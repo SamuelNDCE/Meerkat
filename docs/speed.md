@@ -56,3 +56,16 @@ Ranked by derived saving, then by risk. "Where" is whether the change belongs in
 - The 2026-10-30 incident of 25 windows exhausting CPU and RAM: reported by the coordinating session, not read from a log here.
 - Whether `cargo clippy` and `cargo build` of the sidecar can share compiled work: UNVERIFIED.
 - How often a run repeats on an unchanged commit: unmeasured.
+
+## Exact place to change in NeuralVault (`apps/desktop-electron/scripts/verify/`)
+
+| Rank | File and function | Change |
+|---|---|---|
+| 1 and 2 | `lib/runner.mjs`, `selectChecks` (the `byCost` sort, lines 40 to 41) and the pick order in `runAll` (lines 143 to 189) | Order by longest remaining chain (a check that others wait on via `after`, or the longest lane work), not cheapest estimate. Keep the lane and `after` rules as they are |
+| 3 | `doctor.mjs`, `requirements` (the `built-sidecar` row and `CARGO_TARGET_DIR`); `lib/lanes.mjs`, `wrapForLane` | Warn when the target folder is per-worktree; fail a window check if the sidecar is older than its sources |
+| 4 | `lib/runner.mjs`, `runAll` (`laneBusy`, line 131, and `laneFree`, line 162) | Let the `electron` lane hold a count instead of a flag; gate it on free memory like `resolveWidth` |
+| 5 | New module beside `lib/timings.mjs`; hook in `run.mjs` before `runAll` and after `recordRun` | Store results keyed by commit plus diff hash; never for `npm-audit` or `cargo-audit`; print CACHED |
+| 6 | `click-shards.mjs`, `resolveWidth` (lines 33 to 41) and the `NV_CLICKS_*` reads (lines 154 to 155); `lib/profiles.mjs`, `PROFILES` | Settings only |
+| 7 | `checks/core.mjs`, `unit-tests-changed` (`run` args) | Limit vitest workers when the cargo lane is busy; cause unverified |
+
+Unfinished in this page: no re-measurement of any proposed change was done.
