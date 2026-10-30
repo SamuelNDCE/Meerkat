@@ -1,0 +1,18 @@
+id: nv-sync-public-listings
+info:
+  name: NV sync server lists accounts or failed logins without a token
+  author: neuralvault
+  severity: medium
+  description: /accounts and /security/failed-logins are outside the token layer in routes.rs. This template flags if they return data to an anonymous caller. Review the hit: it may be intended, then allow it here with a reason.
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/accounts"
+      - "{{BaseURL}}/security/failed-logins"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: header
+        words: ["application/json"]

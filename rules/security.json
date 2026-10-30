@@ -1,0 +1,118 @@
+{
+  "rules": [
+    {
+      "id": "ipc-handler-outside-ipc",
+      "message": "ipcMain handler registered outside electron/ipc.cts. Every renderer-facing handler must live in ipc.cts, where the payload is checked, because the renderer is untrusted.",
+      "glob": [
+        "apps/desktop-electron/electron/*.cts"
+      ],
+      "exclude": [
+        "apps/desktop-electron/electron/ipc.cts",
+        "apps/desktop-electron/electron/probe-*",
+        "apps/desktop-electron/electron/audit-*",
+        "apps/desktop-electron/electron/verify-*",
+        "apps/desktop-electron/electron/*.test.cts"
+      ],
+      "pattern": "ipcMain\\.(handle|on|once)\\(",
+      "skipComments": true,
+      "origin": "electron/main.cts and ipc.cts header: the renderer is untrusted, validation lives on the main side (ipc.cts, 'The renderer is untrusted'). A handler elsewhere skips the payload and sender checks reviewed there."
+    },
+    {
+      "id": "ipc-handler-untyped-payload",
+      "message": "ipc handler in ipc.cts declares a parameter as `any`. Declare payload args as `unknown` and check them.",
+      "glob": [
+        "apps/desktop-electron/electron/ipc.cts"
+      ],
+      "exclude": [],
+      "pattern": "ipcMain\\.(handle|on)\\([^)]*\\b\\w+\\s*:\\s*any\\b",
+      "skipComments": true,
+      "origin": "ipc.cts convention: every handler arg is `unknown` and checked (NV_BAD_PAYLOAD / NV_BAD_ARGS), see nv:call and nv:exportPdf."
+    },
+    {
+      "id": "note-path-join-unresolved",
+      "message": "A note id or relative path is joined onto the vault root without id_to_path / resolve_within_root / guard_within_vault. A `..` or an absolute path escapes the vault.",
+      "glob": [
+        "apps/nv-sidecar/src/*.rs",
+        "packages/agents/src/*.rs",
+        "packages/runtime/src/**/*.rs",
+        "packages/calendar/src/*.rs"
+      ],
+      "exclude": [
+        "apps/nv-sidecar/src/*_tests.rs"
+      ],
+      "pattern": "\\b(root|vault_root|vault_dir|vault_path)\\s*\\.join\\(\\s*&?(id|rel|note_id|rel_path|note_path)\\s*\\)",
+      "skipLineIf": "guard_within_vault|id_to_path|resolve_within_root|safe_join|contain_in_vault",
+      "stopAt": "#\\[cfg\\(test\\)\\]",
+      "skipComments": true,
+      "origin": "vault.rs id_to_path doc: `escape/pwned.md` passed every string guard and wrote outside the vault. provenance_cmds.rs header: `root.join(path)` with an absolute path drops the root, `..` walks out."
+    },
+    {
+      "id": "raw-html-sink",
+      "message": "Raw HTML sink (dangerouslySetInnerHTML, innerHTML =, insertAdjacentHTML, outerHTML =, document.write). Note text must go through escapeHtml (toPrintHtml.ts) or be rendered as React text.",
+      "glob": [
+        "apps/desktop-electron/src/**/*.ts",
+        "apps/desktop-electron/src/**/*.tsx",
+        "apps/desktop-electron/electron/*.cts"
+      ],
+      "exclude": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.cts",
+        "apps/desktop-electron/electron/probe-*",
+        "apps/desktop-electron/electron/audit-*",
+        "apps/desktop-electron/electron/verify-*"
+      ],
+      "pattern": "dangerouslySetInnerHTML|\\.innerHTML\\s*[+]?=|insertAdjacentHTML\\(|\\.outerHTML\\s*=|document\\.write\\(",
+      "skipComments": true,
+      "origin": "Markdown.tsx 'THE HARD GUARANTEE: no dangerouslySetInnerHTML, anywhere' and src/lib/guards/no-raw-html.test.ts; failure ledger F-169 (2026-10-17): report-derived text put into an issue body unescaped."
+    },
+    {
+      "id": "electron-hardening-off",
+      "message": "A BrowserWindow hardening switch is turned off (nodeIntegration true, contextIsolation false, sandbox false, webSecurity false). The renderer is untrusted and must stay sandboxed.",
+      "glob": [
+        "apps/desktop-electron/electron/*.cts"
+      ],
+      "exclude": [
+        "apps/desktop-electron/electron/probe-*",
+        "apps/desktop-electron/electron/audit-*",
+        "apps/desktop-electron/electron/verify-*",
+        "apps/desktop-electron/electron/*.test.cts"
+      ],
+      "pattern": "nodeIntegration\\s*:\\s*true|contextIsolation\\s*:\\s*false|\\bsandbox\\s*:\\s*false|webSecurity\\s*:\\s*false",
+      "skipComments": true,
+      "origin": "electron/main.cts header: `sandbox: true`, sandboxed preload, renderer untrusted. Pinned so a packaging or debugging change cannot silently turn it off (see failure ledger F-146 for what an unverified packaging change costs)."
+    }
+  ],
+  "allowlist": [
+    {
+      "rule": "note-path-join-unresolved",
+      "path": "apps/nv-sidecar/src/library_cmds.rs",
+      "contains": "root.join(&rel)",
+      "reason": "Reviewed 2026-10-27, safe: `rel` is rejected above if absolute or containing `..`, and the deepest existing ancestor is then canonicalised (see the denied() path)."
+    },
+    {
+      "rule": "note-path-join-unresolved",
+      "path": "apps/nv-sidecar/src/library_cmds.rs",
+      "contains": "root.join(&id)",
+      "reason": "Reviewed 2026-10-27, safe: `id` comes from the vault's own listing in attach_previews, read-only preview, never from the renderer."
+    },
+    {
+      "rule": "note-path-join-unresolved",
+      "path": "apps/nv-sidecar/src/orchestrate.rs",
+      "contains": "root.join(&rel)",
+      "reason": "Reviewed 2026-10-27, safe: `rel` went through normalise_rel_path, which refuses absolute and `..` paths."
+    },
+    {
+      "rule": "note-path-join-unresolved",
+      "path": "packages/runtime/src/backup.rs",
+      "contains": "vault_root.join(rel)",
+      "reason": "Reviewed 2026-10-27, safe: `rel` comes from relative_files (a directory walk of the vault or of a snapshot we wrote), not from a caller."
+    },
+    {
+      "rule": "note-path-join-unresolved",
+      "path": "packages/runtime/src/second_copy.rs",
+      "contains": "vault_root.join(rel)",
+      "reason": "Reviewed 2026-10-27, safe: `rel` comes from backup::relative_files, a directory walk, read-only metadata."
+    }
+  ]
+}

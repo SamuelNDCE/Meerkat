@@ -1,0 +1,18 @@
+{
+  "name": "meerkat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Meerkat: one command that checks an app before a push, a promotion or a build.",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "meerkat": "node run.mjs",
+    "meerkat:thorough": "node run.mjs --thorough",
+    "meerkat:doctor": "node doctor.mjs",
+    "meerkat:promotion": "node promotion-due.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.2"
+  }
+}

@@ -1,0 +1,7 @@
+// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
+// Proprietary and confidential. Unauthorised copying, modification,
+// or distribution is strictly prohibited.
+
+// Deliberately broken: copied to a throwaway folder by the unit-tests self-test, which must FAIL on it.
+import { expect, test } from "vitest"
+test("broken on purpose", () => { expect(1).toBe(2) })

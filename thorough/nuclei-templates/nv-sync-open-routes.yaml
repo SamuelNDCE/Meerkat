@@ -1,0 +1,17 @@
+id: nv-sync-protected-routes-need-token
+info:
+  name: NV sync server protected routes answer without a token
+  author: neuralvault
+  severity: high
+  description: These routes sit behind the bearer-token layer (apps/sync-server/src/routes.rs). Anything but 401 or 403 without a token is a hole.
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/vaults/main/manifest"
+      - "{{BaseURL}}/vaults/test/manifest"
+      - "{{BaseURL}}/approvals"
+      - "{{BaseURL}}/devices"
+      - "{{BaseURL}}/me"
+    matchers:
+      - type: status
+        status: [200]
