@@ -12,6 +12,12 @@ Meerkat is the validation tool made for NeuralVault: one command that checks an 
 2. Generalise it so it no longer depends on NeuralVault's own sidecar and app windows (the checks that are specific to one app become plug-ins).
 3. Move it here with its history, and have NeuralVault use it as a dependency.
 4. Decide on a licence and whether to make the repository public. Not decided.
+5. Add a UI: a way to see a run, its checks, their status and the saved output without reading terminal text. The form (local page, window, or a section inside the app) is not decided.
+6. Make it work with any app and set up in one guided step (`meerkat:doctor` is the readiness check today).
+
+## When to run it
+
+After a build finishes, not only before a push (Samuel, 2026-10-30). Today the NeuralVault signed Beta chain runs the older `verify:all` and not Meerkat, because Meerkat is on `dev` and not yet on `beta`.
 
 ## Licence
 
