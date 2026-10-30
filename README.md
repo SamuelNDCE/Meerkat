@@ -33,6 +33,36 @@ Ideas for making it faster, with the evidence, are in [`docs/speed.md`](docs/spe
 
 Keep the PC otherwise idle while it runs. A run on a busy PC was stopped on 2026-10-30 because it ran out of CPU and RAM (reported by the coordinating session; the source run log was not read for this page).
 
+## Tools it uses
+
+Meerkat drives other tools and reports on them; it does not replace them. A tool that is missing is NOT RUN, which fails the run.
+
+| Job | Tool | Checks that use it |
+|---|---|---|
+| Type check | TypeScript (`tsc`) | type-check |
+| Unit tests | Vitest | unit-tests, unit-tests-changed |
+| Rust format, lint, tests | rustfmt, clippy, `cargo test` (property tests) | sidecar-fmt, sidecar-clippy, vault-parser-proptest |
+| Dependency advisories | `npm audit`, `cargo audit` | npm-audit, cargo-audit |
+| Real windows | Electron, parked off-screen, with a test-safety layer | screens, accessibility, click-through, shell, app and UI integrity checks |
+| Accessibility | an axe scan inside those windows | ui-axe |
+| Fuzzing and mutation testing | parser fuzzing, `cargo-mutants` | parser-fuzz, guard-mutants |
+| Opt-in extras | k6 (sync load), ZAP and Nuclei (staging scan), Snyk agent scan | sync-load, staging-scan, agent-scan |
+| One heavy job at a time | a machine-wide cargo lock and a one-window lock | every cargo and window check |
+
+Exact needs per check: [`docs/checks.md`](docs/checks.md). Set-up and the lock config: [`docs/setup.md`](docs/setup.md).
+
+## Changes made to the tool (in NeuralVault)
+
+The code stays in NeuralVault until it is extracted, so changes are made there and listed here.
+
+| Date | Change | Where | State |
+|---|---|---|---|
+| 2026-10-30 | Checks that others wait on (the sidecar build) now start first, so the window checks overlap the Rust checks on a cold run. The parser-test time estimate was 3 s and is now 293 s. New opt-in `NV_MUTANTS_JOBS` (default 1, unchanged). | NeuralVault issue 3207, branch `meerkat-speed`, `lib/runner.mjs` | Written and committed locally, not pushed or merged. Modelled at about 1,091 s down to about 879 s on a cold fast run (a model from the 2026-10-28 durations, not a measurement). Measuring waits for the PC to be idle. |
+
+## Terminal UI
+
+Being set up, not built. The proposal (what it shows, how long each check takes on this PC, the library options, all marked UNVERIFIED until tried) is [`docs/terminal-ui.md`](docs/terminal-ui.md). Samuel decides when to build it.
+
 ## Status
 
 **This repository is a placeholder.** The working tool still lives inside the NeuralVault repository, under `apps/desktop-electron/scripts/verify/` and `docs/testing/`, and runs there with `npm --prefix apps/desktop-electron run verify` (also `meerkat`, `meerkat:thorough`, `meerkat:doctor`). Nothing has been moved here yet. Until it is, NeuralVault is the source of truth and changes go there. This repo holds plans and documentation only. No NeuralVault code is copied here, by rule (see `PROJECT.md`).
@@ -75,7 +105,7 @@ Other useful forms: `-- --list` (checks and times), `-- --json result.json` (mac
 ## Current status of the tool
 
 - Fast and thorough tiers: working in NeuralVault, last full runs 2026-10-28 and 2026-10-30.
-- Terminal UI: not built; a proposal is in [`docs/terminal-ui.md`](docs/terminal-ui.md). A simple progress bar and a status file exist today.
+- Terminal UI: being set up, not built; a proposal is in [`docs/terminal-ui.md`](docs/terminal-ui.md). A simple progress bar and a status file exist today.
 - Run after a build finishes: not wired. The signed Beta chain still runs the older `verify:all`.
 - Works with any app: not yet. Several checks are specific to NeuralVault.
 - Licence: none chosen.
