@@ -1,0 +1,1 @@
+packages/agents/src/shell_tool.rs:1180:9: replace classify_command -> Classification with Default::default()

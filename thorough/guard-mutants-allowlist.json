@@ -1,0 +1,4 @@
+{
+  "_about": "Survivors we have read and accepted. Every entry needs a reason a reviewer can check. A survivor NOT here fails the check. Match is a substring of the missed.txt line (file:line:col: description). Start empty: add only after reading the mutant.",
+  "allow": []
+}

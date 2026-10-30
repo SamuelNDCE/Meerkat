@@ -65,7 +65,25 @@ Being set up, not built. The proposal (what it shows, how long each check takes 
 
 ## Status
 
-**This repository is a placeholder.** The working tool still lives inside the NeuralVault repository, under `apps/desktop-electron/scripts/verify/` and `docs/testing/`, and runs there with `npm --prefix apps/desktop-electron run verify` (also `meerkat`, `meerkat:thorough`, `meerkat:doctor`). Nothing has been moved here yet. Until it is, NeuralVault is the source of truth and changes go there. This repo holds plans and documentation only. No NeuralVault code is copied here, by rule (see `PROJECT.md`).
+**The tool's code now lives here** (moved from NeuralVault on 2026-10-30, at Samuel's instruction). The app being checked stays in its own repository; Meerkat finds it with `--app <folder>`, with `NV_APP_DIR`, or by being started in the app's folder (NeuralVault: `apps/desktop-electron`). Meerkat's own tests run here with `npm test` and need no app. The window lock lives with the app's own drivers (`scripts/electron-lock.mjs`), so Meerkat and the drivers queue on one lock. \*
+
+> \*Corrected 2026-10-30: this section used to say the repository was a placeholder holding plans and documentation only, with the working tool in NeuralVault. That is no longer true. Until NeuralVault's pull request that swaps in a small launcher lands, NeuralVault still has its older copy of `scripts/verify`; do not edit it, change the tool here.
+
+## Run it
+
+Clone this repository next to the app's repository, then from the app's folder:
+
+```
+node ../../../meerkat/run.mjs
+```
+
+(adjust the path to where you cloned it), or from anywhere:
+
+```
+node path/to/meerkat/run.mjs --app path/to/NeuralVault/apps/desktop-electron
+```
+
+Add `--thorough` for the thorough tier, `--list` for the checks and their times, `--self-test` to prove every check still fails on a broken case, `--ui` for the terminal view, `--profile low` on a busy PC. `node doctor.mjs` (same folder rules) says what is missing on a new machine. Once NeuralVault's launcher lands, `npm --prefix apps/desktop-electron run verify` does all of it with one command.
 
 ## What it is and why
 
@@ -102,6 +120,8 @@ npm --prefix apps/desktop-electron run verify -- --thorough
 
 Other useful forms: `-- --list` (checks and times), `-- --json result.json` (machine-readable), `-- --profile low` (busy or small PC), `-- --self-test`, and `run verify:promotion` (reports when a promotion is due; never promotes). A failed check keeps its full output in a file named on its result line. Set-up on a new machine: [`docs/setup.md`](docs/setup.md).
 
+> \*Corrected 2026-10-30: the commands below describe the old layout, where the tool sat inside NeuralVault. See "Run it" above for how to run it from this repository.
+
 ## Current status of the tool
 
 - Fast and thorough tiers: working in NeuralVault, last full runs 2026-10-28 and 2026-10-30.
@@ -121,6 +141,8 @@ Other useful forms: `-- --list` (checks and times), `-- --json result.json` (mac
 
 The ordered version, with the decisions Samuel must make, is in [`docs/roadmap.md`](docs/roadmap.md).
 
+> \*Corrected 2026-10-30: step 3 (move it here) is done; the NeuralVault side is a small launcher in a pull request there. Steps 2 and 4 to 6 are still open.
+
 ## When to run it
 
 After a build finishes, not only before a push (Samuel, 2026-10-30). Today the NeuralVault signed Beta chain runs the older `verify:all` and not Meerkat, because Meerkat is on `dev` and not yet on `beta`.
@@ -128,6 +150,8 @@ After a build finishes, not only before a push (Samuel, 2026-10-30). Today the N
 ## How this repo relates to NeuralVault
 
 NeuralVault (private) is the source of truth for the code, the checks and their contract. This repo is where Meerkat will live once extracted. Until then, changes to the tool are made in NeuralVault and described here.
+
+> \*Corrected 2026-10-30: this repository is now the source of truth for the tool. NeuralVault is the app it checks and keeps a launcher; changes to the tool are made here.
 
 ## Licence
 

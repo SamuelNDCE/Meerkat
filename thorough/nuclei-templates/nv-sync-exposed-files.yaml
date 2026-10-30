@@ -1,0 +1,21 @@
+id: nv-sync-exposed-files
+info:
+  name: NV sync server serves a file it should not
+  author: neuralvault
+  severity: high
+http:
+  - method: GET
+    path:
+      - "{{BaseURL}}/.env"
+      - "{{BaseURL}}/.git/config"
+      - "{{BaseURL}}/.accounts.json"
+      - "{{BaseURL}}/vaults/main/notes/..%2f..%2f.accounts.json"
+      - "{{BaseURL}}/vaults/main/notes/%2e%2e/%2e%2e/etc/passwd"
+    matchers-condition: and
+    matchers:
+      - type: status
+        status: [200]
+      - type: word
+        part: body
+        words: ["password", "[core]", "NV_SYNC", "root:"]
+        condition: or

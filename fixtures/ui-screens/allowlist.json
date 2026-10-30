@@ -1,0 +1,4 @@
+{
+  "note": "Known harmless messages the ui-screens check may ignore. Each entry needs a match (a substring) and a reason. Empty to start: add an entry only with a reason and an issue number.",
+  "entries": []
+}
