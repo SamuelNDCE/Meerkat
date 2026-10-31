@@ -13,7 +13,7 @@ export default [
     selfTest: { ...ex('parser-fuzz.mjs', ['--fixtures']), expectFail: true },
   },
   {
-    id: 'guard-mutants', group: 'security', tier: 'thorough', lane: 'cargo', estSeconds: 860, timeoutSeconds: 3300,
+    id: 'guard-mutants', group: 'security', tier: 'thorough', lane: 'cargo', cost: { cpu: 8, memGB: 4 }, estSeconds: 860, timeoutSeconds: 3300,
     title: 'Mutation test the command classifier, poisoning guard and path rules',
     needs: ['node', 'cargo-mutants'],
     paths: ['packages/agents/src/shell_tool.rs', 'packages/agents/src/guard/poison.rs', 'packages/agents/src/sandbox.rs', '.cargo/mutants.toml'],

@@ -20,7 +20,10 @@ export default [
   {
     id: 'ui-axe',
     group: 'ui',
-    tier: 'fast',
+    tier: 'thorough',
+    // The thorough tier's verify-ui runs the same axe scan on every screen and window size, so it covers this one; the fast tier used to
+    // spend about 85 s of window time on it (axe-only, one size). Still runnable alone: --only ui-axe.
+    supersededBy: 'verify-ui',
     title: 'Accessibility scan of every page (axe-core, new serious/critical only)',
     lane: 'electron',
     estSeconds: 90,

@@ -12,6 +12,7 @@ import { createProgress } from './lib/progress.mjs'
 import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
 import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from './lib/timings.mjs'
+import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
 import { finalReport } from './lib/report.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
@@ -20,7 +21,7 @@ import { createSplash } from './lib/tui/splash.mjs'
 import { loadTheme } from './lib/tui/theme.mjs'
 
 export function parseArgs(argv) {
-  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, errors: [] }
+  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -38,6 +39,8 @@ export function parseArgs(argv) {
     else if (a === '--progress') o.progress = true
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
+    else if (a === '--config') o.config = next()
+    else if (a === '--no-config') o.noConfig = true
     else if (a === '--app') o.app = next()
     else o.errors.push(`unknown argument: ${a}`)
   }
@@ -75,7 +78,18 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const uiOk = opts.ui && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
   const splash = createSplash({ theme, env, enabled: uiOk && !opts.list && !opts.selfTest, title: `MEERKAT ${opts.thorough ? 'thorough' : 'fast'}` })
   splash.step('Loading the checks')
-  const checks = await loadChecks(join(here, 'checks'))
+  const builtInChecks = await loadChecks(join(here, 'checks'))
+  // The project's own settings (meerkat.config.json, lib/config.mjs): checks turned off or swapped, tools changed, the budget. Every
+  // note and every turned-off check is printed, so nothing is changed silently.
+  const configFile = opts.noConfig ? null : findConfig({ explicit: opts.config, appDir, repoRoot })
+  const read = configFile ? readConfig(configFile) : { config: { builtin: true, extraChecks: [], disable: [], override: {}, budget: null }, notes: [] }
+  const applied = await applyConfig(builtInChecks, read.config, { file: configFile })
+  const checks = applied.checks
+  if (!opts.list) {
+    if (configFile) log(`config: ${configFile}`)
+    for (const note of [...read.notes, ...applied.notes]) log(`config: ${note}`)
+    for (const d of applied.disabled) log(`[DISABLED] ${d.id}: turned off in ${configFile}`)
+  }
   splash.step('Reading the times measured on this PC')
   // Use the times measured on this machine for the order, the bar and the time left; keep the written ones for any check not yet measured.
   const timingsFile = timingsPath(env)
@@ -124,7 +138,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     splash.step('Choosing the checks to run')
     const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles })
     splash.finish()
-    skippedCount = sel.skipped.length
+    skippedCount = sel.skipped.length + applied.disabled.length
     for (const s of sel.superseded ?? []) log(`[COVERED ] ${s.id}: not run on its own, ${s.supersededBy} covers it`)
     for (const s of sel.skipped) log(`[SKIPPED] ${s.id}: no files changed in its paths`)
     for (const id of opts.only) if (!checks.some((c) => c.id === id)) log(`warning: --only ${id} matches no check`)
@@ -137,7 +151,9 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     const quiet = liveBar || useUi
     status = createStatus({ title: `MEERKAT ${tier}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
     log(`live status: ${statusPath(env)} (rewritten every few seconds while this runs)`)
-    results = await runAll(sel.run, ctx, { keepGoing: opts.keepGoing, parallel: Math.max(1, cpus().length - 1), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status) })
+    // How much a run may use at once: every thread by default, and 3 GB of memory left free; the config can change both.
+    const budget = { cpu: read.config.budget?.cpu ?? cpus().length, reserveGB: read.config.budget?.reserveGB ?? 3 }
+    results = await runAll(sel.run, ctx, { budget, keepGoing: opts.keepGoing, parallel: Math.max(1, cpus().length - 1), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status) })
     bar.stop()
     status.stop()
     // Keep what this run measured, so the next run's order, bar and time left are closer to the truth.

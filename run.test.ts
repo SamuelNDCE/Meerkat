@@ -7,7 +7,8 @@ import { lastLine } from './lib/exec.mjs'
 import { globToRegExp, matchesAny } from './lib/glob.mjs'
 import { loadChecks, validateCheck } from './lib/load-checks.mjs'
 import { bashFor, wrapForLane } from './lib/lanes.mjs'
-import { orderForSpeed, runAll, runOne, selectChecks, summarise } from './lib/runner.mjs'
+import { costOf, orderForSpeed, runAll, runOne, selectChecks, summarise } from './lib/runner.mjs'
+import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
 import { missingBinaries } from './lib/which.mjs'
 import { parseArgs } from './run.mjs'
 import { parseCells, planJobs } from './click-shards.mjs'
@@ -481,5 +482,90 @@ describe('start order for speed', () => {
   test('a dependency cycle does not loop forever', () => {
     const order = orderForSpeed([fake({ id: 'a', after: ['b'] }), fake({ id: 'b', after: ['a'] })])
     expect(order).toHaveLength(2)
+  })
+})
+
+describe('the scheduler gives light checks the machine together and heavy ones room', () => {
+  const sleepCheck = (id: string, ms: number, extra: Record<string, unknown> = {}) => fake({ id, estSeconds: 1, run: async () => { await new Promise((r) => setTimeout(r, ms)); return { ok: true, detail: '' } }, ...extra })
+  test('a check costs what it says, or the usual cost of its lane', () => {
+    expect(costOf({ lane: 'free' } as never).cpu).toBe(1)
+    expect(costOf({ lane: 'cargo' } as never).cpu).toBeGreaterThan(3)
+    expect(costOf({ lane: 'free', cost: { cpu: 7 } } as never)).toMatchObject({ cpu: 7 })
+  })
+  test('with room, light checks run at the same time; the budget holds a heavy one back until there is room', async () => {
+    const order: string[] = []
+    const mk = (id: string, cpu: number) => sleepCheck(id, 60, { cost: { cpu, memGB: 0 }, run: async () => { order.push('start ' + id); await new Promise((r) => setTimeout(r, 60)); order.push('end ' + id); return { ok: true, detail: '' } } })
+    const res = await runAll([mk('heavy', 8), mk('light-a', 1), mk('light-b', 1)], ctx(), { parallel: 5, budget: { cpu: 8, reserveGB: 0 }, freeMemGB: () => 64 })
+    expect(res.map((r: any) => r.status)).toEqual(['PASS', 'PASS', 'PASS'])
+    expect(order.indexOf('end heavy')).toBeLessThan(order.indexOf('start light-a'))
+    expect(order.indexOf('start light-b')).toBeLessThan(order.indexOf('end light-a'))
+  })
+  test('little memory free means a heavy check waits, but one check can always run alone', async () => {
+    const res = await runAll([sleepCheck('big', 20, { cost: { cpu: 1, memGB: 50 } })], ctx(), { parallel: 2, budget: { cpu: 8, reserveGB: 3 }, freeMemGB: () => 1 })
+    expect(res[0].status).toBe('PASS')
+    const seen: string[] = []
+    const a = sleepCheck('a', 40, { cost: { cpu: 1, memGB: 0.1 }, run: async () => { seen.push('a'); await new Promise((r) => setTimeout(r, 40)); return { ok: true, detail: '' } } })
+    const b = sleepCheck('b', 10, { cost: { cpu: 1, memGB: 10 }, run: async () => { seen.push('b'); return { ok: true, detail: '' } } })
+    await runAll([a, b], ctx(), { parallel: 2, budget: { cpu: 8, reserveGB: 3 }, freeMemGB: () => 5 })
+    expect(seen).toEqual(['a', 'b'])
+  })
+  test('without a budget nothing changes: everything runs side by side as before', async () => {
+    const t0 = Date.now()
+    await runAll([sleepCheck('x', 80), sleepCheck('y', 80), sleepCheck('z', 80)], ctx(), { parallel: 5 })
+    expect(Date.now() - t0).toBeLessThan(230)
+  })
+  test('the full unit tests also run in the fast tier when every check runs (nothing differs from origin/dev)', () => {
+    const checks = [fake({ id: 'changed', supersededBy: 'all' }), fake({ id: 'all', tier: 'thorough', fastWhenAll: true }), fake({ id: 'other', tier: 'thorough' })]
+    const sel = selectChecks(checks, { tier: 'fast', mode: 'all', changedFiles: null })
+    expect(ids(sel.run)).toEqual(['all'])
+    expect(ids(sel.superseded)).toEqual(['changed'])
+    expect(ids(selectChecks(checks, { tier: 'fast', mode: 'changed', changedFiles: ['x'] }).run)).toEqual(['changed'])
+  })
+})
+
+describe('swapping checks and tools in and out with meerkat.config.json', () => {
+  const built = [fake({ id: 'type-check', run: { cmd: 'npm', args: ['run', 'check'], cwd: 'app' }, selfTest: { cmd: 'x', args: [], expectFail: true } }), fake({ id: 'ui-axe' }), fake({ id: 'lint' })] as any[]
+  const read = (obj: unknown) => readConfig('/p/meerkat.config.json', () => JSON.stringify(obj))
+  const slash = (f: string | null) => (f ?? '').split(String.fromCharCode(92)).join('/')
+  test('the file is found next to the app, then in the repo, or named on the command line', () => {
+    const has = (...files: string[]) => (f: string) => files.includes(slash(f))
+    expect(slash(findConfig({ explicit: '/x/c.json', appDir: '/a', repoRoot: '/r', exists: () => true }))).toMatch(/c\.json$/)
+    expect(slash(findConfig({ appDir: '/a', repoRoot: '/r', exists: has('/a/meerkat.config.json', '/r/meerkat.config.json') }))).toMatch(/a\/meerkat\.config\.json$/)
+    expect(findConfig({ appDir: '/a', repoRoot: '/r', exists: () => false })).toBeNull()
+  })
+  test('mistakes are reported as notes and the rest of the file still applies; a broken file is ignored', () => {
+    const r = read({ disable: 'nope', override: { lint: { colour: 'red', tier: 'thorough' } }, budget: { cpu: 0 }, extraChecks: 5 })
+    expect(r.notes.length).toBeGreaterThanOrEqual(4)
+    expect(r.config.override.lint).toEqual({ tier: 'thorough' })
+    const broken = readConfig('/p/c.json', () => '{ nope')
+    expect(broken.notes[0]).toContain('ignored')
+    expect(broken.config).toEqual({})
+  })
+  test('disable lists what it turned off; an unknown id is a note, not a silent nothing', async () => {
+    const out = await applyConfig(built, read({ disable: ['ui-axe', 'ghost'] }).config, { file: '/p/meerkat.config.json' })
+    expect(out.checks.map((c: any) => c.id)).toEqual(['type-check', 'lint'])
+    expect(out.disabled.map((d: any) => d.id)).toEqual(['ui-axe'])
+    expect(out.notes.join(' ')).toContain('ghost')
+  })
+  test('override changes a check; changing its tool drops the old self-test so the new tool must prove itself', async () => {
+    const out = await applyConfig(built, read({ override: { 'type-check': { tier: 'thorough', run: { cmd: 'pnpm', args: ['tsc'] } }, lint: { estSeconds: 9 }, ghost: { tier: 'fast' } } }).config, { file: '/p/meerkat.config.json' })
+    const t = out.checks.find((c: any) => c.id === 'type-check') as any
+    expect(t.tier).toBe('thorough')
+    expect(t.run).toMatchObject({ cmd: 'pnpm', args: ['tsc'], cwd: 'app' })
+    expect(t.selfTest).toBeUndefined()
+    expect((out.checks.find((c: any) => c.id === 'lint') as any).estSeconds).toBe(9)
+    expect(out.notes.join(' ')).toContain('ghost')
+    const bad = await applyConfig(built, read({ override: { lint: { lane: 'moon' } } }).config, { file: '/p/meerkat.config.json' })
+    expect((bad.checks.find((c: any) => c.id === 'lint') as any).lane).toBe('free')
+    expect(bad.notes.join(' ')).toContain('lane')
+  })
+  test('extra checks are added, and one with the same id swaps out the built-in one', async () => {
+    const extra = [fake({ id: 'lint', title: 'my lint' }), fake({ id: 'brand-new' })] as any[]
+    const out = await applyConfig(built, read({ extraChecks: ['more'] }).config, { file: '/p/meerkat.config.json', load: async () => extra })
+    expect(out.checks.map((c: any) => c.id)).toEqual(['type-check', 'ui-axe', 'lint', 'brand-new'])
+    expect((out.checks.find((c: any) => c.id === 'lint') as any).title).toBe('my lint')
+    expect(out.notes.join(' ')).toContain('swapped')
+    const only = await applyConfig(built, read({ builtin: false, extraChecks: ['more'] }).config, { file: '/p/meerkat.config.json', load: async () => extra })
+    expect(only.checks.map((c: any) => c.id)).toEqual(['lint', 'brand-new'])
   })
 })
