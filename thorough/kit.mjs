@@ -27,9 +27,72 @@ export function parseArgs(argv) {
 
 // The files git tracks (so ignored build output and node_modules are never scanned); a plain walk when the folder is not a repository.
 export function trackedFiles(root) {
-  const list = listTrackedFiles(root)
+  const list = applyMeerkatIgnore(root, listTrackedFiles(root))
   progress.total(list.length)
   return list
+}
+
+// .meerkatignore: one pattern per line at the project root (# comments and blank lines ignored). Rules, in the style of .gitignore:
+//   dir/        a folder and everything under it     *.min.js   no slash: matches at any depth
+//   a/b/c.txt   a slash anchors it to the root        *  inside one path part     **  across parts     ?  one character
+//   !pattern    re-includes what an earlier line ignored (the last matching line wins)
+export const MEERKATIGNORE_FILE = '.meerkatignore'
+// Never ignorable, so a typo in .meerkatignore cannot hide the supply-chain checks.
+const NEVER_IGNORED = /(^|\/)(\.meerkatignore|package\.json|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?|cargo\.lock|cargo\.toml|go\.mod|go\.sum|requirements[^/]*\.txt|pyproject\.toml|poetry\.lock|gemfile\.lock|composer\.(json|lock)|licen[cs]e[^/]*|copying[^/]*)$/i
+
+export function parseMeerkatIgnore(text) {
+  const rules = []
+  for (let line of String(text).split(/\r?\n/)) {
+    line = line.replace(/^\uFEFF/, '').trim()
+    if (!line || line.startsWith('#')) continue
+    let negate = false
+    if (line.startsWith('!')) {
+      negate = true
+      line = line.slice(1)
+    }
+    const dirOnly = line.endsWith('/')
+    line = line.replace(/\/+$/, '')
+    if (!line) continue
+    const anchored = line.startsWith('/') || line.includes('/')
+    line = line.replace(/^\/+/, '')
+    let body = ''
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i]
+      if (c === '*' && line[i + 1] === '*') {
+        i++
+        if (line[i + 1] === '/') {
+          i++
+          body += '(?:.*/)?'
+        } else body += '.*'
+      } else if (c === '*') body += '[^/]*'
+      else if (c === '?') body += '[^/]'
+      else body += c.replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    }
+    rules.push({ negate, re: new RegExp((anchored ? '^' : '(?:^|/)') + body + (dirOnly ? '/' : '(?:/|$)')) })
+  }
+  return rules
+}
+
+export function isMeerkatIgnored(rules, file) {
+  const f = file.split('\\').join('/')
+  if (NEVER_IGNORED.test(f)) return false
+  let ignored = false
+  for (const r of rules) if (r.re.test(f)) ignored = !r.negate
+  return ignored
+}
+
+export function applyMeerkatIgnore(root, list) {
+  let text
+  try {
+    text = readFileSync(join(root, MEERKATIGNORE_FILE), 'utf8')
+  } catch {
+    return list
+  }
+  const rules = parseMeerkatIgnore(text)
+  if (!rules.length) return list
+  const kept = list.filter((f) => !isMeerkatIgnored(rules, f))
+  if (kept.length !== list.length) process.stderr.write(`ignored ${list.length - kept.length} files by ${MEERKATIGNORE_FILE}\n`)
+  return kept
 }
 
 function listTrackedFiles(root) {

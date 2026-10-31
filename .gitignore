@@ -6,3 +6,9 @@ fixtures/tools/dotnet/bin/
 fixtures/tools/dotnet/obj/
 fixtures/tools/swift/.build/
 fixtures/tools/dart/.dart_tool/
+
+# OS and tool junk
+Thumbs.db
+.DS_Store
+.vitest/
+graphify-out/
