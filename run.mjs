@@ -22,6 +22,7 @@ import { spansFromRecorder } from './lib/tui/group.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
 import { enrichResults, narrowSubs, rollup } from './lib/subchecks.mjs'
 import { packOfCheck, resolveOnly, suiteIdOf } from './lib/suites.mjs'
+import { tipLine } from './lib/recommend.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
 import { mergePresets, parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
@@ -336,6 +337,11 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // What needs a look, repeated in full (failed output, reasons); a passing check shows nothing beyond its row above.
   if (!opts.selfTest) for (const l of finalReport({ results, tier, timings, totalMs: Date.now() - started, checks: ranChecks, grouped: opts.grouped, spans: spansFromRecorder(recorder) })) log(l)
   log(line)
+  // One dim line when the project has no checks of its own and the folder shows tests Meerkat could run (lib/recommend.mjs). Never in --json, quiet or plain output.
+  if (!opts.selfTest && !opts.only.length && !opts.suites.length) {
+    const tip = tipLine({ dir: appDir, checks, env, quiet: hush, plain: Boolean(opts.plain) })
+    if (tip) log(uiOk ? `[2m${tip}[0m` : tip)
+  }
   // Every check's log, a summary and a plain-text report are saved for this run (lib/runlog.mjs).
   const report = writeRunReport({ dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })
   if (report) log(`logs: ${ctx.logDir}   (node run.mjs --last shows the report, --why <check> one check's log)`)
