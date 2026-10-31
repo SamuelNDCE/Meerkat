@@ -9,6 +9,9 @@ import { loadChecks, validateCheck } from './lib/load-checks.mjs'
 import { bashFor, wrapForLane } from './lib/lanes.mjs'
 import { costOf, orderForSpeed, runAll, runOne, selectChecks, summarise } from './lib/runner.mjs'
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
+import { detect, initConfig } from './lib/init.mjs'
+import { parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
+import { execFileSync } from 'node:child_process'
 import { missingBinaries } from './lib/which.mjs'
 import { parseArgs } from './run.mjs'
 import { parseCells, planJobs } from './click-shards.mjs'
@@ -567,5 +570,122 @@ describe('swapping checks and tools in and out with meerkat.config.json', () => 
     expect(out.notes.join(' ')).toContain('swapped')
     const only = await applyConfig(built, read({ builtin: false, extraChecks: ['more'] }).config, { file: '/p/meerkat.config.json', load: async () => extra })
     expect(only.checks.map((c: any) => c.id)).toEqual(['lint', 'brand-new'])
+  })
+})
+
+describe('presets: security only, UI only, app, each fast or full', () => {
+  const mk = (id: string, group: string, tier: string, after: string[] = []) => fake({ id, group, tier, after })
+  const checks = [
+    mk('build', 'functionality', 'fast'),
+    mk('lint', 'functionality', 'fast'),
+    mk('ui-quick', 'ui', 'fast', ['build']),
+    mk('ui-all', 'ui', 'thorough', ['build']),
+    mk('secrets', 'security', 'fast'),
+    mk('fuzz', 'security', 'thorough'),
+  ]
+  test('every preset names a tier and kinds of check; a project can add its own; an unknown name says what exists', () => {
+    expect(PRESETS.quick.tier).toBe('fast')
+    expect(PRESETS.security.groups).toEqual(['security'])
+    expect(resolvePreset('security-fast').preset).toMatchObject({ tier: 'fast', groups: ['security'] })
+    expect(resolvePreset('mine', { mine: { tier: 'thorough', groups: ['ui', 'bogus'] } }).preset).toMatchObject({ tier: 'thorough', groups: ['ui'] })
+    expect(resolvePreset('nope').error).toContain('Presets:')
+    expect(resolvePreset(undefined).preset).toBeNull()
+    expect(parseGroups('ui, security,bogus')).toEqual(['ui', 'security'])
+  })
+  test('a group limits the run to that kind of check, in the tier asked for', () => {
+    expect(ids(selectChecks(checks, { tier: 'fast', mode: 'all', groups: ['security'] }).run)).toEqual(['secrets'])
+    expect(ids(selectChecks(checks, { tier: 'thorough', mode: 'all', groups: ['security'] }).run).sort()).toEqual(['fuzz', 'secrets'])
+  })
+  test('a chosen check brings what it waits for, so a UI-only run still builds first', () => {
+    const run = ids(selectChecks(checks, { tier: 'fast', mode: 'all', groups: ['ui'] }).run)
+    expect(run.sort()).toEqual(['build', 'ui-quick'])
+    expect(run).not.toContain('lint')
+    expect(ids(selectChecks(checks, { tier: 'thorough', mode: 'all', groups: ['ui'] }).run).sort()).toEqual(['build', 'ui-all', 'ui-quick'])
+  })
+  test('no group means everything of the tier, as before', () => {
+    expect(ids(selectChecks(checks, { tier: 'fast', mode: 'all' }).run).sort()).toEqual(['build', 'lint', 'secrets', 'ui-quick'])
+  })
+})
+
+describe('starting a new project: --init', () => {
+  test('it recognises a Cargo project, an Electron app, a Node project and anything else', () => {
+    const has = (name: string) => (f: string) => f.split(String.fromCharCode(92)).join('/').endsWith('/' + name)
+    expect(detect('/p', has('Cargo.toml')).kind).toBe('rust')
+    expect(detect('/p', has('Cargo.toml')).config).toEqual({ builtin: false, packs: ['rust', 'security'] })
+    expect(detect('/p', has('package.json')).kind).toBe('node')
+    expect(detect('/p', () => false).kind).toBe('unknown')
+    expect(detect('/p', (f: string) => f.includes('electron-run')).kind).toBe('electron')
+  })
+  test('it writes a config once and never overwrites one', () => {
+    const files = new Map<string, string>()
+    const write = (f: string, text: string) => void files.set(f, text)
+    const first = initConfig('/p', { exists: (f: string) => files.has(f) || f.endsWith('Cargo.toml'), write })
+    expect(first.written).toBe(true)
+    expect(JSON.parse([...files.values()][0])).toEqual({ builtin: false, packs: ['rust', 'security'] })
+    const again = initConfig('/p', { exists: (f: string) => files.has(f) || f.endsWith('Cargo.toml'), write })
+    expect(again.written).toBe(false)
+    expect(again.message).toContain('already exists')
+  })
+  test('packs named in a config are loaded from Meerkat, and an unknown pack is a note', async () => {
+    const cfg = readConfig('/p/meerkat.config.json', () => JSON.stringify({ builtin: false, packs: ['rust', 'security', 'not-a-pack'] })).config
+    const out = await applyConfig([], cfg, { file: '/p/meerkat.config.json', load: async (dir: string) => (/rust$/.test(dir.split(String.fromCharCode(92)).join('/')) ? [fake({ id: 'rust-fmt' })] : /security$/.test(dir.split(String.fromCharCode(92)).join('/')) ? [fake({ id: 'secret-scan' })] : []) as any })
+    expect(out.checks.map((c: any) => c.id)).toEqual(['rust-fmt', 'secret-scan'])
+    expect(out.notes.join(' ')).toContain('not-a-pack')
+    const bad = readConfig('/p/c.json', () => JSON.stringify({ packs: ['Bad Name'] }))
+    expect(bad.notes.join(' ')).toContain('packs')
+  })
+})
+
+describe('the shipped packs are well-formed and self-testable', () => {
+  test('the rust and security packs load, every check validates and has a self-test', async () => {
+    const { loadChecks } = await import('./lib/load-checks.mjs')
+    for (const pack of ['rust', 'security']) {
+      const list = await loadChecks(join(process.cwd(), 'packs', pack))
+      expect(list.length).toBeGreaterThan(0)
+      for (const c of list as any[]) {
+        expect(c.id.startsWith('bad-check-file')).toBe(false)
+        expect(c.selfTest).toBeTruthy()
+        expect(['security', 'functionality', 'ui', 'performance']).toContain(c.group)
+      }
+    }
+  })
+  test('the secret scanner finds planted secrets, finds none in a clean folder, skips test files by default, and never prints a whole secret', () => {
+    const scanner = join(process.cwd(), 'thorough', 'secret-scan.mjs')
+    const run = (args: string[]) => {
+      try {
+        return { code: 0, out: execFileSync('node', [scanner, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) }
+      } catch (e: any) {
+        return { code: e.status as number, out: String(e.stdout ?? '') }
+      }
+    }
+    const fixture = run(['--fixtures'])
+    expect(fixture.code).toBe(1)
+    expect(fixture.out).toContain('found 3')
+    writeFileSync(join(dir, 'clean.js'), 'const a = 1')
+    expect(run(['--root', dir]).code).toBe(0)
+    const key = 'AKIA' + 'IOSFODNN7EXAMPLE'
+    writeFileSync(join(dir, 'real.js'), `const k = '${key}'`)
+    const found = run(['--root', dir])
+    expect(found.code).toBe(1)
+    expect(found.out).toContain('aws-access-key-id')
+    expect(found.out).not.toContain(key) // only the first characters are shown
+    rmSync(join(dir, 'real.js'))
+    writeFileSync(join(dir, 'thing.test.js'), `const k = '${key}'`)
+    expect(run(['--root', dir]).code).toBe(0) // a test file is skipped...
+    expect(run(['--root', dir, '--include-tests']).code).toBe(1) // ...unless asked for
+    writeFileSync(join(dir, '.meerkat-secrets-allow'), 'thing.test.js')
+    expect(run(['--root', dir, '--include-tests']).code).toBe(0) // ...and an accepted path is left alone
+  })
+})
+
+describe('{repo} and {app} in a check command', () => {
+  test('they expand to the repository root and the app folder, in arguments and in the environment', async () => {
+    const r = await runOne(
+      { id: 'x', lane: 'free', run: { cmd: 'node', args: ['-e', "console.log(process.argv[1] + '|' + process.env.NV_T)", '{repo}/a'], cwd: 'app', env: { NV_T: '{app}/b' } } } as never,
+      { repoRoot: dir, appDir: dir, env: process.env, platform: process.platform, exists: () => true, changedFiles: [] } as never,
+    )
+    // a passing check shows its last output line as the detail
+    const slash = dir.split(String.fromCharCode(92)).join('/')
+    expect(r.detail).toBe(`${slash}/a|${slash}/b`)
   })
 })

@@ -13,15 +13,19 @@ import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
 import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from './lib/timings.mjs'
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
+import { estimateRemaining } from './lib/eta.mjs'
+import { initConfig } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
+import { createModel } from './lib/tui/model.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
+import { parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
 import { createSplash } from './lib/tui/splash.mjs'
 import { loadTheme } from './lib/tui/theme.mjs'
 
 export function parseArgs(argv) {
-  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, errors: [] }
+  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -40,6 +44,10 @@ export function parseArgs(argv) {
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
     else if (a === '--config') o.config = next()
+    else if (a === '--preset') o.preset = next()
+    else if (a === '--group') o.groups.push(...parseGroups(next()))
+    else if (a === '--estimate') o.estimate = true
+    else if (a === '--init') o.init = true
     else if (a === '--no-config') o.noConfig = true
     else if (a === '--app') o.app = next()
     else o.errors.push(`unknown argument: ${a}`)
@@ -71,7 +79,13 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const repoRoot = repoRootOf(appDir)
   process.env.NV_APP_DIR = appDir
   env.NV_APP_DIR = appDir
-  const tier = opts.thorough ? 'thorough' : 'fast'
+  if (opts.init) {
+    const made = initConfig(appDir)
+    log(made.message)
+    return 0
+  }
+  let tier = opts.thorough ? 'thorough' : 'fast'
+  let groups = [...opts.groups]
   // The board's look (theme.mjs): one look, tuned in ~/.nv-verify-theme.json. A loading screen shows what is happening
   // while the run is prepared, then disappears; real terminal only.
   const theme = loadTheme({ env })
@@ -85,6 +99,17 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const read = configFile ? readConfig(configFile) : { config: { builtin: true, extraChecks: [], disable: [], override: {}, budget: null }, notes: [] }
   const applied = await applyConfig(builtInChecks, read.config, { file: configFile })
   const checks = applied.checks
+  // --preset (security, ui-fast, app, ...) picks the tier and the kinds of check; --group adds to it.
+  const chosen = resolvePreset(opts.preset, read.config.presets ?? {})
+  if (chosen.error) {
+    log(chosen.error)
+    return 2
+  }
+  if (chosen.preset) {
+    tier = chosen.preset.tier
+    groups = [...chosen.preset.groups, ...groups]
+    if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
+  }
   if (!opts.list) {
     if (configFile) log(`config: ${configFile}`)
     for (const note of [...read.notes, ...applied.notes]) log(`config: ${note}`)
@@ -104,7 +129,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   }
 
   const ctx = { repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null }
-  let mode = opts.all || (opts.thorough && !opts.changed) ? 'all' : 'changed'
+  let mode = opts.all || (tier === 'thorough' && !opts.changed) ? 'all' : 'changed'
   if (mode === 'changed') splash.step('Finding what changed against origin/dev')
   if (mode === 'changed') ctx.changedFiles = gitChangedFiles(repoRoot)
   if (mode === 'changed' && ctx.changedFiles === null) log('note: git could not list changed files (no origin/dev?), running every check')
@@ -120,7 +145,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let skippedCount = 0
   let status = null
   if (!opts.list) {
-    const problem = appProblem(appDir)
+    // The built-in checks drive an Electron app; a project that turned them off (a Rust app, say) needs no such folder.
+    const problem = read.config.builtin === false ? null : appProblem(appDir)
     if (problem) {
       log(problem)
       return 2
@@ -136,8 +162,20 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     status.stop()
   } else {
     splash.step('Choosing the checks to run')
-    const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles })
+    const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups })
     splash.finish()
+    if (opts.estimate) {
+      // How long this run should take on this PC: the learned times, run through the same scheduling rules (lib/eta.mjs).
+      const rows = createModel({ checks: sel.run, timings, tier }).snapshot(0)
+      const slots = Math.max(1, cpus().length - 1)
+      const ms = estimateRemaining(rows, 0, { freeSlots: slots })
+      const measured = sel.run.filter((c) => c.writtenEstSeconds !== undefined).length
+      const mins = (n) => (n >= 90_000 ? `${Math.round(n / 6000) / 10} minutes` : `${Math.round(n / 1000)} seconds`)
+      log(`ESTIMATE ${opts.preset ?? tier}: about ${mins(ms)} for ${sel.run.length} checks (${measured} with times measured on this PC, ${sel.run.length - measured} using the written guess)`)
+      const lane = (l) => sel.run.filter((c) => c.lane === l).reduce((n, c) => n + (c.estSeconds ?? 0), 0)
+      log(`  work by lane: cargo ${lane('cargo')} s (one at a time), windows ${lane('electron')} s (one at a time), everything else ${lane('free')} s (side by side)`)
+      return 0
+    }
     skippedCount = sel.skipped.length + applied.disabled.length
     for (const s of sel.superseded ?? []) log(`[COVERED ] ${s.id}: not run on its own, ${s.supersededBy} covers it`)
     for (const s of sel.skipped) log(`[SKIPPED] ${s.id}: no files changed in its paths`)

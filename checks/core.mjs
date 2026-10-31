@@ -110,7 +110,9 @@ export default [
     needs: ['bash', 'cargo'],
     paths: RUST_PATHS,
     // The fast tier compiles the sidecar's tests (clippy --all-targets) but never RUNS them; this does.
-    run: { cmd: 'cargo', args: ['test', '-p', 'nv-sidecar', '--manifest-path', SIDECAR], cwd: 'app' },
+    // Builds in its own target folder: `cargo test` rewrites nv-sidecar.exe, and a window check that is running the sidecar has that file open
+    // (seen in the first thorough run: "failed to remove file ... nv-sidecar.exe"). The first run in a new folder compiles everything once.
+    run: { cmd: 'cargo', args: ['test', '-p', 'nv-sidecar', '--manifest-path', SIDECAR], cwd: 'app', env: { CARGO_TARGET_DIR: '{repo}/target/meerkat-tests' } },
     selfTest: { cmd: 'cargo', args: ['test', '--manifest-path', `${FIX}/test-broken/Cargo.toml`], cwd: 'app', expectFail: true },
   },
   {
@@ -126,7 +128,7 @@ export default [
     paths: RUST_PATHS,
     // Opt-in because two tests talk to a local Ollama model when one is running (see CLAUDE.md): with a big model
     // loaded they compete with the build for RAM. Close Ollama or accept that, then add --include rust.
-    run: { cmd: 'cargo', args: ['test', '--workspace', '--manifest-path', SIDECAR], cwd: 'app' },
+    run: { cmd: 'cargo', args: ['test', '--workspace', '--manifest-path', SIDECAR], cwd: 'app', env: { CARGO_TARGET_DIR: '{repo}/target/meerkat-tests' } },
     selfTest: { cmd: 'cargo', args: ['test', '--manifest-path', `${FIX}/test-broken/Cargo.toml`], cwd: 'app', expectFail: true },
   },
   {
