@@ -406,7 +406,10 @@ describe('the real run: live board, streamed output, end-of-run report', () => {
     expect(text).toContain('SLOWEST   a 0:20')
     expect(text).toContain('SLOW      a took 0:20, usually 0:02')
     expect(text).toContain('FAIL      b: boom')
-    expect(text).toContain('| c')
+    expect(text).toContain('output: ')
+    // the log's lines are not repeated by default: the full log is opened on purpose
+    expect(text).not.toContain('| c')
+    expect(finalReport({ results, tier: 'fast', timings: { checks: {} }, totalMs: 1000, logTail: 8, env: { MEERKAT_LOG_DIR: dir } }).join(NL)).toContain('| c')
     expect(text).toContain('NOT RUN   c: stopped after the first failure')
     // a passing check shows nothing beyond its slow line
     const clean = finalReport({ results: [{ id: 'a', status: 'PASS', ms: 1000, detail: '' }], tier: 'fast', timings, totalMs: 1000 }).join(NL)
