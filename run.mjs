@@ -75,6 +75,7 @@ export function parseArgs(argv) {
     else if (a === '--progress') o.progress = true
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
+    else if (a === '--plain') o.plain = true
     else if (a === '--config') o.config = next()
     else if (a === '--preset') o.preset = next()
     else if (a === '--group') o.groups.push(...parseGroups(next()))
@@ -97,7 +98,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const opts = parseArgs(argv)
   // The live bar is for a person at a terminal: drawn only on a real TTY with the default output (a test or a
   // pipe passes its own log, CI sets CI), or when asked for with --progress. --no-progress or MEERKAT_PLAIN=1 turns it off.
-  const liveBar = opts.progress ?? (interactive ?? (givenLog === undefined && Boolean(process.stdout.isTTY) && !env.CI && env.MEERKAT_PLAIN !== '1'))
+  const liveBar = opts.plain ? false : opts.progress ?? (interactive ?? (givenLog === undefined && Boolean(process.stdout.isTTY) && !env.CI && env.MEERKAT_PLAIN !== '1'))
   if (opts.errors.length) {
     log(opts.errors.join('\n'))
     return 2
@@ -137,7 +138,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // The board's look (theme.mjs): one look, tuned in ~/.meerkat-theme.json. A loading screen shows what is happening
   // while the run is prepared, then disappears; real terminal only.
   const theme = loadTheme({ env })
-  const uiOk = opts.ui && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
+  // The full board (the meerkat, the bars, the timeline) is the default in a real terminal. --plain, a pipe, CI or MEERKAT_PLAIN=1 give plain lines.
+  const uiOk = (opts.ui || (!opts.plain && opts.progress !== false)) && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
   // The title names what runs: the preset when one was asked for, else the tier.
   const label = opts.preset ?? (opts.thorough ? 'thorough' : 'fast')
   const splash = createSplash({ theme, env, enabled: uiOk && !opts.list && !opts.selfTest && !opts.listPresets, title: `MEERKAT · ${label}` })
