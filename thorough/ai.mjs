@@ -149,6 +149,7 @@ const routeAudit = async (root) => {
   const cmd = aiCommand()
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
   const prepared = list.map((r) => ({ r, ...redact(r.code) }))
+  if (prepared.some((p) => p.long)) return notRun(`a route's code has a line over 4,000 characters (minified or pasted code), which cannot be cleaned safely. Nothing was sent`)
   const hard = prepared.reduce((n, p) => n + p.hard, 0)
   if (hard) return notRun(`${hard} value(s) in a known secret format were found in the route code. Nothing was sent. Remove the secret (and rotate it), then run again`)
   const kb = Math.round(prepared.reduce((n, p) => n + p.text.length, 0) / 1024)
@@ -208,7 +209,10 @@ const diffReview = async (root) => {
   if (diff.includes('\0')) return notRun('part of the change is binary and cannot be reviewed as text; nothing was sent')
   const cmd = aiCommand()
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
+  // Size is checked before any pattern runs over the text, so a huge diff cannot be used to make the redaction slow.
+  if (diff.length > CHUNK * MAX_CHUNKS) return notRun(`the change is too large to review in full (${Math.round(diff.length / 1024)} KB, limit ${Math.round((CHUNK * MAX_CHUNKS) / 1024)} KB); a partial review is not reported as a pass`)
   const clean = redact(diff)
+  if (clean.long) return notRun('the diff has a line over 4,000 characters (minified or pasted code), which cannot be cleaned safely. Nothing was sent')
   if (clean.hard) return notRun(`${clean.hard} value(s) in a known secret format are in the diff. Nothing was sent. Remove the secret (and rotate it), then run again`)
   // Cut at file boundaries into chunks; if it would need more than MAX_CHUNKS the review would be partial, so it is not run at all.
   const parts = clean.text.split(/^(?=diff --git )/m)
