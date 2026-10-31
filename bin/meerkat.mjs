@@ -12,7 +12,7 @@ import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { aiStatus, aiTest, aiUse } from '../lib/aiconfig.mjs'
 import { latestRunDir, logRoot } from '../lib/runlog.mjs'
 import { runLog, showRun } from '../lib/runs.mjs'
-import { maybeAutoUpdate, runUpdateCommand } from '../lib/update.mjs'
+import { maybeAutoUpdate, runUpdateCommand, timedExec } from '../lib/update.mjs'
 import { addRecent } from '../lib/userconfig.mjs'
 
 process.noDeprecation = true // the claude command on Windows is a .cmd shim, which can only be started through a shell
@@ -40,10 +40,18 @@ async function main() {
   const presets = loadPresets({ cwd, env })
   const plan = planCommand(argv, { cwd, env, interactive, presets })
   const ctx = { out, err, env, cwd, interactive, presets, version: version() }
-  // At most once a day, and only if the person turned it on (meerkat update notify|auto). Silent on any failure.
+  // At most once a day (not with `meerkat update off`): a read-only look-up of the latest version, 3 seconds at most, remembered for
+  // the menu's yellow bar. Only mode auto installs anything. Silent on any failure.
   if (interactive && (plan.kind === 'menu' || (plan.kind === 'run' && !plan.json && !plan.quiet))) {
     try {
-      maybeAutoUpdate({ repoDir: MEERKAT_DIR, env, print: out })
+      maybeAutoUpdate({
+        repoDir: MEERKAT_DIR,
+        env,
+        exec: timedExec(3000),
+        print: plan.kind === 'menu' ? () => {} : out, // the menu shows the yellow bar instead
+        onCheck: () => process.stdout.write('Checking for updates...'),
+        onDone: () => process.stdout.write('\r\x1b[2K'),
+      })
     } catch {
       /* an update check never stops anything */
     }

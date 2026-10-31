@@ -77,6 +77,8 @@ export function parseArgs(argv) {
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
     else if (a === '--plain') o.plain = true
+    else if (a === '--flat') o.grouped = false
+    else if (a === '--grouped') o.grouped = true
     else if (a === '--config') o.config = next()
     else if (a === '--preset') o.preset = next()
     else if (a === '--group') o.groups.push(...parseGroups(next()))
@@ -234,6 +236,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let schedulerUsed = null
   let results
   let skippedCount = 0
+  let ranChecks = []
   let status = null
   if (!opts.list) {
     // The neuralvault example pack drives an Electron app through that app's own harness; other packs need no such folder.
@@ -272,6 +275,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       return 3
     }
     skippedCount = sel.skipped.length + applied.disabled.length
+    ranChecks = sel.run
     selection = { ran: sel.run.map((c) => c.id), skipped: sel.skipped.map((c) => `${c.id} (no files changed in its paths)`), covered: (sel.superseded ?? []).map((c) => `${c.id} (by ${c.supersededBy})`), disabled: applied.disabled.map((d) => d.id) }
     for (const s of sel.superseded ?? []) log(`[COVERED ] ${s.id}: not run on its own, ${s.supersededBy} covers it`)
     for (const s of sel.skipped) log(`[SKIPPED] ${s.id}: no files changed in its paths`)
@@ -280,7 +284,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     const useUi = uiOk
     if (opts.ui && !useUi) log('note: --ui needs an interactive terminal (not a pipe, CI or MEERKAT_PLAIN=1); using the plain lines')
     const bar = useUi
-      ? createTui({ theme, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '' })
+      ? createTui({ theme, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '', grouped: opts.grouped })
       : createProgress({ title: `MEERKAT · ${label}`, checks: sel.run, enabled: liveBar })
     const quiet = liveBar || useUi
     status = createStatus({ title: `MEERKAT · ${label}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
@@ -301,7 +305,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   log('')
   log(table(results))
   // What needs a look, repeated in full (failed output, reasons); a passing check shows nothing beyond its row above.
-  if (!opts.selfTest) for (const l of finalReport({ results, tier, timings, totalMs: Date.now() - started })) log(l)
+  if (!opts.selfTest) for (const l of finalReport({ results, tier, timings, totalMs: Date.now() - started, checks: ranChecks, grouped: opts.grouped })) log(l)
   log(line)
   // Every check's log, a summary and a plain-text report are saved for this run (lib/runlog.mjs).
   const report = writeRunReport({ dir: ctx.logDir, tier, preset: opts.preset, results, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })

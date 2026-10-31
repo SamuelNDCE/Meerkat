@@ -8,6 +8,7 @@
 //   node preview.mjs --once        print one still frame mid-run and exit
 //   node preview.mjs --final --speed 3000   run to the end at once and print the finished board (--fail for the alarm)
 //   node preview.mjs --plain       no colour
+//   node preview.mjs --flat        one line per check, as before (the default folds a run of more than 24 checks into groups; --grouped forces it)
 //   node preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
 import { writeFileSync } from 'node:fs'
 import { estimateRemaining } from './lib/eta.mjs'
@@ -22,6 +23,8 @@ const argv = process.argv.slice(2)
 const has = (f) => argv.includes(f)
 const SPEED = has('--speed') ? Number(argv[argv.indexOf('--speed') + 1]) || 10 : 10
 const FAIL = has('--fail')
+// --flat: one line per check; --grouped: always fold into groups; neither: fold when there are more than 24 checks.
+const GROUPED = has('--flat') ? false : has('--grouped') ? true : undefined
 const theme = loadTheme({})
 const color = !has('--plain') && !process.env.NO_COLOR
 if (has('--head')) {
@@ -31,6 +34,7 @@ if (has('--head')) {
 const ESC = '\x1b['
 
 // Real names, lanes and dependencies of the fast tier; durations are the cold-run numbers (seconds).
+const KIND = { 'rule-scan': 'security', 'npm-audit': 'security', 'cargo-audit': 'security', 'ui-screens': 'ui', 'click-through': 'ui' }
 const spec = [
   ['rule-scan', 'free', 1, [], ['reading 4,474 files', '5 rules, clean']],
   ['npm-audit', 'free', 2, [], ['asking the registry', 'found 0 vulnerabilities']],
@@ -46,6 +50,18 @@ const spec = [
   ['ui-screens', 'electron', 13, ['build-sidecar'], ['Dashboard', 'Library', 'Settings']],
   ['click-through', 'electron', 112, ['build-sidecar'], ['6 windows open', 'pressing controls: 120 / 362', 'pressing controls: 300 / 362']],
 ]
+
+// About fifty more quick checks, so the board has a realistic number of rows to fold: [group, pack, names].
+const MORE = [
+  ['security', 'security', ['secret-scan', 'private-key-scan', 'env-committed', 'eval-use', 'sql-string-concat', 'workflow-perms', 'pinned-actions']],
+  ['functionality', 'quality', ['todo-fixme', 'console-log-left', 'debugger-left', 'empty-catch', 'unused-exports', 'dead-imports', 'duplicate-ids', 'circular-imports', 'long-functions', 'any-types', 'ts-ignore-count', 'skipped-tests', 'focused-tests', 'test-names', 'broken-links', 'readme-present', 'license-present', 'changelog-fresh', 'json-valid', 'yaml-valid', 'lockfile-in-sync', 'engines-field', 'bin-executable', 'shebang-lines']],
+  ['functionality', 'node', ['package-scripts', 'peer-deps', 'unused-deps', 'type-field', 'exports-map', 'files-field']],
+  ['functionality', null, ['line-endings', 'trailing-space', 'final-newline', 'big-files']],
+  ['ui', 'web', ['alt-text', 'html-lang', 'button-names', 'form-labels']],
+  ['performance', 'performance', ['bundle-size', 'image-size', 'sync-fs-in-loop']],
+  ['refactor', 'refactor', ['file-length', 'nesting-depth', 'param-count', 'duplicate-blocks']],
+]
+for (const [group, pack, names] of MORE) for (const [i, name] of names.entries()) spec.push([name, 'free', 1 + (i % 3), [], [`checking ${name}`], group, pack])
 // Files the made-up checks "look at", so the board shows names moving past and a count rising (the real run reads them from the
 // MEERKAT-FILE and MEERKAT-FILES lines a check prints, lib/progress-files.mjs). Which checks read files, and how many.
 const FILE_TOTALS = { 'rule-scan': 4474, 'type-check': 940, 'build-all': 1840, 'unit-tests': 530, 'ui-screens': 24 }
@@ -57,8 +73,10 @@ export const fakeFile = (id, i) => {
   return `${DIRS[(i * 7) % DIRS.length]}/${STEMS[(i * 3 + 1) % STEMS.length]}${i % 11 === 0 ? '-' + (i % 97) : ''}${suffix}`
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-const checks = spec.map(([id, lane, secs, after, notes]) => ({
+const checks = spec.map(([id, lane, secs, after, notes, group, pack]) => ({
   id,
+  group: group ?? KIND[id] ?? 'functionality',
+  source: pack ? `pack ${pack}` : 'built in',
   lane,
   after,
   estSeconds: secs,
@@ -109,7 +127,7 @@ const frame = (tick) => {
   const remaining = estimateRemaining(rows, t, { freeSlots: 11 })
   const target = allDone ? 1 : (t - base) / Math.max(1, t - base + remaining)
   shown = allDone ? 1 : Math.max(shown, shown + (target - shown) * 0.3)
-  return renderLive({ title: 'MEERKAT fast', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: process.stdout.rows, color, theme })
+  return renderLive({ title: 'MEERKAT fast', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: process.stdout.rows, color, theme, grouped: GROUPED })
 }
 
 if (has('--once')) {
@@ -120,7 +138,15 @@ if (has('--once')) {
   for (const [id, at] of Object.entries(early)) {
     const c = checks.find((x) => x.id === id)
     model.start(c, t0 + at * 1000 - 2000)
-    model.settle(c, { status: 'PASS' }, 2000 + (id === 'type-check' || id === 'build-all' ? 8000 : 0))
+    model.settle(c, id === 'cargo-audit' && FAIL ? { status: 'FAIL', detail: '4 known advisories (RUSTSEC)' } : { status: 'PASS' }, 2000 + (id === 'type-check' || id === 'build-all' ? 8000 : 0))
+  }
+  // The extra quick checks: nearly all done by now, a few still running or waiting.
+  const extra = checks.filter((c) => !Object.hasOwn(early, c.id) && !['build-sidecar', 'unit-tests', 'ui-screens', 'click-through', 'vault-parser-proptest', 'sidecar-clippy'].includes(c.id))
+  for (const [i, c] of extra.entries()) {
+    if (i % 17 === 16) continue
+    model.start(c, i % 17 === 15 ? fakeNow - 1000 : t0 + 20_000 + i * 1500)
+    if (i % 17 === 15) continue
+    model.settle(c, { status: 'PASS' }, 1000 + (i % 3) * 1000)
   }
   for (const id of ['build-sidecar', 'unit-tests']) model.start(checks.find((c) => c.id === id), fakeNow - 120_000)
   model.queue([{ id: 'ui-screens', reason: 'after build-sidecar' }, { id: 'click-through', reason: 'after build-sidecar' }, { id: 'vault-parser-proptest', reason: 'the cargo lane is busy' }, { id: 'sidecar-clippy', reason: 'the cargo lane is busy' }])
