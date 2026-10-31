@@ -261,11 +261,22 @@ describe('the live board', () => {
     { id: 'b', status: 'RUNNING', lane: 'cargo', startedAt: 0, typicalMs: 100_000, expectedMs: 100_000, note: 'Compiling nv-core' },
     { id: 'c', status: 'WAITING', lane: 'electron', reason: 'after b', typicalMs: 5000, expectedMs: 5000 },
   ]
-  test('the head turns: left, front and right differ, and every pose has the same height', () => {
-    const poses = ['left', 'center', 'right', 'blink', 'happy', 'wide'].map((p) => headLines(p))
-    expect(new Set(poses.map((p) => p.length)).size).toBe(1)
-    expect(headLines('left').join('')).not.toBe(headLines('right').join(''))
-    expect(headLines('blink').join('')).toContain('-')
+  test('the pixel head turns: left, front and right differ, every pose has the same size, blinks keep their direction', () => {
+    const names = ['left', 'center', 'right', 'blink-left', 'blink-center', 'blink-right', 'happy', 'wide']
+    const heads = names.map((p) => headLines(p, true))
+    expect(new Set(heads.map((h) => h.length)).size).toBe(1)
+    expect(heads[0]).toHaveLength(7)
+    expect(heads[0].join('')).not.toBe(heads[2].join(''))
+    expect(heads[0].join('')).not.toBe(heads[1].join(''))
+    expect(heads[3].join('')).not.toBe(heads[0].join('')) // a blink changes the eye
+    expect(heads[2].join('')).not.toBe(heads[5].join(''))
+    expect(heads[0].join('')).toContain(String.fromCharCode(27) + '[38;2;')
+  })
+  test('without colour the same sprite is drawn in shades, and the eye still shows', () => {
+    const plain = headLines('left', false).join('\n')
+    expect(plain).not.toContain(String.fromCharCode(27))
+    expect(plain).toContain('○')
+    expect(headLines('blink-left', false).join('')).not.toContain('○')
   })
   test('it scans left, centre, right, centre while on watch, and reacts to the result', () => {
     const seen = new Set([0, 20, 40, 60].map((tick) => poseFor({ mood: 'watch', tick })))
