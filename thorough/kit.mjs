@@ -5,8 +5,13 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
+import { createProgressEmitter } from '../lib/progress-files.mjs'
 
 export const NOT_RUN = 75
+
+// What this check is looking at, for the live board (lib/progress-files.mjs). Silent unless the runner sets MEERKAT_PROGRESS.
+export { createProgressEmitter }
+export const progress = createProgressEmitter()
 export const BUDGET_FILE = '.meerkat-budgets.json'
 
 export function parseArgs(argv) {
@@ -21,6 +26,12 @@ export function parseArgs(argv) {
 
 // The files git tracks (so ignored build output and node_modules are never scanned); a plain walk when the folder is not a repository.
 export function trackedFiles(root) {
+  const list = listTrackedFiles(root)
+  progress.total(list.length)
+  return list
+}
+
+function listTrackedFiles(root) {
   try {
     const out = execFileSync('git', ['-C', root, 'ls-files', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 256 * 2 ** 20 })
     return out.split('\0').filter(Boolean).filter((f) => existsSync(join(root, f)))
@@ -43,6 +54,7 @@ export function trackedFiles(root) {
 export const isFixture = (f) => /(^|\/)(fixtures?|testdata|__fixtures__|test-fixtures)\//i.test(f)
 
 export const readText = (root, f) => {
+  progress.file(f)
   try {
     return readFileSync(join(root, f), 'utf8')
   } catch {
