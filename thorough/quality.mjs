@@ -89,7 +89,7 @@ const lineLength = (root) => {
 // ---- debug-leftovers: debugger statements, console.log, Python debug prints, Rust dbg!/todo!, Go debug prints
 const debugWhy = (x, line, prev, testy, cliish) => {
   if (/\.(m?[jt]sx?|cjs)$/.test(x)) {
-    if (/\bdebugger\s*;/.test(line)) return 'has debugger; left in (it stops the program when a debugger is attached)'
+    if (/\bdebugger\s*;|(?:^|[;{}])\s*debugger\s*(?:$|\/[/*])/.test(line)) return 'has debugger; left in (it stops the program when a debugger is attached)'
     if (!testy && !cliish && /\bconsole\.log\s*\(/.test(line)) return 'has console.log() left in'
   }
   if (/\.py$/.test(x) && /\bprint\(/.test(line) && (/print\(\s*f?["']\s*DEBUG/i.test(line) || /#\s*debug/i.test(prev))) return 'has a debug print() left in'
