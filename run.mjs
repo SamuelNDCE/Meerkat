@@ -190,7 +190,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     status = createStatus({ title: `MEERKAT ${tier}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
     log(`live status: ${statusPath(env)} (rewritten every few seconds while this runs)`)
     // How much a run may use at once: every thread by default, and 3 GB of memory left free; the config can change both.
-    const budget = { cpu: read.config.budget?.cpu ?? cpus().length, reserveGB: read.config.budget?.reserveGB ?? 3 }
+    const budget = { cpu: read.config.budget?.cpu ?? cpus().length, reserveGB: read.config.budget?.reserveGB ?? 3, maxParallel: read.config.budget?.maxParallel ?? 5 }
     results = await runAll(sel.run, ctx, { budget, keepGoing: opts.keepGoing, parallel: Math.max(1, cpus().length - 1), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status) })
     bar.stop()
     status.stop()

@@ -512,6 +512,18 @@ describe('the scheduler gives light checks the machine together and heavy ones r
     await runAll([a, b], ctx(), { parallel: 2, budget: { cpu: 8, reserveGB: 3 }, freeMemGB: () => 5 })
     expect(seen).toEqual(['a', 'b'])
   })
+  test('maxParallel caps how many run at once, and an "alone" check runs with nothing beside it', async () => {
+    let live = 0
+    let peak = 0
+    const mk = (id: string, extra: Record<string, unknown> = {}) => sleepCheck(id, 30, { cost: { cpu: 1, memGB: 0 }, run: async () => { live++; peak = Math.max(peak, live); await new Promise((r) => setTimeout(r, 30)); live--; return { ok: true, detail: '' } }, ...extra })
+    await runAll(['a', 'b', 'c', 'd', 'e'].map((i) => mk(i)), ctx(), { parallel: 9, budget: { cpu: 99, reserveGB: 0, maxParallel: 2 }, freeMemGB: () => 64 })
+    expect(peak).toBe(2)
+    peak = 0
+    const seen: number[] = []
+    const solo = mk('solo', { alone: true, run: async () => { seen.push(live); live++; await new Promise((r) => setTimeout(r, 30)); live--; return { ok: true, detail: '' } } })
+    await runAll([mk('x'), mk('y'), solo], ctx(), { parallel: 9, budget: { cpu: 99, reserveGB: 0, maxParallel: 5 }, freeMemGB: () => 64 })
+    expect(seen).toEqual([0])
+  })
   test('without a budget nothing changes: everything runs side by side as before', async () => {
     const t0 = Date.now()
     await runAll([sleepCheck('x', 80), sleepCheck('y', 80), sleepCheck('z', 80)], ctx(), { parallel: 5 })
