@@ -21,7 +21,8 @@ import { createModel } from './lib/tui/model.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
-import { parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
+import { mergePresets, parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
+import { readUserConfig } from './lib/userconfig.mjs'
 import { createSplash } from './lib/tui/splash.mjs'
 import { loadTheme } from './lib/tui/theme.mjs'
 
@@ -33,8 +34,29 @@ const meerkatVersion = () => {
   }
 }
 
+// How a time estimate reads: "about 1 second", "about 5 seconds", "about 2.5 minutes".
+export function durationText(ms) {
+  if (ms >= 90_000) return `${Math.round(ms / 6000) / 10} minutes`
+  const s = Math.round(ms / 1000)
+  return s === 1 ? '1 second' : `${s} seconds`
+}
+
+// One line per preset for --list-presets: name, where it comes from (project, personal or bundled; a project preset beats a personal one,
+// which beats a bundled one of the same name), tier, kinds of check, and the about text.
+export function presetLines(project = {}, personal = {}) {
+  const merged = mergePresets(project, personal)
+  const names = [...new Set([...Object.keys(PRESETS), ...Object.keys(personal), ...Object.keys(project)])]
+  return names.map((name) => {
+    const source = project[name] != null ? 'project' : personal[name] != null ? 'personal' : 'bundled'
+    const { preset } = resolvePreset(name, merged)
+    if (!preset) return `${name.padEnd(20)} ${source.padEnd(9)} (not usable: the preset is not an object)`
+    const kinds = preset.groups.length ? preset.groups.join(', ') : 'all'
+    return `${name.padEnd(20)} ${source.padEnd(9)} ${preset.tier.padEnd(9)} ${kinds.padEnd(30)} ${preset.about}`
+  })
+}
+
 export function parseArgs(argv) {
-  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, errors: [] }
+  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, listPresets: false, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -58,6 +80,7 @@ export function parseArgs(argv) {
     else if (a === '--group') o.groups.push(...parseGroups(next()))
     else if (a === '--estimate') o.estimate = true
     else if (a === '--init') o.init = true
+    else if (a === '--list-presets') o.listPresets = true
     else if (a === '--last') o.last = true
     else if (a === '--logs') o.logs = true
     else if (a === '--why') o.why = next()
@@ -115,17 +138,26 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // while the run is prepared, then disappears; real terminal only.
   const theme = loadTheme({ env })
   const uiOk = opts.ui && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
-  const splash = createSplash({ theme, env, enabled: uiOk && !opts.list && !opts.selfTest, title: `MEERKAT ${opts.thorough ? 'thorough' : 'fast'}` })
+  // The title names what runs: the preset when one was asked for, else the tier.
+  const label = opts.preset ?? (opts.thorough ? 'thorough' : 'fast')
+  const splash = createSplash({ theme, env, enabled: uiOk && !opts.list && !opts.selfTest && !opts.listPresets, title: `MEERKAT · ${label}` })
   splash.step('Loading the checks')
   // The project's own settings (meerkat.config.json, lib/config.mjs): checks turned off or swapped, tools changed, the budget. Every
   // note and every turned-off check is printed, so nothing is changed silently.
   const configFile = opts.noConfig ? null : findConfig({ explicit: opts.config, appDir, repoRoot })
   // With no config file, the packs that fit the folder (lib/init.mjs) are used, so a bare `node run.mjs` still checks something.
   const read = configFile ? readConfig(configFile) : { config: { packs: detect(appDir).config.packs, extraChecks: [], disable: [], override: {}, budget: null, presets: {} }, notes: [] }
-  const applied = await applyConfig([], read.config, { file: configFile })
-  const checks = applied.checks
-  // --preset (security, ui-fast, app, ...) picks the tier and the kinds of check; --group adds to it.
-  const chosen = resolvePreset(opts.preset, read.config.presets ?? {})
+  // The person's settings (~/.meerkat.json): personal presets and extra folders of packs. Read before the presets, since a preset can bring packs.
+  const user = readUserConfig(env)
+  const packDirs = Array.isArray(user.packDirs) ? user.packDirs.filter((d) => typeof d === 'string' && d.trim() !== '') : []
+  // --list-presets: every preset and where it comes from. Nothing is run.
+  if (opts.listPresets) {
+    for (const line of presetLines(read.config.presets ?? {}, user.presets ?? {})) log(line)
+    return 0
+  }
+  // --preset (security, ui-fast, app, ...) picks the tier, the kinds of check and any packs it brings; --group adds to it. A project's
+  // preset wins over the person's, which win over the built-in ones. Resolved before the packs load, so a preset's packs load too.
+  const chosen = resolvePreset(opts.preset, mergePresets(read.config.presets ?? {}, user.presets ?? {}))
   if (chosen.error) {
     log(chosen.error)
     return 2
@@ -134,8 +166,11 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     tier = chosen.preset.tier
     groups = [...chosen.preset.groups, ...groups]
     opts.include.push(...chosen.preset.include)
+    read.config.packs = [...new Set([...(read.config.packs ?? []), ...chosen.preset.packs])]
     if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
   }
+  const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs })
+  const checks = applied.checks
   if (!opts.list) {
     if (configFile) log(`config: ${configFile}`)
     for (const note of [...read.notes, ...applied.notes]) log(`config: ${note}`)
@@ -185,8 +220,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (opts.selfTest) {
     const withTest = checks.filter((c) => (opts.only.length ? opts.only.includes(c.id) : !c.optIn || opts.include.includes(c.optIn)))
     log(`self-test: ${withTest.length} checks`)
-    const bar = createProgress({ title: `MEERKAT ${tier} self-test`, checks: withTest, enabled: liveBar })
-    status = createStatus({ title: `MEERKAT ${tier} self-test`, tier, checks: withTest, file: statusPath(env), say: liveBar ? null : log })
+    const bar = createProgress({ title: `MEERKAT · ${label} self-test`, checks: withTest, enabled: liveBar })
+    status = createStatus({ title: `MEERKAT · ${label} self-test`, tier, checks: withTest, file: statusPath(env), say: liveBar ? null : log })
     results = await runAll(withTest, ctx, { selfTest: true, parallel: Math.max(1, cpus().length - 1), log: liveBar ? () => {} : log, hooks: fanOut(liveBar ? bar : null, status, recorder) })
     bar.stop()
     status.stop()
@@ -200,8 +235,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       const slots = Math.max(1, cpus().length - 1)
       const ms = estimateRemaining(rows, 0, { freeSlots: slots })
       const measured = sel.run.filter((c) => c.writtenEstSeconds !== undefined).length
-      const mins = (n) => (n >= 90_000 ? `${Math.round(n / 6000) / 10} minutes` : `${Math.round(n / 1000)} seconds`)
-      log(`ESTIMATE ${opts.preset ?? tier}: about ${mins(ms)} for ${sel.run.length} checks (${measured} with times measured on this PC, ${sel.run.length - measured} using the written guess)`)
+      log(`ESTIMATE ${opts.preset ?? tier}: about ${durationText(ms)} for ${sel.run.length} checks (${measured} with times measured on this PC, ${sel.run.length - measured} using the written guess)`)
       const lane = (l) => sel.run.filter((c) => c.lane === l).reduce((n, c) => n + (c.estSeconds ?? 0), 0)
       log(`  work by lane: cargo ${lane('cargo')} s (one at a time), windows ${lane('electron')} s (one at a time), everything else ${lane('free')} s (side by side)`)
       return 0
@@ -220,10 +254,10 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     const useUi = uiOk
     if (opts.ui && !useUi) log('note: --ui needs an interactive terminal (not a pipe, CI or MEERKAT_PLAIN=1); using the plain lines')
     const bar = useUi
-      ? createTui({ theme, title: `MEERKAT ${tier}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '' })
-      : createProgress({ title: `MEERKAT ${tier}`, checks: sel.run, enabled: liveBar })
+      ? createTui({ theme, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '' })
+      : createProgress({ title: `MEERKAT · ${label}`, checks: sel.run, enabled: liveBar })
     const quiet = liveBar || useUi
-    status = createStatus({ title: `MEERKAT ${tier}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
+    status = createStatus({ title: `MEERKAT · ${label}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
     log(`live status: ${statusPath(env)} (rewritten every few seconds while this runs)`)
     // How much a run may use at once: every thread by default, and 3 GB of memory left free; the config can change both.
     const budget = { cpu: read.config.budget?.cpu ?? Math.min(10, cpus().length), reserveGB: read.config.budget?.reserveGB ?? 3, maxParallel: read.config.budget?.maxParallel ?? 10 }
