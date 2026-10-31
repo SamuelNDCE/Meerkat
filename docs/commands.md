@@ -120,7 +120,7 @@ Flags, then environment variables, then the project's `meerkat.config.json`, the
 
 `meerkat` on its own, in a terminal, first asks which folder to check, then shows the preset menu with `Project: <path>` at the top. "Change project" in that menu returns to the picker. On a preset, `d` opens its details (the purpose and every check it runs here, with times); Up/Down scroll, any other key goes back. `u` updates and `q` quits. `d` works only in this menu: in the project picker and the folder browser, letters filter the list.
 
-The picker lists "Here" (the folder you are in, or its repository), "Recent", and "Repos found", then "Browse folders...", "Type or paste a path..." (a path or a project name, resolved like `meerkat verify <name>`) and, on Windows, "Choose another drive". Up/Down and Enter move and choose; typing narrows the lists, Backspace removes a letter, Esc clears the filter (and quits when there is none).
+The picker lists "Here" (the folder you are in, or its repository), "Recent", and "Repos found", then "Browse folders...", "Type or paste a path..." (a path or a project name, resolved like `meerkat verify <name>`) and, on Windows, "Choose another drive". Up/Down and Enter move and choose; typing narrows the lists, Backspace removes a letter, Esc clears the filter (and quits when there is none). In the preset menu that follows, Esc goes back to this picker to choose another project (`q` quits); the header shows `Project: <path>   Esc to change`.
 
 Repositories are found in the folder you are in, your recent projects, your roots (`meerkat root add <folder>`), and these places when they exist: `~/Documents`, `~/code`, `~/src`, `~/projects`, `~/dev`, `~/repos`, `~/Desktop` and the folders next to Meerkat. The search goes three levels deep, skips `node_modules`, `target`, `dist`, `build`, `AppData`, Windows system folders and hidden folders, never follows links, and stops after 400 repositories or 2 seconds. It reads only `.git/HEAD` of each repository, to show the branch.
 
@@ -138,7 +138,7 @@ Meerkat looks up the latest version once a day (turn off with `meerkat update of
 
 When a run started from `meerkat` finishes in a terminal, the live board leaves one short summary in the scrollback (the counts, the findings and the line `Findings folder created: <run folder>`) and a full-screen results view opens. The long FAIL, NOT RUN and SUITE lines are not printed there: they are in `report.md` and the logs, and a run with no terminal (a pipe, CI, `--plain`, `--json`) prints exactly the lines it always did.
 
-Three sections, switched with Tab, Left/Right or 1 2 3:
+Three tabs, shown as `<  Findings (95) | Checks (154) | Timeline  >` with the active one highlighted, switched with Tab, Left/Right or 1 2 3 (the first time the screen opens it also says `Press Tab or the arrow keys to see Checks and Timeline` until the first key). A small pixel meerkat head sits top left when the terminal has colour and at least 70 columns by 24 rows; otherwise the title is plain text:
 
 - **1 Findings**: grouped worst first. Critical red, high orange, medium yellow, low and info white (the word is always shown too). Enter opens the full detail, Esc comes back, `f` cycles the severity filter (all, critical, high, medium, low, info, new).
 - **2 Checks**: every check that ran or was skipped, with status, suite, time, a bar scaled to the slowest check and the reason when it did not pass. `s` cycles the status filter (all, problems, not run, passed). Enter opens the check (command, reason, findings, log path).

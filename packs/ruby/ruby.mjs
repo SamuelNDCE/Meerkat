@@ -6,5 +6,5 @@ const RUBY = ['**/*.rb', 'Gemfile', '.rubocop.yml']
 
 export default [
   tool({ id: 'rubocop', expect: 'Layout/SpaceAroundOperators', bin: 'rubocop', args: [], fixture: ['fixtures/tools/ruby/broken.rb'], install: 'gem install rubocop', title: 'RuboCop: Ruby style and common bugs', weight: 'light', estSeconds: 15, paths: RUBY }),
-  tool({ id: 'rspec', expect: 'expected: 2', bin: 'rspec', args: [], fixture: ['fixtures/tools/ruby/broken_spec.rb'], install: 'gem install rspec', title: 'RSpec: the test suite', weight: 'medium', estSeconds: 30, paths: ['**/*.rb'] }),
+  tool({ id: 'rspec', expect: 'expected: 2', bin: 'rspec', args: [], fixture: ['fixtures/tools/ruby/broken_spec.rb'], install: 'gem install rspec', title: 'RSpec: the test suite', weight: 'heavy', estSeconds: 60, paths: ['**/*.rb'] }),
 ]

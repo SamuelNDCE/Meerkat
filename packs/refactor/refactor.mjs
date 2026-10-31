@@ -24,8 +24,8 @@ export default [
   mk('file-length', 'Files too long to read in one sitting', 3, 'fast', 'light'),
   mk('long-functions', 'Functions too long to read in one sitting', 10, 'thorough', 'light'),
   mk('deep-nesting', 'Code nested too many levels deep', 5),
-  mk('commented-out-code', 'Commented-out code left in the files', 5),
-  mk('many-parameters', 'Functions with too many parameters', 5),
-  mk('unused-files', 'JavaScript and TypeScript files nothing imports', 10, 'thorough', 'light'),
-  mk('cyclomatic-complexity', 'Functions with too many branches to test', 5),
+  mk('commented-out-code', 'Commented-out code left in the files', 5, 'fast'),
+  mk('many-parameters', 'Functions with too many parameters', 5, 'fast'),
+  mk('unused-files', 'JavaScript and TypeScript files nothing imports', 10, 'fast', 'light'),
+  mk('cyclomatic-complexity', 'Functions with too many branches to test', 5, 'fast'),
 ]

@@ -42,7 +42,7 @@ export default [
     lane: 'free',
     weight: 'tiny',
     title: 'npm audit, high severity, every dependency including dev ones',
-    estSeconds: 5,
+    estSeconds: 15,
     needs: ['npm'],
     paths: ['package.json', 'package-lock.json', '**/package.json', '**/package-lock.json'],
     run: { cmd: 'node', args: [`${MK}/thorough/npm-audit.mjs`], cwd: 'app' },

@@ -13,6 +13,7 @@ import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
 import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from './lib/timings.mjs'
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
+import { discoverChecks } from './lib/discover.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
 import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
@@ -241,11 +242,21 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
   }
   const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) })
-  const checks = applied.checks
+  // The project's own tests, found without being told (lib/discover.mjs): only for full, thorough and release (a preset with allPacks), or
+  // when asked for by name (`meerkat check discovered`). Never for quick or ci. "discover": false turns it off.
+  const asked = opts.only.includes('discovered')
+  const found = (chosen.preset?.allPacks || asked) && !opts.selfTest ? discoverChecks(appDir, { existing: applied.checks, project: read.config.discover, personal: user.discover, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) }) : null
+  if (asked) opts.only = [...opts.only.filter((w) => w !== 'discovered'), ...(found?.checks ?? []).map((c) => c.id)]
+  if (asked && !opts.only.length) {
+    fail(found && !found.enabled ? 'discovery is turned off ("discover": false), so there is nothing to run for "discovered"' : 'no tests of this project\'s own were found to run (meerkat discover shows what was looked at)')
+    return 3
+  }
+  const checks = [...applied.checks, ...(found?.checks ?? [])]
   if (!opts.list) {
     if (configFile) log(`config: ${configFile}`)
-    for (const note of [...read.notes, ...applied.notes]) log(`config: ${note}`)
+    for (const note of [...read.notes, ...applied.notes, ...(found?.result.notes ?? [])]) log(`config: ${note}`)
     logDisabled(log, applied, configFile)
+    if (found?.checks.length) log(`found ${found.checks.length} test check${found.checks.length === 1 ? '' : 's'} of the project's own (meerkat discover lists them; "discover": false turns this off)`)
   }
   splash.step('Reading the times measured on this PC')
   // Use the times measured on this machine for the order, the bar and the time left; keep the written ones for any check not yet measured.
@@ -313,7 +324,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       const measured = sel.run.filter((c) => c.writtenEstSeconds !== undefined).length
       log(`ESTIMATE ${opts.preset ?? tier}: about ${durationText(ms)} for ${sel.run.length} checks (${measured} with times measured on this PC, ${sel.run.length - measured} using the written guess)`)
       const lane = (l) => sel.run.filter((c) => c.lane === l).reduce((n, c) => n + (c.estSeconds ?? 0), 0)
-      log(`  work by lane: cargo ${lane('cargo')} s (one at a time), windows ${lane('electron')} s (one at a time), everything else ${lane('free')} s (side by side)`)
+      log(`  work by lane: cargo ${lane('cargo')} s (one at a time), windows ${lane('electron')} s (one at a time), found window tests ${lane('windows')} s (up to ${found?.result.maxWindows ?? 3} at once), everything else ${lane('free')} s (side by side)`)
       return 0
     }
     // Nothing to run is not a pass: say why, and what to change.
@@ -338,7 +349,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     status = createStatus({ title: `MEERKAT · ${label}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
     log(`live status: ${statusPath(env)} (rewritten every few seconds while this runs)`)
     // How much a run may use at once: every thread by default, and 3 GB of memory left free; the config can change both.
-    const budget = { cpu: read.config.budget?.cpu ?? Math.min(10, cpus().length), reserveGB: read.config.budget?.reserveGB ?? 3, maxParallel: read.config.budget?.maxParallel ?? 10 }
+    const budget = { cpu: read.config.budget?.cpu ?? Math.min(10, cpus().length), reserveGB: read.config.budget?.reserveGB ?? 3, maxParallel: read.config.budget?.maxParallel ?? 10, maxWindows: found?.result.maxWindows ?? 3 }
     schedulerUsed = { slots: budget.cpu, maxParallel: budget.maxParallel, reserveGB: budget.reserveGB }
     results = await runAll(sel.run, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: Math.max(1, cpus().length - 1), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder) })
     bar.stop()
