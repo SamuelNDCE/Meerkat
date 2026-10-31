@@ -11,18 +11,21 @@
 //   node preview.mjs --speed 20    faster (default 10: 10 seconds of run per second watched)
 //   node preview.mjs --once        print one still frame mid-run and exit
 //   node preview.mjs --plain       no colour
+//   node preview.mjs --theme night looks: meerkat (default), night, retro, calm; see lib/tui/theme.mjs
 //   node preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
 import { computeProgress, etaMs } from './lib/progress.mjs'
 import { orderForSpeed, runAll } from './lib/runner.mjs'
 import { renderLive } from './lib/tui/live.mjs'
 import { colorLevel } from './lib/tui/color.mjs'
 import { renderGallery } from './lib/tui/gallery.mjs'
+import { loadTheme } from './lib/tui/theme.mjs'
 import { createModel } from './lib/tui/model.mjs'
 
 const argv = process.argv.slice(2)
 const has = (f) => argv.includes(f)
 const SPEED = has('--speed') ? Number(argv[argv.indexOf('--speed') + 1]) || 10 : 10
 const FAIL = has('--fail')
+const theme = loadTheme({ name: has('--theme') ? argv[argv.indexOf('--theme') + 1] : undefined })
 const color = !has('--plain') && !process.env.NO_COLOR
 if (has('--head')) {
   console.log(renderGallery({ mode: has('--256') ? '256' : color ? colorLevel(process.env) : false }))
@@ -84,7 +87,7 @@ const frame = (tick) => {
   const running = new Map(rows.filter((r) => r.status === 'RUNNING').map((r) => [r.id, r.startedAt]))
   const { fraction } = computeProgress({ checks: weights, done, running, now: t })
   const allDone = done.size === rows.length
-  return renderLive({ title: 'MEERKAT fast', rows, events, started: base, now: t, tick, fraction: allDone ? 1 : fraction, etaMs: allDone ? null : etaMs(fraction, t - base), width: Math.min(process.stdout.columns || 110, 120), color })
+  return renderLive({ title: 'MEERKAT fast', rows, events, started: base, now: t, tick, fraction: allDone ? 1 : fraction, etaMs: allDone ? null : etaMs(fraction, t - base), width: Math.min(process.stdout.columns || 110, 120), color, theme })
 }
 
 if (has('--once')) {
@@ -103,7 +106,7 @@ if (has('--once')) {
   note.set('build-sidecar', 'Compiling nv-agents v1.1.0')
   note.set('unit-tests-changed', 'vitest: 210 / 530 files')
   const rows = model.snapshot(fakeNow).map((r) => ({ ...r, note: note.get(r.id) }))
-  console.log(renderLive({ rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, color }).join('\n'))
+  console.log(renderLive({ rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, color, theme }).join('\n'))
   process.exit(0)
 }
 

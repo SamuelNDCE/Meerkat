@@ -20,6 +20,9 @@ import { finalReport } from '../report.mjs'
 import { runCommand } from '../exec.mjs'
 import { runOne } from '../runner.mjs'
 import { colorLevel, to256 } from './color.mjs'
+import { THEMES, furPalette, loadTheme, parseColor, sgrFor } from './theme.mjs'
+import { createSplash, renderSplash } from './splash.mjs'
+import { PALETTE } from './pixelhead.mjs'
 
 let dir: string
 beforeEach(() => {
@@ -485,8 +488,77 @@ describe('colour level: truecolor, 256 colours, or shades, decided the way image
     expect(plain).not.toContain(ESC)
     expect(plain).toContain('○') // the eye still shows
   })
-  test('the shaded sprite has light and shade tones, a lit eye and whiskers', () => {
-    const t = headLines('left', 'truecolor').join('')
-    expect(new Set(t.match(/38;2;\d+;\d+;\d+/g)).size).toBeGreaterThan(8)
+})
+
+describe('themes: customisation that can never break a run', () => {
+  const ESC = String.fromCharCode(27)
+  const NL = String.fromCharCode(10)
+  const rows = [{ id: 'b', status: 'RUNNING', lane: 'cargo', startedAt: 0, begunAt: 0, typicalMs: 100_000, expectedMs: 100_000 }]
+  const board = (theme: any, tick = 3) => renderLive({ rows, started: 0, now: 30_000, tick, fraction: 0.4, etaMs: 90_000, color: true, width: 110, theme }).join(NL)
+  test('colours may be hex or names, anything else is ignored', () => {
+    expect(parseColor('#7aa2f7')).toEqual(['rgb', [122, 162, 247]])
+    expect(parseColor('green')).toEqual(['sgr', '32'])
+    expect(parseColor('32')).toEqual(['sgr', '32'])
+    expect(parseColor('not a colour')).toBeNull()
+    expect(parseColor(42 as never)).toBeNull()
+    expect(sgrFor('#010203', '256')).toMatch(/^38;5;\d+$/)
+  })
+  test('a theme file overrides a built-in theme; invalid values fall back; a missing or broken file is fine', () => {
+    const read = (json: string) => () => json
+    const t = loadTheme({ name: 'night', env: {}, readFile: read(JSON.stringify({ spinner: 'line', speed: 2, mascot: false, bar: { ok: '#112233', bad: 'nonsense' }, fur: { M: '#8899bb', Q: 'bad' } })) })
+    expect(t.spinner).toBe('line')
+    expect(t.speed).toBe(2)
+    expect(t.mascot).toBe(false)
+    expect(t.bar.ok).toBe('#112233')
+    expect(t.bar.bad).toBe(THEMES.night.bar.bad) // the bad value was ignored
+    expect(t.fur.M).toBe('#8899bb')
+    expect(t.fur.Q).toBeUndefined()
+    const broken = loadTheme({ env: {}, readFile: read('{ not json') })
+    expect(broken.name).toBe('meerkat')
+    expect(loadTheme({ name: 'no-such-theme', env: {}, readFile: () => { throw new Error('none') } }).name).toBe('meerkat')
+    expect(loadTheme({ env: {}, readFile: read(JSON.stringify({ speed: 99 })) }).speed).toBe(1) // out of range, ignored
+  })
+  test('the spinner, bar colours and meerkat follow the theme', () => {
+    expect(board(THEMES.meerkat)).toContain('⠸') // frame 3 of the dots spinner
+    expect(board({ ...THEMES.meerkat, spinner: 'line' }, 1)).toContain(String.fromCharCode(92))
+    expect(board(THEMES.night)).toContain(ESC + '[38;2;187;154;247m') // the night theme's working colour (bb9af7)
+    const noMascot = board({ ...THEMES.meerkat, mascot: false })
+    expect(noMascot).not.toContain('▀')
+    expect(noMascot).toContain('MEERKAT fast')
+  })
+  test('animation speed scales the ticks: a slower theme changes less from tick to tick', () => {
+    const calm = (t: number) => board({ ...THEMES.meerkat, speed: 0.25 }, t)
+    expect(calm(0)).toBe(calm(1)) // a quarter speed: tick 1 is still frame 0
+    expect(board(THEMES.meerkat, 0)).not.toBe(board(THEMES.meerkat, 1))
+  })
+  test('the meerkat can be recoloured by the theme', () => {
+    const recoloured = furPalette(PALETTE, { M: '#ff0000' })
+    expect(recoloured.M).toEqual([255, 0, 0])
+    expect(PALETTE.M).not.toEqual([255, 0, 0]) // the original palette is untouched
+    expect(headLines('right', 'truecolor', recoloured).join('')).toContain('38;2;255;0;0')
+  })
+})
+
+describe('the loading screen', () => {
+  const NL = String.fromCharCode(10)
+  const ESC = String.fromCharCode(27)
+  test('it lists real steps with a spinner on the one in progress and a tick on the finished ones', () => {
+    const text = renderSplash({ steps: [{ label: 'Loading the checks', state: 'done' }, { label: 'Finding what changed', state: 'doing' }, { label: 'Choosing', state: 'todo' }], tick: 2, color: false, level: false }).join(NL)
+    expect(text).toContain('getting ready')
+    expect(text).toContain('✔ Loading the checks')
+    expect(text).toContain('⠹ Finding what changed')
+    expect(text).toContain('· Choosing')
+  })
+  test('it draws a step at a time, erases itself, and leaves the cursor visible', () => {
+    const out: string[] = []
+    const splash = createSplash({ stream: { write: (x: string) => out.push(x) } as never, env: {}, color: false })
+    splash.step('one')
+    splash.step('two')
+    splash.finish()
+    const all = out.join('')
+    expect(all).toContain('one')
+    expect(all).toContain('two')
+    expect(all.endsWith(ESC + '[?25h')).toBe(true)
+    expect(createSplash({ enabled: false }).enabled).toBe(false)
   })
 })

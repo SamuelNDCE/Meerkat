@@ -20,9 +20,11 @@ import { finalReport } from './lib/report.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
+import { createSplash } from './lib/tui/splash.mjs'
+import { loadTheme } from './lib/tui/theme.mjs'
 
 export function parseArgs(argv) {
-  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, app: null, errors: [] }
+  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -40,6 +42,7 @@ export function parseArgs(argv) {
     else if (a === '--progress') o.progress = true
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
+    else if (a === '--theme') o.theme = next()
     else if (a === '--app') o.app = next()
     else o.errors.push(`unknown argument: ${a}`)
   }
@@ -71,7 +74,14 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   process.env.NV_APP_DIR = appDir
   env.NV_APP_DIR = appDir
   const tier = opts.thorough ? 'thorough' : 'fast'
+  // The board's look (theme.mjs): --theme, NV_VERIFY_THEME or ~/.nv-verify-theme.json. A loading screen shows what is happening
+  // while the run is prepared, then disappears; real terminal only.
+  const theme = loadTheme({ name: opts.theme, env })
+  const uiOk = opts.ui && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
+  const splash = createSplash({ theme, env, enabled: uiOk && !opts.list && !opts.selfTest, title: `MEERKAT ${opts.thorough ? 'thorough' : 'fast'}` })
+  splash.step('Loading the checks')
   const checks = await loadChecks(join(here, 'checks'))
+  splash.step('Reading the times measured on this PC')
   // Use the times measured on this machine for the order, the bar and the time left; keep the written ones for any check not yet measured.
   const timingsFile = timingsPath(env)
   const timings = loadTimings(timingsFile)
@@ -86,6 +96,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
 
   const ctx = { repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null }
   let mode = opts.all || (opts.thorough && !opts.changed) ? 'all' : 'changed'
+  if (mode === 'changed') splash.step('Finding what changed against origin/dev')
   if (mode === 'changed') ctx.changedFiles = gitChangedFiles(repoRoot)
   if (mode === 'changed' && ctx.changedFiles === null) log('note: git could not list changed files (no origin/dev?), running every check')
   // Nothing differs from origin/dev on a promotion branch (test, beta, stable sit behind dev) or a clean dev
@@ -115,16 +126,18 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     bar.stop()
     status.stop()
   } else {
+    splash.step('Choosing the checks to run')
     const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles })
+    splash.finish()
     skippedCount = sel.skipped.length
     for (const s of sel.superseded ?? []) log(`[COVERED ] ${s.id}: not run on its own, ${s.supersededBy} covers it`)
     for (const s of sel.skipped) log(`[SKIPPED] ${s.id}: no files changed in its paths`)
     for (const id of opts.only) if (!checks.some((c) => c.id === id)) log(`warning: --only ${id} matches no check`)
     // --ui: the richer terminal view (lib/tui). Real terminal only; anywhere else the plain lines stay, and say so.
-    const useUi = opts.ui && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
+    const useUi = uiOk
     if (opts.ui && !useUi) log('note: --ui needs an interactive terminal (not a pipe, CI or NV_VERIFY_PLAIN=1); using the plain lines')
     const bar = useUi
-      ? createTui({ title: `MEERKAT ${tier}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.NV_VERIFY_PROFILE ?? '' })
+      ? createTui({ theme, title: `MEERKAT ${tier}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.NV_VERIFY_PROFILE ?? '' })
       : createProgress({ title: `MEERKAT ${tier}`, checks: sel.run, enabled: liveBar })
     const quiet = liveBar || useUi
     status = createStatus({ title: `MEERKAT ${tier}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
