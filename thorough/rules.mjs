@@ -15,10 +15,11 @@
 //   skipLine  optional RegExp: lines that match are skipped (comments, for example)
 //   notIn     optional RegExp on the path: files to skip (tests, vendored code)
 //   bad, good the proof: `bad` MUST be found by the rule and `good` MUST NOT (selfProve() checks every rule; a test calls it)
+//   severity  optional: critical | high | medium | low | info; default is MEERKAT_DEFAULT_SEVERITY (set by the runner from the check, its kind and its suite), else medium
 //   needs     optional (files: string[]) => boolean: the rule is NA (not applicable) when it returns false (default: NA when no file matched the rule's ext/files)
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { isFixture, isText, readText, trackedFiles } from './kit.mjs'
+import { finding, isFixture, isText, readText, trackedFiles } from './kit.mjs'
 
 const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|out|release)\//i
 const MINIFIED = /\.min\.(js|css)$/i
@@ -74,7 +75,7 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
       if (allow.has(`${rule.id} ${f}`) || allow.has(`${rule.id} *`)) continue
       const text = read(f)
       if (typeof text !== 'string') continue
-      for (const n of matches(rule, text, f)) found.push({ rule: rule.id, text: `${f}:${n} ${rule.title}` })
+      for (const n of matches(rule, text, f)) found.push({ rule: rule.id, text: `${f}:${n} ${rule.title}`, file: f, line: n, title: rule.title, severity: rule.severity })
     }
   }
   return { found, na, files: usable.length }
@@ -91,6 +92,9 @@ export function scanRules(name, root, rules, { allowFile, okNote = 'nothing foun
     else if (hit.has(r.id)) console.log(`MEERKAT-SUB FAIL ${r.id} ${hit.get(r.id)} found: ${reason}`)
     else console.log(`MEERKAT-SUB PASS ${r.id} ${reason}`)
   }
+  const fallback = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY) ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'
+  // One finding line per hit (lib/findings.mjs), alongside the usual output below.
+  for (const f of found) finding(f.severity ?? fallback, f.rule, f.file, f.line, f.title)
   if (!found.length) {
     console.log(`${name}: ${okNote}`)
     return 0

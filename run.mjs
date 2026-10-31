@@ -16,6 +16,7 @@ import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
 import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
+import { saveFindings } from './lib/findingsdoc.mjs'
 import { createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
@@ -244,7 +245,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
 
-  const ctx = { repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, disabledSubs: subsOffMap(applied.disabledSubs), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier) }
+  const ctx = { repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, disabledSubs: subsOffMap(applied.disabledSubs), findingsSink: new Map(), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier) }
   let mode = opts.all || (tier === 'thorough' && !opts.changed) ? 'all' : 'changed'
   if (mode === 'changed') splash.step('Finding what changed against the base branch')
   if (mode === 'changed') ctx.changedFiles = gitChangedFiles(repoRoot, env)
@@ -343,7 +344,10 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (tip) log(uiOk ? `[2m${tip}[0m` : tip)
   }
   // Every check's log, a summary and a plain-text report are saved for this run (lib/runlog.mjs).
-  const report = writeRunReport({ dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })
+  // The detection files (lib/findingsdoc.mjs): findings.json, findings.md, findings.sarif and detections.jsonl, then the cross-run history.
+  const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
+  if (findingsInfo && !opts.selfTest && !hush) log(findingsInfo.line)
+  const report = writeRunReport({ findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })
   if (report) log(`logs: ${ctx.logDir}   (node run.mjs --last shows the report, --why <check> one check's log)`)
   if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
   if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog)

@@ -6,6 +6,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, w
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { createProgressEmitter } from '../lib/progress-files.mjs'
+import { formatFindingLine } from '../lib/findings.mjs'
 
 export const NOT_RUN = 75
 
@@ -82,6 +83,14 @@ export function finish(name, findings, okNote = 'nothing found') {
   for (const f of findings.slice(0, 25)) console.log(`  ${f}`)
   if (findings.length > 25) console.log(`  ... and ${findings.length - 25} more`)
   return 1
+}
+
+// Tell Meerkat about one detection (the finding protocol, lib/findings.mjs). Pure addition to the usual output: a check still prints its own
+// lines and returns its own exit code. Returns the line printed, or null when an argument was not valid (nothing is printed then).
+export function finding(severity, ruleId, file, line, message) {
+  const text = formatFindingLine(severity, ruleId, file, line, message)
+  if (text) console.log(text)
+  return text
 }
 
 export function notRun(message) {
