@@ -3,20 +3,22 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**151 checks** across 25 packs: 134 quick, 17 thorough, 3 opt-in. [Security 45](#security-checks) · [Functionality 71](#functionality-checks) · [UI 15](#ui-checks) · [Performance 9](#performance-checks) · [Refactor 11](#refactor-checks)
+**197 checks** across 29 packs: 180 quick, 17 thorough, 3 opt-in. [Security 49](#security-checks) · [Functionality 107](#functionality-checks) · [UI 21](#ui-checks) · [Performance 9](#performance-checks) · [Refactor 11](#refactor-checks)
 
 ### Security checks
 
-Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 45 checks.
+Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 49 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
 | `actionlint` | fast | tiny | 3 s | GitHub Actions workflows (actionlint) *(needs: actionlint)* | infra |
 | `actions-secrets-echo` | fast | tiny | 3 s | GitHub Actions: no secrets printed or leaked, no broad permissions | security-plus |
 | `bandit` | fast | light | 10 s | Bandit: common Python security mistakes *(needs: bandit)* | python |
+| `compose-hygiene` | fast | tiny | 2 s | Docker Compose: pinned images, no privileged containers or host networking, no open database ports, no passwords in the file | config |
 | `cookie-flags` | fast | tiny | 2 s | Cookies are set with HttpOnly, Secure and SameSite | security-plus |
 | `cors-wildcard` | fast | tiny | 2 s | CORS: no site may read responses with credentials, and Origin is not copied back unchecked | security-plus |
 | `credentials-in-urls` | fast | tiny | 2 s | No user name and password written into a web address | security-plus |
+| `csp-present` | fast | tiny | 3 s | A site with HTML pages sends a Content-Security-Policy | web-plus |
 | `debug-enabled` | fast | tiny | 2 s | Debug mode is not switched on where it should be off | security-plus |
 | `dependency-pinning` | fast | tiny | 3 s | Dependencies name a fixed version, not latest or * | security |
 | `dependency-updates-configured` | fast | tiny | 2 s | A dependency update bot (Dependabot or Renovate) is configured | repo |
@@ -25,6 +27,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `env-files-in-history` | fast | tiny | 10 s | Git history: key and environment files that were ever committed | security-plus |
 | `hadolint` | fast | tiny | 3 s | Dockerfiles (hadolint) *(needs: hadolint)* | infra |
 | `hardcoded-ip` | fast | tiny | 2 s | No public IP address written into the code | security-plus |
+| `inline-event-handlers` | fast | tiny | 3 s | Markup has no inline script handlers (onclick and similar) or javascript: links | web-plus |
 | `install-scripts` | fast | tiny | 3 s | Code that runs on install: the project scripts and dependency install scripts | security-plus |
 | `jwt-weak` | fast | tiny | 2 s | JWTs: no "none" algorithm, no decode used as a sign-in check, no secret typed into the code | security-plus |
 | `kube-linter` | fast | light | 10 s | Kubernetes manifests: security and best practice (kube-linter) *(needs: kube-linter)* | kubernetes |
@@ -47,6 +50,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `sql-concat` | fast | tiny | 2 s | SQL is not built by joining text and values together | security-plus |
 | `sri-missing` | fast | tiny | 2 s | Scripts and stylesheets loaded from another site have an integrity hash | a11y |
 | `symlinks-tracked` | fast | tiny | 2 s | No symbolic links are committed (they break on Windows checkouts) | repo |
+| `target-blank-noopener` | fast | tiny | 3 s | Every link that opens a new tab has rel="noopener" | web-plus |
 | `typosquat-names` | fast | tiny | 3 s | Dependency names that look like a misspelt popular package | security-plus |
 | `unsafe-rust` | fast | tiny | 2 s | Every Rust unsafe block says why it is sound | hygiene |
 | `weak-crypto-modes` | fast | tiny | 2 s | No weak cipher, ECB mode, fixed key, guessable token or MD5 password | security-plus |
@@ -59,20 +63,26 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 
 ### Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 71 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 107 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
 | `broken-imports` | fast | tiny | 2 s | Every relative import points at a file that exists | hygiene |
 | `case-conflicts` | fast | tiny | 2 s | No two file names differ only by upper and lower case (they clash on Windows and macOS) | repo |
 | `changelog-format` | fast | tiny | 2 s | CHANGELOG.md has version headings, newest first | repo |
+| `changelog-version-headings` | fast | tiny | 2 s | CHANGELOG.md has version headings, with Unreleased first and newest first | content |
+| `changelog-vs-version` | fast | tiny | 2 s | The package.json version is written down in CHANGELOG.md | content |
+| `ci-node-version-pinned` | fast | tiny | 2 s | GitHub Actions setup steps name a real runtime version, not latest or a floating alias | config |
 | `ci-present` | fast | tiny | 2 s | An automated check config (CI) exists | repo |
+| `ci-timeouts` | fast | tiny | 2 s | Every GitHub Actions job sets timeout-minutes | config |
 | `codeowners-valid` | fast | tiny | 2 s | CODEOWNERS: every pattern has a real owner, and no pattern is listed twice | repo |
 | `composer-validate` | fast | tiny | 5 s | Composer: composer.json is valid (strict) *(needs: composer)* | php |
 | `conflict-markers` | fast | tiny | 2 s | No leftover merge-conflict markers | hygiene |
 | `contributing-file` | fast | tiny | 2 s | CONTRIBUTING.md exists once a project has a README and several source files | repo |
+| `csv-consistent` | fast | tiny | 2 s | Every CSV row has as many columns as its header | content |
 | `dart-analyze` | fast | light | 20 s | Dart: analyzer (errors, warnings and lints) *(needs: dart)* | dart |
 | `dart-format` | fast | tiny | 5 s | Dart: code formatting (dart format) *(needs: dart)* | dart |
+| `dead-assets` | fast | tiny | 2 s | Every image or font under public, assets or static is mentioned by some text file | content |
 | `debug-leftovers` | fast | tiny | 2 s | No debugger statements, console.log, debug prints, dbg! or todo! left in | quality |
 | `dotnet-build` | fast | medium | 30 s | .NET: the build, with warnings treated as errors *(needs: dotnet)* | dotnet |
 | `dotnet-format` | fast | light | 20 s | .NET: code formatting (dotnet format) *(needs: dotnet)* | dotnet |
@@ -85,13 +95,26 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `final-newline` | fast | tiny | 2 s | Every text file ends with exactly one newline | quality |
 | `focused-tests` | fast | tiny | 2 s | No test is left focused, which silently skips the rest | quality |
 | `generated-files-tracked` | fast | tiny | 2 s | No build or dependency output (node_modules, dist, build, target and similar) is committed to git | repo |
+| `gitattributes-eol` | fast | tiny | 2 s | Text files use one line-ending style, or a .gitattributes file says which | config |
 | `gitignore-essentials` | fast | tiny | 2 s | .gitignore covers dependencies, secrets and OS junk, and nothing it ignores is committed | repo |
+| `gitignored-but-tracked` | fast | tiny | 2 s | No file that .gitignore says to ignore is still tracked by git | config |
+| `go-defer-in-loop` | fast | tiny | 2 s | Go does not defer inside a loop | lang |
+| `go-ignored-errors` | fast | tiny | 2 s | Go does not throw an error away with _ | lang |
 | `go-test` | fast | medium | 1.0 min | go test: the test suite *(needs: go)* | go |
 | `go-vet` | fast | light | 15 s | go vet: suspicious constructs *(needs: go)* | go |
 | `helm-lint` | fast | tiny | 5 s | Helm chart: lint *(needs: helm)* | kubernetes |
+| `i18n-keys-match` | fast | tiny | 2 s | Every locale file has the same keys as the largest one | content |
+| `i18n-placeholders` | fast | tiny | 2 s | Every translation uses the same {name} or %s placeholders as the reference | content |
 | `indent-consistency` | fast | tiny | 2 s | No file mixes tab and space indentation | quality |
+| `js-await-in-loop` | fast | tiny | 2 s | No for or while loop awaits each step in turn | lang |
+| `js-eqeqeq` | fast | tiny | 2 s | JavaScript and TypeScript compare with === and !== (null checks aside) | lang |
+| `js-prototype-pollution` | fast | tiny | 2 s | No assignment can reach Object.prototype through __proto__ or a request key | lang |
+| `js-unhandled-promise` | fast | tiny | 2 s | No promise chain starts with .then and leaves its rejection unhandled | lang |
+| `js-var-usage` | fast | tiny | 2 s | No modern JavaScript or TypeScript declares a variable with var | lang |
+| `json-duplicate-keys` | fast | tiny | 2 s | No JSON object repeats a key | content |
 | `json-valid` | fast | tiny | 2 s | Every tracked JSON file parses | hygiene |
 | `large-files` | fast | tiny | 2 s | No oversized file or committed binary | hygiene |
+| `large-json-or-data` | fast | tiny | 2 s | No tracked JSON, CSV or SQL file is over the size budget (content.maxDataKb, default 512 KB) | content |
 | `line-length` | fast | tiny | 2 s | No source line is over the length limit (default 200 characters) | quality |
 | `links` | fast | tiny | 2 s | Every relative link in the documents resolves | hygiene |
 | `local-links` | fast | tiny | 5 s | Links between documents and files (lychee, offline) *(needs: lychee)* | docs |
@@ -99,17 +122,25 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `lockfiles` | fast | tiny | 2 s | Every manifest has its lockfile | hygiene |
 | `long-paths` | fast | tiny | 2 s | No tracked path is too long for Windows tools (default limit 200 characters) | repo |
 | `makefile-tabs` | fast | tiny | 2 s | Makefile recipes start with a tab and the common targets are .PHONY | quality |
+| `markdown-anchors` | fast | tiny | 2 s | Same-page #anchor links in Markdown match a heading or an anchor | content |
+| `markdown-code-fences` | fast | tiny | 2 s | Markdown code fences are closed and name their language | content |
+| `markdown-headings` | fast | tiny | 2 s | Markdown headings nest one level at a time, with one H1 and no trailing punctuation | content |
 | `markdownlint` | fast | tiny | 5 s | Markdown: well-formed documents *(needs: markdownlint-cli2)* | docs |
 | `markers` | fast | tiny | 2 s | No FIXME or XXX notes left in the code | hygiene |
 | `maven-compile` | fast | medium | 1.0 min | Maven: the Java code compiles *(needs: mvn)* | java |
 | `maven-test` | fast | medium | 1.5 min | Maven: the test suite *(needs: mvn)* | java |
 | `maven-validate` | fast | tiny | 10 s | Maven: the project file (pom.xml) is valid *(needs: mvn)* | java |
 | `mypy` | fast | light | 30 s | mypy: type errors *(needs: mypy)* | python |
+| `node-engines` | fast | tiny | 2 s | package.json declares engines.node, and .nvmrc is not below it | config |
 | `non-ascii-filenames` | fast | tiny | 2 s | File names use plain ASCII characters only | repo |
 | `package-fields` | fast | tiny | 2 s | package.json has its name, version, license and entry points that exist | repo |
 | `phpstan` | fast | medium | 30 s | PHPStan: bugs and undefined code (also reports PHP syntax errors) *(needs: phpstan)* | php |
 | `prettier` | fast | tiny | 10 s | Prettier: code is formatted *(needs: prettier)* | node |
+| `py-assert-in-prod` | fast | tiny | 2 s | Python does not check input with assert outside tests | lang |
+| `py-bare-except` | fast | tiny | 2 s | Python except clauses name the exception they catch | lang |
+| `py-mutable-default` | fast | tiny | 2 s | No Python default argument is a shared mutable object | lang |
 | `pytest` | fast | medium | 1.0 min | pytest: the test suite *(needs: pytest)* | python |
+| `readme-install-usage` | fast | tiny | 2 s | README is over 200 characters and has install and usage sections | content |
 | `readme-sections` | fast | tiny | 2 s | README has a title, a how-to-run heading and a licence mention | repo |
 | `reserved-names` | fast | tiny | 2 s | No file or folder uses a name Windows cannot use (CON, AUX, NUL, COM1, and similar) | repo |
 | `rspec` | fast | medium | 30 s | RSpec: the test suite *(needs: rspec)* | ruby |
@@ -118,40 +149,55 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `rust-clippy` | fast | heavy | 2.0 min | Rust lints (cargo clippy, warnings are errors) | rust |
 | `rust-fmt` | fast | heavy | 4 s | Rust formatting (cargo fmt --check) | rust |
 | `rust-test` | fast | heavy | 2.5 min | Rust tests (cargo test, the whole workspace) | rust |
+| `rust-todo-macros` | fast | tiny | 2 s | Rust has no todo! or unimplemented! outside tests | lang |
+| `rust-unwrap-overuse` | fast | tiny | 2 s | Rust unwrap() and expect() outside tests stay within the budget (lang.maxUnwrap) | lang |
 | `scripts-resolve` | fast | tiny | 2 s | Every file an npm script runs exists | hygiene |
 | `semver-valid` | fast | tiny | 2 s | Package, Rust and Python versions are valid version numbers | quality |
 | `shell-hygiene` | fast | tiny | 2 s | Shell scripts have a shebang, stop on errors and use LF line endings | quality |
 | `skipped-tests` | fast | tiny | 2 s | No test is skipped or disabled | quality |
+| `spell-common-typos` | fast | tiny | 2 s | No very common misspelling in the docs or comments | content |
 | `swift-build` | fast | medium | 1.0 min | Swift: the package builds *(needs: swift)* | swift |
 | `swiftlint` | fast | tiny | 10 s | SwiftLint: Swift style and safety *(needs: swiftlint)* | swift |
 | `terraform-fmt` | fast | tiny | 5 s | Terraform: formatting (terraform fmt) *(needs: terraform)* | terraform |
 | `test-presence` | fast | tiny | 2 s | The source has tests, and large folders of source have a test file | quality |
 | `todo-hygiene` | fast | tiny | 2 s | TODO, FIXME, HACK and XXX comments name an owner or an issue (when enforced) | quality |
+| `toml-valid` | fast | tiny | 2 s | Tracked TOML files read as valid (no unclosed strings, repeated keys or bad table headers) | config |
 | `trailing-whitespace` | fast | tiny | 2 s | No line ends with stray spaces or tabs | quality |
+| `ts-any-overuse` | fast | tiny | 2 s | TypeScript uses of any stay within the budget (lang.maxAny) | lang |
+| `ts-ignore-comments` | fast | tiny | 2 s | Every @ts-ignore and @ts-nocheck says why | lang |
 | `tsc` | fast | light | 15 s | TypeScript: no type errors *(needs: tsc)* | node |
+| `tsconfig-strict` | fast | tiny | 2 s | A TypeScript project has a tsconfig.json with strict turned on | config |
 | `typos` | fast | tiny | 3 s | Typos in code and documents *(needs: typos)* | docs |
+| `unicode-control-chars` | fast | tiny | 2 s | No bidirectional override or invisible zero-width character in tracked text | content |
 | `whitespace` | fast | tiny | 2 s | No byte-order marks or mixed line endings | hygiene |
+| `yaml-valid` | fast | tiny | 2 s | Tracked YAML files read as valid (no tab indentation, repeated top-level keys or unclosed quotes) | config |
 | `yamllint` | fast | tiny | 3 s | YAML files (yamllint) *(needs: yamllint)* | infra |
 | `rust-build-release` | thorough | heavy | 5.0 min | Rust release build (cargo build --release) | rust |
 | `rust-doc` | thorough | heavy | 1.0 min | Rust documentation builds without warnings (cargo doc) | rust |
 
 ### UI checks
 
-Pages and styles: accessibility basics and valid markup. 15 checks.
+Pages and styles: accessibility basics and valid markup. 21 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
 | `aria-valid` | fast | tiny | 2 s | ARIA attributes and roles are real, and nothing focusable is hidden from screen readers | a11y |
 | `css-contrast` | fast | tiny | 3 s | Text and background colours written together have enough contrast (WCAG 4.5:1) | ui |
+| `css-important-overuse` | fast | tiny | 3 s | The number of !important rules stays within the budget (default 20) | web-plus |
+| `duplicate-ids` | fast | tiny | 3 s | No id is used twice in one page | web-plus |
 | `focus-visible` | fast | tiny | 2 s | No stylesheet removes the keyboard focus outline without putting another indicator in its place | a11y |
 | `html-structure` | fast | tiny | 3 s | Pages: one h1, headings in order, unique ids, labelled inputs, keyboard-reachable click handlers | ui |
+| `html-valid-basics` | fast | tiny | 3 s | Pages have a doctype, and their common tags nest and close in order | web-plus |
 | `htmlhint` | fast | tiny | 5 s | HTML: valid, accessible markup (htmlhint) *(needs: htmlhint)* | web |
 | `iframe-title` | fast | tiny | 2 s | Every iframe has a title | a11y |
 | `image-alt-quality` | fast | tiny | 2 s | Image descriptions say what the picture shows (not a file name or a bare word like "image") | a11y |
+| `image-dimensions` | fast | tiny | 3 s | Every image has a width and height, and large local images load lazily | web-plus |
 | `link-text` | fast | tiny | 2 s | Every link has text that says where it goes (no empty or "click here" links) | a11y |
+| `manifest-valid` | fast | tiny | 3 s | Web app manifests are valid JSON with a name, icons and a start_url | web-plus |
 | `media-captions` | fast | tiny | 2 s | Videos have captions, and autoplaying media is muted or has controls | a11y |
 | `meta-seo` | fast | tiny | 3 s | Pages have a title and description of a useful length | ui |
 | `reduced-motion` | fast | tiny | 2 s | Animations and transitions have a prefers-reduced-motion option | a11y |
+| `robots-sitemap` | fast | tiny | 3 s | A web root with an index.html has a robots.txt or a sitemap.xml | web-plus |
 | `stylelint` | fast | tiny | 5 s | CSS: no invalid styles (stylelint) *(needs: stylelint)* | web |
 | `table-headers` | fast | tiny | 2 s | Data tables have header cells, and each header is tied to its row or column | a11y |
 | `ui-static` | fast | tiny | 2 s | Pages have alt text, a language, a title and a viewport; no empty buttons | hygiene |
