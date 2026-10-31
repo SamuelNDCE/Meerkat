@@ -97,16 +97,32 @@ export function parseArgs(argv) {
   return o
 }
 
-export async function main(argv = process.argv.slice(2), { log: givenLog, env = process.env, interactive } = {}) {
+// --json-stdout: stdout carries one JSON object and nothing else, so notes go to stderr. -q/--quiet: only the final result line.
+function outputStreams(opts, givenLog, env) {
   const baseLog = givenLog ?? ((l) => console.log(l))
-  const opts = parseArgs(argv)
-  // --json-stdout: stdout carries one JSON object and nothing else, so notes go to stderr. -q/--quiet: only the final result line.
-  const log = opts.jsonStdout ? (givenLog ?? ((l) => console.error(l))) : opts.quiet ? () => {} : baseLog
-  const fail = opts.jsonStdout || opts.quiet ? (givenLog ?? ((l) => console.error(l))) : baseLog
+  const hush = Boolean(opts.jsonStdout || opts.quiet)
+  const toErr = givenLog ?? ((l) => console.error(l))
   if (opts.noColor) env.NO_COLOR = process.env.NO_COLOR = '1'
+  return { baseLog, hush, log: opts.jsonStdout ? toErr : opts.quiet ? () => {} : baseLog, fail: hush ? toErr : baseLog }
+}
+
+// The run's summary.json plus where it is saved, as the only thing on stdout.
+function emitSummary(dir, fallback, givenLog) {
+  let summary = fallback
+  try {
+    summary = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8'))
+  } catch {
+    /* no saved summary: the short form is printed */
+  }
+  ;(givenLog ?? ((l) => process.stdout.write(`${l}\n`)))(JSON.stringify({ ...summary, runDir: dir ?? null }, null, 2))
+}
+
+export async function main(argv = process.argv.slice(2), { log: givenLog, env = process.env, interactive } = {}) {
+  const opts = parseArgs(argv)
+  const { baseLog, log, fail, hush } = outputStreams(opts, givenLog, env)
   // The live bar is for a person at a terminal: drawn only on a real TTY with the default output (a test or a
   // pipe passes its own log, CI sets CI), or when asked for with --progress. --no-progress or MEERKAT_PLAIN=1 turns it off.
-  const liveBar = opts.plain || opts.jsonStdout || opts.quiet ? false : opts.progress ?? (interactive ?? (givenLog === undefined && Boolean(process.stdout.isTTY) && !env.CI && env.MEERKAT_PLAIN !== '1'))
+  const liveBar = opts.plain || hush ? false : opts.progress ?? (interactive ?? (givenLog === undefined && Boolean(process.stdout.isTTY) && !env.CI && env.MEERKAT_PLAIN !== '1'))
   if (opts.errors.length) {
     fail(opts.errors.join('\n'))
     return 2
@@ -147,7 +163,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // while the run is prepared, then disappears; real terminal only.
   const theme = loadTheme({ env })
   // The full board (the meerkat, the bars, the timeline) is the default in a real terminal. --plain, a pipe, CI or MEERKAT_PLAIN=1 give plain lines.
-  const uiOk = (opts.ui || (!opts.plain && opts.progress !== false)) && !opts.jsonStdout && !opts.quiet && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
+  const uiOk = (opts.ui || (!opts.plain && opts.progress !== false)) && !hush && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
   // The title names what runs: the preset when one was asked for, else the tier.
   const label = opts.preset ?? (opts.thorough ? 'thorough' : 'fast')
   const splash = createSplash({ theme, env, enabled: uiOk && !opts.list && !opts.selfTest && !opts.listPresets, title: `MEERKAT · ${label}` })
@@ -291,15 +307,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const report = writeRunReport({ dir: ctx.logDir, tier, preset: opts.preset, results, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })
   if (report) log(`logs: ${ctx.logDir}   (node run.mjs --last shows the report, --why <check> one check's log)`)
   if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, results }, null, 2))
-  if (opts.jsonStdout) {
-    let summary = { tier, summary: line, exitCode, results }
-    try {
-      summary = JSON.parse(readFileSync(join(ctx.logDir, 'summary.json'), 'utf8'))
-    } catch {
-      /* no saved summary: the short form above is printed */
-    }
-    ;(givenLog ?? ((l) => process.stdout.write(`${l}\n`)))(JSON.stringify({ ...summary, runDir: ctx.logDir ?? null }, null, 2))
-  }
+  if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, results }, givenLog)
   if (opts.quiet) baseLog(line)
   return exitCode
 }
