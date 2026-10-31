@@ -13,7 +13,7 @@ import { applyFilter, createModel, initialState, nextState, outputFileFrom, typi
 import { renderHistory, renderRows, sparkline } from './render.mjs'
 import { frameFromStatus, rowsFromStatus, staleNote } from './watch.mjs'
 import { mascotLines, moodOf, speechFor, withMascot } from './mascot.mjs'
-import { animatedBar, headLines, poseFor, renderLive, timelineStrip } from './live.mjs'
+import { animatedBar, headLines, poseFor, renderLive, timelineStrip, windowRows } from './live.mjs'
 import { knownStatus, safeLogPath, stripControl } from './safe.mjs'
 import { parseArgs } from '../../run.mjs'
 import { finalReport } from '../report.mjs'
@@ -22,6 +22,7 @@ import { runOne } from '../runner.mjs'
 import { colorLevel, to256 } from './color.mjs'
 import { THEMES, furPalette, loadTheme, parseColor, sgrFor } from './theme.mjs'
 import { createSplash, renderSplash } from './splash.mjs'
+import { estimateRemaining } from '../eta.mjs'
 import { PALETTE } from './pixelhead.mjs'
 
 let dir: string
@@ -284,10 +285,10 @@ describe('the live board', () => {
     expect(plain).toContain('○')
     expect(headLines('blink-left', false).join('')).not.toContain('○')
   })
-  test('it faces right and glances left now and then while on watch, and reacts to the result', () => {
-    const seen = new Set([0, 50, 90, 100].map((tick) => poseFor({ mood: 'watch', tick })))
-    expect(seen).toEqual(new Set(['left', 'right']))
-    expect(poseFor({ mood: 'watch', tick: 0 })).toBe('right')
+  test('the head looks straight ahead and only blinks; it squints when all passed and stares when something failed', () => {
+    const seen = new Set([0, 24, 48, 72, 99, 100, 150].map((tick) => poseFor({ mood: 'watch', tick })))
+    expect(seen).toEqual(new Set(['right']))
+    expect(poseFor({ mood: 'watch', tick: 36 })).toBe('blink-right')
     expect(poseFor({ mood: 'cheer', tick: 0 })).toBe('happy')
     expect(poseFor({ mood: 'alarm', tick: 0 })).toBe('wide')
   })
@@ -328,11 +329,11 @@ describe('the animations are alive, and the board shows parallel work and an est
     expect(text).toContain('est. 1:15 left') // b: 100 s typical, 25 s spent
     expect(text).toContain('est. 0:28 left') // c: 50 s typical, 22 s spent
   })
-  test('it counts what runs in parallel and in which lane', () => {
+  test('everything that is running is on screen, each with its own bar, and nothing says "in parallel"', () => {
     const text = board(2)
-    expect(text).toContain('2 running in parallel')
-    expect(text).toContain('cargo 1')
-    expect(text).toContain('free 1')
+    expect(text).toContain('Compiling') // the running check's own line
+    expect(text.match(/est\. /g)?.length).toBe(2) // both running checks have their own estimate
+    expect(text).not.toContain('in parallel')
   })
   test('the timeline shows overlap: two running checks cover the same stretch, a waiting one is empty', () => {
     const strip = (r: any) => timelineStrip(r, { started: 0, now: 30_000, tick: 0, width: 30, color: false })
@@ -370,7 +371,6 @@ describe('the real run: live board, streamed output, end-of-run report', () => {
     const screen = tui.frame().join(NL)
     expect(screen).toContain('Compiling nv-core v1.1.0')
     expect(screen).not.toContain(String.fromCharCode(27))
-    expect(screen).toContain('running in parallel')
     expect(screen).toContain('estimated time left')
     tui.settle(checks[1], { status: 'PASS' }, 4000)
     tui.stop()
@@ -503,25 +503,25 @@ describe('themes: customisation that can never break a run', () => {
     expect(parseColor(42 as never)).toBeNull()
     expect(sgrFor('#010203', '256')).toMatch(/^38;5;\d+$/)
   })
-  test('a theme file overrides a built-in theme; invalid values fall back; a missing or broken file is fine', () => {
+  test('a theme file tunes the one look; invalid values fall back; a missing or broken file is fine', () => {
     const read = (json: string) => () => json
-    const t = loadTheme({ name: 'night', env: {}, readFile: read(JSON.stringify({ spinner: 'line', speed: 2, mascot: false, bar: { ok: '#112233', bad: 'nonsense' }, fur: { M: '#8899bb', Q: 'bad' } })) })
+    const t = loadTheme({ env: {}, readFile: read(JSON.stringify({ spinner: 'line', speed: 2, mascot: false, bar: { ok: '#112233', bad: 'nonsense' }, fur: { M: '#8899bb', Q: 'bad' } })) })
     expect(t.spinner).toBe('line')
     expect(t.speed).toBe(2)
     expect(t.mascot).toBe(false)
     expect(t.bar.ok).toBe('#112233')
-    expect(t.bar.bad).toBe(THEMES.night.bar.bad) // the bad value was ignored
+    expect(t.bar.bad).toBe(THEMES.meerkat.bar.bad) // the bad value was ignored
     expect(t.fur.M).toBe('#8899bb')
     expect(t.fur.Q).toBeUndefined()
     const broken = loadTheme({ env: {}, readFile: read('{ not json') })
     expect(broken.name).toBe('meerkat')
-    expect(loadTheme({ name: 'no-such-theme', env: {}, readFile: () => { throw new Error('none') } }).name).toBe('meerkat')
+    expect(Object.keys(THEMES)).toEqual(['meerkat']) // there is one look, no presets
     expect(loadTheme({ env: {}, readFile: read(JSON.stringify({ speed: 99 })) }).speed).toBe(1) // out of range, ignored
   })
-  test('the spinner, bar colours and meerkat follow the theme', () => {
+  test('the spinner, bar colours and meerkat follow the personal file', () => {
     expect(board(THEMES.meerkat)).toContain('⠸') // frame 3 of the dots spinner
     expect(board({ ...THEMES.meerkat, spinner: 'line' }, 1)).toContain(String.fromCharCode(92))
-    expect(board(THEMES.night)).toContain(ESC + '[38;2;187;154;247m') // the night theme's working colour (bb9af7)
+    expect(board({ ...THEMES.meerkat, bar: { ...THEMES.meerkat.bar, work: '#bb9af7' } })).toContain(ESC + '[38;2;187;154;247m')
     const noMascot = board({ ...THEMES.meerkat, mascot: false })
     expect(noMascot).not.toContain('▀')
     expect(noMascot).toContain('MEERKAT fast')
@@ -560,5 +560,54 @@ describe('the loading screen', () => {
     expect(all).toContain('two')
     expect(all.endsWith(ESC + '[?25h')).toBe(true)
     expect(createSplash({ enabled: false }).enabled).toBe(false)
+  })
+})
+
+describe('the countdown is a simulation of the rest of the run, and the list scrolls', () => {
+  const r = (id: string, lane: string, status: string, typicalMs: number, extra: any = {}) => ({ id, lane, status, typicalMs, expectedMs: typicalMs, after: [], ...extra })
+  test('a running check counts down by exactly the time that passes', () => {
+    const rows = [r('b', 'cargo', 'RUNNING', 100_000, { startedAt: 0 })]
+    expect(estimateRemaining(rows, 10_000)).toBe(90_000)
+    expect(estimateRemaining(rows, 40_000)).toBe(60_000)
+  })
+  test('checks in different lanes overlap, checks in one lane queue, and a check waits for what it needs', () => {
+    const rows = [
+      r('build', 'cargo', 'RUNNING', 100_000, { startedAt: 0 }),
+      r('tests', 'free', 'RUNNING', 60_000, { startedAt: 0 }),
+      r('clippy', 'cargo', 'WAITING', 50_000),
+      r('window', 'electron', 'WAITING', 30_000, { after: ['build'] }),
+    ]
+    // build ends at 100 s, then clippy (cargo, 50 s) and window (electron, 30 s) run together: 150 s, not 240 s
+    expect(estimateRemaining(rows, 0)).toBe(150_000)
+  })
+  test('a check that overran is assumed to be nearly done, and a dead dependency adds no time', () => {
+    const rows = [r('a', 'free', 'RUNNING', 10_000, { startedAt: 0 })]
+    const tail = estimateRemaining(rows, 60_000)
+    expect(tail).toBeGreaterThan(0)
+    expect(tail).toBeLessThan(5000)
+    const failed = [r('build', 'cargo', 'FAIL', 1000), r('window', 'electron', 'WAITING', 99_000, { after: ['build'] })]
+    expect(estimateRemaining(failed, 0)).toBe(0)
+    expect(estimateRemaining([], 0)).toBe(0)
+  })
+  test('light checks run side by side up to the free slots, then wait', () => {
+    const rows = [r('a', 'free', 'WAITING', 10_000), r('b', 'free', 'WAITING', 10_000), r('c', 'free', 'WAITING', 10_000)]
+    expect(estimateRemaining(rows, 0, { freeSlots: 3 })).toBe(10_000)
+    expect(estimateRemaining(rows, 0, { freeSlots: 1 })).toBe(30_000)
+  })
+  test('the list scrolls to follow the running checks and says how many are hidden', () => {
+    const rows = Array.from({ length: 20 }, (_, i) => ({ id: 'c' + i, status: i === 12 ? 'RUNNING' : i < 12 ? 'PASS' : 'WAITING' }))
+    const all = windowRows(rows, undefined)
+    expect(all.rows).toHaveLength(20)
+    const v = windowRows(rows, 8)
+    expect(v.rows.length).toBeLessThanOrEqual(8)
+    expect(v.rows.some((x: any) => x.status === 'RUNNING')).toBe(true)
+    expect(v.above + v.rows.length + v.below).toBe(20)
+    expect(v.above).toBeGreaterThan(0)
+  })
+  test('on a short screen the board fits and shows the hidden counts', () => {
+    const rows = Array.from({ length: 30 }, (_, i) => ({ id: 'check-' + i, lane: 'free', status: i === 20 ? 'RUNNING' : i < 20 ? 'PASS' : 'WAITING', ms: 1000, begunAt: 0, endedAt: 1000, startedAt: i === 20 ? 0 : null, typicalMs: 5000, expectedMs: 5000, after: [] }))
+    const text = renderLive({ rows, started: 0, now: 3000, tick: 1, fraction: 0.5, etaMs: 10_000, color: false, width: 110, height: 40 }).join(String.fromCharCode(10))
+    expect(text).toMatch(/↑ \d+ more above/)
+    expect(text.split(String.fromCharCode(10)).length).toBeLessThanOrEqual(40)
   })
 })

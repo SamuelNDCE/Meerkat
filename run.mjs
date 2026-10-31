@@ -42,7 +42,6 @@ export function parseArgs(argv) {
     else if (a === '--progress') o.progress = true
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
-    else if (a === '--theme') o.theme = next()
     else if (a === '--app') o.app = next()
     else o.errors.push(`unknown argument: ${a}`)
   }
@@ -74,9 +73,9 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   process.env.NV_APP_DIR = appDir
   env.NV_APP_DIR = appDir
   const tier = opts.thorough ? 'thorough' : 'fast'
-  // The board's look (theme.mjs): --theme, NV_VERIFY_THEME or ~/.nv-verify-theme.json. A loading screen shows what is happening
+  // The board's look (theme.mjs): one look, tuned in ~/.nv-verify-theme.json. A loading screen shows what is happening
   // while the run is prepared, then disappears; real terminal only.
-  const theme = loadTheme({ name: opts.theme, env })
+  const theme = loadTheme({ env })
   const uiOk = opts.ui && canUseUi({ isTTY: givenLog === undefined && Boolean(process.stdout.isTTY), env })
   const splash = createSplash({ theme, env, enabled: uiOk && !opts.list && !opts.selfTest, title: `MEERKAT ${opts.thorough ? 'thorough' : 'fast'}` })
   splash.step('Loading the checks')

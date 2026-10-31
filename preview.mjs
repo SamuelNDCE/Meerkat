@@ -11,9 +11,8 @@
 //   node preview.mjs --speed 20    faster (default 10: 10 seconds of run per second watched)
 //   node preview.mjs --once        print one still frame mid-run and exit
 //   node preview.mjs --plain       no colour
-//   node preview.mjs --theme night looks: meerkat (default), night, retro, calm; see lib/tui/theme.mjs
 //   node preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
-import { computeProgress, etaMs } from './lib/progress.mjs'
+import { estimateRemaining } from './lib/eta.mjs'
 import { orderForSpeed, runAll } from './lib/runner.mjs'
 import { renderLive } from './lib/tui/live.mjs'
 import { colorLevel } from './lib/tui/color.mjs'
@@ -25,7 +24,7 @@ const argv = process.argv.slice(2)
 const has = (f) => argv.includes(f)
 const SPEED = has('--speed') ? Number(argv[argv.indexOf('--speed') + 1]) || 10 : 10
 const FAIL = has('--fail')
-const theme = loadTheme({ name: has('--theme') ? argv[argv.indexOf('--theme') + 1] : undefined })
+const theme = loadTheme({})
 const color = !has('--plain') && !process.env.NO_COLOR
 if (has('--head')) {
   console.log(renderGallery({ mode: has('--256') ? '256' : color ? colorLevel(process.env) : false }))
@@ -72,6 +71,7 @@ const events = []
 const note = new Map()
 const say = (text) => events.push({ at: simNow(), text })
 
+let shown = 0
 const frame = (tick) => {
   const t = simNow()
   const rows = model.snapshot(t).map((r) => ({ ...r, note: r.status === 'RUNNING' ? note.get(r.id) : '' }))
@@ -82,12 +82,13 @@ const frame = (tick) => {
     const frac = Math.min(0.999, (t - r.startedAt) / (r.typicalMs ?? r.expectedMs))
     note.set(r.id, c.notes[Math.min(c.notes.length - 1, Math.floor(frac * c.notes.length))])
   }
-  const weights = checks.map((c) => ({ id: c.id, estSeconds: c.estSeconds }))
   const done = new Set(rows.filter((r) => ['PASS', 'FAIL', 'NOT RUN'].includes(r.status)).map((r) => r.id))
-  const running = new Map(rows.filter((r) => r.status === 'RUNNING').map((r) => [r.id, r.startedAt]))
-  const { fraction } = computeProgress({ checks: weights, done, running, now: t })
   const allDone = done.size === rows.length
-  return renderLive({ title: 'MEERKAT fast', rows, events, started: base, now: t, tick, fraction: allDone ? 1 : fraction, etaMs: allDone ? null : etaMs(fraction, t - base), width: Math.min(process.stdout.columns || 110, 120), color, theme })
+  // The same countdown and eased bar as the real run (lib/eta.mjs).
+  const remaining = estimateRemaining(rows, t, { freeSlots: 11 })
+  const target = allDone ? 1 : (t - base) / Math.max(1, t - base + remaining)
+  shown = allDone ? 1 : Math.max(shown, shown + (target - shown) * 0.3)
+  return renderLive({ title: 'MEERKAT fast', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: process.stdout.rows, color, theme })
 }
 
 if (has('--once')) {
