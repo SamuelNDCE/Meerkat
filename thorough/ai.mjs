@@ -143,6 +143,9 @@ const routeAudit = async (root) => {
   const list = findRoutes(root)
   if (!list.length) return notRun('no routes, handlers or IPC channels were found to audit')
   if (list.length > MAX_ROUTES) return notRun(`${list.length} routes is more than the ${MAX_ROUTES} this check covers in one run; a partial audit is not reported as a pass. Audit one folder at a time with --root`)
+  // Source files with a sensitive-looking name are not sent, so an audit that skipped one with routes in it would be partial: NOT RUN.
+  const skipped = trackedFiles(root).filter((x) => SOURCE.has(extname(x)) && SENSITIVE_PATH.test(x) && !/(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) && ROUTE_RES.some(([re]) => re.test(readText(root, x))))
+  if (skipped.length) return notRun(`route code in file(s) with a sensitive-looking name was left out (${skipped.slice(0, 3).join(', ')}); audit them by hand or rename them`)
   const cmd = aiCommand()
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
   const prepared = list.map((r) => ({ r, ...redact(r.code) }))
@@ -195,7 +198,7 @@ const diffReview = async (root) => {
   const held = changed.filter((x) => SENSITIVE_PATH.test(x))
   // A held file that is not positively a key or environment file (a source file called secrets.ts, say) would be silently left out
   // of the review, so that is NOT RUN, not a pass.
-  const unknownHeld = held.filter((x) => !SECRET_FILE.test(x))
+  const unknownHeld = held.filter((x) => !SECRET_FILE.test(x) || SOURCE.has(extname(x).toLowerCase()))
   if (unknownHeld.length) return notRun(`changed file(s) with a sensitive-looking name were left out of the review (${unknownHeld.slice(0, 3).join(', ')}); review them by hand or rename them`)
   const files = changed.filter((x) => !SENSITIVE_PATH.test(x))
   if (held.length) console.log(`(${held.length} key or environment file(s) are never sent: ${held.slice(0, 5).join(', ')})`)
