@@ -57,7 +57,7 @@ Options for every run: `--ai` (include the AI checks), `--json` (print the resul
 | `meerkat doctor [folder]` | for this project: which checks would run, which would be NOT RUN and what to install; `--json` |
 | `meerkat self-test [folder]` | prove every check fails on its broken case |
 | `meerkat ai status` / `use <provider> [model]` / `test` | choose the model for the AI checks; `use claude haiku`, `use openrouter deepseek/deepseek-chat` |
-| `meerkat update [check\|apply\|auto\|notify\|off\|status]` | updating Meerkat; off by default |
+| `meerkat update [check\|apply\|auto\|notify\|off\|status]` | updating Meerkat; looks up the latest version once a day (turn off with `meerkat update off`), never installs without you |
 | `meerkat mcp install [claude]` / `serve` / `status` | register or run the tool server for AI agents |
 | `meerkat completion <powershell\|bash\|zsh>` | print a shell completion script |
 | `meerkat describe` | print every command, option and output field as JSON, for AI agents |

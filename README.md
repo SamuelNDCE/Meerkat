@@ -568,17 +568,17 @@ A model can miss things and can be wrong: it is an extra reader, not a gate to r
 
 ## Updating
 
-Meerkat is a clone of this repository, so updating is a fast-forward from GitHub. It is **off by default**, and you choose:
+Meerkat is a clone of this repository, so updating is a fast-forward from GitHub. **Meerkat looks up the latest version once a day (turn off with `meerkat update off`); it never installs without you.** The lookup is read-only, has a 3 second limit, and sends nothing but the request itself. When a newer version exists, the menu shows a yellow bar at the top with its version number; press `u` in the menu (or run `meerkat update`) and answer yes to install it.
 
 | Command | What it does |
 |---|---|
-| `meerkat update` | checks GitHub, shows what changed, and pulls only if you say yes (`--yes` skips the question, `--check` only looks) |
-| `meerkat update notify` | once a day, when you start `meerkat` in a terminal, prints one line if a newer version exists |
-| `meerkat update auto` | once a day, applies a clean fast-forward and says what changed |
-| `meerkat update off` | never contacts GitHub on its own (the default) |
-| `meerkat update status` | shows the mode and when it last checked |
+| `meerkat update` | checks GitHub, shows what changed, and pulls only if you say yes (`--yes` skips the question, `--check` only looks and remembers the answer for the menu's bar) |
+| `meerkat update notify` | the default: one lookup a day, a yellow bar in the menu, nothing installed |
+| `meerkat update auto` | the only mode that installs on its own: once a day, applies a clean fast-forward and says what changed |
+| `meerkat update off` | no daily lookup and no bar (except after a manual `meerkat update --check`) |
+| `meerkat update status` | shows the mode, the newest version it knows about and when it was checked |
 
-An update is refused if you have local changes or it would not be a fast-forward. This is the only code in Meerkat that contacts the network by itself, and only when you turned it on or asked. It sends nothing about you.
+An update is refused if you have local changes or it would not be a fast-forward. This is the only code in Meerkat that contacts the network by itself. It sends nothing about you or your project.
 
 ## Privacy
 

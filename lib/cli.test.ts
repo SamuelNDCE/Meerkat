@@ -355,6 +355,7 @@ describe('update', () => {
 
   test('mode off never calls exec', () => {
     const env = { MEERKAT_USER_CONFIG: join(dir, 'u.json') }
+    writeUserConfig({ updates: 'off' }, env)
     const calls: Call[] = []
     const r = maybeAutoUpdate({ repoDir: repo, exec: fakeExec({}, calls), env, home: dir })
     expect(r).toMatchObject({ ran: false })
