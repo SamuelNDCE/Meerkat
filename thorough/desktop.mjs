@@ -53,7 +53,9 @@ const electronApp = (root) => {
       // not a readable manifest: skip it
     }
   }
-  return tracked(root, CODE).some((x) => ELECTRON_IMPORT.test(readText(root, x)))
+  // Source that only MENTIONS electron (sample projects, tests, docs) does not make the repo an Electron app.
+  const sample = /(^|\/)(tools|tests?|__tests__|fixtures?|docs|examples?)\/|\.(test|spec)\.[a-z]+$/i
+  return tracked(root, CODE).some((x) => !sample.test(x) && ELECTRON_IMPORT.test(readText(root, x)))
 }
 
 const APPS = {

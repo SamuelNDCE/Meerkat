@@ -379,7 +379,7 @@ export function makeFixtures(root, names = Object.keys(FIXTURES)) {
   return out
 }
 
-export const fixtureNames = () => Object.keys(FIXTURES)
+const fixtureNames = () => Object.keys(FIXTURES)
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = process.argv[2] ? resolve(process.argv[2]) : mkdtempSync(join(tmpdir(), 'meerkat-compat-'))

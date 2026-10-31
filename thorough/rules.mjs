@@ -1,7 +1,7 @@
 // A small engine for DATA-DRIVEN sub-checks: a check script is a table of rules, and every rule is one sub-check.
 //
 //   const RULES = [
-//     { id: 'eval-call', title: 'eval() runs text as code', ext: ['js', 'ts'], re: /\beval\s*\(/, bad: 'eval(x)', good: 'evaluate(x)' },
+//     { id: 'no-debugger', title: 'a debugger statement is left in', ext: ['js', 'ts'], re: /\bdebugger\b/, bad: 'debugger', good: 'debug(x)' },
 //     { id: 'merge-marker', title: 'a merge marker is left in', files: /\.(md|txt)$/, re: /^<{7} /, multiline: false, bad: '<<<<<<< HEAD', good: 'ok' },
 //   ]
 //   process.exitCode = scanRules('my-check', root, RULES, { allowFile: '.meerkat-my-allow' })

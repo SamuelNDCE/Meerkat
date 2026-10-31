@@ -84,21 +84,6 @@ export function finish(name, findings, okNote = 'nothing found') {
   return 1
 }
 
-// Sub-checks: one result per RULE inside a check, printed as `MEERKAT-SUB <PASS|FAIL|NA> <rule-id> <reason>` (see docs/suites.md).
-// `rules` is every rule the check knows ({ id, title }); `found` is the findings, each { rule, text }. A rule with no finding is a PASS,
-// a rule listed in `na` (ids that do not apply to this project) is NA. Returns the exit code like finish().
-export function finishRules(name, rules, found, okNote = 'nothing found', na = []) {
-  const hit = new Map()
-  for (const f of found) hit.set(f.rule, (hit.get(f.rule) ?? 0) + 1)
-  for (const r of rules) {
-    const reason = String(r.title ?? '').replace(/[\r\n]+/g, ' ').slice(0, 120)
-    if (na.includes(r.id)) console.log(`MEERKAT-SUB NA ${r.id} ${reason}`)
-    else if (hit.has(r.id)) console.log(`MEERKAT-SUB FAIL ${r.id} ${hit.get(r.id)} found: ${reason}`)
-    else console.log(`MEERKAT-SUB PASS ${r.id} ${reason}`)
-  }
-  return finish(name, found.map((f) => f.text), okNote)
-}
-
 export function notRun(message) {
   console.log(`NOT RUN: ${message}`)
   return NOT_RUN

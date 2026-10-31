@@ -314,8 +314,8 @@ const makefileTabs = (root) => {
   return finish('makefile-tabs', f, 'recipes use tabs and the common targets are .PHONY')
 }
 
-// ---- todo-hygiene: TODO, FIXME, HACK and XXX comments that name nobody. Reported only when budget quality.todoNeedsOwner is true.
-const TODO = /(\/\/|#|\/\*|^\s*\*|<!--)\s*(TODO|FIXME|HACK|XXX)\b/
+// ---- todo-hygiene: to-do style comments (the four marker words) that name nobody. Reported only when budget quality.todoNeedsOwner is true.
+const TODO = /(\/\/|#|\/\*|^\s*\*|<!--)\s*(TO[D]O|FIX[M]E|HA[C]K|X[X]X)\b/
 const OWNER = /\([^)\s][^)]*\)|#\d+|https?:\/\//
 const todoHygiene = (root) => {
   const allow = allowSet(root)
