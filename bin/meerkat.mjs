@@ -2,8 +2,6 @@
 // `meerkat`: the command line front door. Plans the command with lib/cli.mjs, then does it.
 // Exit codes: 0 passed, 1 a check failed or could not run, 2 a usage or configuration error, 3 nothing to run, 130 interrupted.
 // Results go to stdout; notes, progress and errors go to stderr.
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { helpText, loadPresets, packAdd, packRemove, planCommand, presetsText, rootCommand } from '../lib/cli.mjs'
 import { buildBugReport } from '../lib/bugreport.mjs'
 import { execute } from '../lib/commands.mjs'
@@ -15,6 +13,7 @@ import { runLog, showRun } from '../lib/runs.mjs'
 import { asyncTimedExec, maybeAutoUpdateAsync, runUpdateCommand } from '../lib/update.mjs'
 import { createUpdateCheck, outcomeOf } from '../lib/updatecheck.mjs'
 import { addRecent } from '../lib/userconfig.mjs'
+import { VERSION } from '../lib/version.mjs'
 
 process.noDeprecation = true // the claude command on Windows is a .cmd shim, which can only be started through a shell
 process.stdout.on('error', (e) => {
@@ -29,13 +28,7 @@ const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !env
 const out = (t) => process.stdout.write(`${t}\n`)
 const err = (t) => process.stderr.write(`${t}\n`)
 
-function version() {
-  try {
-    return JSON.parse(readFileSync(join(MEERKAT_DIR, 'package.json'), 'utf8')).version
-  } catch {
-    return 'unknown'
-  }
-}
+const version = () => VERSION // lib/version.mjs: package.json, read once
 
 async function main() {
   const presets = loadPresets({ cwd, env })
