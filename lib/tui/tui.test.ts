@@ -16,6 +16,8 @@ import { mascotLines, moodOf, speechFor, withMascot } from './mascot.mjs'
 import { animatedBar, headLines, poseFor, renderLive, timelineStrip } from './live.mjs'
 import { knownStatus, safeLogPath, stripControl } from './safe.mjs'
 import { parseArgs } from '../../run.mjs'
+import { finalReport } from '../report.mjs'
+import { runCommand } from '../exec.mjs'
 
 let dir: string
 beforeEach(() => {
@@ -103,8 +105,7 @@ describe('the live view with a fake run', () => {
     tui.start(checks[1])
     t = 5000
     tui.settle(checks[1], { status: 'FAIL', detail: `boom  [full output: ${log}]` }, 5000)
-    tui.key('down')
-    tui.key('enter')
+    tui.key('o')
     const screen = tui.frame().join('\n')
     expect(screen).toContain('FAIL')
     expect(screen).toContain('1 failed')
@@ -344,5 +345,71 @@ describe('the animations are alive, and the board shows parallel work and an est
     const coloured = renderLive({ rows, started: 0, now: 30_000, tick: 5, fraction: 0.4, etaMs: 90_000, color: true, width: 110 }).join(NL)
     expect(coloured.replace(new RegExp(String.fromCharCode(27) + '\[[0-9;]*m', 'g'), '')).toContain('estimated time left 1:30')
     expect(coloured.length).toBeGreaterThan(plain.length)
+  })
+})
+
+describe('the real run: live board, streamed output, end-of-run report', () => {
+  const NL = String.fromCharCode(10)
+  const mk = () => {
+    const out: string[] = []
+    return { out, columns: 120, rows: 50, write: (t: string) => out.push(t) }
+  }
+  test('it uses the alternate screen, shows what each running check prints, and leaves the finished board behind', () => {
+    const stream = mk()
+    let t = 0
+    const tui = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, now: () => t, color: false, tickMs: 3_600_000 })
+    expect(stream.out.join('')).toContain(String.fromCharCode(27) + '[?1049h')
+    tui.start(checks[1])
+    tui.output(checks[1], 'Compiling nv-core v1.1.0' + String.fromCharCode(27) + '[2J')
+    t = 4000
+    const screen = tui.frame().join(NL)
+    expect(screen).toContain('Compiling nv-core v1.1.0')
+    expect(screen).not.toContain(String.fromCharCode(27))
+    expect(screen).toContain('running in parallel')
+    expect(screen).toContain('estimated time left')
+    tui.settle(checks[1], { status: 'PASS' }, 4000)
+    tui.stop()
+    const all = stream.out.join('')
+    expect(all).toContain(String.fromCharCode(27) + '[?1049l')
+    expect(all).toContain('MEERKAT fast')
+    tui.stop() // a second stop is harmless
+  })
+  test('a narrow terminal gets the compact view, a wide one the board with the head', () => {
+    const narrow = { out: [] as string[], columns: 80, rows: 50, write: (x: string) => narrow.out.push(x) }
+    const t1 = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: narrow as never, input: { isTTY: false } as never, color: false, tickMs: 3_600_000 })
+    expect(t1.frame().join(NL)).not.toContain('TIMELINE')
+    t1.stop()
+    const wide = mk()
+    const t2 = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: wide as never, input: { isTTY: false } as never, color: false, tickMs: 3_600_000 })
+    expect(t2.frame().join(NL)).toContain('TIMELINE')
+    t2.stop()
+  })
+  test('runCommand reports the newest line of output as it arrives, and a display problem never stops the check', async () => {
+    const lines: string[] = []
+    const r = await runCommand({ cmd: 'node', args: ['-e', "console.log('one'); setTimeout(() => console.log('two'), 50)"], timeoutMs: 20_000, onLine: (l: string) => lines.push(l) })
+    expect(r.code).toBe(0)
+    expect(lines).toContain('two')
+    const r2 = await runCommand({ cmd: 'node', args: ['-e', "console.log('x')"], timeoutMs: 20_000, onLine: () => { throw new Error('display broke') } })
+    expect(r2.code).toBe(0)
+  })
+  test('the report repeats only what needs a look: counts, slow ones, failures with the end of their output, NOT RUN reasons', () => {
+    const log = join(dir, 'f.log')
+    writeFileSync(log, ['a', 'b', 'c'].join(NL) + NL)
+    const results = [
+      { id: 'a', status: 'PASS', ms: 20_000, detail: '' },
+      { id: 'b', status: 'FAIL', ms: 3000, detail: `boom  [full output: ${log}]` },
+      { id: 'c', status: 'NOT RUN', ms: 0, detail: 'stopped after the first failure' },
+    ]
+    const text = finalReport({ results, tier: 'fast', timings: { checks: { a: { fast: [2000] } } }, totalMs: 61_000 }).join(NL)
+    expect(text).toContain('SUMMARY [ 1:01 ] 3 checks: 1 passed (1 slow), 1 failed, 1 not run')
+    expect(text).toContain('SLOWEST   a 0:20')
+    expect(text).toContain('SLOW      a took 0:20, usually 0:02')
+    expect(text).toContain('FAIL      b: boom')
+    expect(text).toContain('| c')
+    expect(text).toContain('NOT RUN   c: stopped after the first failure')
+    // a passing check shows nothing beyond its slow line
+    const clean = finalReport({ results: [{ id: 'a', status: 'PASS', ms: 1000, detail: '' }], tier: 'fast', timings, totalMs: 1000 }).join(NL)
+    expect(clean).toContain('1 passed')
+    expect(clean).not.toContain('FAIL')
   })
 })

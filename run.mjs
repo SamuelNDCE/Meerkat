@@ -16,6 +16,7 @@ import { createProgress } from './lib/progress.mjs'
 import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
 import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from './lib/timings.mjs'
+import { finalReport } from './lib/report.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
@@ -140,6 +141,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (!opts.selfTest) appendRun(historyPath(env), runEntry({ tier, summary: line, exitCode, ms: Date.now() - started, results }))
   log('')
   log(table(results))
+  // What needs a look, repeated in full (failed output, reasons); a passing check shows nothing beyond its row above.
+  if (!opts.selfTest) for (const l of finalReport({ results, tier, timings, totalMs: Date.now() - started })) log(l)
   log(line)
   if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, results }, null, 2))
   return exitCode
