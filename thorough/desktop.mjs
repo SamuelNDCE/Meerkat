@@ -10,7 +10,8 @@ const PAGE = /\.(m?[jt]sx?|cjs|cts|mts|html?)$/i
 const UPDATE_FILES = /\.(m?[jt]sx?|cjs|cts|mts|json|ya?ml)$/i
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?|out|release|coverage|docs?|examples?|tests?|__tests__)\/|\.min\.(m?js|css)$|\.(test|spec)\.[a-z]+$|(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$|^thorough\/desktop\.mjs$/i
 const COMMENT = /^\s*(\/\/|\/\*|\*|<!--|#)/
-const ELECTRON_IMPORT = /require\(\s*['"]electron['"]\s*\)|from\s+['"]electron['"]|import\(\s*['"]electron['"]/
+// An import at the start of a line (as real code writes it), so text that only MENTIONS an electron import inside a string does not count.
+const ELECTRON_IMPORT = /^[ \t]*(?:(?:const|let|var)\s+[^=\n]+=\s*|\w+\s*=\s*|export\s+)?(?:require\(\s*['"]electron['"]\s*\)|import\(\s*['"]electron['"]\s*\))|^[ \t]*import\s[^'"\n]*from\s+['"]electron['"]|^[ \t]*import\s+['"]electron['"]/m
 const ALLOW_WORDS = /allow|whitelist|allowlist|\.includes\(|\.has\(|protocol|isSafe|isAllowed/i
 const DEV_GATE = /isDev|isDevelopment|isPackaged|NODE_ENV|development|VITE_DEV|DEV_URL|\bQA\b|__DEV__|import\.meta\.env\.DEV/i
 const IPC_GUARD = /assert|grant|allow|whitelist|valid|sanitiz|normaliz|isOwnPage|safe|check|ensure|need\(|isAbsolute/i
