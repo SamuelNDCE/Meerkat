@@ -144,7 +144,15 @@ export function finish(name, findings, okNote = 'nothing found') {
   }
   console.log(`${name}: found ${findings.length}`)
   for (const f of findings.slice(0, 25)) console.log(`  ${f}`)
-  if (findings.length > 25) console.log(`  ... and ${findings.length - 25} more`)
+  if (findings.length > 25) {
+    console.log(`  ... and ${findings.length - 25} more`)
+    // The printed list stays short, but every finding beyond it is still reported to Meerkat (the finding protocol), so none is lost from findings.json.
+    const sev = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY ?? '') ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'
+    for (const f of findings.slice(25)) {
+      const m = /^(\S+?):(\d+)\s+(.+)$/s.exec(String(f))
+      if (m) finding(sev, '-', m[1], Number(m[2]), m[3].replace(/\s+/g, ' ').slice(0, 280))
+    }
+  }
   return 1
 }
 

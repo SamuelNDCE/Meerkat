@@ -34,7 +34,7 @@ When the project is a git repository with a base to compare with, only the lines
 - One change is applied in a copy, the tests run in that copy, the file is restored, then the next change.
 - The temporary folders are deleted at the end, also on Ctrl-C, on a crash and on exit. A killed test run is cleaned up too.
 - `node_modules` is **linked** into each copy (a junction on Windows, a symlink elsewhere) so the tests can find their tools. The mutation itself never writes there. A test runner may write its own cache folder there (for example `node_modules/.vite`); that is the one place a run can leave a trace in your project. If the link cannot be made, the check says NOT RUN and why.
-- Your project is never written to by Meerkat: its files are hashed before and after in the test suite (`mutation.test.ts`, `mutation-diff.test.ts`). The result files and the history go to the run folder and to `~/.meerkat/mutation/` (or `MEERKAT_LOG_DIR`), never into the project.
+- Your project is never written to by Meerkat: its files are hashed before and after in the test suite (`tests/mutation.test.ts`, `tests/mutation-diff.test.ts`). The result files and the history go to the run folder and to `~/.meerkat/mutation/` (or `MEERKAT_LOG_DIR`), never into the project.
 - The tests run **without a shell** (a fixed program and argument list), and the whole process tree is killed on timeout (`taskkill /T` on Windows, a process group elsewhere).
 - Output is cleaned of control characters, and test output is never printed.
 
