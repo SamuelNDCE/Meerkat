@@ -16,7 +16,7 @@
 //   A model is an extra reader, not a gate to rely on alone: it can miss things, and the code it reads is written by someone else.
 import { execFileSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { extname, join } from 'node:path'
 import { finish, main, notRun, readText, trackedFiles, withFixture } from './kit.mjs'
@@ -211,7 +211,13 @@ const diffReview = async (root) => {
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
   // Size is checked before any pattern runs over the text, so a huge diff cannot be used to make the redaction slow.
   if (diff.length > CHUNK * MAX_CHUNKS) return notRun(`the change is too large to review in full (${Math.round(diff.length / 1024)} KB, limit ${Math.round((CHUNK * MAX_CHUNKS) / 1024)} KB); a partial review is not reported as a pass`)
+  // Secrets are looked for twice: in the diff as git prints it, and in the plain file text with the + / - / space marker removed from each
+  // line, so a value split over several lines is seen the way the file has it, not broken up by the markers.
+  const plain = diff.split('\n').map((l) => (/^(\+\+\+|---) /.test(l) ? l : /^[+\- ]/.test(l) ? l.slice(1) : l)).join('\n')
+  const second = redact(plain)
   const clean = redact(diff)
+  clean.long = clean.long || second.long
+  clean.hard += second.hard
   if (clean.long) return notRun('the diff has a line over 4,000 characters (minified or pasted code), which cannot be cleaned safely. Nothing was sent')
   if (clean.hard) return notRun(`${clean.hard} value(s) in a known secret format are in the diff. Nothing was sent. Remove the secret (and rotate it), then run again`)
   // Cut at file boundaries into chunks; if it would need more than MAX_CHUNKS the review would be partial, so it is not run at all.
@@ -266,5 +272,23 @@ main({
   },
   // Safety fixtures: each of these must come back NOT RUN (75), never 0. Exit 1 here means the safety held.
   'selftest-unreadable-reply': { fixture: async () => ((process.env.MEERKAT_AI_CMD = model('looks fine to me!')), (await withFixture({ 'app.js': "app.get('/a', f)\n" }, routeAudit)) === 75 ? 1 : 0) },
+  // A secret split over lines in a diff (each line carries a + marker) must still stop the send.
+  'selftest-diff-split-secret': {
+    fixture: async () => {
+      process.env.MEERKAT_AI_CMD = model('OK')
+      process.env.MEERKAT_AI_BASE = 'main'
+      const code = await withFixture({ 'a.js': 'x\n' }, (d) => {
+        const g = (...a) => execFileSync('git', ['-C', d, '-c', 'user.name=m', '-c', 'user.email=m@m', ...a], { stdio: 'ignore' })
+        g('init', '-q', '-b', 'main')
+        g('add', '-A')
+        g('commit', '-q', '-m', 'base')
+        g('checkout', '-q', '-b', 'f')
+        writeFileSync(join(d, 'a.js'), 'secret =\n  "hunter2 hunter2\nmore\n')
+        g('commit', '-q', '-am', 'change')
+        return diffReview(d)
+      })
+      return code === 75 ? 1 : 0
+    },
+  },
   'selftest-secret-blocked': { fixture: async () => ((process.env.MEERKAT_AI_CMD = model('OK')), (await withFixture({ 'app.js': "app.get('/a', f)\nconst k = 'AKIA" + "IOSFODNN7EXAMPLE'\n" }, routeAudit)) === 75 ? 1 : 0) },
 })

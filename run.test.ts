@@ -704,7 +704,7 @@ describe('the shipped packs are well-formed and self-testable', () => {
     }
   }, 180000)
   test('the AI checks fail closed: an unreadable model reply, or a secret in the code, is NOT RUN and nothing is sent', () => {
-    for (const c of ['selftest-unreadable-reply', 'selftest-secret-blocked']) {
+    for (const c of ['selftest-unreadable-reply', 'selftest-secret-blocked', 'selftest-diff-split-secret']) {
       let code = 0
       try {
         execFileSync('node', [join(process.cwd(), 'thorough', 'ai.mjs'), c, '--fixtures'], { stdio: 'ignore' })
@@ -735,6 +735,7 @@ describe('the shipped packs are well-formed and self-testable', () => {
     expect(redact(`const secret = ${tick}\nreal-value-on-the-next-line${tick}`).hard).toBeGreaterThan(0)
     expect(redact('password = "hunter2hunter2').hard).toBeGreaterThan(0)
     expect(redact("token = ''").hard).toBe(0)
+    expect(redact('secret\n  =\n  "hunter2 hunter2').hard).toBeGreaterThan(0)
     expect(redact('secret =\n  "hunter2 hunter2').hard).toBeGreaterThan(0)
     expect(redact('password:\n\n`one two three').hard).toBeGreaterThan(0)
     expect(redact("secret =\n'''\nvalue\n'''").hard).toBeGreaterThan(0)
