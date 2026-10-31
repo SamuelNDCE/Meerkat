@@ -13,6 +13,7 @@ import { applyFilter, createModel, initialState, nextState, outputFileFrom, typi
 import { renderHistory, renderRows, sparkline } from './render.mjs'
 import { frameFromStatus, rowsFromStatus, staleNote } from './watch.mjs'
 import { mascotLines, moodOf, speechFor, withMascot } from './mascot.mjs'
+import { headLines, poseFor, renderLive } from './live.mjs'
 import { knownStatus, safeLogPath, stripControl } from './safe.mjs'
 import { parseArgs } from '../../run.mjs'
 
@@ -236,6 +237,8 @@ describe('a status file is untrusted text', () => {
     expect(safeLogPath('//server/share/x.log', { env })).toBeNull()
     expect(safeLogPath('//./pipe/x', { env })).toBeNull()
     expect(safeLogPath(join(logs, 'missing.log'), { env })).toBeNull()
+    expect(safeLogPath(inside + String.fromCharCode(27) + '[2J', { env })).toBeNull()
+    expect(safeLogPath(logs, { env })).toBeNull() // a folder is not a log file
     const mk = (path: string) => ({ tier: 'fast', finished: [{ id: 'c', status: 'FAIL', ms: 1, detail: `boom  [full output: ${path}]` }] })
     expect(rowsFromStatus(mk(inside), timings, { env })[0].outputFile).not.toBeNull()
     expect(rowsFromStatus(mk(outside), timings, { env })[0].outputFile).toBeNull()
@@ -248,5 +251,35 @@ describe('a status file is untrusted text', () => {
     writeFileSync(f, `ok${ESC}[31m red${ESC}[0m${String.fromCharCode(13)}done
 `)
     expect(tailOf(f, 3)).toEqual(['ok[31m red[0mdone'])
+  })
+})
+
+describe('the live board', () => {
+  const t0 = 0
+  const rows = [
+    { id: 'a', status: 'PASS', lane: 'free', ms: 1000, typicalMs: 2000, expectedMs: 2000 },
+    { id: 'b', status: 'RUNNING', lane: 'cargo', startedAt: 0, typicalMs: 100_000, expectedMs: 100_000, note: 'Compiling nv-core' },
+    { id: 'c', status: 'WAITING', lane: 'electron', reason: 'after b', typicalMs: 5000, expectedMs: 5000 },
+  ]
+  test('the head turns: left, front and right differ, and every pose has the same height', () => {
+    const poses = ['left', 'center', 'right', 'blink', 'happy', 'wide'].map((p) => headLines(p))
+    expect(new Set(poses.map((p) => p.length)).size).toBe(1)
+    expect(headLines('left').join('')).not.toBe(headLines('right').join(''))
+    expect(headLines('blink').join('')).toContain('-')
+  })
+  test('it scans left, centre, right, centre while on watch, and reacts to the result', () => {
+    const seen = new Set([0, 20, 40, 60].map((tick) => poseFor({ mood: 'watch', tick })))
+    expect(seen).toEqual(new Set(['left', 'center', 'right']))
+    expect(poseFor({ mood: 'cheer', tick: 0 })).toBe('happy')
+    expect(poseFor({ mood: 'alarm', tick: 0 })).toBe('wide')
+  })
+  test('the board shows every lane, every check as a word, what the running one is doing, and no escape codes without colour', () => {
+    const text = renderLive({ rows, events: [{ at: 5000, text: 'started b' }], started: t0, now: 30_000, tick: 3, fraction: 0.3, etaMs: 60_000, color: false }).join('\n')
+    for (const word of ['cargo', 'windows', 'free', 'PASS', 'RUNNING', 'WAITING', 'Compiling nv-core', 'after b', 'started b', '30%']) expect(text).toContain(word)
+    expect(text).not.toContain(String.fromCharCode(27))
+  })
+  test('text from a check is cleaned before it is drawn', () => {
+    const bad = [{ ...rows[1], note: 'x' + String.fromCharCode(27) + '[2Jy' }]
+    expect(renderLive({ rows: bad, started: 0, now: 1000, color: false }).join('\n')).not.toContain(String.fromCharCode(27))
   })
 })
