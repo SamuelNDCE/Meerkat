@@ -73,7 +73,25 @@ Type it the way you type any command. Words, not flags:
 | `meerkat pack add <folder>` | add your own folder of packs |
 | `meerkat ai use openai` | choose the model for the [AI checks](#ai-checks) (`claude`, `openai` or `openrouter`; `meerkat ai status` shows the choice) |
 
-When a run ends in a terminal, Meerkat asks whether you want to open a log, see the report or run it again. In a pipe, in CI or when an AI agent calls it, there are no prompts and the output is plain lines.
+More commands, for looking around and setting up. Each has `--help`, and `--json` where a script needs the answer:
+
+| You type | What happens |
+|---|---|
+| `meerkat check list`, `meerkat check show <id>` | every check that applies here; what one check does, what it needs and how long it takes |
+| `meerkat check <id> [more ids]` | run only these checks |
+| `meerkat preset list`, `preset show <name>`, `preset new`, `preset delete <name>` | see, make and remove presets (yours stay on your PC or in your project) |
+| `meerkat pack list`, `pack enable <name>`, `pack disable <name>` | switch a pack of checks on or off for this project |
+| `meerkat doctor` | which checks would run here, which could not, and what to install |
+| `meerkat run list`, `run show`, `run log <check>` | past runs and their logs |
+| `meerkat describe` | every command and option as JSON, for AI agents |
+| `meerkat mcp install` | register Meerkat as a tool server for Claude Code |
+| `meerkat completion powershell` (or `bash`, `zsh`) | tab completion |
+
+The full list, with exit codes, is in [docs/commands.md](docs/commands.md).
+
+When a run ends in a terminal, Meerkat stays on the result: it prints the report and what changed in the repository, then waits for you. Press Up and Down, then Enter, to open a log, copy a log path, show the report or the repo changes, run it again, or choose OK to close. In a pipe, in CI or when an AI agent calls it, there are no prompts and the output is plain lines.
+
+![The menu shown after a run: OK, open a log, copy a log path, show the report, show repo changes, run again](docs/images/after-run.png)
 
 ## Ways to run it
 
