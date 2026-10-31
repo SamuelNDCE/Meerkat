@@ -20,7 +20,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { extname, join } from 'node:path'
 import { finish, main, notRun, readText, trackedFiles, withFixture } from './kit.mjs'
-import { redact, SENSITIVE_PATH } from './redact.mjs'
+import { redact, SECRET_FILE, SENSITIVE_PATH } from './redact.mjs'
 
 const ROUTE_RES = [
   [/\b(?:app|router|server|fastify|api)\.(get|post|put|patch|delete|all|use)\s*\(\s*['"`]([^'"`]+)['"`]/, 'http'],
@@ -38,7 +38,7 @@ const safeText = (s) => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0
 export function findRoutes(root) {
   const out = []
   for (const x of trackedFiles(root)) {
-    if (!SOURCE.has(extname(x)) || SENSITIVE_PATH.test(x) || /(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) || /\.(test|spec)\./.test(x)) continue
+    if (!SOURCE.has(extname(x).toLowerCase()) || SENSITIVE_PATH.test(x) || /(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) || /\.(test|spec)\./.test(x)) continue
     const lines = readText(root, x).split('\n')
     lines.forEach((l, i) => {
       for (const [re] of ROUTE_RES) {
@@ -143,6 +143,9 @@ const routeAudit = async (root) => {
   const list = findRoutes(root)
   if (!list.length) return notRun('no routes, handlers or IPC channels were found to audit')
   if (list.length > MAX_ROUTES) return notRun(`${list.length} routes is more than the ${MAX_ROUTES} this check covers in one run; a partial audit is not reported as a pass. Audit one folder at a time with --root`)
+  // Source files with a sensitive-looking name are not sent, so an audit that skipped one with routes in it would be partial: NOT RUN.
+  const skipped = trackedFiles(root).filter((x) => SOURCE.has(extname(x).toLowerCase()) && SENSITIVE_PATH.test(x) && !/(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) && (!readText(root, x) || ROUTE_RES.some(([re]) => re.test(readText(root, x)))))
+  if (skipped.length) return notRun(`route code in file(s) with a sensitive-looking name was left out (${skipped.slice(0, 3).join(', ')}); audit them by hand or rename them`)
   const cmd = aiCommand()
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
   const prepared = list.map((r) => ({ r, ...redact(r.code) }))
@@ -193,15 +196,16 @@ const diffReview = async (root) => {
   }
   if (!changed.length) return finish('ai-diff-review', [], `nothing changed against ${base}`)
   const held = changed.filter((x) => SENSITIVE_PATH.test(x))
-  // A source file whose name looks sensitive would be silently left out of the review, so that is NOT RUN, not a pass.
-  const hiddenSource = held.filter((x) => SOURCE.has(extname(x).toLowerCase()))
-  if (hiddenSource.length) return notRun(`changed source file(s) with a sensitive-looking name were left out of the review (${hiddenSource.slice(0, 3).join(', ')}); review them by hand or rename them`)
+  // A held file that is not positively a key or environment file (a source file called secrets.ts, say) would be silently left out
+  // of the review, so that is NOT RUN, not a pass.
+  const unknownHeld = held.filter((x) => !SECRET_FILE.test(x) || SOURCE.has(extname(x).toLowerCase()))
+  if (unknownHeld.length) return notRun(`changed file(s) with a sensitive-looking name were left out of the review (${unknownHeld.slice(0, 3).join(', ')}); review them by hand or rename them`)
   const files = changed.filter((x) => !SENSITIVE_PATH.test(x))
-  if (held.length) console.log(`(${held.length} sensitive-looking file(s) are never sent: ${held.slice(0, 5).join(', ')})`)
-  if (!files.length) return finish('ai-diff-review', [], 'only sensitive-looking files changed; none were sent')
+  if (held.length) console.log(`(${held.length} key or environment file(s) are never sent: ${held.slice(0, 5).join(', ')})`)
+  if (!files.length) return notRun('only key or environment files changed, so there was nothing to review')
   // --text and no filters: a .gitattributes file in the change must not be able to hide code behind "Binary files differ".
   const diff = execFileSync('git', ['-C', root, '-c', 'core.attributesFile=', 'diff', '--text', '--no-textconv', '--no-ext-diff', '--unified=3', `${base}...HEAD`, '--', ...files.map((x) => `:(literal)${x}`)], { encoding: 'utf8', maxBuffer: 64 * 2 ** 20, stdio: ['ignore', 'pipe', 'ignore'] })
-  if (/^Binary files .* differ$/m.test(diff)) return notRun('part of the change is binary and cannot be reviewed as text; nothing was sent')
+  if (diff.includes('\0')) return notRun('part of the change is binary and cannot be reviewed as text; nothing was sent')
   const cmd = aiCommand()
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
   const clean = redact(diff)

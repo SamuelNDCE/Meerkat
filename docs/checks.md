@@ -1,5 +1,71 @@
 # Every check, and how long it takes
 
+<!-- checks:start -->
+**57 checks** (33 fast, 24 thorough, 6 opt-in). Security 14, Functionality 23, UI 9, Performance 8, Refactor 3.
+
+| Check | Kind | Tier | Weight | Typical time | What it does | Comes from |
+|---|---|---|---|---|---|---|
+| `cargo-audit` | Security | fast | light | 4 s | cargo audit (advisory allow-list in .cargo/audit.toml) | built in (NeuralVault app) |
+| `license` | Security | fast | tiny | 2 s | A license is declared, and no copyleft dependency slipped in | hygiene |
+| `npm-audit` | Security | fast | light | 2 s | npm audit, high severity, shipped dependencies only | built in (NeuralVault app) |
+| `rule-scan` | Security | fast | light | 1 s | Failure-derived rule scan (IPC, note paths, raw HTML, window hardening) | built in (NeuralVault app) |
+| `rust-audit` | Security | fast | light | 4 s | Rust dependency advisories (cargo audit) | rust |
+| `secret-scan` | Security | fast | tiny | 3 s | Secret scan: keys, tokens and private keys in tracked files | security |
+| `sensitive-files` | Security | fast | tiny | 2 s | No environment files, private keys or tokens are tracked | hygiene |
+| `unsafe-rust` | Security | fast | tiny | 2 s | Every Rust unsafe block says why it is sound | hygiene |
+| `agent-scan` | Security | thorough | light | 2.0 min | Snyk agent-scan of the MCP and skill setup (prints what it sends first) (opt-in: `--include snyk`) | built in (NeuralVault app) |
+| `ai-diff-review` | Security | thorough | light | 1.0 min | AI security review of the changes against the base branch (opt-in: `--include ai`) | ai |
+| `ai-route-audit` | Security | thorough | light | 5.0 min | AI audit of every route, handler and IPC channel (opt-in: `--include ai`) | ai |
+| `guard-mutants` | Security | thorough | heavy | 14 min | Mutation test the command classifier, poisoning guard and path rules | built in (NeuralVault app) |
+| `npm-audit-all` | Security | thorough | tiny | 5 s | npm audit, high severity, every dependency including dev ones | security |
+| `staging-scan` | Security | thorough | light | 10 min | ZAP baseline and Nuclei against the staging sync server (never the live one) (opt-in: `--include staging`) | built in (NeuralVault app) |
+| `build-all` | Functionality | fast | light | 10 s | Build renderer and Electron shell (shared by the window checks) | built in (NeuralVault app) |
+| `build-sidecar` | Functionality | fast | heavy | 50 s | Build the sidecar (shared by the window checks) | built in (NeuralVault app) |
+| `conflict-markers` | Functionality | fast | tiny | 2 s | No leftover merge-conflict markers | hygiene |
+| `json-valid` | Functionality | fast | tiny | 2 s | Every tracked JSON file parses | hygiene |
+| `large-files` | Functionality | fast | tiny | 2 s | No oversized file or committed binary | hygiene |
+| `links` | Functionality | fast | tiny | 2 s | Every relative link in the documents resolves | hygiene |
+| `lockfiles` | Functionality | fast | tiny | 2 s | Every manifest has its lockfile | hygiene |
+| `markers` | Functionality | fast | tiny | 2 s | No FIXME or XXX notes left in the code | hygiene |
+| `rust-clippy` | Functionality | fast | heavy | 2.0 min | Rust lints (cargo clippy, warnings are errors) | rust |
+| `rust-fmt` | Functionality | fast | heavy | 4 s | Rust formatting (cargo fmt --check) | rust |
+| `rust-test` | Functionality | fast | heavy | 2.5 min | Rust tests (cargo test, the whole workspace) | rust |
+| `scripts-resolve` | Functionality | fast | tiny | 2 s | Every file an npm script runs exists | hygiene |
+| `sidecar-clippy` | Functionality | fast | heavy | 30 s | Sidecar clippy, warnings are errors | built in (NeuralVault app) |
+| `sidecar-fmt` | Functionality | fast | heavy | 5 s | Sidecar rustfmt check | built in (NeuralVault app) |
+| `type-check` | Functionality | fast | light | 10 s | TypeScript type check (renderer and Electron) | built in (NeuralVault app) |
+| `unit-tests-changed` | Functionality | fast | light | 1.7 min | Unit tests related to files changed against origin/dev | built in (NeuralVault app) |
+| `vault-parser-proptest` | Functionality | fast | heavy | 4.9 min | Vault note parser property tests (never panics, round-trips, odd input) | built in (NeuralVault app) |
+| `parser-fuzz` | Functionality | thorough | heavy | 1.3 min | Fuzz the vault markdown and frontmatter parser (NV_FUZZ_SECONDS, default 60) | built in (NeuralVault app) |
+| `rust-build-release` | Functionality | thorough | heavy | 5.0 min | Rust release build (cargo build --release) | rust |
+| `sidecar-tests` | Functionality | thorough | heavy | 2.5 min | Sidecar Rust tests (cargo test -p nv-sidecar) | built in (NeuralVault app) |
+| `unit-tests` | Functionality | thorough | light | 2.0 min | Every unit test (vitest, npm test) | built in (NeuralVault app) |
+| `verify-sidecar` | Functionality | thorough | light | 6 s | Sidecar answers over its real socket (verify:sidecar) | built in (NeuralVault app) |
+| `workspace-tests` | Functionality | thorough | heavy | 10 min | Every Rust test in the workspace (cargo test --workspace); opt-in: --include rust (opt-in: `--include rust`) | built in (NeuralVault app) |
+| `click-through` | UI | fast | medium | 1.9 min | Real-window click-through, short version, split across several windows (verify:clicks) | built in (NeuralVault app) |
+| `test-safety` | UI | fast | medium | 8 s | Test windows cannot open folders or dialogs, or take focus | built in (NeuralVault app) |
+| `ui-screens` | UI | fast | medium | 15 s | Screenshots and UX of the primary pages (blank, errors, scroll, clipping, motion) | built in (NeuralVault app) |
+| `ui-static` | UI | fast | tiny | 2 s | Pages have alt text, a language, a title and a viewport; no empty buttons | hygiene |
+| `click-through-full` | UI | thorough | medium | 9.5 min | Real-window click-through, every control, in the default look and in light, black and the smallest window | built in (NeuralVault app) |
+| `ui-axe` | UI | thorough | medium | 1.5 min | Accessibility scan of every page (axe-core, new serious/critical only) | built in (NeuralVault app) |
+| `verify-app` | UI | thorough | medium | 12 s | Whole app in a real hidden window (verify:app) | built in (NeuralVault app) |
+| `verify-shell` | UI | thorough | medium | 10 s | Electron shell starts (verify:shell) | built in (NeuralVault app) |
+| `verify-ui` | UI | thorough | medium | 5.0 min | UI integrity in a real hidden window (verify:ui) | built in (NeuralVault app) |
+| `perf-deps` | Performance | fast | tiny | 3 s | Dependency weight: direct count and installed size | performance |
+| `perf-memory` | Performance | fast | light | 15 s | Memory: idle and peak use of the app and everything it starts | performance |
+| `perf-sizes` | Performance | fast | tiny | 2 s | Size budgets: bundles and binaries stay under their limits | performance |
+| `perf-startup` | Performance | fast | light | 15 s | Start-up time: how fast the app is ready (median of several starts) | performance |
+| `perf-build` | Performance | thorough | alone | 2.0 min | Build time: the build stays inside its time budget | performance |
+| `perf-endpoints` | Performance | thorough | light | 20 s | Response time: p95 of each configured endpoint | performance |
+| `perf-load` | Performance | thorough | medium | 30 s | Load burst: concurrent requests to a local server, error rate and p95 | performance |
+| `sync-load` | Performance | thorough | light | 1.0 min | Load test the sync server (k6, synthetic notes). NV_SYNC_URL, NV_SYNC_TOKEN; add --local to the script for a local server (opt-in: `--include staging`) | built in (NeuralVault app) |
+| `dead-code` | Refactor | thorough | light | 10 s | Dead code: exported names nothing else uses (JS and TS) | refactor |
+| `duplicate-code` | Refactor | thorough | light | 15 s | Duplicated code: blocks copied between files | refactor |
+| `file-length` | Refactor | thorough | light | 3 s | Files too long to read in one sitting | refactor |
+<!-- checks:end -->
+
+## Measured times, NeuralVault app
+
 Source of the list: the check files under `apps/desktop-electron/scripts/verify/checks/` in NeuralVault, read on `origin/dev` on 2026-10-30. Run `npm --prefix apps/desktop-electron run verify -- --list` there for the live list.
 
 ## The PC these were measured on

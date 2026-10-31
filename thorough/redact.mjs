@@ -18,8 +18,9 @@ const SOFT = /\b((?:[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|passwd
 
 const NAME = String.raw`[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|passwd|credential|authorization|bearer|private[_-]?key)[a-z0-9_.-]*`
 // A quoted value of any content up to its closing quote, and an auth header's whole line (any scheme, not just Bearer).
-const QUOTED = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*)(["'\`])(?:\\.|(?!\2)[^\n]){3,500}?\2`, 'gi')
-const AUTH_LINE = /\b(authorization["'`]?\s*[:=]\s*)(.+)$/gim
+const QUOTED = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*)(["'\`])(?:\\.|(?!\2)[^\n\\]){3,500}?\2`, 'gi')
+const OPEN_QUOTE = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*["'\`])(?!<hidden>)[^\n]+$`, 'gim')
+const AUTH_LINE =/\b(authorization["'`]?\s*[:=]\s*)(.+)$/gim
 
 export function redact(text) {
   let hard = 0
@@ -28,9 +29,14 @@ export function redact(text) {
   for (const re of HARD) out = out.replace(re, () => (hard++, '<hidden>'))
   out = out.replace(AUTH_LINE, (_, head) => (soft++, `${head}<hidden>`))
   out = out.replace(QUOTED, (_, head) => (soft++, `${head}"<hidden>"`))
+  // A secret-named assignment that opens a quote the pattern above could not close (a multi-line value, or one ending in a backslash):
+  // the extent of the value is unknown, so it counts as a hard find and nothing is sent.
+  out = out.replace(OPEN_QUOTE, (_, head) => (hard++, `${head}<hidden>`))
   out = out.replace(SOFT, (_, head) => (soft++, `${head}<hidden>`))
   return { text: out, hard, soft }
 }
 
 // Paths whose contents are never sent, even in a diff.
-export const SENSITIVE_PATH = /(^|\/)(\.env(\..*)?|.*\.(pem|key|p12|pfx|jks|keystore)|id_(rsa|dsa|ed25519|ecdsa)|\.npmrc|\.netrc|credentials(\.json)?|secrets?\.[a-z]+)$/i
+export const SENSITIVE_PATH = /(^|\/)([^/]*(credential|secret)[^/]*|\.env(\..*)?|.*\.(pem|key|p12|pfx|jks|keystore)|id_(rsa|dsa|ed25519|ecdsa)|\.npmrc|\.netrc)$/i
+// Of those, the ones that are positively key or environment files and not code: nothing is lost by leaving these out of a review.
+export const SECRET_FILE = /(^|\/)(\.env(\.(local|production|prod|development|dev|staging|test|example|sample))?|.*\.(pem|key|p12|pfx|jks|keystore)|id_(rsa|dsa|ed25519|ecdsa)|\.npmrc|\.netrc)$/i

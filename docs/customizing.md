@@ -29,8 +29,8 @@ It is JSON, no code.
 | `builtin` | Use Meerkat's own checks. `false` means only the ones you add. |
 | `extraChecks` | Folders of check files (see below), relative to the config file. A check with the **same id as a built-in one replaces it**, which is how you swap one tool for another. |
 | `disable` | Turn checks off. Every run lists them as `[DISABLED]`, so nothing is ever turned off silently. |
-| `override` | Change one check: `tier`, `lane`, `estSeconds`, `cost`, `timeoutSeconds`, `paths`, `after`, `needs`, `optIn`, `title`, `run` (the command) and `selfTest`. |
-| `budget` | How much a run may use at once: threads (`cpu`, default every thread) and memory to leave free (`reserveGB`, default 3). |
+| `override` | Change one check: `tier`, `lane`, `weight`, `alone`, `estSeconds`, `cost`, `timeoutSeconds`, `paths`, `after`, `needs`, `optIn`, `title`, `run` (the command) and `selfTest`. |
+| `budget` | How much a run may use at once: slots (`cpu`, default 10 or the number of threads if fewer), the most checks together (`maxParallel`, default 10) and memory to leave free (`reserveGB`, default 3). |
 
 A mistake in the file (a typo, a wrong type, an id that does not exist) is printed as a `config:` note and the rest of the file still applies. It can
 never stop a run.
@@ -47,12 +47,13 @@ A check file exports an array of checks. This is the whole shape:
 export default [
   {
     id: 'lint',                       // kebab-case, unique
-    group: 'functionality',           // security | functionality | ui | performance
+    group: 'functionality',           // security | functionality | ui | performance | refactor
     tier: 'fast',                     // fast (before every push) or thorough (before a promotion)
     lane: 'free',                     // free (side by side), cargo (one Rust build at a time), electron (one window job at a time)
     title: 'ESLint, no warnings',
     estSeconds: 20,                   // a guess; Meerkat learns the real time on your machine and uses that
-    cost: { cpu: 2, memGB: 1 },       // optional: what it costs the machine (see below)
+    weight: 'light',                  // tiny | light | medium | heavy | alone: how much of the machine it needs (see below)
+    cost: { cpu: 2, memGB: 1 },       // optional: an exact cost instead of a weight (cpu is in slots, 10 per run)
     needs: ['npx'],                   // tools that must exist, or the check is NOT RUN
     after: [],                        // ids that must pass first (a build, for example)
     paths: ['src/**'],                // only runs when these changed (fast tier)
@@ -68,8 +69,9 @@ never make a run look clean.
 ## 3. How fast it runs, and how to keep it from crashing the PC
 
 - **Order:** a check that others wait on (a build) starts first; quick checks go ahead of it so a quick failure shows up at once.
-- **Cost:** every check costs processor threads and memory (`cost`, or the usual cost of its lane). Light checks run side by side; a heavy one starts only
-  when the machine has room, so mostly it runs alone. Free memory is read every time, so a PC that is busy with something else starts fewer checks. One
+- **Weight:** a run has 10 slots. A check says how many it needs with `weight`: `tiny` (1 slot, so up to 10 together), `light` (2, so 5), `medium` (4, so 2 or 3),
+  `heavy` (8, so one plus a light one) or `alone` (the machine to itself). No weight means the usual one for its lane. `cost: { cpu, memGB }` sets exact numbers instead.
+  `budget.maxParallel` (default 10) caps how many run at once whatever their weight. A heavy check starts only when the machine has room, so mostly it runs alone. Free memory is read every time, so a PC that is busy with something else starts fewer checks. One
   check can always run alone, so a run never deadlocks.
 - **Lanes:** one Rust build at a time (the machine-wide cargo lock), one window job at a time (the window lock).
 - **The fast tier is lean on purpose.** The accessibility scan (`ui-axe`) is not in it, because the thorough tier's UI integrity check runs the same scan on

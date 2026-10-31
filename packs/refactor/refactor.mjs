@@ -9,6 +9,7 @@ const mk = (id, title, estSeconds) => ({
   group: 'refactor',
   tier: 'thorough',
   lane: 'free',
+  weight: 'light',
   title,
   estSeconds,
   needs: ['node'],

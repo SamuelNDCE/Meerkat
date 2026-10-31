@@ -9,6 +9,7 @@ const mk = (id, title, estSeconds) => ({
   group: 'security',
   tier: 'thorough',
   lane: 'free',
+  weight: 'light',
   optIn: 'ai',
   title,
   estSeconds,
@@ -19,6 +20,6 @@ const mk = (id, title, estSeconds) => ({
 })
 
 export default [
-  mk('route-audit', 'AI audit of every route, handler and IPC channel (opt-in: sends code to a model)', 300),
-  mk('diff-review', 'AI security review of the changes against the base branch (opt-in: sends the diff to a model)', 60),
+  mk('route-audit', 'AI audit of every route, handler and IPC channel', 300),
+  mk('diff-review', 'AI security review of the changes against the base branch', 60),
 ]
