@@ -43,6 +43,11 @@ Options for every run: `--ai` (include the AI checks), `--json` (print the resul
 | `meerkat check <suite>` / `<suite>/<check>` / `<suite>/<check>/<sub>` | run a whole suite, one check, or one check and report only one sub-check (see docs/suites.md) |
 | `meerkat check list [folder]` | every check that applies, nested under its suite (`--flat` for one line each), with kind, tier, weight and time (`--json` for scripts; rows have `suite` and `subChecks`) |
 | `meerkat check show <id>` | what one check does, the tool it needs, how to install it, its limits and its time here |
+| `meerkat check new [--id <id> --title <t> --cmd "npm run test:e2e" --suite <s> --group <kind> --tier fast\|thorough --personal\|--project]` | add a check of your own, no code: asks in a terminal, or takes the flags (needs `--yes` with no terminal; `--dry-run` shows what it would write). Writes `customChecks` in `meerkat.config.json` (this project) or `~/.meerkat.json` (`--personal`, every project), keeping other keys and line endings |
+| `meerkat check edit <id>` / `meerkat check remove <id> [--yes]` | change or remove a check of yours (bundled ones are refused) |
+| `meerkat check mine` | your own checks, where each lives and whether its program is installed (`--json`) |
+| `meerkat check try <id>` | run just that one check |
+| `meerkat recommend [folder]` | tests this project could run that no check covers (`--json`); `--add <id\|all>` adds them as checks of yours (`--personal`, `--dry-run`, `--yes`); never runs or writes without `--add` |
 | `meerkat preset list` | every preset, with where it comes from (bundled, personal, project) |
 | `meerkat preset show <name>` | what a preset is for (its purpose) and every check it runs here, grouped by kind, with the time of each and the total on this PC; `--json` has `about`, `purpose`, `source` and `checks` |
 | `meerkat preset new` | create a preset (asks; `--name`, `--tier`, `--group`, `--pack`, `--about`, `--purpose`, `--personal`, `--project` make it scriptable) |

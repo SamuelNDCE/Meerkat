@@ -22,6 +22,16 @@ Meerkat has three levels. Each level is one idea.
 
 A suite run does not look at the tier: you asked for the suite, so its quick and slow checks both run (opt-in checks, such as the AI review, only with `--include ai`). The menu's "Choose checks one by one" shows about fifty suites instead of every check: Space ticks a whole suite, Right opens it so you can tick single checks, Enter runs.
 
+## Your app: suites of your own
+
+A project can name suites of its own for the checks only it has. Write the checks as `customChecks` (docs/customizing.md, "Your own checks") and give them a suite name; add a label and purpose in `meerkat.config.json`:
+
+```json
+{ "suites": { "my-app": { "label": "My app", "purpose": "The tests only this app has." } } }
+```
+
+The name is lowercase letters, digits and dashes (up to 41 characters) and is not one of Meerkat's suites; without an entry the label comes from the name. Your suites appear under **Your app** in `meerkat suite list` and `suite show`, at the top of "Choose checks one by one" in the menu (tagged `yours`), and work with `meerkat check my-app`, `--suite my-app` and `disable: ["suite:my-app"]` like any other. Checks of your own that fit one of Meerkat's suites can use its name instead (for example `"suite": "javascript"`).
+
 ## Turning things off
 
 In `meerkat.config.json`:

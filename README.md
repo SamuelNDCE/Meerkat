@@ -529,6 +529,8 @@ claude mcp add --scope user meerkat -- node path/to/Meerkat/bin/meerkat-mcp.mjs
 
 ## Add your own check
 
+**No code needed for a command you already run.** `meerkat check new` asks for a name and a command such as `npm run test:e2e` and saves it as a check of yours (`customChecks` in `meerkat.config.json`, or `--personal` for every project). It runs with the rest, is tagged `yours` or `project` everywhere results show, and has its own suite under **Your app**. `meerkat recommend` looks at the folder and suggests tests it could run (it never runs or writes anything by itself). `meerkat check mine` lists yours, `meerkat check try <id>` runs just one. Details: docs/customizing.md, "Your own checks".
+
 Meerkat is open on purpose. There are three ways, from smallest to biggest.
 
 **1. Turn a check off, or swap its tool (no code).** In `meerkat.config.json`:
