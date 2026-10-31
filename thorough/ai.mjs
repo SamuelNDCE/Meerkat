@@ -211,13 +211,15 @@ const diffReview = async (root) => {
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
   // Size is checked before any pattern runs over the text, so a huge diff cannot be used to make the redaction slow.
   if (diff.length > CHUNK * MAX_CHUNKS) return notRun(`the change is too large to review in full (${Math.round(diff.length / 1024)} KB, limit ${Math.round((CHUNK * MAX_CHUNKS) / 1024)} KB); a partial review is not reported as a pass`)
-  // Secrets are looked for twice: in the diff as git prints it, and in the plain file text with the + / - / space marker removed from each
-  // line, so a value split over several lines is seen the way the file has it, not broken up by the markers.
-  const plain = diff.split('\n').map((l) => (/^(\+\+\+|---) /.test(l) ? l : /^[+\- ]/.test(l) ? l.slice(1) : l)).join('\n')
-  const second = redact(plain)
+  // Secrets are looked for in the diff as git prints it, and in each side of it as the file has it (the + / - / space marker removed, the
+  // other side's lines dropped), so a value split over several lines is seen whole. If either file side shows anything the diff scan did
+  // not, the text that would be sent is not the text that was checked, so nothing is sent.
+  const side = (drop) => diff.split('\n').filter((l) => /^(\+\+\+|---) /.test(l) || !l.startsWith(drop)).filter((l) => !l.startsWith(String.fromCharCode(92)) && !l.startsWith('@@')).map((l) => (/^(\+\+\+|---) /.test(l) ? l : /^[+\- ]/.test(l) ? l.slice(1) : l)).join('\n')
+  const sides = [redact(side('-')), redact(side('+'))]
   const clean = redact(diff)
-  clean.long = clean.long || second.long
-  clean.hard += second.hard
+  clean.long = clean.long || sides.some((x) => x.long)
+  clean.hard += sides.reduce((n, x) => n + x.hard, 0)
+  if (sides.some((x) => x.soft > clean.soft)) return notRun('a secret-looking value runs across lines in the change, so what would be sent is not what was checked. Nothing was sent')
   if (clean.long) return notRun('the diff has a line over 4,000 characters (minified or pasted code), which cannot be cleaned safely. Nothing was sent')
   if (clean.hard) return notRun(`${clean.hard} value(s) in a known secret format are in the diff. Nothing was sent. Remove the secret (and rotate it), then run again`)
   // Cut at file boundaries into chunks; if it would need more than MAX_CHUNKS the review would be partial, so it is not run at all.
@@ -272,6 +274,24 @@ main({
   },
   // Safety fixtures: each of these must come back NOT RUN (75), never 0. Exit 1 here means the safety held.
   'selftest-unreadable-reply': { fixture: async () => ((process.env.MEERKAT_AI_CMD = model('looks fine to me!')), (await withFixture({ 'app.js': "app.get('/a', f)\n" }, routeAudit)) === 75 ? 1 : 0) },
+  // A secret-looking value that runs across lines in a diff, even a closed one, must stop the send (what is sent must be what was checked).
+  'selftest-diff-multiline-closed': {
+    fixture: async () => {
+      process.env.MEERKAT_AI_CMD = model('OK')
+      process.env.MEERKAT_AI_BASE = 'main'
+      const code = await withFixture({ 'a.js': 'x\n' }, (d) => {
+        const g = (...a) => execFileSync('git', ['-C', d, '-c', 'user.name=m', '-c', 'user.email=m@m', ...a], { stdio: 'ignore' })
+        g('init', '-q', '-b', 'main')
+        g('add', '-A')
+        g('commit', '-q', '-m', 'base')
+        g('checkout', '-q', '-b', 'f')
+        writeFileSync(join(d, 'a.js'), 'secret =\n  "closed value here"\n')
+        g('commit', '-q', '-am', 'change')
+        return diffReview(d)
+      })
+      return code === 75 ? 1 : 0
+    },
+  },
   // A secret split over lines in a diff (each line carries a + marker) must still stop the send.
   'selftest-diff-split-secret': {
     fixture: async () => {
