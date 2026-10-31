@@ -45,7 +45,7 @@ export default [
     estSeconds: 5,
     needs: ['npm'],
     paths: ['package.json', 'package-lock.json', '**/package.json', '**/package-lock.json'],
-    run: { cmd: 'npm', args: ['audit', '--audit-level=high'], cwd: 'app' },
+    run: { cmd: 'node', args: [`${MK}/thorough/npm-audit.mjs`], cwd: 'app' },
     // An offline registry makes audit fail, which is the failure this proves is not swallowed.
     selfTest: { cmd: 'npm', args: ['audit', '--audit-level=high', '--registry', 'http://127.0.0.1:9'], cwd: 'app', expectFail: true },
   },

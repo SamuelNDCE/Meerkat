@@ -172,7 +172,18 @@ const imageDimensions = (root) => {
 }
 
 // ---- robots-sitemap: a folder with an index.html is a web root; it should have a robots.txt or a sitemap.xml (beside the page or in public/)
+// An Electron or Tauri app loads its pages from disk: there is no crawler, so robots.txt and sitemap.xml do not apply.
+const isDesktopApp = (root) => {
+  try {
+    const p = JSON.parse(readText(root, 'package.json'))
+    const deps = { ...p.dependencies, ...p.devDependencies }
+    return Boolean(deps.electron || deps['@tauri-apps/api'])
+  } catch {
+    return false
+  }
+}
 const robotsSitemap = (root) => {
+  if (isDesktopApp(root)) return finish('robots-sitemap', [], 'not applicable: this is a desktop app (its pages are not crawled)')
   const allow = allowSet(root)
   const tracked = new Set(trackedFiles(root))
   const f = []

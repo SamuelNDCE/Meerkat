@@ -100,12 +100,22 @@ const debugWhy = (x, line, prev, testy, cliish) => {
   if (/\.go$/.test(x) && !/_test\.go$/.test(x) && /fmt\.Println\(\s*"debug/i.test(line)) return 'has a debug fmt.Println() left in'
   return null
 }
+// The files package.json names under "bin": a command-line program prints on purpose.
+const binFiles = (root) => {
+  try {
+    const bin = JSON.parse(readText(root, 'package.json')).bin
+    return new Set((typeof bin === 'string' ? [bin] : Object.values(bin ?? {})).map((p) => posix.normalize(String(p))))
+  } catch {
+    return new Set()
+  }
+}
 const debugLeftovers = (root) => {
   const allow = allowSet(root)
+  const bins = binFiles(root)
   const f = []
   for (const x of files(root, SOURCE)) {
     const testy = TEST_FILE.test(x)
-    const cliish = /(^|\/)(bin|scripts|tools|cli)\//i.test(x)
+    const cliish = /(^|\/)(bin|scripts|tools|cli)\//i.test(x) || bins.has(x) || /^#!/.test(readText(root, x))
     const lines = readText(root, x).split('\n')
     lines.forEach((line, i) => {
       const why = debugWhy(x, line, lines[i - 1] ?? '', testy, cliish)
