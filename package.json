@@ -10,6 +10,7 @@
     "meerkat:thorough": "node run.mjs --thorough",
     "meerkat:doctor": "node doctor.mjs",
     "meerkat:promotion": "node promotion-due.mjs",
+    "meerkat:watch": "node watch.mjs",
     "test": "vitest run"
   },
   "devDependencies": {

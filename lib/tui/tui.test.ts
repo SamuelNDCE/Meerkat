@@ -11,6 +11,8 @@ import { appendRun, loadHistory, runEntry } from './history.mjs'
 import { canUseUi, createTui, tailOf } from './index.mjs'
 import { applyFilter, createModel, initialState, nextState, outputFileFrom, typicalMs } from './model.mjs'
 import { renderHistory, renderRows, sparkline } from './render.mjs'
+import { frameFromStatus, rowsFromStatus, staleNote } from './watch.mjs'
+import { mascotLines, moodOf, speechFor, withMascot } from './mascot.mjs'
 import { parseArgs } from '../../run.mjs'
 
 let dir: string
@@ -132,5 +134,74 @@ describe('plain fallback and run log', () => {
     writeFileSync(file, '{ not json')
     expect(loadHistory(file)).toEqual([])
     expect(readFileSync(join(dir, 'h.json'), 'utf8')).toContain('not json')
+  })
+})
+
+describe('the watch viewer (reads a status file, never touches the run)', () => {
+  const status = {
+    title: 'MEERKAT fast',
+    tier: 'fast',
+    state: 'running',
+    updatedAt: new Date(1_000_000).toISOString(),
+    elapsedMs: 61_000,
+    percent: 31,
+    etaMs: 129_000,
+    finished: [
+      { id: 'a', status: 'PASS', ms: 2400, detail: '' },
+      { id: 'c', status: 'FAIL', ms: 900, detail: 'boom  [full output: C:/tmp/c.log]' },
+    ],
+    running: [{ id: 'b', lane: 'cargo', elapsedMs: 57_000, expectedMs: 2000, overran: true }],
+    waiting: [{ id: 'd', reason: 'after b' }],
+  }
+  test('every check becomes one row: finished, running, waiting', () => {
+    const rows = rowsFromStatus(status, timings)
+    expect(rows.map((r) => `${r.id}:${r.status}`)).toEqual(['a:PASS', 'c:FAIL', 'b:RUNNING', 'd:WAITING'])
+    expect(rows[1].outputFile).toBe('C:/tmp/c.log')
+    expect(rows[2]).toMatchObject({ slow: true, lane: 'cargo' })
+    expect(rows[0].typicalMs).toBe(3000)
+  })
+  test('the frame shows the percentage from the file and every status as a word', () => {
+    const text = frameFromStatus(status, { timings, width: 100, color: false, now: 1_010_000 }).join('\n')
+    expect(text).toContain('31%')
+    expect(text).toContain('RUNNING')
+    expect(text).toContain('slower than usual')
+    expect(text).toContain('after b')
+    expect(text).not.toContain('\x1b[')
+  })
+  test('no status file yet, a finished run, and a status file that stopped updating', () => {
+    expect(frameFromStatus(null)[0]).toContain('No Meerkat status file')
+    expect(frameFromStatus({ ...status, state: 'done', percent: 100, summary: 'MEERKAT fast: ok' }, { timings, color: false }).join('\n')).toContain('MEERKAT fast: ok')
+    expect(staleNote(status, 1_000_000 + 5 * 60_000)).toContain('may have stopped')
+    expect(staleNote(status, 1_000_000 + 1000)).toBe('')
+  })
+})
+
+describe('the meerkat', () => {
+  const row = (status: string, slow = false) => ({ id: status, status, slow })
+  test('mood: anything not green is alarm, a clean finished run cheers, running is on watch, else waiting', () => {
+    expect(moodOf([row('PASS'), row('FAIL')])).toBe('alarm')
+    expect(moodOf([row('PASS'), row('NOT RUN')])).toBe('alarm')
+    expect(moodOf([row('PASS'), row('PASS')])).toBe('cheer')
+    expect(moodOf([row('PASS'), row('RUNNING')])).toBe('watch')
+    expect(moodOf([row('WAITING')])).toBe('wait')
+    expect(moodOf([])).toBe('wait')
+  })
+  test('every picture has the same size, and it blinks while on watch', () => {
+    const rows = [row('RUNNING')]
+    const all = [0, 1, 2, 3, 4].map((t) => mascotLines(rows, t))
+    expect(new Set(all.flatMap((a) => a.map((l) => l.length))).size).toBe(1)
+    expect(all[4][1]).not.toBe(all[0][1])
+  })
+  test('a slow check gets the stink eye; the line changes slowly, not every second', () => {
+    expect(speechFor([row('RUNNING', true)], 0)).toMatch(/slower|snails/)
+    expect(speechFor([row('RUNNING')], 0)).toBe(speechFor([row('RUNNING')], 7))
+  })
+  test('narrow terminal or switched off: the header alone, nothing else moves', () => {
+    const head = ['title line', 'counts line']
+    expect(withMascot(head, [row('PASS')], { width: 50 })).toEqual(head)
+    expect(withMascot(head, [row('PASS')], { width: 100, enabled: false })).toEqual(head)
+    const withArt = withMascot(head, [row('PASS')], { width: 100 })
+    expect(withArt).toHaveLength(5)
+    expect(withArt[0]).toContain('title line')
   })
 })
