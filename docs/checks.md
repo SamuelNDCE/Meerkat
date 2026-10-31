@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**338 checks** in 47 suites with 1037 sub-checks (a check that declares no rules counts as one), across 44 packs: 315 quick, 23 thorough, 9 opt-in. [Security 100](#security-checks) · [Functionality 190](#functionality-checks) · [UI 22](#ui-checks) · [Performance 15](#performance-checks) · [Refactor 11](#refactor-checks)
+**360 checks** in 47 suites with 1402 sub-checks (a check that declares no rules counts as one), across 47 packs: 328 quick, 32 thorough, 18 opt-in. [Security 106](#security-checks) · [Functionality 205](#functionality-checks) · [UI 22](#ui-checks) · [Performance 16](#performance-checks) · [Refactor 11](#refactor-checks)
 
 ### Suites
 
@@ -22,7 +22,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `html-and-css` | HTML and CSS | 10 | 35 | Valid markup, duplicate ids, image sizes, stylesheet lint and !important overuse. |
 | `seo-and-meta` | SEO and meta | 2 | 2 | Title, description, robots and sitemap. |
 | `code-quality` | Code quality | 10 | 10 | Whitespace, indentation, leftovers, empty catches, TODO hygiene and broken imports. |
-| `test-hygiene` | Test hygiene | 10 | 31 | Skipped or focused tests, duplicate test names and projects with no tests. |
+| `test-hygiene` | Test hygiene | 21 | 88 | Skipped or focused tests, duplicate test names and projects with no tests. |
 | `refactor` | Refactor | 9 | 9 | Duplicated code, dead code, long files and functions, deep nesting and complexity. |
 | `javascript` | JavaScript and TypeScript | 7 | 7 | Common JS and TS mistakes: loose equality, var, unhandled promises, any, ts-ignore. |
 | `slow-code-patterns` | Slow code patterns | 4 | 4 | Sync file calls in handlers, parsing or regex building inside loops, DOM queries in loops. |
@@ -37,14 +37,14 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `api-contracts` | API contracts | 4 | 4 | OpenAPI and GraphQL schemas are valid and complete. |
 | `database` | Database | 4 | 4 | SQL migrations order and safety, missing indexes, Prisma schema basics. |
 | `api-resilience` | API resilience | 4 | 4 | Timeouts, rate limits, error leaks and bounded pagination. |
-| `desktop-apps` | Desktop and mobile apps | 14 | 14 | Electron, Tauri, Capacitor, Cordova and Android manifest security settings. |
+| `desktop-apps` | Desktop and mobile apps | 19 | 176 | Electron, Tauri, Capacitor, Cordova and Android manifest security settings. |
 | `git-history` | Git history | 8 | 8 | Commit messages, large commits, binaries and secrets in history, author identity. |
 | `git-workflow` | Git workflow | 3 | 3 | Branch names, long-lived branches and pinned submodules. |
 | `release-versioning` | Release versioning | 15 | 15 | Semantic versions, tags that match the package, changelog kept up to date. |
 | `dependencies` | Dependencies | 15 | 15 | Lockfile in sync, unused, duplicate, wildcard or misplaced dependencies. |
 | `performance` | Performance | 11 | 11 | Size, start-up, memory, response time, load and build time against budgets. |
 | `node` | Node and TypeScript tools | 9 | 9 | ESLint, tsc, Prettier, circular imports, engines and tsconfig strictness. |
-| `rust` | Rust | 10 | 10 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
+| `rust` | Rust | 16 | 156 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
 | `python` | Python | 8 | 8 | ruff, mypy, pytest, bandit and dead code. |
 | `go` | Go | 4 | 4 | go vet and go test. |
 | `java` | Java | 3 | 3 | Maven validate, compile and test. |
@@ -61,7 +61,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 
 ### Security checks
 
-Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 100 checks.
+Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 106 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -101,6 +101,11 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `electron-updater-https` | fast | tiny | 2 s | Electron: app updates are fetched over https | desktop |
 | `electron-web-security` | fast | tiny | 2 s | Electron: no window switches off webSecurity or allows insecure content | desktop |
 | `env-files-in-history` | fast | tiny | 10 s | Git history: key and environment files that were ever committed | security-plus |
+| `ep-content-renderer` | fast | tiny | 2 s | Electron page content: Content-Security-Policy, remote scripts, webview, eval and raw HTML | electron-plus |
+| `ep-fuses-build` | fast | tiny | 2 s | Electron fuses and build config: package-time fuses, asar, signing, notarisation, entitlements and publish settings | electron-plus |
+| `ep-ipc-preload` | fast | tiny | 2 s | Electron IPC and preload: sender checks, exposed Node objects, channel names and listeners | electron-plus |
+| `ep-tauri-cross` | fast | tiny | 2 s | Tauri, NW.js, Neutralino, Cordova, Capacitor and Android WebView: scopes, capabilities and command settings | electron-plus |
+| `ep-window` | fast | tiny | 2 s | Electron windows: sandbox, experimental features, navigation, permissions, certificates and command-line switches | electron-plus |
 | `external-fonts-cdn` | fast | tiny | 2 s | No font or style is loaded from a third-party CDN (listed unless privacy.noThirdPartyFonts is true) | privacy |
 | `geolocation-and-media-requests` | fast | tiny | 2 s | Location, camera, microphone and clipboard prompts only run behind a user action | privacy |
 | `github-actions-artifacts` | fast | tiny | 2 s | GitHub Actions artifact uploads set a retention limit and upload no secret paths | ci-systems |
@@ -137,6 +142,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `regex-dos` | fast | tiny | 2 s | No regular expression that can take exponential time | security-plus |
 | `requirements-hashes` | fast | tiny | 3 s | Installs pinned to a version or hash, and not fetched over plain http | security-plus |
 | `risky-code` | fast | tiny | 3 s | Risky calls: eval, shell strings, disabled TLS checks, weak hashes, plain http | security |
+| `rp-safety` | fast | tiny | 2 s | Rust unsafe code: SAFETY notes, unsafe fns and traits documented, no static mut or transmute misuse | rust-plus |
 | `rust-audit` | fast | light | 4 s | Rust dependency advisories (cargo audit) | rust |
 | `rust-deny` | fast | light | 10 s | Rust dependency policy: licenses, banned crates, sources (cargo deny) *(opt-in: `--include deny`)* *(needs: cargo-deny)* | rust |
 | `secret-scan` | fast | tiny | 3 s | Secret scan: keys, tokens and private keys in tracked files | security |
@@ -168,11 +174,12 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 
 ### Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 190 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 205 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
 | `ansible-hygiene` | fast | tiny | 2 s | Ansible playbooks hide passwords, limit become and avoid plain http downloads | ci-systems |
+| `assertion-strength` | fast | tiny | 3 s | Assertion strength, read from the files: defined-only, truthy-on-object, not-throw-only and mock-call-only tests | mutation |
 | `author-identity` | fast | tiny | 3 s | Recent commits have a real author name and email, not a placeholder | git |
 | `binary-in-history` | fast | tiny | 3 s | No file over the size budget was added in the recent history | git |
 | `branch-names` | fast | tiny | 3 s | Local branch names are lowercase kebab-case with / separators | git |
@@ -300,6 +307,10 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `requirements-pinned-ml` | fast | tiny | 2 s | ML packages in requirements or pyproject have exact versions | data-science |
 | `reserved-names` | fast | tiny | 2 s | No file or folder uses a name Windows cannot use (CON, AUX, NUL, COM1, and similar) | repo |
 | `root-private` | fast | tiny | 2 s | A monorepo root package.json is marked private | packaging |
+| `rp-api-ffi-wasm` | fast | tiny | 2 s | Rust API, FFI, WebAssembly and serde: documented public items, C ABI symbols, no HTML injection, no serialized secrets | rust-plus |
+| `rp-async` | fast | tiny | 2 s | Rust async: no blocking calls inside async fns, no held std locks across await, no dropped spawn handles | rust-plus |
+| `rp-cargo` | fast | tiny | 2 s | Cargo manifests and cargo-deny config: metadata, release profile, no wildcard or unpinned git deps, no machine paths | rust-plus |
+| `rp-errors` | fast | tiny | 2 s | Rust error handling: no empty expect, no panics in library code, no lost error sources | rust-plus |
 | `rspec` | fast | medium | 30 s | RSpec: the test suite *(needs: rspec)* | ruby |
 | `rubocop` | fast | light | 15 s | RuboCop: Ruby style and common bugs *(needs: rubocop)* | ruby |
 | `ruff` | fast | tiny | 3 s | Ruff: lint and import order *(needs: ruff)* | python |
@@ -325,6 +336,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `terraform-fmt` | fast | tiny | 5 s | Terraform: formatting (terraform fmt) *(needs: terraform)* | terraform |
 | `test-presence` | fast | tiny | 2 s | The source has tests, and large folders of source have a test file | quality |
 | `test-quality-static` | fast | tiny | 3 s | Test quality, read from the files: no assertions, always-true assertions, swallowed errors, sleeps, skipped tests | mutation |
+| `test-to-code-ratio` | fast | tiny | 2 s | Test lines per source line, by folder (informational): folders with source and no tests are listed | mutation |
 | `todo-hygiene` | fast | tiny | 2 s | TODO, FIXME, HACK and XXX comments name an owner or an issue (when enforced) | quality |
 | `toml-valid` | fast | tiny | 2 s | Tracked TOML files read as valid (no unclosed strings, repeated keys or bad table headers) | config |
 | `trailing-whitespace` | fast | tiny | 2 s | No line ends with stray spaces or tabs | quality |
@@ -355,13 +367,22 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `yaml-valid` | fast | tiny | 2 s | Tracked YAML files read as valid (no tab indentation, repeated top-level keys or unclosed quotes) | config |
 | `yamllint` | fast | tiny | 3 s | YAML files (yamllint) *(needs: yamllint)* | infra |
 | `clean-copy-builds` | thorough | alone | 3.0 min | A clean copy of the tracked files installs, builds and passes its tests *(opt-in: `--include runtime`)* | functionality-run |
+| `crash-fuzz` | thorough | heavy | 1.5 min | Exported functions survive nasty inputs: no hang, crash, stack overflow or prototype pollution *(opt-in: `--include runtime`)* | robustness |
 | `env-example-boot` | thorough | heavy | 1.0 min | The app starts with the variables .env.example lists (no undocumented variable) *(opt-in: `--include runtime`)* | functionality-run |
 | `flaky-tests` | thorough | alone | 3.0 min | The tests give the same result every time they run *(opt-in: `--include runtime`)* | functionality-run |
+| `idempotent-cli` | thorough | medium | 30 s | Command-line tools answer --help and --version identically, reject bad flags cleanly and never hang *(opt-in: `--include runtime`)* | robustness |
 | `install-reproducible` | thorough | heavy | 1.0 min | The frozen install works and the lockfile matches the manifest *(opt-in: `--include runtime`)* | functionality-run |
 | `mutation-testing` | thorough | alone | 5.0 min | Mutation testing: the tests notice when the code is changed (works on a temporary copy) *(opt-in: `--include mutation`)* | mutation |
+| `parallel-safety` | thorough | alone | 2.0 min | The tests give the same result one at a time and in parallel (no shared-state races) *(opt-in: `--include runtime`)* | robustness |
 | `readme-commands-work` | thorough | heavy | 1.5 min | The shell commands the README tells people to run work (allowlisted commands only) *(opt-in: `--include runtime`)* | functionality-run |
+| `reproducible-build` | thorough | alone | 2.0 min | Two clean builds of the same source give identical files (no timestamps, paths or random ids) *(opt-in: `--include runtime`)* | robustness |
 | `rust-build-release` | thorough | heavy | 5.0 min | Rust release build (cargo build --release) | rust |
 | `rust-doc` | thorough | heavy | 1.0 min | Rust documentation builds without warnings (cargo doc) | rust |
+| `slow-test-regression` | thorough | heavy | 2.0 min | No test got more than 3x slower than its recent median (and the five slowest tests are listed) *(opt-in: `--include runtime`)* | robustness |
+| `test-order-independence` | thorough | alone | 2.0 min | The tests still pass when run in a different order (no hidden coupling between tests) *(opt-in: `--include runtime`)* | robustness |
+| `tests-fail-without-source` | thorough | alone | 4.0 min | Source files that no test depends on: emptying one file at a time (in a temporary copy) must make a test fail *(opt-in: `--include mutation`)* | mutation |
+| `tz-locale-matrix` | thorough | alone | 2.0 min | The tests pass in other time zones and locales too (UTC, Los Angeles, Kolkata, Kiritimati; Turkish, German) *(opt-in: `--include runtime`)* | robustness |
+| `unused-dependency-proof` | thorough | alone | 4.0 min | Production dependencies that are not imported can be removed without breaking tests or build *(opt-in: `--include runtime`)* | robustness |
 
 ### UI checks
 
@@ -394,7 +415,7 @@ Pages and styles: accessibility basics and valid markup. 22 checks.
 
 ### Performance checks
 
-Size, start-up, memory, response time, load and build time, against budgets you set. 15 checks.
+Size, start-up, memory, response time, load and build time, against budgets you set. 16 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -408,6 +429,7 @@ Size, start-up, memory, response time, load and build time, against budgets you 
 | `perf-startup` | fast | light | 15 s | Start-up time: how fast the app is ready (median of several starts) | performance |
 | `regex-in-loop` | fast | tiny | 2 s | No RegExp is built inside a loop | health |
 | `render-blocking` | fast | tiny | 2 s | Head scripts do not block drawing, and images have a size and load lazily | a11y |
+| `rp-perf-style` | fast | tiny | 2 s | Rust performance and style: is_empty over len, no needless collect or clone, no regex compiled per call | rust-plus |
 | `sync-fs-in-handlers` | fast | tiny | 2 s | No blocking file or process call inside a server request or event handler | health |
 | `unoptimised-images` | fast | tiny | 2 s | No image is over its size budget (default 500 KB), and no bmp or tiff | health |
 | `perf-build` | thorough | alone | 2.0 min | Build time: the build stays inside its time budget | performance |

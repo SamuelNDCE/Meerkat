@@ -289,7 +289,7 @@ describe('the board', () => {
     m.start(checks[1], 0)
     const before = board(m.snapshot(5000)).split('\n').length
     m.progress(checks[0], { file: 'src/a.ts' })
-    expect(board(m.snapshot(5000)).split('\n').length).toBe(before + 1) // only while it runs
+    expect(board(m.snapshot(5000)).split('\n').length).toBe(before) // the running area keeps one height while checks run
     m.settle(checks[0], { status: 'PASS' }, 1000)
     m.settle(checks[1], { status: 'PASS' }, 1000)
     const done = board(m.snapshot(6000))

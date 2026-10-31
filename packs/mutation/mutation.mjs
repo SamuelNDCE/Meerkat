@@ -1,0 +1,82 @@
+// The mutation pack. mutation-testing changes the project's code in small ways, in a temporary copy, and checks that the project's own
+// tests notice; it runs the tests many times, so it is opt-in (--include mutation, or `meerkat check mutation-testing`).
+// test-quality-static is the cheap cousin: it reads the test files and needs no test run. See thorough/mutation.mjs and docs/mutation.md.
+import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
+
+const S = `${MK}/thorough/mutation.mjs`
+const Q = `${MK}/thorough/mutation-quality.mjs`
+
+export default [
+  {
+    id: 'mutation-testing',
+    group: 'functionality',
+    tier: 'thorough',
+    lane: 'free',
+    weight: 'alone',
+    optIn: 'mutation',
+    suite: 'test-hygiene',
+    title: 'Mutation testing: the tests notice when the code is changed (works on a temporary copy)',
+    estSeconds: 300,
+    timeoutSeconds: 900,
+    subs: 18,
+    needs: ['node'],
+    run: { cmd: 'node', args: [S, 'mutation-testing'], cwd: 'repo' },
+  },
+  {
+    id: 'test-quality-static',
+    group: 'functionality',
+    tier: 'fast',
+    lane: 'free',
+    weight: 'tiny',
+    suite: 'test-hygiene',
+    title: 'Test quality, read from the files: no assertions, always-true assertions, swallowed errors, sleeps, skipped tests',
+    estSeconds: 3,
+    subs: 13,
+    needs: ['node'],
+    run: { cmd: 'node', args: [S, 'test-quality-static'], cwd: 'repo' },
+    selfTest: { cmd: 'node', args: [S, 'test-quality-static', '--fixtures'], cwd: 'repo', expectFail: true },
+  },
+  {
+    id: 'tests-fail-without-source',
+    group: 'functionality',
+    tier: 'thorough',
+    lane: 'free',
+    weight: 'alone',
+    optIn: 'mutation',
+    suite: 'test-hygiene',
+    title: 'Source files that no test depends on: emptying one file at a time (in a temporary copy) must make a test fail',
+    estSeconds: 240,
+    timeoutSeconds: 900,
+    subs: 1,
+    needs: ['node'],
+    run: { cmd: 'node', args: [Q, 'tests-fail-without-source'], cwd: 'repo' },
+    selfTest: { cmd: 'node', args: [Q, 'tests-fail-without-source', '--fixtures'], cwd: 'repo', expectFail: true },
+  },
+  {
+    id: 'assertion-strength',
+    group: 'functionality',
+    tier: 'fast',
+    lane: 'free',
+    weight: 'tiny',
+    suite: 'test-hygiene',
+    title: 'Assertion strength, read from the files: defined-only, truthy-on-object, not-throw-only and mock-call-only tests',
+    estSeconds: 3,
+    subs: 5,
+    needs: ['node'],
+    run: { cmd: 'node', args: [Q, 'assertion-strength'], cwd: 'repo' },
+    selfTest: { cmd: 'node', args: [Q, 'assertion-strength', '--fixtures'], cwd: 'repo', expectFail: true },
+  },
+  {
+    id: 'test-to-code-ratio',
+    group: 'functionality',
+    tier: 'fast',
+    lane: 'free',
+    weight: 'tiny',
+    suite: 'test-hygiene',
+    title: 'Test lines per source line, by folder (informational): folders with source and no tests are listed',
+    estSeconds: 2,
+    subs: 1,
+    needs: ['node'],
+    run: { cmd: 'node', args: [Q, 'test-to-code-ratio'], cwd: 'repo' },
+  },
+]

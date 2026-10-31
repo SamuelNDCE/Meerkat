@@ -557,7 +557,7 @@ describe('the loading screen', () => {
     const all = out.join('')
     expect(all).toContain('one')
     expect(all).toContain('two')
-    expect(all.endsWith(ESC + '[?25h')).toBe(true)
+    expect(all.endsWith(ESC + '[?25h' + ESC + '[?1049l')).toBe(true) // the splash lives on the alternate screen and leaves it clean
     expect(createSplash({ enabled: false }).enabled).toBe(false)
   })
 })

@@ -18,7 +18,7 @@ import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
 import { compactSummary } from './lib/tui/results.mjs'
 import { saveFindings } from './lib/findingsdoc.mjs'
-import { createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, showWhy, writeRunReport } from './lib/runlog.mjs'
+import { createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
@@ -347,7 +347,9 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     saveTimings(timingsFile, { ...recordRun(timings, results, tier), project: appDir })
   }
   results = narrowSubs(results, subOnly) // `suite/check/sub` ids report only that sub-check
-  const full = enrichResults(results, ranChecks.length ? ranChecks : checks) // suite and sub-check counts for the saved files and --json
+  let full = enrichResults(results, ranChecks.length ? ranChecks : checks) // suite and sub-check counts for the saved files and --json
+  // A check that could not run gets a short log too (why, and what to do), so `meerkat why <check>` always has something to show.
+  if (!opts.selfTest) full = saveNotRunLogs(ctx.logDir, full, ranChecks.length ? ranChecks : checks)
   const { line, exitCode } = summarise(opts.selfTest ? `${tier} self-test` : tier, results, skippedCount, Date.now() - started)
   status?.stop(line)
   // A finished real run adds one entry to the run log the terminal UI's history view reads (home folder, never the repo).

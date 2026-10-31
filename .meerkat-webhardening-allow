@@ -1,0 +1,4 @@
+# Accepted web-hardening findings for the Meerkat repository itself (one "<rule-id> <path>" per line).
+# Both are fixture text inside Meerkat's own check scripts, not live code. Reviewed 2026-10-31.
+stack-trace-to-client-js thorough/api.mjs
+cors-reflects-request-origin thorough/sec-code.mjs

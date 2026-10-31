@@ -133,3 +133,15 @@ The project picker, the browse screen and the preset menu share one layout: the 
 The meerkat is drawn only in a terminal with colour that is at least 70 columns wide and 24 rows tall. In a narrower or shorter terminal, with `NO_COLOR`, `MEERKAT_PLAIN=1` or `MEERKAT_MASCOT=0`, or without a terminal, the title is plain text with no art.
 
 Meerkat looks up the latest version once a day (turn off with `meerkat update off`); it never installs without you. The lookup is read-only, limited to 3 seconds, and its answer is kept in `~/.meerkat.json` (`updateCache`). When that answer is newer than the version you run, the first line of the menu screens, and of the screen after a run, is a yellow bar: "Update available: Meerkat 1.4.0 (you have 1.3.2). Press u to update, or choose Check for updates below". While the daily look-up runs, a small spinner line at the top of the menu says `Checking for updates...`; it turns into `Up to date (v1.2.3)` (green) or `Could not check (offline)` for a second, or into the yellow bar when a newer version exists. The look-up never holds up a key and stops after 3 seconds. In the preset menu, `u` (or the Check for updates row) starts the update, which shows what changed and asks before installing. With `meerkat update off` nothing is looked up on its own, and the bar appears only if a manual `meerkat update --check` found a newer version. `meerkat update status` shows the setting, the newest version known and when it was checked.
+
+## The results screen (after a run in a terminal)
+
+When a run started from `meerkat` finishes in a terminal, the live board leaves one short summary in the scrollback (the counts, the findings and the line `Findings folder created: <run folder>`) and a full-screen results view opens. The long FAIL, NOT RUN and SUITE lines are not printed there: they are in `report.md` and the logs, and a run with no terminal (a pipe, CI, `--plain`, `--json`) prints exactly the lines it always did.
+
+Three sections, switched with Tab, Left/Right or 1 2 3:
+
+- **1 Findings**: grouped worst first. Critical red, high orange, medium yellow, low and info white (the word is always shown too). Enter opens the full detail, Esc comes back, `f` cycles the severity filter (all, critical, high, medium, low, info, new).
+- **2 Checks**: every check that ran or was skipped, with status, suite, time, a bar scaled to the slowest check and the reason when it did not pass. `s` cycles the status filter (all, problems, not run, passed). Enter opens the check (command, reason, findings, log path).
+- **3 Timeline**: a gantt of every check on one time axis, with how many ran at once on top. Enter opens the check.
+
+Keys: `c` copies the findings folder path (in a check detail: that check's log path), `l` shows the log, `y` copies the selected log path, `o` shows the report, `d` shows the repo changes, `r` runs again, `m` goes back to the menu, `q`, Esc or Ctrl+C is done, `?` lists the keys. `MEERKAT_OLD_MENU=1` brings back the old list.

@@ -95,3 +95,7 @@ A check script can tell the live board which file it is reading by printing, one
 ## Safety
 
 Log text is data. When Meerkat prints it, control characters are removed so nothing in a log can move the cursor or rewrite earlier lines, and Meerkat opens a log path only if it is inside its own log folder.
+
+## Check log format
+
+Every check's `<check>.log` starts with a header (check, title, kind, command, folder, result, exit code, `started` and `ended` times and how long it took, and a `findings:` line when it produced any), then a line `--- output ---`, then everything the check printed, then the sub-check block. A check that could not run (NOT RUN) gets a short log too: the same header, `exit code: n/a (the check never started)`, then the reason and what to do, so `meerkat why <check>` always has something to show.

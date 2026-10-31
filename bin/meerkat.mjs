@@ -135,7 +135,11 @@ async function main() {
         }
       }
       const code = spawnRun(plan.args, { env, cwd })
-      if (interactive && !plan.json && !plan.quiet) await afterRun({ runDir: latestRunDir(env), env, args: plan.args, cwd })
+      if (interactive && !plan.json && !plan.quiet) {
+        const next = await afterRun({ runDir: latestRunDir(env), env, args: plan.args, cwd, canMenu: true })
+        // m on the results screen: back to the home menu, for the same project.
+        if (next === 'menu') await runMenu({ cwd, env, folder: plan.folder ?? cwd })
+      }
       return code
     }
     default:
