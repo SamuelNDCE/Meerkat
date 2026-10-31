@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
+import { VERSION } from '../lib/version.mjs'
 
 const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'web-plus', 'lang', 'config', 'content', 'git', 'desktop', 'api', 'health', 'data-science', 'packaging', 'ci-systems', 'privacy', 'engines', 'secrets-plus', 'code-patterns', 'infra-plus', 'web-hardening', 'functionality-run', 'mutation', 'robustness', 'electron-plus', 'rust-plus', 'ai']
 let checks = 0
@@ -13,6 +14,7 @@ for (const p of PACKS) checks += (await loadChecks(join(MEERKAT_DIR, 'packs', p)
 // label, value, colour of the value half
 const BADGES = [
   ['licence', 'PCL 1.0', '#8a5cf5'],
+  ['version', `v${VERSION}`, '#7d5bd6'], // from package.json, so it follows every bump when this is run again
   ['telemetry', 'none', '#2ea44f'],
   ['dependencies', 'zero', '#2ea44f'],
   ['node', '20+', '#3c873a'],

@@ -33,14 +33,9 @@ import { mergePresets, parseGroups, PRESETS, resolvePreset } from './lib/presets
 import { readUserConfig } from './lib/userconfig.mjs'
 import { createSplash } from './lib/tui/splash.mjs'
 import { loadTheme } from './lib/tui/theme.mjs'
+import { VERSION } from './lib/version.mjs'
 
-const meerkatVersion = () => {
-  try {
-    return JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'package.json'), 'utf8')).version
-  } catch {
-    return ''
-  }
-}
+const meerkatVersion = () => VERSION // lib/version.mjs: package.json, read once
 
 // How a time estimate reads: "about 1 second", "about 5 seconds", "about 2.5 minutes".
 export function durationText(ms) {

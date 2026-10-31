@@ -5,7 +5,7 @@
 **One command that checks your project before you ship it.**<br>
 It runs the checks your project needs, shows what passed, what failed and what could not run, and saves a log of every one.
 
-<img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11">
+<img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11">
 
 ![Meerkat running: a progress bar with the time left, what is running now, every check with its time, and a timeline](docs/images/meerkat-run.gif)
 
