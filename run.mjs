@@ -362,7 +362,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     boardShown = useUi
     if (opts.ui && !useUi) log('note: --ui needs an interactive terminal (not a pipe, CI or MEERKAT_PLAIN=1); using the plain lines')
     const bar = useUi
-      ? createTui({ theme, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '', grouped: opts.grouped, typicalHere: timings.project === appDir, showFinal: false, sink: ctx.findingsSink })
+      ? createTui({ control: ctx.control, theme, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '', grouped: opts.grouped, typicalHere: timings.project === appDir, showFinal: false, sink: ctx.findingsSink })
       : createProgress({ title: `MEERKAT · ${label}`, checks: sel.run, enabled: liveBar })
     const quiet = liveBar || useUi
     status = createStatus({ title: `MEERKAT · ${label}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })

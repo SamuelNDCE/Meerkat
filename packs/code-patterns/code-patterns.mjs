@@ -21,10 +21,10 @@ const check = (id, title, suite, subs) => ({
 })
 
 export default [
-  check('cp-python', 'Python: no shell or process call from variables, no unsafe loads, no disabled TLS, no weak modes', 'risky-calls', 30),
-  check('cp-js', 'JavaScript and TypeScript: no command or require built from variables, no timing-unsafe secret checks, no hidden characters', 'risky-calls', 24),
+  check('cp-python', 'Python: no shell or process call from variables, no unsafe loads, no disabled TLS, no weak modes', 'risky-calls', 32),
+  check('cp-js', 'JavaScript and TypeScript: no command or require built from variables, no timing-unsafe secret checks, no hidden characters', 'risky-calls', 25),
   check('cp-go', 'Go: no hardcoded secrets, no unbounded servers, no command or path from requests, no weak crypto', 'risky-calls', 25),
   check('cp-rust', 'Rust: unsafe blocks carry a SAFETY note, no weak hashes, no secrets printed', 'risky-calls', 10),
-  check('cp-java', 'Java: no runtime exec or object deserialization from untrusted input, no trust-all TLS, no expression injection', 'injection-patterns', 25),
-  check('cp-dotnet-php-ruby', 'C#, PHP and Ruby: no unsafe deserialization, no eval of input, no disabled checks, no unscoped params', 'injection-patterns', 39),
+  check('cp-java', 'Java: no runtime exec or object deserialization from untrusted input, no trust-all TLS, no expression injection', 'injection-patterns', 26),
+  check('cp-dotnet-php-ruby', 'C#, PHP and Ruby: no unsafe deserialization, no eval of input, no disabled checks, no unscoped params', 'injection-patterns', 40),
 ]
