@@ -84,7 +84,12 @@ if (has('--once')) {
   // A still frame, taken part way through: some done, the cargo build and a unit-test run going, windows waiting.
   const t0 = base
   const fakeNow = t0 + 140_000
-  for (const id of ['rule-scan', 'npm-audit', 'cargo-audit', 'type-check', 'build-all', 'sidecar-fmt', 'test-safety']) model.settle(checks.find((c) => c.id === id), { status: 'PASS' }, 2000)
+  const early = { 'rule-scan': 2, 'npm-audit': 3, 'cargo-audit': 4, 'type-check': 10, 'build-all': 10, 'sidecar-fmt': 4, 'test-safety': 15 }
+  for (const [id, at] of Object.entries(early)) {
+    const c = checks.find((x) => x.id === id)
+    model.start(c, t0 + at * 1000 - 2000)
+    model.settle(c, { status: 'PASS' }, 2000 + (id === 'type-check' || id === 'build-all' ? 8000 : 0))
+  }
   for (const id of ['build-sidecar', 'unit-tests-changed']) model.start(checks.find((c) => c.id === id), fakeNow - 120_000)
   model.queue([{ id: 'ui-screens', reason: 'after build-sidecar' }, { id: 'ui-axe', reason: 'after build-sidecar' }, { id: 'click-through', reason: 'after build-sidecar' }, { id: 'vault-parser-proptest', reason: 'the cargo lane is busy' }, { id: 'sidecar-clippy', reason: 'the cargo lane is busy' }])
   events.push({ at: t0 + 120_000, text: 'started build-sidecar: cargo build -p nv-sidecar' }, { at: t0 + 125_000, text: 'PASS test-safety: 5 native calls blocked' }, { at: t0 + 130_000, text: 'started unit-tests-changed' })

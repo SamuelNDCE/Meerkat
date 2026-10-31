@@ -13,7 +13,7 @@ import { applyFilter, createModel, initialState, nextState, outputFileFrom, typi
 import { renderHistory, renderRows, sparkline } from './render.mjs'
 import { frameFromStatus, rowsFromStatus, staleNote } from './watch.mjs'
 import { mascotLines, moodOf, speechFor, withMascot } from './mascot.mjs'
-import { headLines, poseFor, renderLive } from './live.mjs'
+import { animatedBar, headLines, poseFor, renderLive, timelineStrip } from './live.mjs'
 import { knownStatus, safeLogPath, stripControl } from './safe.mjs'
 import { parseArgs } from '../../run.mjs'
 
@@ -265,7 +265,7 @@ describe('the live board', () => {
     const names = ['left', 'right', 'blink-left', 'blink-right', 'happy', 'wide']
     const heads = names.map((p) => headLines(p, true))
     expect(new Set(heads.map((h) => h.length)).size).toBe(1)
-    expect(heads[0]).toHaveLength(12)
+    expect(heads[0]).toHaveLength(10)
     expect(heads[0].join('')).not.toBe(heads[1].join('')) // left is not right
     expect(heads[2].join('')).not.toBe(heads[0].join('')) // a blink changes the eye
     expect(heads[3].join('')).not.toBe(heads[1].join(''))
@@ -293,5 +293,56 @@ describe('the live board', () => {
   test('text from a check is cleaned before it is drawn', () => {
     const bad = [{ ...rows[1], note: 'x' + String.fromCharCode(27) + '[2Jy' }]
     expect(renderLive({ rows: bad, started: 0, now: 1000, color: false }).join('\n')).not.toContain(String.fromCharCode(27))
+  })
+})
+
+describe('the animations are alive, and the board shows parallel work and an estimate', () => {
+  const NL = String.fromCharCode(10)
+  const rows = [
+    { id: 'a', status: 'PASS', lane: 'free', ms: 10_000, begunAt: 0, endedAt: 10_000, typicalMs: 10_000, expectedMs: 10_000 },
+    { id: 'b', status: 'RUNNING', lane: 'cargo', startedAt: 5_000, begunAt: 5_000, typicalMs: 100_000, expectedMs: 100_000, note: 'Compiling' },
+    { id: 'c', status: 'RUNNING', lane: 'free', startedAt: 8_000, begunAt: 8_000, typicalMs: 50_000, expectedMs: 50_000 },
+    { id: 'd', status: 'WAITING', lane: 'electron', reason: 'after b', typicalMs: 5000, expectedMs: 5000 },
+  ]
+  const board = (tick: number) => renderLive({ rows, started: 0, now: 30_000, tick, fraction: 0.4, etaMs: 90_000, color: false, width: 110 }).join(NL)
+  test('the bar shimmers and its edge pulses: the same progress draws differently on different ticks', () => {
+    const frames = new Set([0, 1, 2, 3, 4, 5].map((t) => animatedBar(0.5, 20, t, { color: false })))
+    expect(frames.size).toBeGreaterThan(3)
+    expect(animatedBar(0.5, 20, 0, { color: false }).replace(/[^█▒▌░]/g, '')).toHaveLength(20) // same width every frame
+    expect(animatedBar(1, 10, 3, { color: false })).not.toContain('░')
+    expect(animatedBar(0, 10, 3, { color: false })).toBe('░'.repeat(10))
+  })
+  test('the spinner turns and the whole screen changes from one tick to the next', () => {
+    expect(board(0)).not.toBe(board(1))
+    expect(board(0)).not.toBe(board(3))
+  })
+  test('it says how long is estimated to be left, overall and for each running check', () => {
+    const text = board(2)
+    expect(text).toContain('estimated time left 1:30')
+    expect(text).toContain('est. 1:15 left') // b: 100 s typical, 25 s spent
+    expect(text).toContain('est. 0:28 left') // c: 50 s typical, 22 s spent
+  })
+  test('it counts what runs in parallel and in which lane', () => {
+    const text = board(2)
+    expect(text).toContain('2 running in parallel')
+    expect(text).toContain('cargo 1')
+    expect(text).toContain('free 1')
+  })
+  test('the timeline shows overlap: two running checks cover the same stretch, a waiting one is empty', () => {
+    const strip = (r: any) => timelineStrip(r, { started: 0, now: 30_000, tick: 0, width: 30, color: false })
+    const b = strip(rows[1])
+    const c = strip(rows[2])
+    const filled = (s: string) => [...s].map((ch, i) => (ch === '█' || ch === '▌' ? i : -1)).filter((i) => i >= 0)
+    const overlap = filled(b).filter((i) => filled(c).includes(i))
+    expect(overlap.length).toBeGreaterThan(10)
+    expect(filled(strip(rows[3]))).toEqual([])
+    expect(filled(strip(rows[0]))[0]).toBe(0) // a started at the beginning
+    expect(strip(rows[1])).toHaveLength(30)
+  })
+  test('with colour on, the animation still only adds colour codes, never changes the text', () => {
+    const plain = renderLive({ rows, started: 0, now: 30_000, tick: 5, fraction: 0.4, etaMs: 90_000, color: false, width: 110 }).join(NL)
+    const coloured = renderLive({ rows, started: 0, now: 30_000, tick: 5, fraction: 0.4, etaMs: 90_000, color: true, width: 110 }).join(NL)
+    expect(coloured.replace(new RegExp(String.fromCharCode(27) + '\[[0-9;]*m', 'g'), '')).toContain('estimated time left 1:30')
+    expect(coloured.length).toBeGreaterThan(plain.length)
   })
 })
