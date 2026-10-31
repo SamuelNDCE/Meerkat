@@ -155,7 +155,9 @@ NeuralVault (private) is the source of truth for the code, the checks and their 
 
 ## Licence
 
-None chosen yet. Until one is added, all rights are reserved and the repository stays private.
+No licence file has been added yet, and the code carries no copyright or proprietary notices: it is meant to be opened up. The licence will be chosen and added when the repository is published. \*
+
+> \*Corrected 2026-10-31: this section used to say all rights are reserved and the repository stays private. Samuel said it will probably be open source, and asked for every proprietary notice to be removed.
 
 ## More
 

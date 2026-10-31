@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // Wrappers for the gates that already exist (the exact commands from `verify:all` in package.json) plus the
 // dependency audits (flags copied from .github/workflows/security-audit.yml). Part B and C add their own files.
 import { copyFileSync, mkdirSync, rmSync } from 'node:fs'

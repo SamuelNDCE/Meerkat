@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // Watch a Meerkat run from a second terminal. Read-only: it reads the run's status file and the saved times and run
 // log in your home folder, and never touches the run. See lib/tui/watch.mjs.
 //

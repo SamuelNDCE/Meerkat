@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-// guard-mutants: cargo-mutants on the three guard areas (scope lives in .cargo/mutants.toml).
 // Fails when a mutant survives (the guard tests still pass with the rule broken) unless the
 // survivor is in guard-mutants-allowlist.json with a reason. Wraps the installed cargo-mutants (MIT).
 // Env: NV_MUTANTS_SHARD=k/n runs one slice (871 mutants at first count, each needs a nv-agents rebuild: the full run takes hours).

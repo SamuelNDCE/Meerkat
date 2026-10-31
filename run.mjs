@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // Meerkat, the validation tool (issue #3114). Contract: docs/testing/validation-tool.md.
 //   npm --prefix apps/desktop-electron run verify            (fast tier)
 //   npm --prefix apps/desktop-electron run verify -- --thorough

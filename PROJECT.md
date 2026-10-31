@@ -17,7 +17,7 @@ A private placeholder created 2026-10-30 under the `perpetual-technologies-offic
 > \*Corrected 2026-10-30: superseded. This repository is now the source of truth for the tool; change it here. NeuralVault keeps only a small launcher (and, until its pull request lands, an older copy that is deleted by that pull request, so do not edit that copy).
 - **Name.** The tool was renamed from "validation tool" to Meerkat on 2026-10-29. Check for trademark or name clashes before making the repository or the name public (not checked).
 - **Pushing.** Commit as yourself, no AI co-author line, stage files by name, and open a pull request for anything beyond README and PROJECT.md edits.
-- **Licence.** None chosen. Do not add one without Samuel.
+- **Licence.** None chosen yet. Do not add one without Samuel. The code carries no copyright or proprietary headers (removed 2026-10-31 at Samuel's instruction, because it will probably be open source); do not add them back.
 
 ## Where things are
 

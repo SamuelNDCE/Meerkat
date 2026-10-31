@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-// sync-load: runs tools/loadtest/sync-load.js (k6) against NV_SYNC_URL with NV_SYNC_TOKEN.
 // Wraps the installed k6 binary (AGPL-3.0: we do not copy or vendor any k6 code).
 // Refuses any target that is not staging or loopback: the script WRITES notes into the
 // throwaway vault (NV_SYNC_VAULT, default "test").

@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // The Meerkat orchestrator (the validation tool) (issue #3114): selection, lanes, statuses, the hard timeout and the loader.
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -97,6 +93,11 @@ describe('statuses, order and fail-fast', () => {
     const elsewhere = await runOne(check, { ...ctx(), env: { PATH: '' }, platform: 'linux' })
     expect(elsewhere.status).toBe('NOT RUN')
     expect(elsewhere.detail).toContain('bash')
+  })
+  test('the one-line failure detail is the cause, not the routine log lines after it', () => {
+    const output = ['  PASS  something', 'VERIFICATION ERRORED: Error: Cannot find module', '2026-10-31T00:19:31Z INFO  [sidecar] state stopped', '2026-10-31T00:19:31Z INFO  [sidecar] ignored the exit'].join(String.fromCharCode(10))
+    expect(lastLine(output)).toContain('VERIFICATION ERRORED')
+    expect(lastLine('plain output' + String.fromCharCode(10) + 'last line')).toBe('last line')
   })
   test('summary line and exit code: failed or not run both fail the run', () => {
     const ok = summarise('fast', [{ status: 'PASS' }], 2, 1500)

@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // Part D of Meerkat, the validation tool (#3114): a real-window screenshot and UX check of the primary pages.
 // The harness is electron/verify-screens.cts. Screenshots go to NV_SCREENS_DIR (default a temp folder, printed).
 import { runCommand, lastLine } from '../lib/exec.mjs'

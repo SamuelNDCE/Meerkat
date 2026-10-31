@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-// agent-scan: wrapper for Snyk Agent Scan (Apache-2.0, https://github.com/snyk/agent-scan).
 // CLI verified 2026-10-27 from https://github.com/snyk/agent-scan (README, "Run with uvx"):
 //   SNYK_TOKEN=<token> uvx snyk-agent-scan@latest [path-to-config-or-skills-folder]
 // Snyk's README also lists a standalone binary; this wrapper uses uvx. We never pass

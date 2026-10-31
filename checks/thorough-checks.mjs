@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-// Thorough-tier checks (docs/testing/validation-tool.md, issue #3114). Scripts live in ../thorough/.
 // Exit codes from these scripts: 0 pass, 1 fail, 75 = "NOT RUN: <why>" printed on the last line.
 import { MEERKAT_DIR as MK } from '../lib/paths.mjs';
 const T = `${MK}/thorough`;
