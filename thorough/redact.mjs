@@ -19,7 +19,9 @@ const SOFT = /\b((?:[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|passwd
 const NAME = String.raw`[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|passwd|credential|authorization|bearer|private[_-]?key)[a-z0-9_.-]*`
 // A quoted value of any content up to its closing quote, and an auth header's whole line (any scheme, not just Bearer).
 const QUOTED = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*)(["'\`])(?:\\.|(?!\2)[^\n\\]){3,500}?\2`, 'gi')
-const OPEN_QUOTE = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*["'\`])(?!<hidden>)[^\n]+$`, 'gim')
+// An opening quote after a secret-named assignment with nothing closing it on the line, including a quote at the very end of the line
+// (the value starts on the next line). An empty string ('' or "") is not matched.
+const OPEN_QUOTE = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*(["'\`]))(?!<hidden>|\2)[^\n]*$`, 'gim')
 const AUTH_LINE =/\b(authorization["'`]?\s*[:=]\s*)(.+)$/gim
 
 export function redact(text) {
