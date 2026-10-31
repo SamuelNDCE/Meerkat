@@ -38,7 +38,11 @@ const gitInstalled = () => {
 }
 const inRepo = (root) => git(root, ['rev-parse', '--is-inside-work-tree'])?.trim() === 'true'
 const hasCommits = (root) => git(root, ['rev-parse', '--verify', '-q', 'HEAD']) !== null
-const latestTag = (root) => git(root, ['describe', '--tags', '--abbrev=0'])?.trim() || null
+// A tag name comes from the repository, so it is never allowed to look like an option (git diff <tag> HEAD).
+const latestTag = (root) => {
+  const tag = git(root, ['describe', '--tags', '--abbrev=0'])?.trim() || null
+  return tag && !tag.startsWith('-') ? tag : null
+}
 
 // The shared start of every check: NOT RUN without git, a repository, or a commit to look at. Null when the check may run.
 function gate(root) {
@@ -309,7 +313,8 @@ function signedCommitsInfo(root) {
   if (skip !== null) return skip
   const rows = recent(root, 200, '%H%x1f%G?%x1f%h')
   if (!rows) return notRun('could not read the commit log')
-  const unsigned = rows.filter(([, status = 'N']) => status === 'N' || status === 'B')
+  // Only a good signature (G) counts as signed: every other status, known or new, is unsigned.
+  const unsigned = rows.filter(([, status = 'N']) => status !== 'G')
   const signed = rows.length - unsigned.length
   const allow = allowList(root)
   if (budget(root, 'requireSigned', false) !== true) {
