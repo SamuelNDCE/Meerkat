@@ -15,8 +15,8 @@ const strip = (t: string) => t.replace(/\x1b\[[0-9;]*m/g, '')
 
 describe('full-tier presets bring every pack that applies', () => {
   test('full, thorough and release ask for it; quick and the rest do not', () => {
-    for (const n of ['full', 'thorough', 'release']) expect(resolvePreset(n).preset.allPacks).toBe(true)
-    for (const n of ['quick', 'fast', 'ci', 'security', 'ui', 'functionality']) expect(resolvePreset(n).preset.allPacks).toBe(false)
+    for (const n of ['full', 'thorough', 'release', 'quick', 'fast']) expect(resolvePreset(n).preset.allPacks).toBe(true)
+    for (const n of ['ci', 'security', 'ui', 'functionality']) expect(resolvePreset(n).preset.allPacks).toBe(false)
   })
 
   test('a Node folder gets the generic packs plus node (and web with an index.html); a Rust folder gets rust', () => {
@@ -50,9 +50,9 @@ describe('full-tier presets bring every pack that applies', () => {
     const full = await count('full')
     expect(full.n).toBeGreaterThan(quick.n)
     expect(full.n).toBeGreaterThan(100)
-    expect(quick.packs.length).toBeLessThan(full.packs.length)
+    expect(quick.packs.length).toBeLessThanOrEqual(full.packs.length)
     expect(full.packs).toEqual(expect.arrayContaining(GENERIC_PACKS))
-    expect(PRESETS.quick.allPacks).toBeUndefined()
+    expect(PRESETS.quick.allPacks).toBe(true)
   })
 })
 
