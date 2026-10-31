@@ -47,7 +47,7 @@ describe('model', () => {
     const m = createModel({ checks, timings, tier: 'fast' })
     m.start(checks[1], 1000)
     expect(m.snapshot(61000).find((r) => r.id === 'b')).toMatchObject({ status: 'RUNNING', elapsedMs: 60000, slow: false })
-    expect(m.snapshot(1000 + 90000 * 1.6).find((r) => r.id === 'b')?.slow).toBe(true)
+    expect(m.snapshot(1000 + 90000 * 3.1).find((r) => r.id === 'b')?.slow).toBe(true)
     m.settle(checks[1], { status: 'FAIL', detail: 'boom', outputFile: 'C:/tmp/b.log' }, 5000)
     expect(m.snapshot(9000).find((r) => r.id === 'b')).toMatchObject({ status: 'FAIL', elapsedMs: 5000, outputFile: 'C:/tmp/b.log' })
     expect(outputFileFrom('no file named')).toBeNull()

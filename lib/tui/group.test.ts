@@ -127,7 +127,7 @@ describe('the board', () => {
     const model = createModel({ checks: checks as never })
     for (const c of checks) model.settle(c as never, { status: 'FAIL', detail: 'x' }, 1)
     const lines = renderLive({ rows: model.snapshot(5000), events: [], started: 0, now: 5000, tick: 0, fraction: 0.5, width: 110, height: 40, color: false }).join('\n')
-    expect(lines).toMatch(/\.\.\. and \d+ more lines/)
+    expect(lines).toMatch(/more in this group|more groups?:/)
   })
   test('the toggle key: g flips between groups and every check, on the live board and in the pure key table', () => {
     const stream = { out: [] as string[], columns: 110, rows: 80, write: (x: string) => stream.out.push(x) }
