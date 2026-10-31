@@ -214,12 +214,32 @@ const diffReview = async (root) => {
   // Secrets are looked for in the diff as git prints it, and in each side of it as the file has it (the + / - / space marker removed, the
   // other side's lines dropped), so a value split over several lines is seen whole. If either file side shows anything the diff scan did
   // not, the text that would be sent is not the text that was checked, so nothing is sent.
-  const side = (drop) => diff.split('\n').filter((l) => /^(\+\+\+|---) /.test(l) || !l.startsWith(drop)).filter((l) => !l.startsWith(String.fromCharCode(92)) && !l.startsWith('@@')).map((l) => (/^(\+\+\+|---) /.test(l) ? l : /^[+\- ]/.test(l) ? l.slice(1) : l)).join('\n')
+  // Read the diff the way git defines it: file headers sit between "diff --git" and the first "@@"; inside a hunk every line is judged by its
+  // first character alone (so "--- x" is a removed line), and the hunk's line counts say where it ends.
+  const side = (drop) => {
+    const out = []
+    let oldLeft = 0
+    let newLeft = 0
+    for (const l of diff.split('\n')) {
+      const h = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/.exec(l)
+      if (h) {
+        oldLeft = h[1] === undefined ? 1 : Number(h[1])
+        newLeft = h[2] === undefined ? 1 : Number(h[2])
+        continue
+      }
+      if ((oldLeft > 0 || newLeft > 0) && /^[+\- ]/.test(l)) {
+        if (l[0] !== drop) out.push(l.slice(1))
+        if (l[0] !== '+') oldLeft--
+        if (l[0] !== '-') newLeft--
+      } else if (!l.startsWith('\\')) out.push(l)
+    }
+    return out.join('\n')
+  }
   const sides = [redact(side('-')), redact(side('+'))]
   const clean = redact(diff)
   clean.long = clean.long || sides.some((x) => x.long)
   clean.hard += sides.reduce((n, x) => n + x.hard, 0)
-  if (sides.some((x) => x.soft > clean.soft)) return notRun('a secret-looking value runs across lines in the change, so what would be sent is not what was checked. Nothing was sent')
+  if (sides.some((x) => x.soft > clean.soft || x.multiline > 0) || clean.multiline > 0) return notRun('a secret-looking value runs across lines in the change, so what would be sent is not what was checked. Nothing was sent')
   if (clean.long) return notRun('the diff has a line over 4,000 characters (minified or pasted code), which cannot be cleaned safely. Nothing was sent')
   if (clean.hard) return notRun(`${clean.hard} value(s) in a known secret format are in the diff. Nothing was sent. Remove the secret (and rotate it), then run again`)
   // Cut at file boundaries into chunks; if it would need more than MAX_CHUNKS the review would be partial, so it is not run at all.

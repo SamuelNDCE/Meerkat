@@ -3,7 +3,7 @@
 //
 //   node watch.mjs                 follow the run (Ctrl+C or q to leave; the run keeps going)
 //   node watch.mjs --once          one frame, then exit
-//   node watch.mjs --file <path>   a different status file (NV_VERIFY_STATUS does the same)
+//   node watch.mjs --file <path>   a different status file (MEERKAT_STATUS does the same)
 //   node watch.mjs --plain         no colour
 import { readFileSync } from 'node:fs'
 import { historyPath, loadHistory } from './lib/tui/history.mjs'

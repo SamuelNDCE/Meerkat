@@ -6,7 +6,7 @@ import { appDirOf, repoRootOf } from '../lib/paths.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = repoRootOf(appDirOf());
-export const fixturesDir = path.resolve(here, '../fixtures');
+export const fixturesDir = path.resolve(here, '../fixtures'); // shared fixtures; an example keeps its own beside its scripts
 export const EXIT_NOT_RUN = 75; // printed as "NOT RUN: <why>". A check that cannot run is never a pass.
 
 export function say(msg) { console.log(msg); }

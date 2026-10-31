@@ -3,7 +3,8 @@
 import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
 
 const S = `${MK}/thorough/hygiene.mjs`
-const mk = (id, group, title, tier = 'fast') => ({
+const ST = `${MK}/thorough/static.mjs`
+const mk = (id, group, title, tier = 'fast', script = S) => ({
   id,
   group,
   tier,
@@ -12,8 +13,8 @@ const mk = (id, group, title, tier = 'fast') => ({
   title,
   estSeconds: 2,
   needs: ['node'],
-  run: { cmd: 'node', args: [S, id], cwd: 'repo' },
-  selfTest: { cmd: 'node', args: [S, id, '--fixtures'], cwd: 'repo', expectFail: true },
+  run: { cmd: 'node', args: [script, id], cwd: 'repo' },
+  selfTest: { cmd: 'node', args: [script, id, '--fixtures'], cwd: 'repo', expectFail: true },
 })
 
 export default [
@@ -27,5 +28,8 @@ export default [
   mk('scripts-resolve', 'functionality', 'Every file an npm script runs exists'),
   mk('markers', 'functionality', 'No FIXME or XXX notes left in the code'),
   mk('links', 'functionality', 'Every relative link in the documents resolves'),
+  mk('broken-imports', 'functionality', 'Every relative import points at a file that exists', 'fast', ST),
+  mk('env-example', 'functionality', 'Every environment variable the code reads is documented', 'fast', ST),
+  mk('whitespace', 'functionality', 'No byte-order marks or mixed line endings', 'fast', ST),
   mk('ui-static', 'ui', 'Pages have alt text, a language, a title and a viewport; no empty buttons'),
 ]
