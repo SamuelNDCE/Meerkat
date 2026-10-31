@@ -1,0 +1,3 @@
+{
+  "refactor": { "maxFunctionLines": 200, "maxComplexity": 90, "maxParameters": 8 }
+}

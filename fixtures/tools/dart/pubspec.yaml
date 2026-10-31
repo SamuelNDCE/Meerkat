@@ -1,0 +1,5 @@
+name: broken
+description: Deliberately broken fixture for Meerkat's Dart checks.
+publish_to: none
+environment:
+  sdk: ">=3.0.0 <4.0.0"

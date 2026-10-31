@@ -183,8 +183,15 @@ function bodyOpenAfter(s, from) {
   for (let hop = 0; hop < 8; hop++) {
     let q = p
     while (q < s.length && q - p < 200 && !'{};()'.includes(s[q])) q++
-    if (SIG_STOP.test(s.slice(p, q))) return -1
-    if (s[q] === '{') return q
+    const gap = s.slice(p, q)
+    if (SIG_STOP.test(gap)) return -1
+    // An arrow only has a body when a "{" follows the arrow directly. "=> expr" is an expression, and whatever brace comes later belongs to the next statement.
+    const arrow = gap.indexOf('=>')
+    if (arrow >= 0) return gap.slice(arrow + 2).trim() === '' && s[q] === '{' ? q : -1
+    if (s[q] === '{') {
+      // A "{" reached across a line break with other text in between is the next statement, not this signature's body.
+      return gap.includes('\n') && gap.trim() !== '' ? -1 : q
+    }
     if (s[q] !== '(') return -1
     // Another parameter list only counts on the same line: across a line break it is the next statement.
     if (s.slice(p, q).includes('\n')) return -1

@@ -18,6 +18,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { extname, join } from 'node:path'
 import { finish, main, notRun, readText, trackedFiles, withFixture } from './kit.mjs'
 import { redact, SECRET_FILE, SENSITIVE_PATH } from './redact.mjs'
@@ -67,6 +68,8 @@ const aiCommand = () => {
   } catch {
     /* no user file */
   }
+  // A model key in the environment means the person wants that service: use the OpenAI-compatible command (thorough/ai-openai.mjs).
+  if (process.env.MEERKAT_AI_KEY || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY) return [process.execPath, fileURLToPath(new URL('./ai-openai.mjs', import.meta.url))]
   return ['claude', '-p', '--model', 'haiku', '--tools', '', '--setting-sources', 'user', '--strict-mcp-config', '--disable-slash-commands', '--no-session-persistence']
 }
 
