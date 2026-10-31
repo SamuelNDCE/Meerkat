@@ -7,7 +7,7 @@ import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { isAlone } from '../lib/runner.mjs'
 
-const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'ai']
+const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'web-plus', 'lang', 'config', 'content', 'ai']
 const KINDS = [
   ['security', 'Security', 'Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review.'],
   ['functionality', 'Functionality', 'Does it build, type-check, lint and pass its tests; is the repository in order.'],
