@@ -5,7 +5,7 @@ Generated from the checks themselves by `node tools/gen-checks.mjs`, so it canno
 <!-- checks:start -->
 **360 checks** in 47 suites with 1401 sub-checks (a check that declares no rules counts as one), across 47 packs: 335 quick, 25 thorough, 18 opt-in. [Security 106](#security-checks) · [Functionality 205](#functionality-checks) · [UI 22](#ui-checks) · [Performance 16](#performance-checks) · [Refactor 11](#refactor-checks)
 
-### Suites
+## Suites
 
 You pick a suite; it runs its checks, and each check reports its own sub-checks. See docs/suites.md.
 

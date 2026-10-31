@@ -273,12 +273,31 @@ const POLLUTION = [
   /\bconstructor\s*\.\s*prototype\s*\.\s*[\w$]+\s*=(?!=)/g,
   /\[\s*(?:req|request|body|query|params|input|payload)[\w$.]*\s*\]\s*\[[^\]\n]+\]\s*=(?!=)/g,
 ]
+// A recursive merge / assign helper: a loop over the keys of an object that writes target[key] = ... with no check for __proto__,
+// constructor or prototype in the loop. Looked for in the loop head and the next 8 lines; the loop must sit in (or right under) a
+// function whose name or body says merge, extend, assign, clone, defaults, mixin or set. Linear: bounded windows, one pass.
+const KEY_LOOP = /\bfor\s*\(\s*(?:const|let|var)?\s*(\w+)\s+in\s+[^)\n]{1,80}\)|\bfor\s*\(\s*(?:const|let|var)\s*\[\s*(\w+)\s*(?:,\s*\w+\s*)?\]\s+of\s+Object\.(?:keys|entries)\([^)\n]{1,80}\)|\bObject\.(?:keys|entries)\([^)\n]{1,80}\)\.forEach\(\s*\(?\s*(?:\[\s*)?(\w+)/g
+const MERGEISH = /\b(?:merge|extend|assign|deep\w*|clone|mixin|defaults|set\w*|copy\w*|combine|patch|update\w*)\b/i
+const POLLUTION_GUARD = /__proto__|\bconstructor\b|\bprototype\b|hasOwn(?:Property)?\b|\bsafeKey|\bisSafe|\bforbidden|\bblocklist|\bdenylist/i
+function* recursiveMergeHits(t) {
+  for (const m of t.matchAll(KEY_LOOP)) {
+    const key = m[1] || m[2] || m[3]
+    if (!key) continue
+    const before = t.slice(Math.max(0, m.index - 300), m.index)
+    const win = t.slice(m.index, m.index + 700).split('\n').slice(0, 9).join('\n')
+    if (!MERGEISH.test(before.split('\n').slice(-6).join('\n')) && !MERGEISH.test(win)) continue
+    if (POLLUTION_GUARD.test(win)) continue
+    const hit = new RegExp(`[\\w$.]{1,60}\\[\\s*${key}\\s*\\]\\s*=(?!=)`).exec(win)
+    if (hit) yield m.index + hit.index
+  }
+}
 const jsPrototypePollution = (root) => {
   const allow = allowSet(root)
   const f = []
   for (const x of files(root, JS)) {
     if (allowed(allow, 'js-prototype-pollution', x)) continue
     const t = codeOnly(sourceOf(root, x), JS_OPTS)
+    for (const at of recursiveMergeHits(t)) f.push(`${x}:${lineOf(t, at)} copies keys into a target in a loop with no check for __proto__ or constructor, so a crafted key can change every object (skip those keys, or use Object.create(null))`)
     for (const re of POLLUTION) {
       for (const m of t.matchAll(re)) f.push(`${x}:${lineOf(t, m.index)} assigns through __proto__, constructor.prototype or a request-supplied key, which can change every object (use a Map, or Object.create(null) with a checked key)`)
     }
@@ -355,7 +374,7 @@ const pyMutableDefault = (root) => {
 }
 
 // ---- py-assert-in-prod: assert used to check input in non-test Python. Python removes asserts under -O, so the check vanishes.
-const ASSERT_CHECK = /^(?:not\s+)?(?:isinstance|callable|len|hasattr)\s*\(|\bis\s+(?:not\s+)?None\b|^[\w.]+\s+in\s/
+const ASSERT_CHECK = /^(?:not\s+)?(?:isinstance|callable|len|hasattr)\s*\(|\bis\s+(?:not\s+)?None\b|^[\w.]+\s+in\s|\b(?:is_admin|is_staff|is_superuser|is_authenticated|is_authorized|is_owner|authorized|authenticated|has_perm\w*|has_permission\w*|permission\w*|can_\w+|role|roles|owner|password|passwd|token|csrf\w*|signature|auth\w*|allowed)\b|\b(?:request|req|session|form|params|payload|body|user_input)\b[\w.[\]'"]{0,40}\s*(?:==|!=|<=|>=|<|>|\bin\b)|^(?:not\s+)?[\w.]{1,40}\.(?:startswith|endswith|isdigit|isalnum|isalpha|match)\(/
 const pyAssertInProd = (root) => {
   const allow = allowSet(root)
   const f = []

@@ -12,3 +12,13 @@ Thumbs.db
 .DS_Store
 .vitest/
 graphify-out/
+
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/

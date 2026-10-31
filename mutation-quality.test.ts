@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test } from 'vitest'
-// @ts-ignore
+// @ts-ignore plain .mjs module has no type declarations
 import * as Q from './thorough/mutation-quality.mjs'
 import { loadChecks } from './lib/load-checks.mjs'
 

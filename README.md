@@ -130,7 +130,7 @@ In a pipe, in CI, or when an AI agent calls it, nothing is drawn and the output 
 <!-- presets:start -->
 Measured on Meerkat's own repository, a small project, on one PC (median of 3 runs). Real projects take as long as their builds and tests; the quick checks that only read files stay at a second or two.
 
-#### Everything
+### Everything
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
@@ -139,7 +139,7 @@ Measured on Meerkat's own repository, a small project, on one PC (median of 3 ru
 | `meerkat full` | every check, the slow ones too: before a release | 152 | 4.1 s |
 | `meerkat thorough` | every check, the slow ones too (same as full) | 152 | 3.9 s |
 
-#### By kind
+### By kind
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
@@ -153,7 +153,7 @@ Measured on Meerkat's own repository, a small project, on one PC (median of 3 ru
 | `meerkat performance` | every performance check: also response time, load and build time | 1 | <1 s |
 | `meerkat refactor` | is the code in good shape: duplicated code, dead code, files too long | 9 | <1 s |
 
-#### Combinations
+### Combinations
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
@@ -766,6 +766,12 @@ export default [
 Then share it as a **pack**: a folder `packs/<name>/` with check files, switched on with `"packs": ["name"]`. Choose weights honestly: a check that reads files is `tiny`, a build is `heavy`. The full guide, with the rules for good checks, is [`docs/writing-checks.md`](docs/writing-checks.md). Every check is run on 20 kinds of sample project to prove it never crashes or fails on a clean one: [`docs/compatibility.md`](docs/compatibility.md).
 
 **Connecting an app's own test harness** is the same thing: set a check's `run` to whatever starts that app's tests. Anyone may do this, for any app.
+
+## Leave files out: `.meerkatignore`
+
+Put a `.meerkatignore` at the project root to keep generated code, vendored code, and rule or fixture text (files that hold bad examples on purpose) out of the checks. One pattern per line, `#` for comments, `dir/` for a folder, `*` within a path part, `**` across parts, `!pattern` to bring a file back. Manifests, lockfiles, licences and `.meerkatignore` itself are never ignored, so a typo cannot hide the supply-chain checks. Meerkat prints `ignored N files by .meerkatignore` when it skips anything. See [docs/customizing.md](docs/customizing.md).
+
+Environment variables Meerkat reads: `MEERKAT_APP_DIR` (the app being checked; `NV_APP_DIR` is set too for older scripts) and `NV_CARGO_LOCK` (an optional lock script that serialises cargo builds on one machine).
 
 ## Configuration
 

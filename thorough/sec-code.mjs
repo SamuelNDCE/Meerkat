@@ -235,6 +235,7 @@ const md5Password = {
     .filter((h) => /passw|passwd|\bpwd\b/i.test(near(t, h.line, 3, 0)))
     .map((h) => ({ line: h.line, why: 'MD4 or MD5 is used on what looks like a password (use bcrypt, scrypt or argon2)' })),
 }
+const TOKENISH = /token|secret|passw|nonce|session|api[_-]?key|\botp\b|csrf|reset|\bsalt\b|\bkey\b|\bpin\b|verif|invite|\bauth|\bcode\b|uuid|captcha|\bsid\b|\bid_?gen/i
 const weakCrypto = [
   pat(code, /\bcreate(?:De)?[Cc]ipher\s*\(/, 'createCipher uses no IV, so the same key always gives the same output (use createCipheriv with a random IV)'),
   pat(code, /\bcreate(?:De)?[Cc]ipheriv\s*\(\s*['"](?:des|rc4|bf|blowfish|aes-\d+-ecb)/i, 'a weak or unsafe cipher (DES, RC4, Blowfish or ECB mode) is named'),
@@ -243,8 +244,9 @@ const weakCrypto = [
   pat(code, /\bMODE_ECB\b/, 'ECB mode: identical blocks encrypt to identical output (use GCM, or CBC with a random IV)'),
   pat(code, /(?:Cipheriv|Decipheriv)\s*\([^\n]*?(?:Buffer\.from|new Buffer)\(\s*['"]|\b(?:key|iv|IV|secretKey)\s*[:=]\s*(?:Buffer\.from|new Buffer)\(\s*['"]|\b(?:AES|DES3?|ChaCha20\w*)\.new\(\s*b?['"]|\b(?:key|iv|IV|KEY)\s*=\s*b['"][^'"\n]{4,}['"]/,
     'a cipher key or IV is written into the code (load it from a secret store or an environment variable)'),
-  pat(code, /(?<!['"\`])\b(?:Math\.random|random\.(?:random|choice|randint|getrandbits))\s*\(/, (t, h) => /token|secret|passw|nonce|session|api[_-]?key|otp|csrf/i.test(h.text)
-    ? 'a random number from a generator that is not secure makes a token or secret (use crypto.randomBytes, Python secrets, or crypto/rand)'
+  // The generator call, or the name it is assigned to / the function it sits in (up to 3 lines above), says token, secret, key, code...
+  pat(code, /(?<!['"\`])(?:\b(?:Math\.random|random\.(?:random|choice|choices|randint|randrange|getrandbits|sample)|(?:Kernel\.|Random\.)?rand|mt_rand|lcg_value|uniqid|rand\.(?:Int|Intn|Int31n?|Int63n?|Uint32|Uint64|Float64|Read)|Random\.new|SecureRandom\.hex\(\s*\d{1,2}\s*\)\.to_i|new\s+(?:java\.util\.)?Random)\s*\(|\bnew\s+Random\b\s*(?!\())/, (t, h) => TOKENISH.test(near(t, h.line, 3, 0))
+    ? 'a random number from a generator that is not secure makes a token or secret (use crypto.randomBytes, Python secrets, SecureRandom, random_bytes or crypto/rand)'
     : null),
   md5Password,
 ]

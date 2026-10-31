@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test } from 'vitest'
 import { loadChecks } from './lib/load-checks.mjs'
-// @ts-ignore
+// @ts-ignore plain .mjs module has no type declarations
 import * as M from './thorough/mutation.mjs'
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url))

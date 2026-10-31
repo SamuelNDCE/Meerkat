@@ -1,5 +1,5 @@
 // The full-tier presets bring every pack that applies; the home menu (Run list, time estimates, update wording); the startup spinner.
-// @ts-nocheck
+// @ts-nocheck the menu is tested with loose stand-in objects
 import { describe, expect, test } from 'vitest'
 import { applicablePacks, GENERIC_PACKS, presetPacks } from './init.mjs'
 import { MAIN_PRESETS, menuItems, otherPresetItems } from './menu.mjs'

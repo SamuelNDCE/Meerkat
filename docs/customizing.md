@@ -50,6 +50,29 @@ never stop a run.
 Give the new one a `selfTest` (a broken case it must fail), or `--self-test` fails for that check, loudly. Meerkat's rule stays the same for every
 tool you plug in: a check that cannot start is NOT RUN, and NOT RUN fails the run.
 
+## Leave files out: `.meerkatignore`
+
+Some files hold bad examples on purpose: a scanner's rule table, a fixture, generated or vendored code. The checks should not read them. Put a `.meerkatignore` at the project root, one pattern per line:
+
+```text
+# generated and vendored code
+dist-gen/
+vendor/**
+*.min.js
+# rule text that quotes bad examples
+rules/*.json
+!rules/keep-me.json
+```
+
+- A blank line or a line starting with `#` is skipped. Windows (CRLF) line endings work.
+- `dir/` ignores a folder and everything under it, at any depth unless the pattern also has a slash earlier in it (`docs/images/` is anchored to the root).
+- `*` matches within one path part. `**` crosses parts. `?` is one character.
+- `!pattern` brings back what an earlier line ignored. The last matching line wins.
+- Manifests, lockfiles, licences and `.meerkatignore` itself are never ignored, whatever the file says.
+- Without the file nothing changes. When it skips files, each check prints `ignored N files by .meerkatignore` on stderr.
+
+It applies to every check that reads the project's files through Meerkat's shared file list. Do not use it to hide a real problem: a missing `SECURITY.md` is a finding, a bad example inside a rule table is noise.
+
 ## Your own presets: say what they are for
 
 A preset is a named run: `tier` (`fast` or `thorough`), `groups` (the kinds of check), optional `include` and `packs`. Put it in `meerkat.config.json` under `presets` (this project, for everyone who uses the project) or in `~/.meerkat.json` (just you, every project). Two optional texts make it easy for people to choose the right one:
