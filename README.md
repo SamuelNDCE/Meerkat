@@ -11,7 +11,7 @@ It runs the checks your project needs, shows what passed, what failed and what c
 
 </div>
 
-**[Why](#why-meerkat) · [Quick start](#quick-start) · [The meerkat command](#the-meerkat-command) · [Ways to run it](#ways-to-run-it) · [Every check](#every-check) · [What it works on](#what-it-works-on) · [Speed and your PC](#speed-and-your-pc) · [Logs](#logs-and-why-something-failed) · [For AI agents](#for-ai-agents) · [Add your own check](#add-your-own-check) · [Configuration](#configuration) · [AI checks](#ai-checks) · [Updating](#updating) · [Privacy](#privacy) · [CI](#using-it-in-ci) · [Environment variables](#environment-variables) · [Licence](#licence)**
+**[Why](#why-meerkat) · [Quick start](#quick-start) · [Make it yours](#make-it-yours-add-your-own-checks) · [The meerkat command](#the-meerkat-command) · [Ways to run it](#ways-to-run-it) · [Every check](#every-check) · [What it works on](#what-it-works-on) · [Speed and your PC](#speed-and-your-pc) · [Logs](#logs-and-why-something-failed) · [For AI agents](#for-ai-agents) · [Add your own check](#add-your-own-check) · [Configuration](#configuration) · [AI checks](#ai-checks) · [Updating](#updating) · [Privacy](#privacy) · [CI](#using-it-in-ci) · [Environment variables](#environment-variables) · [Licence](#licence)**
 
 ## Why Meerkat
 
@@ -58,6 +58,27 @@ Run `meerkat` on its own and it first asks which project: the folder you are in,
 
 ![The board after a run with one failure: the failed check in red, a timeline of what ran when](docs/images/board-fail.png)
 
+## Make it yours: add your own checks
+
+Meerkat runs its own checks and yours side by side. Pick the easiest way that fits:
+
+| To | Do this | Example |
+|---|---|---|
+| Add a command you already run, with no code | `meerkat check new` asks for a name and a command | `meerkat check new --id e2e --cmd "npm run test:e2e" --yes` |
+| Set a command in the project's config file | `customChecks` in `meerkat.config.json` | `"customChecks": [{ "id": "e2e", "title": "End-to-end tests", "cmd": "npm", "args": ["run", "test:e2e"] }]` |
+| Get suggestions for tests your project can run | `meerkat recommend` lists them and changes nothing | `meerkat recommend --add all --dry-run` |
+| Make a preset of your own | `meerkat preset new` | `meerkat preset new --name pre-push --tier fast --group security,ui --personal` |
+| Describe a preset (shown when you press `d`) | `meerkat preset edit` | `meerkat preset edit pre-push --purpose "Run before every push."` |
+| Write a check in JavaScript | a file in `.meerkat/checks/`, found with no setting | `.meerkat/checks/lint.mjs` |
+| Share a folder of JavaScript checks | `meerkat pack add <folder>` | `meerkat pack add C:\code\my-checks` |
+| Turn a check off | `"disable"` list in `meerkat.config.json` | `"disable": ["prettier"]` |
+| Silence one known finding | an allow file, `.meerkat-<area>-allow`, one `rule path` per line | `js-eqeqeq src/legacy.js` (a line in `.meerkat-lang-allow`) |
+| Run your project's own test scripts | `meerkat discover` lists them; `full`, `thorough` and `release` run them | `meerkat discover` |
+
+Your own settings for every project live in `~/.meerkat.json`, and personal packs live in `~/.meerkat/packs/`. Settings for one project live in its `meerkat.config.json`, so the whole team gets them. Checks you add are labelled `yours` or `project` in lists, on the board and in the report, so you can always see where each came from.
+
+Details, and a 5-minute quick start: [docs/customizing.md](docs/customizing.md).
+
 ## The meerkat command
 
 Type it the way you type any command. Words, not flags:
@@ -101,8 +122,6 @@ When a run ends in a terminal, Meerkat opens a results screen with three tabs: *
 - `m` goes back to the menu, `q` finishes, and `?` lists the keys.
 
 In a pipe, in CI, or when an AI agent calls it, nothing is drawn and the output is plain lines.
-
-![The menu shown after a run: OK, open a log, copy a log path, show the report, show repo changes, run again](docs/images/after-run.png)
 
 ## Ways to run it
 

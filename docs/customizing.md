@@ -2,6 +2,16 @@
 
 Meerkat is built to fit a project, not the other way round. Everything below is a plain file you can change; nothing needs a rebuild.
 
+## Quick start: your first check in 5 minutes
+
+1. **Create a check.** In your project folder, run `meerkat check new --id e2e --cmd "npm run test:e2e" --yes`. Leave out `--yes` and it asks you the questions instead. Use a command your project already runs.
+2. **Run it on its own.** Run `meerkat check try e2e`. It shows PASS or FAIL, or NOT RUN when its program is missing.
+3. **See it labelled.** Run `meerkat check list`. `e2e` shows the tag `project`, because it went into this project's `meerkat.config.json`. Add `--personal` to step 1 to keep it for every project instead, and it shows `yours`.
+
+The check is `thorough` by default, so `meerkat full` runs it with the rest. `meerkat verify` runs only the quick checks and leaves it out.
+
+The sections below cover the other ways to add checks, presets and packs.
+
 ## 1. Choose what runs: `meerkat.config.json`
 
 Put a `meerkat.config.json` next to your app, or in the repository root, or point at one with `--config <file>` (`--no-config` ignores it).
