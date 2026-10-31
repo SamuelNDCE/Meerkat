@@ -384,7 +384,7 @@ const GHA_RULES = withScope(GHA_FILES, COMMENT, [
 ])
 
 export { DOCKER_RULES, K8S_RULES, TF_RULES, COMPOSE_RULES, GHA_RULES, DOCKER_EXTRA, K8S_EXTRA }
-export const RULE_TOTAL = DOCKER_RULES.length + K8S_RULES.length + TF_RULES.length + COMPOSE_RULES.length + GHA_RULES.length
+const RULE_TOTAL = DOCKER_RULES.length + K8S_RULES.length + TF_RULES.length + COMPOSE_RULES.length + GHA_RULES.length
 
 // The number of sub-checks each check reports (its rule tables plus its folder-level rules), for the pack entries.
 export const CHECK_SUBS = {

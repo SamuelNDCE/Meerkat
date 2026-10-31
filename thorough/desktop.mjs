@@ -10,8 +10,16 @@ const PAGE = /\.(m?[jt]sx?|cjs|cts|mts|html?)$/i
 const UPDATE_FILES = /\.(m?[jt]sx?|cjs|cts|mts|json|ya?ml)$/i
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?|out|release|coverage|docs?|examples?|tests?|__tests__)\/|\.min\.(m?js|css)$|\.(test|spec)\.[a-z]+$|(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$|^thorough\/desktop\.mjs$/i
 const COMMENT = /^\s*(\/\/|\/\*|\*|<!--|#)/
-// An import at the start of a line (as real code writes it), so text that only MENTIONS an electron import inside a string does not count.
-const ELECTRON_IMPORT = /^[ \t]*(?:(?:const|let|var)\s+[^=\n]+=\s*|\w+\s*=\s*|export\s+)?(?:require\(\s*['"]electron['"]\s*\)|import\(\s*['"]electron['"]\s*\))|^[ \t]*import\s[^'"\n]*from\s+['"]electron['"]|^[ \t]*import\s+['"]electron['"]/m
+// Detection must over-match, not under-match (a missed Electron app would make every Electron rule pass vacuously): any import or require of
+// electron counts, in any form (multi-line imports, destructuring, re-exports), except a mention that sits inside a string on the same line.
+const ELECTRON_IMPORT = /require\(\s*['"]electron['"]\s*\)|\bfrom\s+['"]electron['"]|\bimport\s*\(\s*['"]electron['"]|\bimport\s+['"]electron['"]/g
+const mentionsElectronImport = (text) => {
+  for (const m of text.matchAll(ELECTRON_IMPORT)) {
+    const before = text.slice(text.lastIndexOf('\n', m.index) + 1, m.index)
+    if ((before.match(/['"`]/g) ?? []).length % 2 === 0) return true
+  }
+  return false
+}
 const ALLOW_WORDS = /allow|whitelist|allowlist|\.includes\(|\.has\(|protocol|isSafe|isAllowed/i
 const DEV_GATE = /isDev|isDevelopment|isPackaged|NODE_ENV|development|VITE_DEV|DEV_URL|\bQA\b|__DEV__|import\.meta\.env\.DEV/i
 const IPC_GUARD = /assert|grant|allow|whitelist|valid|sanitiz|normaliz|isOwnPage|safe|check|ensure|need\(|isAbsolute/i
@@ -49,14 +57,14 @@ const electronApp = (root) => {
   for (const x of tracked(root, /(^|\/)package\.json$/i)) {
     try {
       const j = JSON.parse(readText(root, x))
-      if (j.dependencies?.electron || j.devDependencies?.electron) return true
+      if (j.dependencies?.electron || j.devDependencies?.electron || j.peerDependencies?.electron || j.optionalDependencies?.electron) return true
     } catch {
       // not a readable manifest: skip it
     }
   }
   // Source that only MENTIONS electron (sample projects, tests, docs) does not make the repo an Electron app.
   const sample = /(^|\/)(tools|tests?|__tests__|fixtures?|docs|examples?)\/|\.(test|spec)\.[a-z]+$/i
-  return tracked(root, CODE).some((x) => !sample.test(x) && ELECTRON_IMPORT.test(readText(root, x)))
+  return tracked(root, CODE).some((x) => !sample.test(x) && mentionsElectronImport(readText(root, x)))
 }
 
 const APPS = {
