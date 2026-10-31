@@ -71,7 +71,7 @@ ${CSP}${extraHead}</head>
 `
 
 const lockfile = JSON.stringify({ name: 'example', version: '1.0.0', lockfileVersion: 3, requires: true, packages: { '': { name: 'example', version: '1.0.0', license: 'MIT' } } }, null, 2) + '\n'
-const electronLock = JSON.stringify({ name: 'example', version: '1.0.0', lockfileVersion: 3, requires: true, packages: { '': { name: 'example', version: '1.0.0', license: 'MIT', devDependencies: { electron: '^45.2.1' } }, 'node_modules/electron': { version: '45.2.1', resolved: 'https://registry.npmjs.org/electron/-/electron-45.2.1.tgz', integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==', dev: true, license: 'MIT' } } }, null, 2) + '\n'
+const electronLock = JSON.stringify({ name: 'example', version: '1.0.0', lockfileVersion: 3, requires: true, packages: { '': { name: 'example', version: '1.0.0', license: 'MIT', devDependencies: { electron: '45.2.1' } }, 'node_modules/electron': { version: '45.2.1', resolved: 'https://registry.npmjs.org/electron/-/electron-45.2.1.tgz', integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==', dev: true, license: 'MIT' } } }, null, 2) + '\n'
 const pkgJson = (o) => JSON.stringify({ name: 'example', version: '1.0.0', description: 'A small example project.', license: 'MIT', private: true, ...o }, null, 2) + '\n'
 
 // name -> { files: { path: text }, git: true | false | 'empty' }
@@ -101,7 +101,7 @@ export const FIXTURES = {
   },
   'electron-app': {
     files: {
-      'package.json': pkgJson({ main: 'main.js', scripts: { start: 'electron .' }, engines: { node: '>=18' }, devDependencies: { electron: '^45.2.1' } }),
+      'package.json': pkgJson({ main: 'main.js', scripts: { start: 'electron .' }, engines: { node: '>=18' }, devDependencies: { electron: '45.2.1' } }),
       'package-lock.json': electronLock,
       'main.js': `const { app, BrowserWindow } = require('electron')
 const path = require('node:path')
