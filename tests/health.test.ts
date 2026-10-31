@@ -51,7 +51,7 @@ function cleanFolder(): string {
   }
   put('package.json', '{\n  "name": "clean",\n  "version": "1.0.0",\n  "private": true,\n  "dependencies": {}\n}\n')
   put('src/add.js', 'export function add(a, b) {\n\treturn a + b\n}\n')
-  put('src/server.js', "import { add } from '../add.js'\nconst total = [1, 2].reduce((s, n) => add(s, n), 0)\nexport default total\n")
+  put('src/server.js', "import { add } from './add.js'\nconst total = [1, 2].reduce((s, n) => add(s, n), 0)\nexport default total\n")
   return dir
 }
 

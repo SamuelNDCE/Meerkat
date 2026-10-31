@@ -71,7 +71,7 @@ describe('every check fails on its own fixture', () => {
 describe('clean-copy-builds', () => {
   const BUILD = { 'package.json': pkg({ build: 'node build.js', test: 'node test.js' }), 'test.js': 'process.exit(0)\n' }
   test('a build that needs an untracked file fails and names it, then passes once the file is committed', () => {
-    const dir = project({ ...BUILD, 'build.js': "require('../helper.js')\n" }, { 'helper.js': 'module.exports = 1\n' })
+    const dir = project({ ...BUILD, 'build.js': "require('./helper.js')\n" }, { 'helper.js': 'module.exports = 1\n' })
     const before = hashTree(dir)
     const bad = run(['clean-copy-builds', '--root', dir])
     expect(bad.code).toBe(1)

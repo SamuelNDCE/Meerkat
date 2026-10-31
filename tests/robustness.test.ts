@@ -195,7 +195,7 @@ describe('pure logic', () => {
     expect(R.scanPyFunctions('def ok(a, b):\n  pass\ndef _p(a):\n  pass\ndef none():\n  pass\ndef star(*a):\n  pass\n').map((x: any) => x.name)).toEqual(['ok'])
   })
   test('banned imports: fs, child_process, network modules and packages', () => {
-    expect(R.bannedImports("import fs from 'node:fs'\nconst cp = require('child_process')\nimport x from 'axios'\nimport y from '../y.js'\nimport z from 'lodash'").sort()).toEqual(['axios', 'child_process', 'node:fs'])
+    expect(R.bannedImports("import fs from 'node:fs'\nconst cp = require('child_process')\nimport x from 'axios'\nimport y from './y.js'\nimport z from 'lodash'").sort()).toEqual(['axios', 'child_process', 'node:fs'])
   })
   test('plan: seeded, within the case budget, same seed same plan', () => {
     const t = Array.from({ length: 80 }, (_, i) => ({ file: 'a.js', name: `f${i}`, arity: 1, line: 1 }))

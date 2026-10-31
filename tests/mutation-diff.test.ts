@@ -47,7 +47,7 @@ function hashTree(dir: string): string {
 }
 const LIB1 = 'export function add(a, b) {\n  return a + b\n}\n'
 const LIB2 = `${LIB1}\nexport function sub(a, b) {\n  return a - b\n}\n`
-const LIB_TEST = "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { add } from '../lib.js'\n\ntest('add', () => {\n  assert.equal(add(2, 3), 5)\n})\n"
+const LIB_TEST = "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { add } from './lib.js'\n\ntest('add', () => {\n  assert.equal(add(2, 3), 5)\n})\n"
 const repo = () => {
   const dir = folder({ 'package.json': PKG, 'lib.js': LIB1, 'lib.test.js': LIB_TEST, '.meerkat-budgets.json': M.BUDGET({ totalSeconds: 50, minScore: 0, maxMutants: 40 }) })
   git(dir, 'init', '-q')
@@ -199,7 +199,7 @@ describe('likely equivalent mutants', () => {
   })
 
   test('equivalent mutants are left out of the score and listed on their own', async () => {
-    const dir = folder({ 'package.json': PKG, 'index.js': 'export const same = (x) => x * 1\nexport const add = (a, b) => a + b\n', 'index.test.js': "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { same, add } from '../index.js'\ntest('t', () => {\n  assert.equal(same(4), 4)\n  assert.equal(add(1, 2), 3)\n})\n", '.meerkat-budgets.json': M.BUDGET({ totalSeconds: 50 }) })
+    const dir = folder({ 'package.json': PKG, 'index.js': 'export const same = (x) => x * 1\nexport const add = (a, b) => a + b\n', 'index.test.js': "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { same, add } from './index.js'\ntest('t', () => {\n  assert.equal(same(4), 4)\n  assert.equal(add(1, 2), 3)\n})\n", '.meerkat-budgets.json': M.BUDGET({ totalSeconds: 50 }) })
     const r = await M.runMutation(dir, {}, () => {})
     expect(r.status).toBe('ok')
     expect(r.equivalent).toBeGreaterThan(0)
@@ -215,7 +215,7 @@ describe('likely equivalent mutants', () => {
 
 describe('coverage hints', () => {
   const SRC = 'export function add(a, b) {\n  return a + b\n}\nexport function sub(a, b) {\n  return a - b\n}\n'
-  const T = "import { test } from 'node:test'\nimport { add, sub } from '../index.js'\ntest('runs', () => {\n  add(1, 2)\n  sub(2, 1)\n})\n"
+  const T = "import { test } from 'node:test'\nimport { add, sub } from './index.js'\ntest('runs', () => {\n  add(1, 2)\n  sub(2, 1)\n})\n"
   const mk = (shift: number) => {
     const dir = folder({ 'package.json': PKG, 'index.js': SRC, 'index.test.js': T, '.meerkat-budgets.json': M.BUDGET({ totalSeconds: 50, maxMutants: 200, minScore: 0 }) })
     mkdirSync(join(dir, 'coverage'))
@@ -331,7 +331,7 @@ describe('parallel workers, fail fast, result files and history', () => {
 
 describe('which tests run, and the other ecosystems', () => {
   test('a changed module runs only the tests that reach it through imports', () => {
-    const dir = folder({ 'a.js': 'export const a = 1\n', 'b.js': "import { a } from '../a.js'\nexport const b = a\n", 'b.test.js': "import { b } from '../b.js'\n", 'c.test.js': "import { x } from '../nothing.js'\n", 'd.test.ts': "const a = require('../a')\n" })
+    const dir = folder({ 'a.js': 'export const a = 1\n', 'b.js': "import { a } from './a.js'\nexport const b = a\n", 'b.test.js': "import { b } from './b.js'\n", 'c.test.js': "import { x } from './nothing.js'\n", 'd.test.ts': "const a = require('./a')\n" })
     const files = ['a.js', 'b.js', 'b.test.js', 'c.test.js', 'd.test.ts']
     const g = S.buildImportGraph(dir, files)
     expect(S.testsReaching(g, ['b.test.js', 'c.test.js', 'd.test.ts'], 'a.js').sort()).toEqual(['b.test.js', 'd.test.ts'])

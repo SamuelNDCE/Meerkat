@@ -156,7 +156,7 @@ describe('safety', () => {
 
   test('a test that hangs is killed at the per-mutant timeout and counts as killed', async () => {
     const src = 'export function count(n) {\n  let i = 0\n  let c = 0\n  while (i < n) {\n    c = c + 1\n    i++\n  }\n  return c\n}\n'
-    const t = "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { count } from '../index.js'\ntest('count', () => {\n  assert.equal(count(3), 3)\n})\n"
+    const t = "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { count } from './index.js'\ntest('count', () => {\n  assert.equal(count(3), 3)\n})\n"
     const dir = folder({ 'package.json': PKG, 'index.js': src, 'index.test.js': t, '.meerkat-budgets.json': M.BUDGET({ timeoutSeconds: 3, totalSeconds: 40 }) })
     const t0 = Date.now()
     const r = await M.runMutation(dir, {}, () => {})
@@ -248,15 +248,15 @@ describe('test-quality-static', () => {
   })
   test('each bad pattern fails its own rule', () => {
     const bad: Record<string, string> = {
-      'tautology-assert': "import { add } from '../a.js'\ntest('x', () => {\n  expect(true).toBe(true)\n  expect(add(1, 1)).toBe(2)\n})\n",
-      'file-without-assertions': "import { add } from '../a.js'\ntest('x', () => {\n  add(1, 1)\n})\n",
-      'empty-test-body': "import { add } from '../a.js'\ntest('x', () => {})\ntest('y', () => { expect(add(1, 1)).toBe(2) })\n",
-      'sleep-based-test': "import { add } from '../a.js'\ntest('x', async () => {\n  await new Promise((r) => setTimeout(r, 5000))\n  expect(add(1, 1)).toBe(2)\n})\n",
-      'commented-out-test': "import { add } from '../a.js'\n// it('old', () => {\ntest('x', () => { expect(add(1, 1)).toBe(2) })\n",
-      'network-in-unit-test': "import { add } from '../a.js'\ntest('x', async () => {\n  await fetch('https://example.org/api')\n  expect(add(1, 1)).toBe(2)\n})\n",
+      'tautology-assert': "import { add } from './a.js'\ntest('x', () => {\n  expect(true).toBe(true)\n  expect(add(1, 1)).toBe(2)\n})\n",
+      'file-without-assertions': "import { add } from './a.js'\ntest('x', () => {\n  add(1, 1)\n})\n",
+      'empty-test-body': "import { add } from './a.js'\ntest('x', () => {})\ntest('y', () => { expect(add(1, 1)).toBe(2) })\n",
+      'sleep-based-test': "import { add } from './a.js'\ntest('x', async () => {\n  await new Promise((r) => setTimeout(r, 5000))\n  expect(add(1, 1)).toBe(2)\n})\n",
+      'commented-out-test': "import { add } from './a.js'\n// it('old', () => {\ntest('x', () => { expect(add(1, 1)).toBe(2) })\n",
+      'network-in-unit-test': "import { add } from './a.js'\ntest('x', async () => {\n  await fetch('https://example.org/api')\n  expect(add(1, 1)).toBe(2)\n})\n",
       'never-imports-source': "test('x', () => {\n  expect(1 + 1).toBe(2)\n})\n",
-      'skip-ratio': "import { add } from '../a.js'\ntest('a', () => { expect(add(1, 1)).toBe(2) })\ntest.skip('b', () => { expect(add(1, 1)).toBe(2) })\ntest.skip('c', () => { expect(add(1, 1)).toBe(2) })\n",
-      'duplicate-test-name': "import { add } from '../a.js'\ntest('a', () => { expect(add(1, 1)).toBe(2) })\ntest('a', () => { expect(add(2, 2)).toBe(4) })\n",
+      'skip-ratio': "import { add } from './a.js'\ntest('a', () => { expect(add(1, 1)).toBe(2) })\ntest.skip('b', () => { expect(add(1, 1)).toBe(2) })\ntest.skip('c', () => { expect(add(1, 1)).toBe(2) })\n",
+      'duplicate-test-name': "import { add } from './a.js'\ntest('a', () => { expect(add(1, 1)).toBe(2) })\ntest('a', () => { expect(add(2, 2)).toBe(4) })\n",
     }
     for (const [rule, body] of Object.entries(bad)) {
       const r = cli(['test-quality-static', '--root', folder({ 'a.js': 'export const add = (a, b) => a + b\n', 'a.test.js': body })])

@@ -93,11 +93,11 @@ describe('assertion-strength', () => {
   })
 
   const bad: Record<string, string> = {
-    'defined-after-assignment': "import { a } from '../a.js'\ntest('x', () => {\n  const out = a()\n  expect(out).toBeDefined()\n  expect(out.n).toBe(1)\n})\n",
-    'truthy-on-object': "import { a } from '../a.js'\ntest('x', () => {\n  const out = { n: a() }\n  expect(out).toBeTruthy()\n  expect(out.n).toBe(1)\n})\n",
-    'only-defined-or-truthy': "import { a } from '../a.js'\ntest('x', () => {\n  expect(a()).toBeTruthy()\n})\n",
-    'only-not-throw': "import { a } from '../a.js'\ntest('x', () => {\n  expect(() => a()).not.toThrow()\n})\n",
-    'mock-call-only': "import { a } from '../a.js'\ntest('x', () => {\n  const spy = vi.fn()\n  a(spy)\n  expect(spy).toHaveBeenCalledWith(1)\n})\n",
+    'defined-after-assignment': "import { a } from './a.js'\ntest('x', () => {\n  const out = a()\n  expect(out).toBeDefined()\n  expect(out.n).toBe(1)\n})\n",
+    'truthy-on-object': "import { a } from './a.js'\ntest('x', () => {\n  const out = { n: a() }\n  expect(out).toBeTruthy()\n  expect(out.n).toBe(1)\n})\n",
+    'only-defined-or-truthy': "import { a } from './a.js'\ntest('x', () => {\n  expect(a()).toBeTruthy()\n})\n",
+    'only-not-throw': "import { a } from './a.js'\ntest('x', () => {\n  expect(() => a()).not.toThrow()\n})\n",
+    'mock-call-only': "import { a } from './a.js'\ntest('x', () => {\n  const spy = vi.fn()\n  a(spy)\n  expect(spy).toHaveBeenCalledWith(1)\n})\n",
   }
   for (const [rule, body] of Object.entries(bad)) {
     test(`${rule} fails on its bad pattern`, () => {
@@ -109,7 +109,7 @@ describe('assertion-strength', () => {
   }
 
   test('strong tests, comments and an allow file are clean; Python is covered', () => {
-    const good = "import { a } from '../a.js'\ntest('x', () => {\n  const out = a()\n  expect(out).toBe(1)\n  expect(out).toBeDefined()\n  // expect(out).toBeTruthy()\n})\ntest('y', () => {\n  expect(() => a()).not.toThrow()\n  expect(a()).toBe(1)\n})\n"
+    const good = "import { a } from './a.js'\ntest('x', () => {\n  const out = a()\n  expect(out).toBe(1)\n  expect(out).toBeDefined()\n  // expect(out).toBeTruthy()\n})\ntest('y', () => {\n  expect(() => a()).not.toThrow()\n  expect(a()).toBe(1)\n})\n"
     const r = cli(['assertion-strength', '--root', folder({ 'a.js': 'export const a = () => 1\n', 'a.test.js': good })])
     expect(r.out).not.toMatch(/MEERKAT-SUB FAIL/)
     expect(r.code).toBe(0)

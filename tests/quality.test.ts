@@ -38,7 +38,7 @@ function cleanFolder(): string {
   put('CHANGELOG.md', '# Changelog\n\n## [1.0.0]\n\n- First release\n')
   put('README.md', '# Clean\n\nA small example.\n')
   put('src/add.js', 'export function add(a, b) {\n\treturn a + b\n}\n')
-  put('src/add.test.js', "import { add } from '../add.js'\n\ntest('adds two numbers', () => {\n\tif (add(1, 2) !== 3) throw new Error('bad')\n})\n")
+  put('src/add.test.js', "import { add } from './add.js'\n\ntest('adds two numbers', () => {\n\tif (add(1, 2) !== 3) throw new Error('bad')\n})\n")
   put('scripts/run.sh', '#!/usr/bin/env bash\nset -euo pipefail\necho ok\n')
   put('Makefile', '.PHONY: all clean test\n\nall:\n\tnode src/add.js\n\nclean:\n\trm -f out\n\ntest:\n\tnode --test\n')
   return dir
