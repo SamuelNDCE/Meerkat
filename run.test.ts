@@ -623,7 +623,7 @@ describe('starting a new project: --init', () => {
   test('it recognises a Cargo project, an Electron app, a Node project and anything else', () => {
     const has = (name: string) => (f: string) => f.split(String.fromCharCode(92)).join('/').endsWith('/' + name)
     expect(detect('/p', has('Cargo.toml')).kind).toBe('rust')
-    expect(detect('/p', has('Cargo.toml')).config).toEqual({ builtin: false, packs: ['rust', 'security'] })
+    expect(detect('/p', has('Cargo.toml')).config).toEqual({ builtin: false, packs: ['rust', 'security', 'hygiene'] })
     expect(detect('/p', has('package.json')).kind).toBe('node')
     expect(detect('/p', () => false).kind).toBe('unknown')
     expect(detect('/p', (f: string) => f.includes('electron-run')).kind).toBe('electron')
@@ -633,7 +633,7 @@ describe('starting a new project: --init', () => {
     const write = (f: string, text: string) => void files.set(f, text)
     const first = initConfig('/p', { exists: (f: string) => files.has(f) || f.endsWith('Cargo.toml'), write })
     expect(first.written).toBe(true)
-    expect(JSON.parse([...files.values()][0])).toEqual({ builtin: false, packs: ['rust', 'security'] })
+    expect(JSON.parse([...files.values()][0])).toEqual({ builtin: false, packs: ['rust', 'security', 'hygiene'] })
     const again = initConfig('/p', { exists: (f: string) => files.has(f) || f.endsWith('Cargo.toml'), write })
     expect(again.written).toBe(false)
     expect(again.message).toContain('already exists')
@@ -660,6 +660,32 @@ describe('the shipped packs are well-formed and self-testable', () => {
         expect(['security', 'functionality', 'ui', 'performance']).toContain(c.group)
       }
     }
+  })
+  test('the hygiene, performance and AI packs load, and every check fails on its own broken case (the AI ones with a stand-in model)', async () => {
+    const { loadChecks } = await import('./lib/load-checks.mjs')
+    const all: any[] = []
+    for (const pack of ['hygiene', 'performance', 'ai']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
+    expect(all.length).toBeGreaterThanOrEqual(19)
+    expect(new Set(all.map((c) => c.id)).size).toBe(all.length)
+    for (const c of all) {
+      expect(c.selfTest.expectFail).toBe(true)
+      let code = 0
+      try {
+        execFileSync(c.selfTest.cmd, c.selfTest.args, { stdio: 'ignore', timeout: 60000 })
+      } catch (e: any) {
+        code = e.status
+      }
+      expect({ id: c.id, code }).toEqual({ id: c.id, code: 1 })
+    }
+  }, 180000)
+  test('a performance check with no budget is NOT RUN (exit 75), never a quiet pass', () => {
+    let code = 0
+    try {
+      execFileSync('node', [join(process.cwd(), 'thorough', 'perf.mjs'), 'sizes', '--root', dir], { stdio: 'ignore' })
+    } catch (e: any) {
+      code = e.status
+    }
+    expect(code).toBe(75)
   })
   test('the secret scanner finds planted secrets, finds none in a clean folder, skips test files by default, and never prints a whole secret', () => {
     const scanner = join(process.cwd(), 'thorough', 'secret-scan.mjs')
