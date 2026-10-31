@@ -11,7 +11,7 @@ const mk = (id, group, title, tier = 'fast', script = S) => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   needs: ['node'],
   run: { cmd: 'node', args: [script, id], cwd: 'repo' },
   selfTest: { cmd: 'node', args: [script, id, '--fixtures'], cwd: 'repo', expectFail: true },

@@ -12,7 +12,7 @@ const make = (id, group, title, paths) => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   needs: ['node'],
   paths,
   run: { cmd: 'node', args: [SCRIPT, id], cwd: 'repo' },

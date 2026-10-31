@@ -12,7 +12,7 @@ const check = (id, title, suite, subs) => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   suite,
   subs,
   needs: ['node'],

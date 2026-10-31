@@ -244,10 +244,10 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
   }
   const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) })
-  // The project's own tests, found without being told (lib/discover.mjs): only for full, thorough and release (a preset with allPacks), or
+  // The project's own tests, found without being told (lib/discover.mjs): only for full, thorough and release (thorough tier with every pack; quick also has allPacks, so the tier decides), or
   // when asked for by name (`meerkat check discovered`). Never for quick or ci. "discover": false turns it off.
   const asked = opts.only.includes('discovered')
-  const found = (chosen.preset?.allPacks || asked) && !opts.selfTest ? discoverChecks(appDir, { existing: applied.all ?? applied.checks, config: { disable: read.config.disable, override: read.config.override }, project: read.config.discover, personal: user.discover, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) }) : null
+  const found = ((tier === 'thorough' && (!chosen.preset || chosen.preset.allPacks)) || asked) && !opts.selfTest ? discoverChecks(appDir, { existing: applied.all ?? applied.checks, config: { disable: read.config.disable, override: read.config.override }, project: read.config.discover, personal: user.discover, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) }) : null
   if (asked) opts.only = [...opts.only.filter((w) => w !== 'discovered'), ...(found?.checks ?? []).map((c) => c.id)]
   if (asked && !opts.only.length) {
     fail(found && !found.enabled ? 'discovery is turned off ("discover": false), so there is nothing to run for "discovered"' : 'no tests of this project\'s own were found to run (meerkat discover shows what was looked at)')

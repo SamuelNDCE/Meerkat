@@ -10,7 +10,7 @@ const make = (id, title, paths, group = 'ui') => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 3,
+  estSeconds: 1,
   needs: ['node'],
   ...(paths ? { paths } : {}),
   run: { cmd: 'node', args: [ST, id], cwd: 'repo' },

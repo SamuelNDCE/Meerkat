@@ -147,7 +147,8 @@ const packageFields = (root) => {
   const f = []
   for (const k of ['name', 'version', 'license']) if (typeof j[k] !== 'string' || !j[k].trim()) f.push(`package.json has no "${k}"`)
   if (typeof j.version === 'string' && j.version && !SEMVER.test(j.version)) f.push(`package.json version "${j.version}" is not valid semver (use a form like 1.2.3)`)
-  if (!j.private) for (const k of ['description', 'repository', 'engines']) if (!j[k]) f.push(`package.json has no "${k}" (needed because the package is not private)`)
+  if (!j.private) // engines.node is reported once, by node-engines; this check only asks for the fields a registry page shows.
+  if (!j.private) for (const k of ['description', 'repository']) if (!j[k]) f.push(`package.json has no "${k}" (needed because the package is not private)`)
   const paths = []
   if (typeof j.main === 'string') paths.push(['main', j.main])
   if (typeof j.bin === 'string') paths.push(['bin', j.bin])

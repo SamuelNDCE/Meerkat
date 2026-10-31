@@ -9,7 +9,7 @@ const make = (id, group, title, paths) => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 3,
+  estSeconds: 1,
   needs: ['node'],
   ...(paths ? { paths } : {}),
   run: { cmd: 'node', args: [WP, id], cwd: 'repo' },

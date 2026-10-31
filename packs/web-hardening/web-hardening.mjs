@@ -10,7 +10,7 @@ const make = (id, group, title, suite, subs, paths) => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 3,
+  estSeconds: 1,
   needs: ['node'],
   suite,
   subs,

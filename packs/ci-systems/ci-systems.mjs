@@ -12,7 +12,7 @@ const make = (id, group, title) => ({
   weight: 'tiny',
   suite: 'ci-config',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   needs: ['node'],
   run: { cmd: 'node', args: [CS, id], cwd: 'repo' },
   selfTest: { cmd: 'node', args: [CS, id, '--fixtures'], cwd: 'repo', expectFail: true },

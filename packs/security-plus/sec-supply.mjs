@@ -17,7 +17,7 @@ const check = (id, title, { tier = 'fast', weight = 'tiny', git = false } = {}) 
   lane: 'free',
   weight,
   title,
-  estSeconds: git ? 10 : 3,
+  estSeconds: git ? 2 : 1,
   needs: git ? ['node', 'git'] : ['node'],
   run: { cmd: 'node', args: [SC, id], cwd: 'repo' },
   selfTest: { cmd: 'node', args: [SC, id, '--fixtures'], cwd: 'repo', expectFail: true },

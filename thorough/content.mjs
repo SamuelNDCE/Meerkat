@@ -223,7 +223,7 @@ const changelogVsVersion = (root) => {
 
 // ---- readme-install-usage: README is over 200 characters and has an install section and a usage section (the title does not count)
 const INSTALL = /\b(install|installation|setup|set up|getting started|quick ?start|build)\b/i
-const USAGE = /\b(usage|use|how to use|running|run|examples?|quick ?start|getting started)\b/i
+const USAGE = /\b(usage|use|using|how to use|how it works|running|run|examples?|quick ?start|getting started|commands?|command line|cli|keyboard shortcuts|tour|walkthrough|guide|tutorial)\b/i
 const readmeInstallUsage = (root) => {
   const id = 'readme-install-usage'
   const name = 'README.md'

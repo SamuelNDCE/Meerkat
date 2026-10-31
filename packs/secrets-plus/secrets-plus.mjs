@@ -16,7 +16,7 @@ export default [
     suite: 'secrets',
     subs: RULES.length,
     title: 'No provider key, token, private key or high-entropy secret is written into the files (never printed in full)',
-    estSeconds: 3,
+    estSeconds: 1,
     needs: ['node'],
     run: { cmd: 'node', args: [SP, 'secrets-plus'], cwd: 'repo' },
     selfTest: { cmd: 'node', args: [SP, 'secrets-plus', '--fixtures'], cwd: 'repo', expectFail: true, expectMatch: 'found' },

@@ -23,7 +23,7 @@ const check = (id) => ({
   lane: 'free',
   weight: 'tiny',
   title: TITLES[id],
-  estSeconds: 2,
+  estSeconds: 1,
   suite: 'desktop-apps',
   subs: CHECK_TABLES[id].length,
   needs: ['node'],

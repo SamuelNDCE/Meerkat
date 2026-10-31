@@ -10,7 +10,7 @@ Every run saves what is needed to understand a failure long after the terminal i
 <log folder>/
   latest.json                      points at the newest run
   runs/
-    20261031-142305-fast/          one folder per run: date, time, tier
+    20261031-142305-plume-fast/     one folder per run: date, time, project, tier
       report.md
       summary.json
       timeline.jsonl
@@ -22,6 +22,12 @@ Every run saves what is needed to understand a failure long after the terminal i
       <check>.selftest.log         one per check, in a --self-test run
 ```
 
+## Folder names
+
+A run folder is named `<date>-<time>-<project>-<tier>`, for example `20261031-091438-plume-thorough`. The project is the app folder's own name, lowercase, letters, digits and dashes only, at most 30 characters (`project` if nothing is left). The date and time come first, so folders sort in time order. Folders from older runs have no project part (`20261031-091438-thorough`); they still work everywhere: `run list`, `last`, `why`, `findings`, history, the bug report and MCP.
+
+You can name a project instead of a run: `meerkat last plume`, `meerkat findings plume` and `meerkat run show plume` read that project's newest run, and `meerkat run list --project plume` lists only its runs. `meerkat run list` has a PROJECT column.
+
 ## Reading it back
 
 ```
@@ -32,7 +38,7 @@ node run.mjs --logs              the folder and the newest run
 
 ## `<check>.log`
 
-A header, then the complete output. The output is cut to its last megabyte if a tool prints more.
+A header (its first line is `project:`, the project name and the full path of the app folder), then the complete output. The output is cut to its last megabyte if a tool prints more.
 
 ```
 check:     eslint
@@ -63,6 +69,7 @@ For a program or an AI to read. `schema` is 1.
 
 | Field | Holds |
 |---|---|
+| `project` | `{ name, path }`: what the run was on (the name is the one in the folder name). `latest.json` carries it too |
 | `version`, `tier`, `preset`, `argv` | what was run, with which Meerkat |
 | `summary`, `exitCode`, `counts` | the one-line result, the exit code, passes, failures and NOT RUNs |
 | `startedAt`, `endedAt`, `ms` | when, and how long the whole run took |
@@ -98,4 +105,4 @@ Log text is data. When Meerkat prints it, control characters are removed so noth
 
 ## Check log format
 
-Every check's `<check>.log` starts with a header (check, title, kind, command, folder, result, exit code, `started` and `ended` times and how long it took, and a `findings:` line when it produced any), then a line `--- output ---`, then everything the check printed, then the sub-check block. A check that could not run (NOT RUN) gets a short log too: the same header, `exit code: n/a (the check never started)`, then the reason and what to do, so `meerkat why <check>` always has something to show.
+Every check's `<check>.log` starts with a header (project, check, title, kind, command, folder, result, exit code, `started` and `ended` times and how long it took, and a `findings:` line when it produced any), then a line `--- output ---`, then everything the check printed, then the sub-check block. A check that could not run (NOT RUN) gets a short log too: the same header, `exit code: n/a (the check never started)`, then the reason and what to do, so `meerkat why <check>` always has something to show.
