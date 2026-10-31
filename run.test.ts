@@ -491,7 +491,8 @@ describe('start order for speed', () => {
 describe('the scheduler gives light checks the machine together and heavy ones room', () => {
   const sleepCheck = (id: string, ms: number, extra: Record<string, unknown> = {}) => fake({ id, estSeconds: 1, run: async () => { await new Promise((r) => setTimeout(r, ms)); return { ok: true, detail: '' } }, ...extra })
   test('a check costs what it says, or the usual cost of its lane', () => {
-    expect(costOf({ lane: 'free' } as never).cpu).toBe(1)
+    expect(costOf({ lane: 'free' } as never).cpu).toBe(2)
+    expect(costOf({ lane: 'cargo', weight: 'tiny' } as never).cpu).toBe(1)
     expect(costOf({ lane: 'cargo' } as never).cpu).toBeGreaterThan(3)
     expect(costOf({ lane: 'free', cost: { cpu: 7 } } as never)).toMatchObject({ cpu: 7 })
   })
@@ -523,6 +524,30 @@ describe('the scheduler gives light checks the machine together and heavy ones r
     const solo = mk('solo', { alone: true, run: async () => { seen.push(live); live++; await new Promise((r) => setTimeout(r, 30)); live--; return { ok: true, detail: '' } } })
     await runAll([mk('x'), mk('y'), solo], ctx(), { parallel: 9, budget: { cpu: 99, reserveGB: 0, maxParallel: 5 }, freeMemGB: () => 64 })
     expect(seen).toEqual([0])
+  })
+  test('weight classes: ten tiny checks run together, light ones five at a time, medium two, and "alone" runs by itself', async () => {
+    const peakFor = async (weight: string, count: number) => {
+      let live = 0
+      let peak = 0
+      const list = Array.from({ length: count }, (_, i) => sleepCheck(`${weight}${i}`, 40, { weight, run: async () => { live++; peak = Math.max(peak, live); await new Promise((r) => setTimeout(r, 40)); live--; return { ok: true, detail: '' } } }))
+      await runAll(list, ctx(), { parallel: 99, budget: { cpu: 10, reserveGB: 0, maxParallel: 10 }, freeMemGB: () => 64 })
+      return peak
+    }
+    expect(await peakFor('tiny', 14)).toBe(10)
+    expect(await peakFor('light', 9)).toBe(5)
+    expect(await peakFor('medium', 6)).toBe(2)
+    expect(await peakFor('heavy', 3)).toBe(1)
+    expect(await peakFor('alone', 3)).toBe(1)
+  })
+  test('the thorough tier covers everything the fast tier does: each fast check is in it, or replaced by a wider one that is', async () => {
+    const { loadChecks } = await import('./lib/load-checks.mjs')
+    const all: any[] = []
+    for (const d of ['checks']) all.push(...((await loadChecks(join(process.cwd(), d))) as any[]))
+    for (const pack of ['rust', 'security', 'hygiene', 'performance', 'refactor']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
+    const thorough = new Set(selectChecks(all, { tier: 'thorough', mode: 'all' }).run.map((c: any) => c.id))
+    const fast = selectChecks(all, { tier: 'fast', mode: 'all' }).run
+    expect(fast.length).toBeGreaterThan(10)
+    for (const c of fast as any[]) expect({ id: c.id, covered: thorough.has(c.id) || (!!c.supersededBy && thorough.has(c.supersededBy)) }).toEqual({ id: c.id, covered: true })
   })
   test('without a budget nothing changes: everything runs side by side as before', async () => {
     const t0 = Date.now()
@@ -688,6 +713,21 @@ describe('the shipped packs are well-formed and self-testable', () => {
       }
       expect({ c, code }).toEqual({ c, code: 1 })
     }
+  })
+  test("Meerkat's own code makes no network calls (no telemetry); only the user-configured perf check and the tools it runs may", async () => {
+    const { readdirSync, readFileSync, statSync } = await import('node:fs')
+    const files: string[] = []
+    const walk = (d: string) => {
+      for (const e of readdirSync(d)) {
+        const p = join(d, e)
+        if (statSync(p).isDirectory()) walk(p)
+        else if (/\.mjs$/.test(e)) files.push(p)
+      }
+    }
+    for (const d of ['lib']) walk(join(process.cwd(), d))
+    for (const f of ['run.mjs', 'watch.mjs', 'preview.mjs']) files.push(join(process.cwd(), f))
+    const bad = files.filter((f) => /(fetch\(|https?\.request|http\.get|https\.get|net\.connect|new WebSocket|XMLHttpRequest)/.test(readFileSync(f, 'utf8')))
+    expect(bad).toEqual([])
   })
   test('a performance check with no budget is NOT RUN (exit 75), never a quiet pass', () => {
     let code = 0

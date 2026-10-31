@@ -29,8 +29,9 @@ export function redact(text) {
   for (const re of HARD) out = out.replace(re, () => (hard++, '<hidden>'))
   out = out.replace(AUTH_LINE, (_, head) => (soft++, `${head}<hidden>`))
   out = out.replace(QUOTED, (_, head) => (soft++, `${head}"<hidden>"`))
-  // A secret-named assignment that opens a quote the pattern above could not close (a value ending in a backslash, say): blank the rest of the line.
-  out = out.replace(OPEN_QUOTE, (_, head) => (soft++, `${head}<hidden>`))
+  // A secret-named assignment that opens a quote the pattern above could not close (a multi-line value, or one ending in a backslash):
+  // the extent of the value is unknown, so it counts as a hard find and nothing is sent.
+  out = out.replace(OPEN_QUOTE, (_, head) => (hard++, `${head}<hidden>`))
   out = out.replace(SOFT, (_, head) => (soft++, `${head}<hidden>`))
   return { text: out, hard, soft }
 }

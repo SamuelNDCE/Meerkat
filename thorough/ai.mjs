@@ -38,7 +38,7 @@ const safeText = (s) => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0
 export function findRoutes(root) {
   const out = []
   for (const x of trackedFiles(root)) {
-    if (!SOURCE.has(extname(x)) || SENSITIVE_PATH.test(x) || /(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) || /\.(test|spec)\./.test(x)) continue
+    if (!SOURCE.has(extname(x).toLowerCase()) || SENSITIVE_PATH.test(x) || /(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) || /\.(test|spec)\./.test(x)) continue
     const lines = readText(root, x).split('\n')
     lines.forEach((l, i) => {
       for (const [re] of ROUTE_RES) {
@@ -144,7 +144,7 @@ const routeAudit = async (root) => {
   if (!list.length) return notRun('no routes, handlers or IPC channels were found to audit')
   if (list.length > MAX_ROUTES) return notRun(`${list.length} routes is more than the ${MAX_ROUTES} this check covers in one run; a partial audit is not reported as a pass. Audit one folder at a time with --root`)
   // Source files with a sensitive-looking name are not sent, so an audit that skipped one with routes in it would be partial: NOT RUN.
-  const skipped = trackedFiles(root).filter((x) => SOURCE.has(extname(x)) && SENSITIVE_PATH.test(x) && !/(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) && ROUTE_RES.some(([re]) => re.test(readText(root, x))))
+  const skipped = trackedFiles(root).filter((x) => SOURCE.has(extname(x).toLowerCase()) && SENSITIVE_PATH.test(x) && !/(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) && (!readText(root, x) || ROUTE_RES.some(([re]) => re.test(readText(root, x)))))
   if (skipped.length) return notRun(`route code in file(s) with a sensitive-looking name was left out (${skipped.slice(0, 3).join(', ')}); audit them by hand or rename them`)
   const cmd = aiCommand()
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')

@@ -8,6 +8,7 @@ const mk = (id, group, title, tier = 'fast') => ({
   group,
   tier,
   lane: 'free',
+  weight: 'tiny',
   title,
   estSeconds: 2,
   needs: ['node'],

@@ -9,6 +9,7 @@
 //   node preview.mjs --final --speed 3000   run to the end at once and print the finished board (--fail for the alarm)
 //   node preview.mjs --plain       no colour
 //   node preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
+import { writeFileSync } from 'node:fs'
 import { estimateRemaining } from './lib/eta.mjs'
 import { orderForSpeed, runAll } from './lib/runner.mjs'
 import { renderLive } from './lib/tui/live.mjs'
@@ -114,9 +115,14 @@ let last = []
 const draw = (tick) => {
   const rows = (process.stdout.rows || 60) - 1
   last = frame(tick)
+  if (DUMP && tick % 10 === 0) dumped.push(last.join('\n'))
   process.stdout.write(`${ESC}H${last.slice(0, rows).map((l) => `${l}${ESC}K`).join('\n')}\n${ESC}J`)
 }
 const FINAL = has('--final')
+// --dump <file>: also write a frame about every 0.8 s to the file (split by a form-feed line), for tools/make_gif.py.
+const DUMP = has('--dump') ? argv[argv.indexOf('--dump') + 1] : null
+const dumped = []
+if (DUMP) process.on('exit', () => writeFileSync(DUMP, [...dumped, ...(last.length ? [last.join('\n')] : [])].join('\n\f\n')))
 if (!FINAL) process.stdout.write(`${ESC}?1049h${ESC}?25l`)
 if (!FINAL) process.on('exit', () => {
   process.stdout.write(`${ESC}?25h${ESC}?1049l`)
