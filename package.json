@@ -1,6 +1,7 @@
 {
   "name": "meerkat",
   "version": "0.1.0",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "description": "Meerkat: one command that checks an app before a push, a promotion or a build.",
   "engines": { "node": ">=20" },

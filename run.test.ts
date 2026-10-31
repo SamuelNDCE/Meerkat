@@ -729,6 +729,19 @@ describe('the shipped packs are well-formed and self-testable', () => {
     const bad = files.filter((f) => /(fetch\(|https?\.request|http\.get|https\.get|net\.connect|new WebSocket|XMLHttpRequest)/.test(readFileSync(f, 'utf8')))
     expect(bad).toEqual([])
   })
+  test('redaction: an unclosed secret quote (even at the end of a line) is a hard find; an empty string and ordinary code are not', async () => {
+    const { redact } = await import('./thorough/redact.mjs')
+    const tick = String.fromCharCode(96)
+    expect(redact(`const secret = ${tick}\nreal-value-on-the-next-line${tick}`).hard).toBeGreaterThan(0)
+    expect(redact('password = "hunter2hunter2').hard).toBeGreaterThan(0)
+    expect(redact("token = ''").hard).toBe(0)
+    expect(redact('secret = "";').hard).toBe(0)
+    expect(redact('password = """hunter2 hunter2"""').hard).toBeGreaterThan(0)
+    expect(redact("secret = '''\nvalue\n'''").hard).toBeGreaterThan(0)
+    expect(redact('secret = "" + "a b c"').hard).toBeGreaterThan(0)
+    expect(redact('const x = compute(1, 2)').hard).toBe(0)
+    expect(redact('secret = "hello world"').text).not.toContain('hello')
+  })
   test('a performance check with no budget is NOT RUN (exit 75), never a quiet pass', () => {
     let code = 0
     try {

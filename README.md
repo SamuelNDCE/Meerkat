@@ -304,7 +304,14 @@ A pixel-art meerkat watches the run. It looks straight ahead and blinks, squints
 
 ## Licence
 
-Today Meerkat is under the [PolyForm Noncommercial License 1.0.0](LICENSE): free to use, change and share for any noncommercial purpose, with the `Required Notice:` line kept as credit, and not for sale. A purpose-written licence for this project, free for people and requiring organisations to say publicly that they use it, is drafted for review in [`docs/licence-draft.md`](docs/licence-draft.md). It is not in force yet.
+Meerkat is under the [Fair Credit Community Licence 1.0](LICENSE) (a working name), written for this project and meant to be for people rather than for companies to take from:
+
+- **People** can use, change and share it for anything, free.
+- **Organisations** can use it free too, but must say publicly that they use it, with a link to this repository.
+- **Nobody may sell Meerkat itself**, or run it as a paid service for others. A company that builds it into its own product and sells *that* may, if it credits Meerkat and links here. Extensions you write for it are yours to sell.
+- **No telemetry**, and nothing is sent to an AI model unless you turn that check on.
+
+The numbered terms in [`LICENSE`](LICENSE) are what counts; the summary above is only a guide. [`docs/licence-notes.md`](docs/licence-notes.md) shows how the text was compared with Apache 2.0, MPL 2.0, Elastic 2.0, PolyForm Shield and the Business Source License, and what is still open. It is not open source in the strict sense (it restricts selling), and it has not been reviewed by a solicitor.
 
 ## Project layout
 
@@ -315,7 +322,7 @@ Today Meerkat is under the [PolyForm Noncommercial License 1.0.0](LICENSE): free
 | `packs/` | the packs: `rust`, `security`, `hygiene`, `performance`, `refactor`, `ai` |
 | `thorough/` | the zero-dependency scripts the packs call (scanners, fuzzers, budgets, AI) |
 | `lib/` | the scheduler, config, presets, estimate and the board (`lib/tui/`) |
-| `docs/` | [customizing](docs/customizing.md), [every check](docs/checks.md), [speed notes](docs/speed.md), [set-up](docs/setup.md), [roadmap](docs/roadmap.md), [licence draft](docs/licence-draft.md) |
+| `docs/` | [customizing](docs/customizing.md), [every check](docs/checks.md), [speed notes](docs/speed.md), [set-up](docs/setup.md), [roadmap](docs/roadmap.md), [licence notes](docs/licence-notes.md) |
 | `tools/` | `screenshot.py`, `make_gif.py` and `gen-checks.mjs` (they make the pictures and the check list) |
 
 Meerkat's own tests: `npm test`. After adding or changing a check, run `node tools/gen-checks.mjs` to refresh the list above. Rules for working in this repository: [`PROJECT.md`](PROJECT.md).

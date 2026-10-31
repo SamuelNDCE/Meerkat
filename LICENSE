@@ -1,75 +1,141 @@
 Required Notice: Copyright (c) 2026 SamuelNDCE (https://github.com/SamuelNDCE/Meerkat)
 
-# PolyForm Noncommercial License 1.0.0
+# Fair Credit Community Licence 1.0
 
-<https://polyformproject.org/licenses/noncommercial/1.0.0>
+SPDX-style identifier: `FCCL-1.0` (not an SPDX-registered licence)
 
-## Acceptance
+**Summary (for convenience only; if it differs from the numbered terms, the numbered terms win).** People can use, change and share this software for anything, free. Organisations can use it free too, but must say publicly that they use it. Nobody may sell the software itself, or a service that is mainly the software. A company that builds the software into its own product and sells that product may do so, if it credits the software and links to its repository. The software collects no data about you.
 
-In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
+---
 
-## Copyright License
+## 1. Acceptance
 
-The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose. However, you may only distribute the software according to [Distribution License](#distribution-license) and make changes or new works based on the software according to [Changes and New Works License](#changes-and-new-works-license).
+You get a licence under these terms only by agreeing to them. Using, copying, changing or sharing the software means You agree. These terms are both promises You make and conditions of every licence You receive.
 
-## Distribution License
+## 2. Definitions
 
-The licensor grants you an additional copyright license to distribute copies of the software. Your license to distribute covers distributing the software with changes and new works permitted by [Changes and New Works License](#changes-and-new-works-license).
+In these terms, "including" means "including without limitation".
 
-## Notices
+- **Licensor**: SamuelNDCE, the author, and anyone the author names as a co-owner of the software in its repository.
+- **Software**: the work these terms came with (Meerkat), in the version You received, including its documentation, and any part of it.
+- **You**: whoever is using the software. If You use it for an Organisation, the Organisation is also "You" for sections 6, 7 and 8.
+- **Individual**: a natural person using the software for themselves, including for their own unpaid projects, study, research and hobbies, and for freelance or self-employed work that person does alone, without employees.
+- **Organisation**: a company, partnership, charity, school, public body or any other group of people, and anyone using the software for the work or benefit of one. An employee or contractor who uses the software at work does so for the Organisation they work for, so that Organisation is the one with the duties below.
+- **Affiliate**: an organisation that controls, is controlled by, or is under common control with another. **Control** means owning more than half of an entity's shares or assets, or the power to direct its management and policies by vote, contract or otherwise, directly or indirectly. An Organisation and its Affiliates count as one Organisation under these terms.
+- **Sell**: to receive money or anything else of value in exchange for the software, for a copy of it, or for access to it. A subscription, a licence fee, a "pro" or "enterprise" edition, a paid download, and a hosted or managed service are all selling.
+- **Hosted service**: a service where someone other than the customer runs the software and gives the customer access to any substantial set of its features or functionality, or to the results of running it.
+- **Product**: a program, service or device that has its own purpose and that includes, runs or depends on the software as one part among others.
+- **Extension**: a separate work, such as a pack of extra checks, that uses the software only through its documented plug-in interface (the configuration file, packs and check format) and does not copy the software's own code. An Extension is not a Modified Version.
+- **Modified Version**: the software with changes to its own files, or a work that copies a substantial part of the software's files.
+- **Contribution**: anything You intentionally send to the Licensor for inclusion in the software, in any form, including through the repository's issues and pull requests, except what You clearly mark in writing as "Not a Contribution".
+- **Credit Notice**: the statement in section 6.
+- **Share**: to give a copy of the software to anyone outside Your own Organisation, in any medium, in source or compiled form, including by making it available to download.
 
-You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of these terms or the URL for them above, as well as copies of any plain-text lines beginning with `Required Notice:` that the licensor provided with the software. For example:
+## 3. Copyright licence
 
-> Required Notice: Copyright Yoyodyne, Inc. (http://example.com)
+The Licensor grants You a worldwide, free, non-exclusive licence under the Licensor's copyright to use, run, study, copy, change, make derivative works of, and Share the software, for any purpose that these terms do not forbid, for as long as You follow these terms. Your right to Share and to change the software is subject to section 7, and Your right to charge for anything is subject to section 8.
 
-## Changes and New Works License
+Anyone who gets the software from You gets their licence **directly from the Licensor**, on these same terms. You cannot sublicense it, and You cannot give anyone better terms or worse ones.
 
-The licensor grants you an additional copyright license to make changes and new works based on the software for any permitted purpose.
+## 4. Patent licence
 
-## Patent License
+The Licensor grants You a licence under any patent claims the Licensor can license, or becomes able to license, that You would otherwise infringe by using the software as provided, for the purposes that section 3 allows.
 
-The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
+If You make a written claim, including in a lawsuit or counterclaim, that the software infringes a patent, Your patent licence under this section ends immediately. If Your Organisation makes such a claim, the patent licence ends immediately for work done for that Organisation.
 
-## Noncommercial Purposes
+## 5. Individuals
 
-Any noncommercial purpose is a permitted purpose.
+An Individual has no duties under these terms except those in section 7 when they Share a copy, and the rule against selling in section 8.
 
-## Personal Uses
+## 6. Organisations: say that You use it
 
-Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, is use for a permitted purpose.
+An Organisation may use the software inside the Organisation, on any number of machines, free of charge. It must, **within 60 days of first using the software and for as long as it keeps using it**, publish a Credit Notice somewhere the public can read, such as a credits, "open source" or "acknowledgements" page of its website or product, its public documentation, or the README of a public repository. The notice must say, in words at least as clear as:
 
-## Noncommercial Organizations
+> This organisation uses Meerkat, by SamuelNDCE (https://github.com/SamuelNDCE/Meerkat), under the Fair Credit Community Licence.
 
-Use by any charitable organization, educational institution, public research organization, public safety or health organization, environmental protection organization, or government institution is use for a permitted purpose regardless of the source of funding or obligations resulting from the funding.
+1. It may add its own words, but must not state or suggest that the Licensor endorses it.
+2. One notice may cover an Organisation and its Affiliates if it names them or says it covers them.
+3. If an Organisation truly cannot publish anything (for example because of a legal duty of secrecy), it must ask the Licensor in writing for permission to place the notice in its customer documentation instead. Without that written permission, the duty stands.
+4. The duty ends 6 months after the Organisation stops using the software and removes it from its systems.
 
-## Fair Use
+## 7. Sharing copies
 
-You may have "fair use" rights for the software under the law. These terms do not limit them.
+If You Share the software, whether changed or not, You must:
 
-## No Other Rights
+1. give each recipient a copy of these terms, or the web address https://github.com/SamuelNDCE/Meerkat where they can be read;
+2. keep every `Required Notice:` line, copyright notice and licence notice that came with the software;
+3. if You changed it, mark each changed file with a prominent notice that You changed it, saying who and when, and not suggest that the Licensor made or approves the changed version; and
+4. if You Share a Modified Version, make its complete source available to each recipient, free of charge, under these terms.
 
-These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else. These terms do not imply any other licenses.
+Sharing a copy inside Your own Organisation is not Sharing for item 4.
 
-## Patent Defense
+## 8. Selling, and building it into a Product
 
-If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
+1. **Not allowed, unless You have a commercial licence under section 12:** to Sell the software, a Modified Version, or any copy of either; or to provide a Hosted service.
+2. **Allowed:** to include the software in a Product and Sell the Product, if all of these are true: (a) the Product is more than the software and has its own purpose; (b) the Product's documentation and its website listing say plainly that it includes or uses Meerkat by SamuelNDCE and link to https://github.com/SamuelNDCE/Meerkat; and (c) the copy of the software inside the Product keeps these terms and every notice that came with it.
+3. **Allowed:** to charge for services around the software that are Yours: consulting, training, support, installation, writing Extensions or harnesses for a client, or running the software for a client as part of delivering Your own work, so long as You are not simply giving the client access to the software or its results as a service.
+4. **Allowed:** to make and Sell Extensions under any licence You choose. An Extension is Your own work.
+5. The reports, logs and screenshots the software produces about Your project belong to You.
+6. The test is what the customer is mainly paying for. If it is the software's own job, that is selling the software. Using affiliates, contractors, resellers, a free tier that leads to a paid one, or any other arrangement to get around this section is a breach of it.
 
-## Violations
+## 9. Built for people: no telemetry, open connections, AI by choice
 
-The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice. Otherwise, all your licenses end immediately.
+1. **No telemetry.** The software does not collect or send data about You, Your projects or Your machine, and the Licensor will not add anything that does. A Modified Version that You Share must not add telemetry either, unless the person running it has clearly switched it on (an opt-in that is off by default), and it says in plain words what is sent and where.
+2. **Open connections.** Anyone may connect the software to any application's test harness, including applications made by the Licensor or by Perpetual Technologies, and may write Extensions and harnesses for it. An Organisation that does so has the same duties as any other under sections 6 and 8, so the Licensor's own companies credit and link to the repository like everyone else.
+3. **AI is optional and visible.** Checks that use an AI model are off unless You turn them on. They say, before they run, what they will send and to which model, and they do not run at all when no model can be reached or no key or login is found. The software never sends code to a model on its own.
 
-## No Liability
+## 10. Names and logos
 
-***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
+These terms give no right to the name "Meerkat" as the name of Your own product or service, or to the pixel-art meerkat mascot or the project's logos, except to say truthfully what Your work is or works with ("compatible with Meerkat", "includes Meerkat"), and to publish the Credit Notice and the credit in section 8.
 
-## Definitions
+## 11. Contributions
 
-The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
+Each Contribution is licensed to everyone under these terms, **and** You grant the Licensor a worldwide, free, perpetual, irrevocable licence to use it, change it and license it to others on any terms, including commercial ones (this is what makes section 12 possible). You promise that the Contribution is Your own original work, or that You have the right to give it. If You send work in the course of employment, the employer's permission is Your responsibility. The Licensor is under no duty to accept a Contribution.
 
-**You** refers to the individual or entity agreeing to these terms.
+## 12. Commercial licences
 
-**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all organizations that have control over, are under the control of, or are under common control with that organization. **Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise. Control can be direct or indirect.
+The Licensor may grant anyone other terms in writing, for a fee or not. That does not change the terms for anyone else.
 
-**Your licenses** are all the licenses granted to you for the software under these terms.
+## 13. Fair use, and no other rights
 
-**Use** means anything you do with the software requiring one of your licenses.
+These terms do not limit any rights You have under fair use, fair dealing or similar rules of law. They give You no other rights than those written here: no right is implied from the way the software is sold, shared or described, and You have no right to sublicense or transfer Your licence, except that someone who receives the software from You gets their own licence under section 3.
+
+## 14. If something goes wrong
+
+If You break these terms, the licences You were given end automatically. They are **reinstated** if You stop the breach and put things right within 30 days of the Licensor telling You in writing what is wrong (for example by publishing the Credit Notice or ending the sale). The first reinstatement is automatic and retroactive. If You break these terms again after being reinstated, Your licences end permanently unless the Licensor chooses to restore them in writing.
+
+Copies that other people received from You in good faith keep their licence, because it comes from the Licensor (section 3). Their rights do not end because Your rights ended.
+
+## 15. Versions
+
+The terms You received with a copy of the software cannot be taken away from that copy. The Licensor may release later versions of the software under different terms; that does not change the terms of earlier versions. A later version under different terms applies only to that version.
+
+## 16. No warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OR CONDITION OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING ANY WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT OR TITLE, TO THE FULLEST EXTENT THE LAW ALLOWS. A check that reports "passed" is not a promise that the software it checked is free of faults or safe to ship.
+
+## 17. Limit of liability
+
+TO THE FULLEST EXTENT THE LAW ALLOWS, THE LICENSOR IS NOT LIABLE TO YOU FOR ANY LOSS OR DAMAGE ARISING OUT OF THESE TERMS OR THE USE OR NATURE OF THE SOFTWARE, UNDER ANY KIND OF LEGAL CLAIM, AND IN ANY CASE NOT FOR MORE THAN YOU PAID FOR THE SOFTWARE (USUALLY NOTHING). Nothing in these terms limits liability that the law does not allow to be limited, including for death or personal injury caused by negligence, or for fraud.
+
+## 18. General
+
+1. **Governing law.** These terms are governed by the law of England and Wales, and the courts of England and Wales have exclusive jurisdiction, except that the Licensor may bring a claim in any court where You are based.
+2. **If part is unenforceable,** the rest stays in force, and the unenforceable part is read as narrowly as needed to make it enforceable.
+3. **No waiver.** Not enforcing a term once is not giving it up.
+4. **Whole agreement.** These terms are the whole licence for the software. Nothing said elsewhere changes them unless the Licensor signs it. The summary at the top and the headings are for convenience and are not part of the terms.
+5. **Assignment.** The Licensor may transfer its rights and these terms to anyone, and the licences already granted stay in force. You may not transfer Yours, except as section 13 allows.
+6. **Notices.** A notice to the Licensor is made by opening an issue in the repository https://github.com/SamuelNDCE/Meerkat or by writing to the contact address listed there. A notice to You may be sent to any address or account the Licensor reasonably thinks reaches You, including a public message in a repository where You publish.
+7. **Other people's work.** Where the software contains work by others, it keeps their licence, which is listed in the repository.
+8. **Language.** If these terms are translated, the English text wins.
+
+---
+
+## How to apply this licence to a file
+
+Put this at the top of a source file:
+
+```
+Copyright (c) 2026 SamuelNDCE (https://github.com/SamuelNDCE/Meerkat)
+Licensed under the Fair Credit Community Licence 1.0. See the LICENSE file.
+```
