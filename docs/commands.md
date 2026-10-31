@@ -20,6 +20,8 @@ meerkat <command> --help                help for any command (also: meerkat help
 | `meerkat full [folder]` | every check | alias of `meerkat thorough` |
 | `meerkat <preset> [folder]` | any preset: `security`, `ui`, `functionality`, `performance`, `refactor`, `ci`, `release`, and your own | `meerkat preset list` shows them |
 | `meerkat check <id>... [folder]` | only these checks | same as `--only` |
+| `meerkat repos [--scan <folder>]` | the git repositories Meerkat can find: name, path, branch (`--json` for scripts) | `--scan` looks in that folder too, once |
+| `meerkat recent` / `recent clear` | the last 12 projects you used, newest first (`--json`); `clear` empties the list | stored as paths only in `~/.meerkat.json` |
 
 Options for every run: `--ai` (include the AI checks), `--json` (print the result as JSON on stdout), `--plain` (no board), `--no-color`, `-q/--quiet` (only the result line), `--fail-fast`, `--keep-going`, `--group <kinds>`, `--include <name>`, `--only <ids>`, `--config <file>`, `--no-config`.
 
@@ -100,3 +102,13 @@ Tab completion for commands, presets, nouns and verbs, and check ids (asked lazi
 ## Config order
 
 Flags, then environment variables, then the project's `meerkat.config.json`, then your `~/.meerkat.json`, then the defaults.
+
+## The project picker
+
+`meerkat` on its own, in a terminal, first asks which folder to check, then shows the preset menu with `Project: <path>` at the top. "Change project" in that menu returns to the picker.
+
+The picker lists "Here" (the folder you are in, or its repository), "Recent", and "Repos found", then "Browse folders...", "Type or paste a path..." (a path or a project name, resolved like `meerkat verify <name>`) and, on Windows, "Choose another drive". Up/Down and Enter move and choose; typing narrows the lists, Backspace removes a letter, Esc clears the filter (and quits when there is none).
+
+Repositories are found in the folder you are in, your recent projects, your roots (`meerkat root add <folder>`), and these places when they exist: `~/Documents`, `~/code`, `~/src`, `~/projects`, `~/dev`, `~/repos`, `~/Desktop` and the folders next to Meerkat. The search goes three levels deep, skips `node_modules`, `target`, `dist`, `build`, `AppData`, Windows system folders and hidden folders, never follows links, and stops after 400 repositories or 2 seconds. It reads only `.git/HEAD` of each repository, to show the branch.
+
+The picker is skipped when a folder is given (`meerkat verify D:/code/app`, `meerkat menu D:/code/app`) and whenever there is no terminal, so scripts and AI agents see no change.

@@ -288,7 +288,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     // How much a run may use at once: every thread by default, and 3 GB of memory left free; the config can change both.
     const budget = { cpu: read.config.budget?.cpu ?? Math.min(10, cpus().length), reserveGB: read.config.budget?.reserveGB ?? 3, maxParallel: read.config.budget?.maxParallel ?? 10 }
     schedulerUsed = { slots: budget.cpu, maxParallel: budget.maxParallel, reserveGB: budget.reserveGB }
-    results = await runAll(sel.run, ctx, { budget, keepGoing: !opts.failFast, parallel: Math.max(1, cpus().length - 1), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder) })
+    results = await runAll(sel.run, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: Math.max(1, cpus().length - 1), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder) })
     bar.stop()
     status.stop()
     // Keep what this run measured, so the next run's order, bar and time left are closer to the truth.

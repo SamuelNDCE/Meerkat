@@ -49,6 +49,7 @@ Fields to read first in `summary.json`:
 - `summary`: the one-line result.
 - `counts`: `{ pass, fail, notRun }`.
 - `results[].id`, `results[].status` (`PASS`, `FAIL` or `NOT RUN`), `results[].detail` (the reason), `results[].logFile`, `results[].command`.
+- `results[].files.total`: how many files the check examined. Present only when the check reported it (the built-in file scanners do; an external tool such as `tsc` or `cargo` does not), so a missing `files` means "not known", never zero.
 
 ## Recipe: act on a failure
 

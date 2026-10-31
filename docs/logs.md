@@ -68,11 +68,15 @@ For a program or an AI to read. `schema` is 1.
 | `selection` | `ran`, `skipped`, `covered`, `disabled` |
 | `waited` | for each check that waited: `reason` and `waitedMs` |
 | `configFile` | the config that applied, or null |
-| `results` | one entry per check: `id`, `title`, `status`, `detail`, `ms`, `command`, `exitCode`, `startedAt`, `logFile`, `outputFile` (failures only) |
+| `results` | one entry per check: `id`, `title`, `status`, `detail`, `ms`, `command`, `exitCode`, `startedAt`, `logFile`, `outputFile` (failures only), `files.total` (how many files the check examined; only when it reported it) |
 
 ## `timeline.jsonl`
 
-One JSON object per line, in order: `{ "t": 1840, "event": "end", "id": "eslint", "status": "FAIL", "ms": 4210, "at": "..." }`. `t` is milliseconds from the start of the run. Events are `start` (with the lane) and `end`.
+One JSON object per line, in order: `{ "t": 1840, "event": "end", "id": "eslint", "status": "FAIL", "ms": 4210, "at": "..." }`. `t` is milliseconds from the start of the run. Events are `start` (with the lane) and `end`. An `end` event carries `files: { "total": 940 }` when the check reported how many files it examined, and no `files` field otherwise.
+
+## File progress (`MEERKAT-FILE`)
+
+A check script can tell the live board which file it is reading by printing, one per line, to stderr: `MEERKAT-FILE <relative path>` for the current file and `MEERKAT-FILES <done>/<total>` for the count. Meerkat reads these lines out of the output and removes them, so they never appear in a saved log or in `--json` output. The scripts in `thorough/` print them through `thorough/kit.mjs`, and only when Meerkat sets `MEERKAT_PROGRESS` (`1` when the live board is on, `count` otherwise, which sends only the count). A path with control characters or longer than 120 characters is ignored.
 
 ## Safety
 

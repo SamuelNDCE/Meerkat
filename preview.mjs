@@ -46,6 +46,16 @@ const spec = [
   ['ui-screens', 'electron', 13, ['build-sidecar'], ['Dashboard', 'Library', 'Settings']],
   ['click-through', 'electron', 112, ['build-sidecar'], ['6 windows open', 'pressing controls: 120 / 362', 'pressing controls: 300 / 362']],
 ]
+// Files the made-up checks "look at", so the board shows names moving past and a count rising (the real run reads them from the
+// MEERKAT-FILE and MEERKAT-FILES lines a check prints, lib/progress-files.mjs). Which checks read files, and how many.
+const FILE_TOTALS = { 'rule-scan': 4474, 'type-check': 940, 'build-all': 1840, 'unit-tests': 530, 'ui-screens': 24 }
+const DIRS = ['src/main', 'src/vault', 'src/renderer/components', 'src/agents', 'src/shared', 'electron', 'scripts', 'docs']
+const STEMS = ['ipc', 'parser', 'Sidebar', 'tool-loop', 'settings', 'index', 'vault-store', 'palette', 'router', 'markdown', 'search', 'graph-view']
+const EXTS = ['ts', 'tsx', 'ts', 'mjs', 'ts', 'css', 'ts', 'md']
+export const fakeFile = (id, i) => {
+  const suffix = id === 'unit-tests' ? '.test.ts' : '.' + EXTS[(i * 5) % EXTS.length]
+  return `${DIRS[(i * 7) % DIRS.length]}/${STEMS[(i * 3 + 1) % STEMS.length]}${i % 11 === 0 ? '-' + (i % 97) : ''}${suffix}`
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const checks = spec.map(([id, lane, secs, after, notes]) => ({
   id,
@@ -69,6 +79,7 @@ const note = new Map()
 const say = (text) => events.push({ at: simNow(), text })
 
 let shown = 0
+let lastChecking = 0
 const frame = (tick) => {
   const t = simNow()
   const rows = model.snapshot(t).map((r) => ({ ...r, note: r.status === 'RUNNING' ? note.get(r.id) : '' }))
@@ -78,6 +89,19 @@ const frame = (tick) => {
     const c = checks.find((x) => x.id === r.id)
     const frac = Math.min(0.999, (t - r.startedAt) / (r.typicalMs ?? r.expectedMs))
     note.set(r.id, c.notes[Math.min(c.notes.length - 1, Math.floor(frac * c.notes.length))])
+    const total = FILE_TOTALS[r.id]
+    if (total) {
+      const done = Math.floor(frac * total)
+      Object.assign(r, { currentFile: fakeFile(r.id, done), filesDone: done, filesTotal: total })
+      // The same one-line-a-second "checking" event the real board writes, replacing the last one.
+      if (t - lastChecking > 1000) {
+        lastChecking = t
+        const e = events[events.length - 1]
+        const text = `checking ${r.currentFile} (${r.id})`
+        if (e?.kind === 'checking') Object.assign(e, { at: t, text })
+        else events.push({ at: t, text, kind: 'checking' })
+      }
+    }
   }
   const done = new Set(rows.filter((r) => ['PASS', 'FAIL', 'NOT RUN'].includes(r.status)).map((r) => r.id))
   const allDone = done.size === rows.length
@@ -103,7 +127,7 @@ if (has('--once')) {
   events.push({ at: t0 + 120_000, text: 'started build-sidecar: cargo build -p nv-sidecar' }, { at: t0 + 125_000, text: 'PASS test-safety: 5 native calls blocked' }, { at: t0 + 130_000, text: 'started unit-tests' })
   note.set('build-sidecar', 'Compiling nv-agents v1.1.0')
   note.set('unit-tests', 'vitest: 210 / 530 files')
-  const rows = model.snapshot(fakeNow).map((r) => ({ ...r, note: note.get(r.id) }))
+  const rows = model.snapshot(fakeNow).map((r) => (r.id === 'unit-tests' ? { ...r, note: note.get(r.id), currentFile: fakeFile('unit-tests', 210), filesDone: 210, filesTotal: 530 } : { ...r, note: note.get(r.id) }))
   console.log(renderLive({ rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, color, theme }).join('\n'))
   process.exit(0)
 }

@@ -13,6 +13,7 @@ import { aiStatus, aiTest, aiUse } from '../lib/aiconfig.mjs'
 import { latestRunDir, logRoot } from '../lib/runlog.mjs'
 import { runLog, showRun } from '../lib/runs.mjs'
 import { maybeAutoUpdate, runUpdateCommand } from '../lib/update.mjs'
+import { addRecent } from '../lib/userconfig.mjs'
 
 process.noDeprecation = true // the claude command on Windows is a .cmd shim, which can only be started through a shell
 process.stdout.on('error', (e) => {
@@ -76,7 +77,7 @@ async function main() {
       return r.ok ? 0 : 1
     }
     case 'menu':
-      return runMenu({ cwd, env })
+      return runMenu({ cwd, env, folder: plan.folder ?? null })
     case 'update':
       return runUpdateCommand(plan, { repoDir: MEERKAT_DIR, env })
     case 'pack': {
@@ -97,6 +98,13 @@ async function main() {
       return 0
     }
     case 'run': {
+      if (plan.folder) {
+        try {
+          addRecent(plan.folder, env)
+        } catch {
+          /* the recent list is a convenience */
+        }
+      }
       const code = spawnRun(plan.args, { env, cwd })
       if (interactive && !plan.json && !plan.quiet) await afterRun({ runDir: latestRunDir(env), env, args: plan.args, cwd })
       return code
