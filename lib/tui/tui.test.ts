@@ -278,9 +278,10 @@ describe('the live board', () => {
     expect(plain).toContain('○')
     expect(headLines('blink-left', false).join('')).not.toContain('○')
   })
-  test('it looks left then right while on watch, and reacts to the result', () => {
-    const seen = new Set([0, 24, 48, 72].map((tick) => poseFor({ mood: 'watch', tick })))
+  test('it faces right and glances left now and then while on watch, and reacts to the result', () => {
+    const seen = new Set([0, 50, 90, 100].map((tick) => poseFor({ mood: 'watch', tick })))
     expect(seen).toEqual(new Set(['left', 'right']))
+    expect(poseFor({ mood: 'watch', tick: 0 })).toBe('right')
     expect(poseFor({ mood: 'cheer', tick: 0 })).toBe('happy')
     expect(poseFor({ mood: 'alarm', tick: 0 })).toBe('wide')
   })
