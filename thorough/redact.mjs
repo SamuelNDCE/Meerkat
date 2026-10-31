@@ -18,7 +18,7 @@ const SOFT = /\b((?:[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|passwd
 
 const NAME = String.raw`[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|passwd|credential|authorization|bearer|private[_-]?key)[a-z0-9_.-]*`
 // A quoted value of any content up to its closing quote, and an auth header's whole line (any scheme, not just Bearer).
-const QUOTED = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*)(["'\`])(?:\\.|(?!\2)[^\n]){3,500}?\2`, 'gi')
+const QUOTED = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*)(["'\`])(?:\\.|(?!\2)[^\n\\]){3,500}?\2`, 'gi')
 const AUTH_LINE = /\b(authorization["'`]?\s*[:=]\s*)(.+)$/gim
 
 export function redact(text) {
@@ -33,4 +33,6 @@ export function redact(text) {
 }
 
 // Paths whose contents are never sent, even in a diff.
-export const SENSITIVE_PATH = /(^|\/)(\.env(\..*)?|.*\.(pem|key|p12|pfx|jks|keystore)|id_(rsa|dsa|ed25519|ecdsa)|\.npmrc|\.netrc|credentials(\.json)?|secrets?\.[a-z]+)$/i
+export const SENSITIVE_PATH = /(^|\/)([^/]*(credential|secret)[^/]*|\.env(\..*)?|.*\.(pem|key|p12|pfx|jks|keystore)|id_(rsa|dsa|ed25519|ecdsa)|\.npmrc|\.netrc)$/i
+// Of those, the ones that are positively key or environment files and not code: nothing is lost by leaving these out of a review.
+export const SECRET_FILE = /(^|\/)(\.env(\..*)?|.*\.(pem|key|p12|pfx|jks|keystore)|id_(rsa|dsa|ed25519|ecdsa)|\.npmrc|\.netrc)$/i
