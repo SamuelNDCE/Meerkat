@@ -102,14 +102,6 @@ When a run ends in a terminal, Meerkat opens a results screen with three tabs: *
 
 In a pipe, in CI, or when an AI agent calls it, nothing is drawn and the output is plain lines.
 
-To get the older plain list after a run instead, set `MEERKAT_OLD_MENU=1`. In PowerShell:
-
-```
-$env:MEERKAT_OLD_MENU = '1'
-```
-
-Then run `meerkat` as usual. To go back to the results screen, run `Remove-Item Env:MEERKAT_OLD_MENU`.
-
 ![The menu shown after a run: OK, open a log, copy a log path, show the report, show repo changes, run again](docs/images/after-run.png)
 
 ## Ways to run it
@@ -846,7 +838,6 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 | `MEERKAT_APP_DIR` | the folder to check, if not given with `--app` |
 | `MEERKAT_BASE` | the branch changes are measured against (default: what `origin/HEAD` points at, else `main`, `master`, `dev`) |
 | `MEERKAT_PLAIN=1` | plain lines instead of the live board |
-| `MEERKAT_OLD_MENU=1` | the older plain list after a run, instead of the results screen |
 | `NO_COLOR` | no colour |
 | `MEERKAT_PROFILE` | a named set of limits for a slower PC |
 | `MEERKAT_TIMINGS`, `MEERKAT_HISTORY`, `MEERKAT_STATUS`, `MEERKAT_THEME_FILE` | where the learned times, run history, live status and board theme are kept |
