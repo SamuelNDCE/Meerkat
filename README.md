@@ -49,6 +49,8 @@ One command, different amounts of checking. `--preset` picks one; `--list` shows
 | `--preset security-fast` | the quick security checks: secret scan, dependency advisories, source rules | any time, a few seconds |
 | `--preset security` | every security check, including fuzzing and mutation testing | before a release |
 | `--preset ui-fast` / `--preset ui` | only the real-window checks, quick or complete | after a UI change |
+| `--preset performance-fast` / `--preset performance` | size, dependencies, start-up, memory; the full one adds response time, load and build time | after a change that could slow things down |
+| `--preset refactor` | duplicated code, dead code, files too long | before a clean-up, or now and then |
 | `--preset app-fast` / `--preset app` | UI and functionality together | after a feature |
 | `--group security,ui` | any mix of the four kinds: `security`, `functionality`, `ui`, `performance` | your own mix |
 | `--self-test` | proves every check still fails on a broken case | after changing Meerkat or a tool |
@@ -59,7 +61,17 @@ A focused run brings what its checks need with it (a UI check pulls in the build
 
 Measured on one PC (Ryzen 5 7600, 6 cores and 12 threads, 31 GB), on a clean checkout of a large Rust and Electron app. A run's total is close to its longest check, because the rest run beside it.
 
-@@TIMES@@
+| Run | Time on this PC | How it was got |
+|---|---|---|
+| `quick` (fast tier), warm build cache | about 2.3 minutes | measured: 137 s |
+| `quick`, cold (first run after a clean checkout) | about 15 to 18 minutes | measured earlier: 1,070 s, mostly the first Rust build |
+| `full` (thorough tier) | about 21 minutes | estimate from measured per-check times; a real run on 2026-10-31 took 17.4 minutes with the 12-minute mutation test cut short |
+| `security-fast` | a few seconds | estimate |
+| `security` | about 12 minutes | estimate; nearly all of it is the mutation test |
+| `ui-fast` / `ui` | about 3 / 15 minutes | estimate |
+| `app-fast` / `app` | about 3 / 15 minutes | estimate |
+
+The slowest single checks in that real run: the full click-through 557 s, the UI integrity check 315 s, the Rust parser fuzz 97 s, every unit test 92 s. Checks from the generic packs take a second or two each.
 
 Run `node run.mjs --estimate` (or `--preset full --estimate`) for the figure on your own machine. It uses the times Meerkat has measured there, run through the same scheduling rules.
 
@@ -95,7 +107,8 @@ Run `node run.mjs --list` for the live list; the counts below are a snapshot fro
 | `rust` | 5 | format, lints, tests, advisories, release build | `cargo` |
 | `security` | 2 | secret scan, `npm audit` on every dependency | nothing |
 | `hygiene` | 11 | license, tracked keys and `.env` files, oversized files, lockfiles, JSON that parses, merge-conflict markers, npm scripts that point at missing files, FIXME notes, broken document links, page accessibility basics, Rust `unsafe` without a reason | nothing |
-| `performance` | 6 | size budgets, dependency weight, start-up time, response time, a load burst, build time | budgets in `.meerkat-budgets.json` |
+| `performance` | 7 | size budgets, dependency weight, start-up time, memory (idle and peak), response time, a load burst, build time | budgets in `.meerkat-budgets.json` |
+| `refactor` | 3 | duplicated code, dead code (unused exports), files too long. Kept apart from "does the app work" | nothing |
 | `ai` | 2 | a model audits every route and handler, and reviews your diff, for bugs and security holes | opt-in: `--include ai` |
 
 **Performance budgets.** A performance check with no budget is reported NOT RUN and prints the exact lines to add, so an unset budget is never mistaken for a pass. Put them in `.meerkat-budgets.json` at the repository root:
@@ -114,6 +127,35 @@ The load burst only aims at this machine unless you add `"allowRemote": true`, s
 **Setting up the license check.** The check fails until the repository says how others may use it. Pick a license (<https://choosealicense.com> explains the common ones), save its text as `LICENSE` at the top of the repository, and put the same name in `package.json` (`"license": "MIT"`) or `Cargo.toml` (`license = "MIT"`). It also lists any installed dependency under a copyleft license (GPL, AGPL and similar), so you decide whether that fits how you ship. Meerkat flags these; it does not give legal advice.
 
 **The AI audit.** `ai-route-audit` finds every HTTP route, IPC channel and command handler by pattern (`node thorough/ai.mjs routes` lists them and sends nothing), then asks a model to look for missing authentication, injection, path traversal and logic bugs in each. `ai-diff-review` does the same for what changed against your main branch. By default it uses your own Claude Code login; point `MEERKAT_AI_CMD` at any command that reads a prompt on stdin and prints an answer to use another model. It prints what it will send before sending, blanks secret-looking values first, and treats the code as data, not instructions. High and critical findings fail the run; lower ones are listed. A model can miss things and can be wrong, so treat it as an extra reader, not a replacement for the other checks.
+
+## What it works on
+
+| Your project | What you get |
+|---|---|
+| Any language, any app | `hygiene`, `security` (secret scan), `refactor` (duplicate code, file length), the `performance` budgets (they run any command you give them: a server, a desktop app, a CLI), and the `ai` route and diff review for JS, TS, Rust, Python and Go |
+| Rust (Cargo) | the `rust` pack: format, lints, tests, advisories, release build; plus Rust-specific checks such as `unsafe` without a reason |
+| Node, JS and TS | `npm audit`, unused exports, scripts that point at missing files, lockfile checks |
+| Web pages and components (HTML, JSX, TSX, Vue, Svelte) | static accessibility checks: alt text, page language, title, viewport, empty buttons |
+| Electron or Chromium desktop apps | the real-window checks (click through every page and control, accessibility scan on every screen, screenshots), which need a small test harness in the app; the built-in set is written for the app Meerkat was made for |
+| Python, Go, Java and others | the generic packs above work today; test-runner and linter packs for them (pytest, ruff, `go vet`) are not written yet |
+
+So it is not only for Rust and Electron: the generic packs fit anything git tracks, and the Rust and real-window parts are the deepest. A real-window UI check for an ordinary website (any browser) is not built yet.
+
+## Using it in CI
+
+Meerkat exits non-zero on any failure or NOT RUN and can write a machine-readable report with `--json <file>`. A minimal GitHub Actions job:
+
+```yaml
+- uses: actions/setup-node@v4
+  with: { node-version: 20 }
+- run: git clone https://github.com/SamuelNDCE/Meerkat.git "$RUNNER_TEMP/meerkat"
+- run: node "$RUNNER_TEMP/meerkat/run.mjs" --init
+- run: node "$RUNNER_TEMP/meerkat/run.mjs" --preset security-fast --json meerkat.json
+```
+
+## Licence
+
+Meerkat is under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use it, change it and share it for any noncommercial purpose, including personal projects, research, and use by charities, schools and public bodies. You must keep the `Required Notice:` line in [`LICENSE`](LICENSE) with any copy, which is how credit is kept. You may not sell it or use it commercially. That is a deliberate choice, and it means Meerkat is source-available rather than "open source" in the strict sense. For commercial use, contact the author.
 
 ## Make it fit your project
 
@@ -144,6 +186,6 @@ A pixel-art meerkat watches the run. It looks straight ahead and blinks, squints
 ## Status
 
 - Working: the fast and thorough tiers, presets, the scheduler, the config file, the Rust and security packs, the board and its loading screen.
-- Not yet: checks for Chromium-based apps and plain Node projects beyond the security pack, a generic window harness for apps other than the one Meerkat was first written for, running after a build automatically, and a licence (none is chosen yet; the code carries no copyright or proprietary notices because it is meant to be opened up).
+- Not yet: checks for Chromium-based apps and plain Node projects beyond the security pack, a generic window harness for apps other than the one Meerkat was first written for, running after a build automatically, and test-runner and linter packs for Python and Go (the generic packs already work on them).
 
 More: [`docs/setup.md`](docs/setup.md) (set-up on a new machine), [`docs/roadmap.md`](docs/roadmap.md), [`docs/speed.md`](docs/speed.md), [`PROJECT.md`](PROJECT.md) (rules for working in this repository). Meerkat's own tests: `npm test`.

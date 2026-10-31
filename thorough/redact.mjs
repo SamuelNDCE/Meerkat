@@ -16,14 +16,21 @@ const HARD = [
 // name = value or name: value, quoted or not, where the name says it is a secret.
 const SOFT = /\b((?:[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|passwd|credential|authorization|bearer|private[_-]?key)[a-z0-9_.-]*)["'`]?\s*[:=]\s*(?:Bearer\s+)?["'`]?)([^\s"'`,;)}\]]{6,})/gi
 
+const NAME = String.raw`[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|passwd|credential|authorization|bearer|private[_-]?key)[a-z0-9_.-]*`
+// A quoted value of any content up to its closing quote, and an auth header's whole line (any scheme, not just Bearer).
+const QUOTED = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*)(["'\`])(?:\\.|(?!\2)[^\n]){3,500}?\2`, 'gi')
+const AUTH_LINE = /\b(authorization["'`]?\s*[:=]\s*)(.+)$/gim
+
 export function redact(text) {
   let hard = 0
   let soft = 0
   let out = text
   for (const re of HARD) out = out.replace(re, () => (hard++, '<hidden>'))
+  out = out.replace(AUTH_LINE, (_, head) => (soft++, `${head}<hidden>`))
+  out = out.replace(QUOTED, (_, head) => (soft++, `${head}"<hidden>"`))
   out = out.replace(SOFT, (_, head) => (soft++, `${head}<hidden>`))
   return { text: out, hard, soft }
 }
 
 // Paths whose contents are never sent, even in a diff.
-export const SENSITIVE_PATH = /(^|\/)(\.env(\..*)?|.*\.(pem|key|p12|pfx|jks|keystore)|id_(rsa|ed25519|ecdsa)|\.npmrc|\.netrc|credentials(\.json)?|secrets?\.[a-z]+)$/i
+export const SENSITIVE_PATH = /(^|\/)(\.env(\..*)?|.*\.(pem|key|p12|pfx|jks|keystore)|id_(rsa|dsa|ed25519|ecdsa)|\.npmrc|\.netrc|credentials(\.json)?|secrets?\.[a-z]+)$/i

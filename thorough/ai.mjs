@@ -184,15 +184,24 @@ function baseRef(root) {
 const diffReview = async (root) => {
   const base = baseRef(root)
   if (!base) return notRun('no usable base branch to compare against. Set MEERKAT_AI_BASE to your main branch (letters, digits, . _ - / only)')
-  const exclude = ['.env', '.env.*', '*.pem', '*.key', '*.p12', '*.pfx', '*.jks', '*.keystore', 'id_rsa', 'id_ed25519', '.npmrc', '.netrc', '*credentials*', '*secret*'].map((g) => `:(exclude,glob)**/${g}`)
-  let files = []
+  // One list of changed paths, one filter (SENSITIVE_PATH, case-insensitive), then diff exactly the allowed paths and nothing else.
+  let changed = []
   try {
-    files = execFileSync('git', ['-C', root, 'diff', '--name-only', '-z', `${base}...HEAD`, '--', '.', ...exclude], { encoding: 'utf8', maxBuffer: 64 * 2 ** 20, stdio: ['ignore', 'pipe', 'ignore'] }).split('\0').filter(Boolean)
+    changed = execFileSync('git', ['-C', root, 'diff', '--name-only', '-z', `${base}...HEAD`], { encoding: 'utf8', maxBuffer: 64 * 2 ** 20, stdio: ['ignore', 'pipe', 'ignore'] }).split('\0').filter(Boolean)
   } catch {
     return notRun(`could not diff against ${base}`)
   }
-  if (!files.length) return finish('ai-diff-review', [], `nothing changed against ${base}`)
-  const diff = execFileSync('git', ['-C', root, 'diff', '--unified=3', `${base}...HEAD`, '--', '.', ...exclude], { encoding: 'utf8', maxBuffer: 64 * 2 ** 20, stdio: ['ignore', 'pipe', 'ignore'] })
+  if (!changed.length) return finish('ai-diff-review', [], `nothing changed against ${base}`)
+  const held = changed.filter((x) => SENSITIVE_PATH.test(x))
+  // A source file whose name looks sensitive would be silently left out of the review, so that is NOT RUN, not a pass.
+  const hiddenSource = held.filter((x) => SOURCE.has(extname(x).toLowerCase()))
+  if (hiddenSource.length) return notRun(`changed source file(s) with a sensitive-looking name were left out of the review (${hiddenSource.slice(0, 3).join(', ')}); review them by hand or rename them`)
+  const files = changed.filter((x) => !SENSITIVE_PATH.test(x))
+  if (held.length) console.log(`(${held.length} sensitive-looking file(s) are never sent: ${held.slice(0, 5).join(', ')})`)
+  if (!files.length) return finish('ai-diff-review', [], 'only sensitive-looking files changed; none were sent')
+  // --text and no filters: a .gitattributes file in the change must not be able to hide code behind "Binary files differ".
+  const diff = execFileSync('git', ['-C', root, '-c', 'core.attributesFile=', 'diff', '--text', '--no-textconv', '--no-ext-diff', '--unified=3', `${base}...HEAD`, '--', ...files.map((x) => `:(literal)${x}`)], { encoding: 'utf8', maxBuffer: 64 * 2 ** 20, stdio: ['ignore', 'pipe', 'ignore'] })
+  if (/^Binary files .* differ$/m.test(diff)) return notRun('part of the change is binary and cannot be reviewed as text; nothing was sent')
   const cmd = aiCommand()
   if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
   const clean = redact(diff)

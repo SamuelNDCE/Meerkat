@@ -22,6 +22,7 @@ export default [
   mk('sizes', 'Size budgets: bundles and binaries stay under their limits', 'fast', 2),
   mk('deps', 'Dependency weight: direct count and installed size', 'fast', 3),
   mk('startup', 'Start-up time: how fast the app is ready (median of several starts)', 'fast', 15, { timeoutSeconds: 300 }),
+  mk('memory', 'Memory: idle and peak use of the app and everything it starts', 'fast', 15, { timeoutSeconds: 300 }),
   mk('endpoints', 'Response time: p95 of each configured endpoint', 'thorough', 20, { timeoutSeconds: 600 }),
   mk('load', 'Load burst: concurrent requests to a local server, error rate and p95', 'thorough', 30, { timeoutSeconds: 900, cost: { cpu: 4, memGB: 1 } }),
   mk('build', 'Build time: the build stays inside its time budget', 'thorough', 120, { timeoutSeconds: 3600, cost: { cpu: 8, memGB: 3 }, alone: true }),

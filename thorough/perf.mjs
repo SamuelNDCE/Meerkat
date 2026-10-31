@@ -10,7 +10,7 @@
 //       "load":    { "url": "http://127.0.0.1:3000/", "requests": 500, "concurrency": 20, "maxP95Ms": 500, "maxErrorRate": 0.01 },
 //       "deps":    { "maxDirect": 80, "maxInstalledMB": 600 } } }
 // The load check only targets this machine unless "allowRemote": true is set on it, so it can never hammer a live server by mistake.
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -77,6 +77,67 @@ const startup = async (root) => {
   const med = pct(runs, 50)
   console.log(`  start times ms: ${runs.join(', ')}`)
   return finish('startup-time', med > c.maxMs ? [`median start ${med} ms is over the ${c.maxMs} ms budget`] : [], `median start ${med} ms, inside ${c.maxMs} ms`)
+}
+
+// Memory in use by a process and everything it started, in MB.
+const treeMB = (pid) => {
+  try {
+    if (process.platform === 'win32') {
+      const ps = `$p=Get-CimInstance Win32_Process;$s=@{};$s[${pid}]=$true;do{$n=0;foreach($x in $p){if($s[[int]$x.ParentProcessId] -and -not $s[[int]$x.ProcessId]){$s[[int]$x.ProcessId]=$true;$n++}}}while($n);($p|Where-Object{$s[[int]$_.ProcessId]}|Measure-Object WorkingSetSize -Sum).Sum`
+      return Number(execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', ps], { encoding: 'utf8', timeout: 20000, windowsHide: true })) / 2 ** 20
+    }
+    const rows = execFileSync('ps', ['-A', '-o', 'pid=,ppid=,rss='], { encoding: 'utf8' }).trim().split('\n').map((l) => l.trim().split(/\s+/).map(Number))
+    const mine = new Set([pid])
+    for (let grew = true; grew; ) {
+      grew = false
+      for (const [id, parent] of rows) if (mine.has(parent) && !mine.has(id)) (mine.add(id), (grew = true))
+    }
+    return rows.filter(([id]) => mine.has(id)).reduce((n, r) => n + r[2], 0) / 1024
+  } catch {
+    return 0
+  }
+}
+
+const memory = async (root) => {
+  const c = perf(root).memory
+  if (!c?.cmd) return need('memory', '"memory":{"cmd":"node","args":["server.js"],"readyText":"listening","maxIdleMB":200,"maxPeakMB":400}')
+  const child = spawn(c.cmd, c.args ?? [], { cwd: root, shell: process.platform === 'win32' && c.cmd !== process.execPath, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
+  let out = ''
+  let exited = false
+  child.on('exit', () => (exited = true))
+  child.on('error', () => (exited = true))
+  const feed = (b) => (out += b)
+  child.stdout.on('data', feed)
+  child.stderr.on('data', feed)
+  const stop = () => {
+    try {
+      if (process.platform === 'win32') execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
+      else child.kill('SIGKILL')
+    } catch {
+      /* already gone */
+    }
+  }
+  try {
+    const t0 = Date.now()
+    while (!exited && (c.readyText ? !out.includes(c.readyText) : Date.now() - t0 < 2000) && Date.now() - t0 < (c.timeoutMs ?? 60000)) await new Promise((r) => setTimeout(r, 200))
+    if (exited || (c.readyText && !out.includes(c.readyText))) return finish('memory', ['the app did not reach ready, so its memory could not be measured'])
+    await new Promise((r) => setTimeout(r, (c.settleSeconds ?? 3) * 1000))
+    let idle = treeMB(child.pid)
+    let peak = idle
+    const until = Date.now() + (c.sampleSeconds ?? 8) * 1000
+    while (Date.now() < until && !exited) {
+      peak = Math.max(peak, treeMB(child.pid))
+      await new Promise((r) => setTimeout(r, 500))
+    }
+    idle = Math.min(idle, peak)
+    console.log(`  after settling: ${idle.toFixed(0)} MB; peak while watched: ${peak.toFixed(0)} MB (limits ${c.maxIdleMB ?? '-'} / ${c.maxPeakMB ?? '-'} MB)`)
+    const f = []
+    if (c.maxIdleMB && idle > c.maxIdleMB) f.push(`idle memory ${idle.toFixed(0)} MB is over ${c.maxIdleMB} MB`)
+    if (c.maxPeakMB && peak > c.maxPeakMB) f.push(`peak memory ${peak.toFixed(0)} MB is over ${c.maxPeakMB} MB`)
+    return finish('memory', f, 'memory is inside its budgets')
+  } finally {
+    stop()
+  }
 }
 
 const build = async (root) => {
@@ -192,6 +253,7 @@ const withServer = async (handler, fn) => {
 main({
   sizes: { run: sizes, fixture: () => withFixture({ 'dist/a.bin': 'x'.repeat(4096), '.meerkat-budgets.json': JSON.stringify({ perf: { sizes: [{ path: 'dist', maxKB: 1 }] } }) }, sizes) },
   startup: { run: startup, fixture: () => withFixture({ '.meerkat-budgets.json': JSON.stringify({ perf: { startup: { cmd: process.execPath, args: ['-e', 'setTimeout(()=>{},400)'], maxMs: 20, runs: 1 } } }) }, startup) },
+  memory: { run: memory, fixture: () => withFixture({ '.meerkat-budgets.json': JSON.stringify({ perf: { memory: { cmd: process.execPath, args: ['-e', "const b=Buffer.alloc(300*2**20,1);console.log('ready');setInterval(()=>b[0]++,1000)"], readyText: 'ready', settleSeconds: 1, sampleSeconds: 2, maxIdleMB: 50, maxPeakMB: 50 } } }) }, memory) },
   build: { run: build, fixture: () => withFixture({ '.meerkat-budgets.json': JSON.stringify({ perf: { build: { cmd: process.execPath, args: ['-e', 'process.exit(3)'], maxSeconds: 60 } } }) }, build) },
   endpoints: { run: endpoints, fixture: () => withServer((q, s) => setTimeout(() => s.end('ok'), 60), (url) => withFixture({ '.meerkat-budgets.json': JSON.stringify({ perf: { endpoints: [{ url, maxMs: 5, runs: 3 }] } }) }, endpoints)) },
   load: { run: load, fixture: () => withServer((q, s) => { s.statusCode = 500; s.end('x') }, (url) => withFixture({ '.meerkat-budgets.json': JSON.stringify({ perf: { load: { url, requests: 20, concurrency: 4 } } }) }, load)) },

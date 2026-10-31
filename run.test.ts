@@ -657,15 +657,15 @@ describe('the shipped packs are well-formed and self-testable', () => {
       for (const c of list as any[]) {
         expect(c.id.startsWith('bad-check-file')).toBe(false)
         expect(c.selfTest).toBeTruthy()
-        expect(['security', 'functionality', 'ui', 'performance']).toContain(c.group)
+        expect(['security', 'functionality', 'ui', 'performance', 'refactor']).toContain(c.group)
       }
     }
   })
   test('the hygiene, performance and AI packs load, and every check fails on its own broken case (the AI ones with a stand-in model)', async () => {
     const { loadChecks } = await import('./lib/load-checks.mjs')
     const all: any[] = []
-    for (const pack of ['hygiene', 'performance', 'ai']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
-    expect(all.length).toBeGreaterThanOrEqual(19)
+    for (const pack of ['hygiene', 'performance', 'ai', 'refactor']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
+    expect(all.length).toBeGreaterThanOrEqual(23)
     expect(new Set(all.map((c) => c.id)).size).toBe(all.length)
     for (const c of all) {
       expect(c.selfTest.expectFail).toBe(true)
