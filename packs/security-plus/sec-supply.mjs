@@ -1,5 +1,5 @@
 // The security-plus pack: git-history and supply-chain checks that fit any project. Turn it on with { "packs": ["security-plus"] } in meerkat.config.json.
-//   git-history-secrets       secrets ever committed, even if removed since (thorough)
+//   git-history-secrets       secrets ever committed, even if removed since
 //   env-files-in-history      key and environment files that were ever committed
 //   install-scripts           code that runs when a package is installed
 //   typosquat-names           dependency names one letter away from a popular package
@@ -24,7 +24,7 @@ const check = (id, title, { tier = 'fast', weight = 'tiny', git = false } = {}) 
 })
 
 export default [
-  check('git-history-secrets', 'Git history: secrets ever committed, even if removed since', { tier: 'thorough', weight: 'light', git: true }),
+  check('git-history-secrets', 'Git history: secrets ever committed, even if removed since', { tier: 'fast', weight: 'light', git: true }),
   check('env-files-in-history', 'Git history: key and environment files that were ever committed', { git: true }),
   check('install-scripts', 'Code that runs on install: the project scripts and dependency install scripts'),
   check('typosquat-names', 'Dependency names that look like a misspelt popular package'),

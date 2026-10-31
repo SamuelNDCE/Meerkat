@@ -51,6 +51,7 @@ Options for every run: `--ai` (include the AI checks), `--json` (print the resul
 | `meerkat check edit <id>` / `meerkat check remove <id> [--yes]` | change or remove a check of yours (bundled ones are refused) |
 | `meerkat check mine` | your own checks, where each lives and whether its program is installed (`--json`) |
 | `meerkat check try <id>` | run just that one check |
+| `meerkat discover [folder]` | the project's own tests (scripts, Makefile targets, Playwright/Cypress) that `full`, `thorough` and `release` would also run, and why (`--json`); runs nothing; see [discover.md](discover.md) |
 | `meerkat recommend [folder]` | tests this project could run that no check covers (`--json`); `--add <id\|all>` adds them as checks of yours (`--personal`, `--dry-run`, `--yes`); never runs or writes without `--add` |
 | `meerkat preset list` | every preset, with where it comes from (bundled, personal, project) |
 | `meerkat preset show <name>` | what a preset is for (its purpose) and every check it runs here, grouped by kind, with the time of each and the total on this PC; `--json` has `about`, `purpose`, `source` and `checks` |

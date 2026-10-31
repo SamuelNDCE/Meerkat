@@ -15,6 +15,7 @@ import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from '
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
 import { discoverChecks } from './lib/discover.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
+import { clampScale } from './lib/timeouts.mjs'
 import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
 import { compactSummary } from './lib/tui/results.mjs'
@@ -94,7 +95,7 @@ export function parseArgs(argv) {
     else if (a === '--estimate') o.estimate = true
     else if (a === '--init') o.init = true
     else if (a === '--list-presets') o.listPresets = true
-    else if (a === '--last') o.last = true
+    else if (a === '--last') (o.last = true, argv[i + 1] && !argv[i + 1].startsWith('-') && (o.lastProject = argv[++i]))
     else if (a === '--logs') o.logs = true
     else if (a === '--why') o.why = next()
     else if (a === '--no-config') o.noConfig = true
@@ -102,6 +103,7 @@ export function parseArgs(argv) {
     else if (a === '--quiet' || a === '-q') o.quiet = true
     else if (a === '--no-color') o.noColor = true
     else if (a === '--app') o.app = next()
+    else if (a === '--timeout-scale') o.timeoutScale = clampScale(next())
     else o.errors.push(`unknown argument: ${a}`)
   }
   if (o.changed && o.all) o.errors.push('--changed and --all cannot be used together')
@@ -186,7 +188,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
   if (opts.last || opts.why) {
-    const shown = opts.why ? showWhy(opts.why, env) : showLast(env)
+    const shown = opts.why ? showWhy(opts.why, env) : showLast(env, opts.lastProject)
     log(shown.text)
     return shown.ok ? 0 : 1
   }
@@ -245,7 +247,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // The project's own tests, found without being told (lib/discover.mjs): only for full, thorough and release (a preset with allPacks), or
   // when asked for by name (`meerkat check discovered`). Never for quick or ci. "discover": false turns it off.
   const asked = opts.only.includes('discovered')
-  const found = (chosen.preset?.allPacks || asked) && !opts.selfTest ? discoverChecks(appDir, { existing: applied.checks, project: read.config.discover, personal: user.discover, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) }) : null
+  const found = (chosen.preset?.allPacks || asked) && !opts.selfTest ? discoverChecks(appDir, { existing: applied.all ?? applied.checks, config: { disable: read.config.disable, override: read.config.override }, project: read.config.discover, personal: user.discover, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) }) : null
   if (asked) opts.only = [...opts.only.filter((w) => w !== 'discovered'), ...(found?.checks ?? []).map((c) => c.id)]
   if (asked && !opts.only.length) {
     fail(found && !found.enabled ? 'discovery is turned off ("discover": false), so there is nothing to run for "discovered"' : 'no tests of this project\'s own were found to run (meerkat discover shows what was looked at)')
@@ -256,12 +258,13 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (configFile) log(`config: ${configFile}`)
     for (const note of [...read.notes, ...applied.notes, ...(found?.result.notes ?? [])]) log(`config: ${note}`)
     logDisabled(log, applied, configFile)
+    for (const d of found?.result.disabled ?? []) log(`config: found check ${d.id} is turned off by your config`)
     if (found?.checks.length) log(`found ${found.checks.length} test check${found.checks.length === 1 ? '' : 's'} of the project's own (meerkat discover lists them; "discover": false turns this off)`)
   }
   splash.step('Reading the times measured on this PC')
   // Use the times measured on this machine for the order, the bar and the time left; keep the written ones for any check not yet measured.
   const timingsFile = timingsPath(env)
-  const timings = loadTimings(timingsFile)
+  const timings = loadTimings(timingsFile, appDir)
   applyLearned(checks, timings, tier)
 
   if (opts.listJson) settleSplash()
@@ -273,7 +276,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
 
-  const ctx = { repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, disabledSubs: subsOffMap(applied.disabledSubs), findingsSink: new Map(), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier) }
+  const ctx = { timeoutScale: opts.timeoutScale ?? 1, repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, disabledSubs: subsOffMap(applied.disabledSubs), findingsSink: new Map(), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier, new Date(), undefined, appDir) }
   let mode = opts.all || (tier === 'thorough' && !opts.changed) ? 'all' : 'changed'
   if (mode === 'changed') splash.step('Finding what changed against the base branch')
   if (mode === 'changed') ctx.changedFiles = gitChangedFiles(repoRoot, env)
@@ -343,7 +346,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     boardShown = useUi
     if (opts.ui && !useUi) log('note: --ui needs an interactive terminal (not a pipe, CI or MEERKAT_PLAIN=1); using the plain lines')
     const bar = useUi
-      ? createTui({ theme, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '', grouped: opts.grouped, typicalHere: timings.project === appDir, showFinal: false })
+      ? createTui({ theme, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '', grouped: opts.grouped, typicalHere: timings.project === appDir, showFinal: false, sink: ctx.findingsSink })
       : createProgress({ title: `MEERKAT · ${label}`, checks: sel.run, enabled: liveBar })
     const quiet = liveBar || useUi
     status = createStatus({ title: `MEERKAT · ${label}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
