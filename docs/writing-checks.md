@@ -119,3 +119,7 @@ A check file that fails to load becomes one failing check that names the file, s
 ## When the check does not apply
 
 A check about one kind of file (Go, Cargo, Terraform) sets `appliesTo` to the globs of those files (the `tool()` helper uses its `paths`). A folder with none of them gets a PASS that says `not applicable: ...` and the tool is never started. A check written as a script prints `not applicable: <why>` and exits 0 in the same case. Use NOT RUN (exit 75) only for a missing tool, a missing git repository or a missing setting. `node tools/compat-matrix.mjs` proves it on 20 sample projects (docs/compatibility.md).
+
+## Reporting findings
+
+A check can say exactly what it found, and where, by printing `MEERKAT-FINDING <severity> <rule-id> <path>:<line> <message>` lines (in `thorough/kit.mjs`: `finding(severity, ruleId, file, line, message)`). Meerkat compiles them into `findings.json` with the rule, the check that found it and whether it is new. Without them it reads `path:line message` lines from a failed check's output. Optional check fields `severity` and `fix` set the default severity and a fix hint. Protocol and schema: [findings.md](findings.md).
