@@ -704,7 +704,7 @@ describe('the shipped packs are well-formed and self-testable', () => {
     }
   }, 180000)
   test('the AI checks fail closed: an unreadable model reply, or a secret in the code, is NOT RUN and nothing is sent', () => {
-    for (const c of ['selftest-unreadable-reply', 'selftest-secret-blocked', 'selftest-diff-split-secret']) {
+    for (const c of ['selftest-unreadable-reply', 'selftest-secret-blocked', 'selftest-diff-split-secret', 'selftest-diff-multiline-closed']) {
       let code = 0
       try {
         execFileSync('node', [join(process.cwd(), 'thorough', 'ai.mjs'), c, '--fixtures'], { stdio: 'ignore' })
