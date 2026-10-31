@@ -163,7 +163,9 @@ describe('the live board fixes', () => {
     const t = renderLive({ rows: rows as never, events: [], started: 0, now: 1000, tick: 0, fraction: 0.02, etaMs: null, width: 120, color: false }).map(stripAnsi).join('\n')
     expect(t).toContain('2% of estimated time')
     expect(t).toContain('0/1 checks done')
-    expect(t).toContain('estimating...')
+    // a named running check with no measured time: the label names it instead of "estimating..."
+    expect(t).toContain('time left: unknown (no timing recorded for a yet)')
+    expect(t).not.toContain('estimating...')
   })
   test('when groups do not fit, the rest become a status strip, never only a line count', () => {
     const rows = Array.from({ length: 60 }, (_, i) => ({ id: `c${i}`, status: i < 3 ? 'FAIL' : 'PASS', suite: `suite-${i % 20}`, begunAt: 0, endedAt: 10, ms: 10 }))

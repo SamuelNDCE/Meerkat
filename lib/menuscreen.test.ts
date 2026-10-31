@@ -83,12 +83,12 @@ describe('the yellow bar', () => {
   test('text from the brief, black on yellow, first line of the screen', () => {
     const bar = updateBar(UP, { width: 120, color: true, hotkey: true })!
     expect(bar).toContain('\x1b[30;43m')
-    expect(strip(bar).trimEnd()).toBe(' Update available: Meerkat 1.4.0 (you have 1.3.2).  Press u to update, or choose Check for updates below'.trimEnd())
+    expect(strip(bar).trimEnd()).toBe(' Update available: you have v1.3.2, new version v1.4.0.  Press u to update, or choose Check for updates below'.trimEnd())
     const lines = renderScreen(state(), { ...base, update: UP, width: 120, rows: 40 }) as { text: string }[]
     expect(lines[0].text).toBe(bar)
   })
   test('shorter wording on a narrow line, plain text without colour', () => {
-    expect(strip(updateBar(UP, { width: 60, color: false })!)).toBe(' Update available: Meerkat 1.4.0 (you have 1.3.2).')
+    expect(strip(updateBar(UP, { width: 60, color: false })!)).toBe(' Update available: you have v1.3.2, new version v1.4.0.')
     expect(updateBar(UP, { width: 80, color: false })).not.toContain('\x1b')
   })
   test('absent without an update', () => {

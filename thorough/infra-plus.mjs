@@ -7,7 +7,7 @@
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { evaluate, readAllow } from './rules.mjs'
-import { isFixture, main, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finding, isFixture, main, readText, trackedFiles, withFixture } from './kit.mjs'
 import { COMPOSE_RULES, COMPOSE_FILES, DOCKER_FILES, DOCKER_RULES, GHA_FILES, GHA_RULES, K8S_RULES, TF_FILES, TF_RULES, YAML_FILES } from './rules-infra-plus.mjs'
 
 const ALLOW_FILE = '.meerkat-infraplus-allow'
@@ -47,6 +47,39 @@ const FAMILIES = {
   'ip-gha': { title: 'GitHub Actions workflows', groups: [{ label: 'GitHub Actions workflow', path: GHA_FILES, rules: GHA_RULES }] },
 }
 
+// A Dockerfile instruction continued with a trailing backslash is one logical line: join it onto its first line and blank the others,
+// so every rule sees the whole RUN and line numbers stay the same.
+export function joinContinuations(text) {
+  const ls = text.split(/\r?\n/)
+  const out = []
+  for (let i = 0; i < ls.length; i++) {
+    let cur = ls[i]
+    if (/^\s*#/.test(cur)) {
+      out.push(cur)
+      continue
+    }
+    let extra = 0
+    while (/\\\s*$/.test(cur) && i + 1 < ls.length && extra < 60) {
+      i++
+      extra++
+      const nx = ls[i]
+      cur = /^\s*#/.test(nx) ? cur : cur.replace(/\\\s*$/, ' ') + nx.trim()
+      if (/^\s*#/.test(nx)) cur = cur.replace(/\s*$/, '') + ' \\'
+    }
+    out.push(cur)
+    for (let k = 0; k < extra; k++) out.push('')
+  }
+  return out.join('\n')
+}
+// Terraform written as JSON: `"key": value,` becomes `key = value`, one JSON object per line becomes one setting per line.
+export function tfJsonAsHcl(text) {
+  return text
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^(\s*)"([^"]{1,80})"\s*:\s*(.*?),?\s*$/, '$1$2 = $3'))
+    .join('\n')
+}
+const FALLBACK = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY) ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'
+
 const sub = (status, id, reason) => console.log(`MEERKAT-SUB ${status} ${id} ${String(reason).replace(/[\r\n\u0000-\u001f]+/g, ' ').slice(0, 200)}`)
 
 // Runs one family over a folder: prints the sub-check lines and returns the exit code (0 pass, 1 findings).
@@ -59,8 +92,10 @@ function runFamily(name, root) {
     const texts = new Map()
     for (const f of listed) {
       if (!g.path.test(f) || isFixture(f)) continue
-      const t = readText(root, f)
+      let t = readText(root, f)
       if (g.content && !g.content(t)) continue
+      if (g.label === 'Dockerfile') t = joinContinuations(t)
+      if (g.label === 'Terraform file' && /\.tf\.json$/i.test(f)) t = tfJsonAsHcl(t)
       texts.set(f, t)
     }
     const files = [...texts.keys()]
@@ -70,7 +105,8 @@ function runFamily(name, root) {
       for (const x of g.extras ?? []) sub('NA', x.id ?? x(root, [], read).id, `no ${g.label} here`)
       continue
     }
-    const { found, na } = evaluate(root, g.rules, { files, allow, read })
+    const { found, na, hits: located } = evaluate(root, g.rules, { files, allow, read })
+    for (const h of located ?? []) finding(h.severity ?? FALLBACK, h.rule, h.file, h.line, h.title)
     const hits = new Map()
     for (const h of found) hits.set(h.rule, (hits.get(h.rule) ?? 0) + 1)
     for (const r of g.rules) {
@@ -88,6 +124,7 @@ function runFamily(name, root) {
         failed++
         sub('FAIL', res.id, `${fails.length} found: ${res.title}`)
         for (const p of fails.slice(0, 25)) console.log(`  ${p}: ${res.title}`)
+        for (const p of fails) finding(FALLBACK, res.id, p, 0, res.title)
       } else sub('PASS', res.id, res.title)
     }
     for (const f of found.slice(0, 25)) console.log(`  ${f.text}`)
