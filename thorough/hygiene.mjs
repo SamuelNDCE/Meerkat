@@ -7,12 +7,14 @@ import { finish, isFixture, isText, main, readBudgets, readText, trackedFiles as
 
 // The hygiene checks leave folders of deliberately broken test files (fixtures/) alone.
 const trackedFiles = (root) => allTracked(root).filter((f) => !isFixture(f))
+// Checks about secrets, unsafe code, size and the licence look at every tracked file, fixtures included: nothing hides under a folder name.
+const everyFile = allTracked
 
 const limits = (root) => readBudgets(root)?.hygiene ?? {}
 const BINARY = /\.(exe|dll|so|dylib|zip|7z|rar|tar|gz|iso|dmg|msi|jar|class|pdb|node|wasm)$/i
 
 const license = (root) => {
-  const files = trackedFiles(root)
+  const files = everyFile(root)
   const f = []
   const hasLicense = files.some((x) => /^(licen[sc]e|copying|unlicense)(\.[a-z]+)?$/i.test(x))
   if (!hasLicense) f.push('no LICENSE file at the top of the repository (without one, nobody may legally reuse the code)')
@@ -53,7 +55,7 @@ const license = (root) => {
 const largeFiles = (root) => {
   const max = (limits(root).largeFileMB ?? 5) * 2 ** 20
   const f = []
-  for (const x of trackedFiles(root)) {
+  for (const x of everyFile(root)) {
     let size = 0
     try {
       size = statSync(join(root, x)).size
@@ -108,7 +110,7 @@ const links = (root) => {
 
 const sensitive = (root) => {
   const f = []
-  for (const x of trackedFiles(root)) {
+  for (const x of everyFile(root)) {
     const base = x.split('/').pop()
     if (/^\.env(\..+)?$/.test(base) && !/example|sample|template/.test(base)) f.push(`${x} is an environment file tracked by git`)
     else if (/\.(pem|p12|pfx|key|keystore|jks)$/i.test(base) || /^id_(rsa|ed25519|ecdsa)$/.test(base)) f.push(`${x} looks like a private key or keystore`)
@@ -178,7 +180,7 @@ const scriptsResolve = (root) => {
 
 const unsafeRust = (root) => {
   const f = []
-  for (const x of trackedFiles(root)) {
+  for (const x of everyFile(root)) {
     if (extname(x) !== '.rs') continue
     const lines = readText(root, x).split('\n')
     lines.forEach((l, i) => {

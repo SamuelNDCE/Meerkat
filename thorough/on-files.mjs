@@ -25,12 +25,12 @@ if (!files.length) {
 // that cmd.exe would read as something other than a name is refused, and every name is passed with ./ so it can never look like an option.
 const resolved = findBinary(cmd) ?? cmd
 const needsShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(resolved)
-const unsafe = needsShell ? files.filter((f) => /[&|<>^%()"!`]/.test(f)) : []
+const unsafe = needsShell ? files.filter((f) => /[\s&|<>^%()"!`,;=]/.test(f)) : []
 if (unsafe.length) {
   console.log(`${cmd}: refusing to start it through cmd.exe with these file names: ${unsafe.slice(0, 3).join(', ')}. Rename them.`)
   process.exit(1)
 }
-const named = files.map((f) => (f.startsWith('-') ? `./${f}` : f))
+const named = files.map((f) => (/^([A-Za-z]:)?[\/]/.test(f) ? f : `./${f}`))
 let worst = 0
 for (let i = 0; i < named.length; i += 50) {
   const r = spawnSync(resolved, [...opts, ...named.slice(i, i + 50)], { cwd: root, stdio: 'inherit', shell: needsShell })
