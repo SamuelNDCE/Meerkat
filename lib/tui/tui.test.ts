@@ -404,7 +404,7 @@ describe('the real run: live board, streamed output, end-of-run report', () => {
     const text = finalReport({ results, tier: 'fast', timings: { checks: { a: { fast: [2000] } } }, totalMs: 61_000, env: { MEERKAT_LOG_DIR: dir } }).join(NL)
     expect(text).toContain('SUMMARY [ 1:01 ] 3 checks: 1 passed (1 slow), 1 failed, 1 not run')
     expect(text).toContain('SLOWEST   a 0:20')
-    expect(text).toContain('SLOW      a took 0:20, usually 0:02')
+    expect(text).toContain('SLOW      a took 0:20, usually 2.0s')
     expect(text).toContain('FAIL      b: boom')
     expect(text).toContain('output: ')
     // the log's lines are not repeated by default: the full log is opened on purpose

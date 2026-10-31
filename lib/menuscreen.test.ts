@@ -63,7 +63,8 @@ describe('header layout', () => {
 describe('sections', () => {
   test('the preset menu has the named sections, one line per item with its description', () => {
     const lines = plain(renderScreen(state(), { ...base, color: false, level: false, width: 120, rows: 60 }) as never)
-    for (const h of ['Run', 'By kind', 'Fast and combined', 'More']) expect(lines.some((l) => l.trim().startsWith(h))).toBe(true)
+    for (const h of ['Run', 'More']) expect(lines.some((l) => l.trim().startsWith(h))).toBe(true)
+    expect(lines.some((l) => l.includes('Fast and combined'))).toBe(false)
     const quick = lines.find((l) => /^[> ] quick\b/.test(l.trimEnd()) || /^> quick|^ {2}quick/.test(l))!
     expect(quick).toMatch(/quick\s{2,}Every quick check/)
     expect(lines[lines.length - 1]).toContain('q quit')
@@ -82,7 +83,7 @@ describe('the yellow bar', () => {
   test('text from the brief, black on yellow, first line of the screen', () => {
     const bar = updateBar(UP, { width: 120, color: true, hotkey: true })!
     expect(bar).toContain('\x1b[30;43m')
-    expect(strip(bar).trimEnd()).toBe(' Update available: Meerkat 1.4.0 (you have 1.3.2).  Press u to update, or choose Update below'.trimEnd())
+    expect(strip(bar).trimEnd()).toBe(' Update available: Meerkat 1.4.0 (you have 1.3.2).  Press u to update, or choose Check for updates below'.trimEnd())
     const lines = renderScreen(state(), { ...base, update: UP, width: 120, rows: 40 }) as { text: string }[]
     expect(lines[0].text).toBe(bar)
   })
@@ -97,7 +98,7 @@ describe('the yellow bar', () => {
     expect(headerLines({ ...base, update: null, width: 80, rows: 24 })[0]).not.toContain('Update available')
   })
   test('the Update item says a version is waiting', () => {
-    const item = menuItems({ user: {}, project: {}, update: UP }).find((i: { label: string }) => i.label === 'Update Meerkat')
+    const item = menuItems({ user: {}, project: {}, update: UP }).find((i: { label: string }) => i.label === 'Check for updates')
     expect(item.about).toContain('1.4.0')
   })
   test('the screen after a run gets the bar in front', () => {

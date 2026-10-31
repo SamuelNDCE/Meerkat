@@ -12,7 +12,8 @@ import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { aiStatus, aiTest, aiUse } from '../lib/aiconfig.mjs'
 import { latestRunDir, logRoot } from '../lib/runlog.mjs'
 import { runLog, showRun } from '../lib/runs.mjs'
-import { maybeAutoUpdate, runUpdateCommand, timedExec } from '../lib/update.mjs'
+import { asyncTimedExec, maybeAutoUpdateAsync, runUpdateCommand } from '../lib/update.mjs'
+import { createUpdateCheck, outcomeOf } from '../lib/updatecheck.mjs'
 import { addRecent } from '../lib/userconfig.mjs'
 
 process.noDeprecation = true // the claude command on Windows is a .cmd shim, which can only be started through a shell
@@ -41,19 +42,39 @@ async function main() {
   const plan = planCommand(argv, { cwd, env, interactive, presets })
   const ctx = { out, err, env, cwd, interactive, presets, version: version() }
   // At most once a day (not with `meerkat update off`): a read-only look-up of the latest version, 3 seconds at most, remembered for
-  // the menu's yellow bar. Only mode auto installs anything. Silent on any failure.
+  // the menu's yellow bar. Only mode auto installs anything. Silent on any failure. It never runs without a terminal.
+  // The menu starts it and goes on at once: a spinner line in the menu header shows it, and no key waits for it. A plain run waits
+  // for it (3 seconds at most) with the same spinner on one line, which is cleared afterwards.
+  let updateCheck = null
   if (interactive && (plan.kind === 'menu' || (plan.kind === 'run' && !plan.json && !plan.quiet))) {
+    const inMenu = plan.kind === 'menu'
+    const color = Boolean(process.stdout.isTTY) && !env.NO_COLOR && !env.MEERKAT_PLAIN
+    const wipe = () => process.stdout.write('\r\x1b[2K')
+    const check = createUpdateCheck({
+      version: version(),
+      color,
+      isTTY: Boolean(process.stdout.isTTY),
+      holdMs: inMenu ? 1000 : 0,
+      run: async ({ onCheck }) => outcomeOf(await maybeAutoUpdateAsync({ repoDir: MEERKAT_DIR, env, exec: asyncTimedExec(3000), print: inMenu ? () => {} : out, onCheck })),
+    })
+    if (!inMenu) {
+      const draw = () => {
+        const line = check.line()
+        wipe()
+        if (line) process.stdout.write(line)
+      }
+      check.onChange = draw
+    }
     try {
-      maybeAutoUpdate({
-        repoDir: MEERKAT_DIR,
-        env,
-        exec: timedExec(3000),
-        print: plan.kind === 'menu' ? () => {} : out, // the menu shows the yellow bar instead
-        onCheck: () => process.stdout.write('Checking for updates...'),
-        onDone: () => process.stdout.write('\r\x1b[2K'),
-      })
+      const done = check.start()
+      if (inMenu) updateCheck = check
+      else await done
     } catch {
       /* an update check never stops anything */
+    }
+    if (!inMenu) {
+      check.stop()
+      wipe()
     }
   }
   switch (plan.kind) {
@@ -85,7 +106,7 @@ async function main() {
       return r.ok ? 0 : 1
     }
     case 'menu':
-      return runMenu({ cwd, env, folder: plan.folder ?? null })
+      return runMenu({ cwd, env, folder: plan.folder ?? null, updateCheck })
     case 'update':
       return runUpdateCommand(plan, { repoDir: MEERKAT_DIR, env })
     case 'pack': {

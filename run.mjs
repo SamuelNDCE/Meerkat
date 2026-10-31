@@ -14,7 +14,7 @@ import { createStatus, fanOut, statusPath } from './lib/status.mjs'
 import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from './lib/timings.mjs'
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
-import { detect, initConfig } from './lib/init.mjs'
+import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
 import { createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
@@ -195,7 +195,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     tier = chosen.preset.tier
     groups = [...chosen.preset.groups, ...groups]
     opts.include.push(...chosen.preset.include)
-    read.config.packs = [...new Set([...(read.config.packs ?? []), ...chosen.preset.packs])]
+    read.config.packs = [...new Set([...(read.config.packs ?? []), ...presetPacks(chosen.preset, appDir)])]
     if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
   }
   const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs })

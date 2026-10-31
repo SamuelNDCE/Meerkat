@@ -133,9 +133,10 @@ describe('menu key handling', () => {
   const items = menuItems(none)
   test('the menu has the groups and items asked for', () => {
     const headings = items.filter((i) => i.kind === 'heading').map((i) => i.label)
-    expect(headings).toEqual(['Run', 'By kind', 'Fast and combined', 'More'])
+    expect(headings).toEqual(['Run', 'More'])
+    expect(headings).not.toContain('Fast and combined')
     const labels = items.filter((i) => i.kind === 'item').map((i) => i.label)
-    for (const l of ['quick', 'full', 'security-fast', 'refactor', 'app-fast', 'release', 'Choose checks one by one', 'Create a preset', 'See the last report', 'Read a log', 'Update Meerkat', 'Quit']) expect(labels).toContain(l)
+    for (const l of ['quick', 'full', 'security', 'functionality', 'ui', 'performance', 'refactor', 'ci', 'release', 'More presets...', 'Choose checks one by one', 'Create a preset', 'See the last report', 'Read a log', 'Check for updates', 'Quit']) expect(labels).toContain(l)
   })
 
   test('a Mine group appears when there are personal or project presets', () => {
@@ -149,7 +150,7 @@ describe('menu key handling', () => {
     let st = s
     for (let i = 0; i < 2; i++) st = menuStep(st, 'down').state
     expect(items[st.cursor].kind).toBe('item')
-    expect(items[st.cursor].label).toBe('security') // quick, full, then past the "By kind" heading
+    expect(items[st.cursor].label).toBe('security') // quick, full, security: the Run list
   })
 
   test('up wraps to the last item; j and k work like the arrows', () => {
