@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // Runs the real-window click-through (electron/verify-click-through.cts) as several Electron windows at once.
 //
 //   node click-shards.mjs   (from the app folder, or with NV_APP_DIR set)

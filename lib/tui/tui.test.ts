@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // The Meerkat terminal UI: a fake run (no real check, no real terminal), so it is fast and safe to run anywhere.
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'

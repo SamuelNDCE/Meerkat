@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // A PREVIEW of Meerkat's live board, with a fake run (no real check, no app needed). It uses the real scheduler and
 // the real start order on made-up checks that take the times a cold fast run takes on Samuel's PC, sped up so a whole
 // run plays in about a minute.

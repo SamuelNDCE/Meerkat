@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // Is this machine ready to run Meerkat, the validation tool? Prints one line per requirement, in the order to fix them,
 // each with the exact command that fixes it, and exits 1 when something REQUIRED is missing.
 //   npm --prefix apps/desktop-electron run verify:doctor

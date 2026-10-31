@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-
 // Which promotion hops have waited long enough that it is time to run the thorough tier and promote.
 //   node promotion-due.mjs            report; exit 0 when nothing is due, 10 when a hop is due
 //

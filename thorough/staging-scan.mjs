@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-// staging-scan: ZAP baseline + Nuclei against NV_STAGING_URL, and ONLY a staging host or loopback.
 // Opt-in (--include staging). Tuned for our server, not stock:
 //   Nuclei runs only our own small template set (thorough/nuclei-templates/*.yaml), not the public library.
 //   ZAP runs the baseline with thorough/zap-baseline.conf (rules that cannot apply to a JSON API are ignored).

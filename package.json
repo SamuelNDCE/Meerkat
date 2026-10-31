@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "Meerkat: one command that checks an app before a push, a promotion or a build.",
-  "license": "UNLICENSED",
   "engines": { "node": ">=20" },
   "scripts": {
     "meerkat": "node run.mjs",

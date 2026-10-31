@@ -1,7 +1,3 @@
-// Copyright (c) 2026 perpetualtechnologies. All rights reserved.
-// Proprietary and confidential. Unauthorised copying, modification,
-// or distribution is strictly prohibited.
-// parser-fuzz: hammer the vault frontmatter parser (nv-vault, packages/vault/src/frontmatter.rs)
 // for NV_FUZZ_SECONDS (default 60).
 //
 // Method chosen: a time-boxed LOOP of the `proptests` module with a high PROPTEST_CASES.
