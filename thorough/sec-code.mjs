@@ -212,6 +212,8 @@ const repeatRisk = (src) => {
   const s = src.replace(/\\./g, '~').replace(/\[(?:[^\]\\]|\\.)*\]/g, 'C')
   // A single repeated token inside an open-ended repeat, such as (a+)+, (.*)*, (\s*)* or ([a-z]+)*. Bounded repeats and longer bodies are left alone.
   if (/\((?:\?:)?(?:[~C.]|[a-zA-Z0-9])[+*]\)(?:[+*]|\{\d+,\})/.test(s)) return 'a group that repeats is itself repeated'
+  // A repeated token followed by an optional one inside an open-ended repeat, such as (\w+\s?)+: the optional part lets the same text split many ways.
+  if (/\((?:\?:)?(?:[~C.]|[a-zA-Z0-9])[+*](?:[~C.]|[a-zA-Z0-9])[?*]\)(?:[+*]|\{\d+,\})/.test(s)) return 'a group that repeats is itself repeated'
   for (const m of s.matchAll(/\((?:\?:)?([^()]*\|[^()]*)\)(?:[+*]|\{\d)/g)) {
     const alts = m[1].split('|').filter(Boolean)
     if (alts.some((a, i) => alts.some((b, j) => i !== j && b.startsWith(a)))) return 'a repeated choice where one option is the start of another'

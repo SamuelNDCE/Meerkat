@@ -120,6 +120,10 @@ const tomlProblems = (text) => {
     if (keys.has(name)) out.push(`line ${n} repeats the key "${name}"${table ? ` in [${table}]` : ''}`)
     keys.add(name)
     const value = m[2]
+    if (!value.trim() || value.startsWith('=')) {
+      out.push(`line ${n} has no value after the key "${name}"`)
+      return
+    }
     const trip = /^("""|''')/.exec(value)
     if (trip) {
       if (!value.slice(3).includes(trip[1])) multi = trip[1]
