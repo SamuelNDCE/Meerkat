@@ -593,6 +593,8 @@ Every run saves a folder under `~/.meerkat/logs/runs/` (or `MEERKAT_LOG_DIR`), a
 | `summary.json` | a program or an AI | every result with its command, exit code, start and end, duration and log path; what was chosen and skipped; the scheduler limits; the git commit and branch; the machine |
 | `timeline.jsonl` | a program or an AI | one line per start and end, with the time from the start of the run |
 | `<check>.log` | both | the command, folder, exit code and timing, then the complete output |
+| `findings.json` | a program or an AI | every detection: what it is, where, which rule, and exactly which check, script or tool found it, with new, known or fixed since the last run |
+| `findings.md`, `findings.sarif`, `detections.jsonl` | a person, GitHub code scanning, a program | the same findings readable, as SARIF 2.1.0, and one line per detection event (including why a check could not run) |
 
 ```
 node run.mjs --last              print the report of the newest run
@@ -601,6 +603,19 @@ node run.mjs --logs              print where the logs are
 ```
 
 Details and the `summary.json` fields: [`docs/logs.md`](docs/logs.md).
+
+### Findings: everything a run detected, in one file
+
+At the end of a run Meerkat compiles every detection into `findings.json` (plus `findings.md`, `findings.sarif` and `detections.jsonl`): the severity, the file and line, the rule, which check, script or tool found it, the evidence line (never for secrets, never a line that looks like a secret), a fix hint, and whether it is new, known or fixed since the last run. A check can report findings itself with `MEERKAT-FINDING` lines; for the others Meerkat reads `path:line message` lines from their output.
+
+```
+meerkat findings                       the newest run's detections
+meerkat findings --severity high --new
+meerkat findings --fail-on high        exit 1 when any finding at or above high exists
+meerkat finding <id>                   one finding in full: who detected it, the log, the fix
+```
+
+Schema, the protocol for check authors and a GitHub code scanning upload: [`docs/findings.md`](docs/findings.md).
 
 ## For AI agents
 

@@ -33,6 +33,10 @@ Options for every run: `--ai` (include the AI checks), `--json` (print the resul
 | `meerkat run show [id]` | the report of a run (default: the newest) | `meerkat last` |
 | `meerkat run log <check> [id]` | one check's log | `meerkat why <check>`, `meerkat log <check>` |
 | `meerkat run open [id]` | print the run's folder | `meerkat logs` |
+| `meerkat findings [folder\|run-id] [--severity high] [--suite s] [--check id] [--new] [--fixed] [--limit n]` | what the run detected: severity, rule, file:line, message, new or known (`--json` for scripts) | |
+| `meerkat findings --fail-on <severity>` | exit 1 when any finding at or above that severity exists (for CI) | |
+| `meerkat findings --export sarif\|md\|json [file]` | copy the run's `findings.sarif`, `findings.md` or `findings.json` to a file, or print it | |
+| `meerkat finding <id> [run-id]` | one finding in full: what, evidence, who detected it (check, rule, pack, script, tool), the log, how to fix it, first seen | |
 
 ## Checks, presets, packs
 

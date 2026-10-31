@@ -14,6 +14,10 @@ Every run saves what is needed to understand a failure long after the terminal i
       report.md
       summary.json
       timeline.jsonl
+      findings.json                  what the run detected (see findings.md in docs)
+      findings.md
+      findings.sarif
+      detections.jsonl
       <check>.log                  one per check
       <check>.selftest.log         one per check, in a --self-test run
 ```
@@ -68,11 +72,17 @@ For a program or an AI to read. `schema` is 1.
 | `selection` | `ran`, `skipped`, `covered`, `disabled` |
 | `waited` | for each check that waited: `reason` and `waitedMs` |
 | `configFile` | the config that applied, or null |
+| `files` | `{ findings, report, sarif, detections }`: the paths of the four detection files (`findings.json`, `findings.md`, `findings.sarif`, `detections.jsonl`) |
+| `findings` | `{ total, bySeverity, new, known, fixed }` |
 | `results` | one entry per check: `id`, `title`, `status`, `detail`, `ms`, `command`, `exitCode`, `startedAt`, `logFile`, `outputFile` (failures only), `files.total` (how many files the check examined; only when it reported it) |
 
 ## `timeline.jsonl`
 
 One JSON object per line, in order: `{ "t": 1840, "event": "end", "id": "eslint", "status": "FAIL", "ms": 4210, "at": "..." }`. `t` is milliseconds from the start of the run. Events are `start` (with the lane) and `end`. An `end` event carries `files: { "total": 940 }` when the check reported how many files it examined, and no `files` field otherwise.
+
+## The detection files
+
+Every run also writes `findings.json` (every finding: what, where, which rule, which check, script or tool found it, evidence, fix hint, new or known, first seen), `findings.md` (the same for a person), `findings.sarif` (SARIF 2.1.0 for GitHub code scanning) and `detections.jsonl` (one line per detection event in time order, including every failed sub-check and every NOT RUN with its reason). A cross-run history in `~/.meerkat/findings/` makes new, known and fixed survive the pruning of old runs. A check can print `MEERKAT-FINDING <severity> <rule-id> <path>:<line> <message>` lines, which are taken out of the output like the lines below. Schema, protocol and a GitHub upload example: [findings.md](findings.md).
 
 ## Sub-checks (`MEERKAT-SUB`)
 
