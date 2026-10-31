@@ -21,7 +21,7 @@ import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
 import { enrichResults, narrowSubs, rollup } from './lib/subchecks.mjs'
-import { packOfCheck, resolveOnly, suiteIdOf } from './lib/suites.mjs'
+import { packOfCheck, resolveOnly, suiteIdOf, suiteInfo } from './lib/suites.mjs'
 import { tipLine } from './lib/recommend.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
@@ -114,7 +114,7 @@ const subsOffMap = (list = []) => {
   }
   return m
 }
-const listJsonText = (checks) => JSON.stringify(checks.map((c) => ({ id: c.id, kind: c.group, tier: c.tier, lane: c.lane, seconds: c.estSeconds ?? null, title: c.title, optIn: c.optIn ?? null, pack: packOfCheck(c), suite: suiteIdOf(c), subs: c.subs ?? 1, origin: c.origin ?? 'bundled' })))
+const listJsonText = (checks) => JSON.stringify(checks.map((c) => ({ id: c.id, kind: c.group, tier: c.tier, lane: c.lane, seconds: c.estSeconds ?? null, title: c.title, optIn: c.optIn ?? null, pack: packOfCheck(c), suite: suiteIdOf(c), subs: c.subs ?? 1, origin: c.origin ?? 'bundled', ...(suiteInfo(suiteIdOf(c))?.project ? { suiteLabel: suiteInfo(suiteIdOf(c)).label, suitePurpose: suiteInfo(suiteIdOf(c)).purpose } : {}) })))
 function logDisabled(log, applied, configFile) {
   for (const d of applied.disabled) log(`[DISABLED] ${d.id}: turned off in ${configFile}${d.by ? ` (${d.by})` : ''}`)
   for (const ref of applied.disabledSubs ?? []) log(`[DISABLED] sub-check ${ref}: turned off in ${configFile}`)
