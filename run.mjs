@@ -70,6 +70,7 @@ export function parseArgs(argv) {
     else if (a === '--fail-fast') o.failFast = true
     else if (a === '--only') o.only.push(...list(next()))
     else if (a === '--include') o.include.push(...list(next()))
+    else if (a === '--ai') o.include.push('ai')
     else if (a === '--json') o.json = next()
     else if (a === '--profile') o.profile = next()
     else if (a === '--progress') o.progress = true

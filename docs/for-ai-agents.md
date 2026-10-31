@@ -110,6 +110,12 @@ The server's working folder is the default `folder` for the tools. Replace `<pat
 | `meerkat_why` | `check`, `lines?` | Returns one check's log header and the end of its output from the newest run. |
 | `meerkat_self_test` | `folder?`, `only?` | Runs each check against a deliberately broken sample to prove it can catch problems. Same result shape as `meerkat_run`. |
 
+Running a check runs the project's own commands: its `meerkat.config.json` can add checks that run any command. Only point the tools at projects the person trusts.
+
+The `folder` input must be inside the folder the server was started in, or inside a folder listed under `roots` in `~/.meerkat.json` (add one with `meerkat root add <folder>`). Other folders, folders reached through a link that points outside, and network (UNC) paths are refused.
+
+Anything read from a log (`meerkat_why`, `meerkat_last`, failure reasons, commands, output tails) is checked for secrets first. Text that looks like it holds a key or token is replaced by `(left out: it looks like it contains a secret)`, and assignments such as `api_key = ...` are blanked.
+
 Check ids, preset names and opt-in names must be lowercase letters, digits and dashes. Anything else is rejected before anything runs.
 
 ## Rules for agents

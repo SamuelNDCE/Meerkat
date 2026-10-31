@@ -2,9 +2,11 @@
 import { spawn } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, test } from 'vitest'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { afterAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
-import { createReader, handleLine, handleMessage, parseListLine, TOOLS } from './mcp.mjs'
+import { createContext, createReader, handleLine, handleMessage, parseListLine, TOOLS } from './mcp.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -29,6 +31,8 @@ function makeCtx(over: Record<string, unknown> = {}) {
     presets: { quick: { tier: 'fast', groups: [], about: 'every quick check' }, security: { tier: 'thorough', groups: ['security'], include: ['ai'], about: 'security' } },
     userPresets: () => ({ mine: { tier: 'fast', groups: ['ui'], about: 'my own' } }),
     isDirectory: (p: string) => p === root || p.endsWith('real-folder'),
+    realpath: (p: string) => p,
+    roots: () => [],
     readFile: () => JSON.stringify(summary(new Date().toISOString())),
     latestRunDir: () => '/logs/run1',
     showLast: () => ({ ok: true, text: '# Meerkat run: quick' }),
@@ -197,6 +201,115 @@ describe('input checks (nothing is ever spawned for a bad input)', () => {
     expect(r.result.isError).toBe(true)
     expect(r.result.content[0].text.length).toBeGreaterThan(5)
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe('folder confinement (real folders)', () => {
+  const base = mkdtempSync(join(tmpdir(), 'meerkat-mcp-'))
+  const start = join(base, 'start')
+  const inside = join(start, 'proj')
+  const sibling = join(base, 'sibling')
+  const extra = join(base, 'extra')
+  for (const d of [inside, sibling, extra]) mkdirSync(d, { recursive: true })
+  afterAll(() => rmSync(base, { recursive: true, force: true }))
+
+  const real = (roots: string[] = []) => {
+    const calls: string[][] = []
+    const ctx = { ...createContext({ MEERKAT_USER_CONFIG: join(base, 'none.json') }), cwd: start, roots: () => roots, runMeerkat: async (a: string[]) => (calls.push(a), { code: 0, stdout: '', stderr: '', timedOut: false }) }
+    return { ctx, calls }
+  }
+  const list = (ctx: unknown, folder: string) => call(ctx, 'meerkat_list', { folder })
+
+  test('a folder inside the start folder is allowed', async () => {
+    const { ctx, calls } = real()
+    const r = await list(ctx, inside)
+    expect(r.result.isError).toBeFalsy()
+    expect(calls).toHaveLength(1)
+  })
+
+  test('a sibling folder is refused and the message says how to add a root', async () => {
+    const { ctx, calls } = real()
+    const r = await list(ctx, sibling)
+    expect(r.result.isError).toBe(true)
+    expect(r.result.content[0].text).toContain('meerkat root add <folder>')
+    expect(r.result.content[0].text).toContain('Allowed:')
+    expect(calls).toHaveLength(0)
+  })
+
+  test('a folder in the configured roots is allowed', async () => {
+    const { ctx } = real([extra])
+    expect((await list(ctx, extra)).result.isError).toBeFalsy()
+  })
+
+  test('.. cannot escape the root', async () => {
+    const { ctx, calls } = real()
+    const r = await list(ctx, join(inside, '..', '..', 'sibling'))
+    expect(r.result.isError).toBe(true)
+    expect(calls).toHaveLength(0)
+  })
+
+  test('a symlink or junction pointing outside is refused', async () => {
+    const link = join(start, 'escape')
+    try {
+      symlinkSync(sibling, link, 'junction')
+    } catch {
+      return // this platform cannot create one here
+    }
+    const { ctx, calls } = real()
+    const r = await list(ctx, link)
+    expect(r.result.isError).toBe(true)
+    expect(calls).toHaveLength(0)
+  })
+
+  test('UNC paths are refused', async () => {
+    const { ctx, calls } = real()
+    for (const p of ['\\\\server\\share\\proj', '//server/share/proj']) {
+      const r = await list(ctx, p)
+      expect(r.result.isError).toBe(true)
+      expect(r.result.content[0].text).toContain('UNC')
+    }
+    expect(calls).toHaveLength(0)
+  })
+})
+
+describe('secrets are left out of replies', () => {
+  const key = 'AKIA' + 'IOSFODNN7EXAMPLE'
+
+  test('meerkat_why and meerkat_last leave out text holding a key', async () => {
+    const { ctx } = makeCtx({ showWhy: () => ({ ok: true, text: `output ${key} end` }), showLast: () => ({ ok: true, text: `report ${key}` }) })
+    for (const [tool, args] of [['meerkat_why', { check: 'build' }], ['meerkat_last', {}]] as const) {
+      const text = (await call(ctx, tool, args)).result.content[0].text
+      expect(text).toBe('(left out: it looks like it contains a secret)')
+    }
+  })
+
+  test('soft secrets are blanked, other text kept', async () => {
+    const { ctx } = makeCtx({ showWhy: () => ({ ok: true, text: 'line one\napi_key = hunter2hunter2\nline three' }) })
+    const text = (await call(ctx, 'meerkat_why', { check: 'build' })).result.content[0].text
+    expect(text).toContain('line one')
+    expect(text).toContain('line three')
+    expect(text).not.toContain('hunter2')
+  })
+
+  test('a very long line is left out', async () => {
+    const { ctx } = makeCtx({ showLast: () => ({ ok: true, text: 'x'.repeat(5000) }) })
+    expect((await call(ctx, 'meerkat_last')).result.content[0].text).toBe('(left out: a line is too long to check)')
+  })
+
+  test('run reasons, commands and output tails are redacted', async () => {
+    const s = summary(new Date().toISOString())
+    s.results[1].detail = `failed with ${key}`
+    s.results[1].command = `deploy --token ${key}`
+    const { ctx } = makeCtx({ readFile: () => JSON.stringify(s) })
+    const r = await call(ctx, 'meerkat_run', {})
+    const out = JSON.stringify(r.result)
+    expect(out).not.toContain(key)
+    expect(r.result.structuredContent.failed[0].reason).toBe('(left out: it looks like it contains a secret)')
+    expect(r.result.structuredContent.failed[0].command).toBe('(left out: it looks like it contains a secret)')
+
+    const stale = makeCtx({ readFile: () => '{}', runMeerkat: async () => ({ code: 2, stdout: `oops ${key}`, stderr: '', timedOut: false }) }).ctx
+    const r2 = await call(stale, 'meerkat_run', {})
+    expect(JSON.stringify(r2.result)).not.toContain(key)
   })
 })
 

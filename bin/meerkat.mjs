@@ -6,10 +6,11 @@ import { helpText, loadPresets, packAdd, packList, packRemove, planCommand, pres
 import { buildBugReport } from '../lib/bugreport.mjs'
 import { afterRun, runMenu, spawnRun } from '../lib/menu.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
-import { aiStatus, aiUse } from '../lib/aiconfig.mjs'
+import { aiStatus, aiTest, aiUse } from '../lib/aiconfig.mjs'
 import { latestRunDir } from '../lib/runlog.mjs'
 import { maybeAutoUpdate, runUpdateCommand } from '../lib/update.mjs'
 
+process.noDeprecation = true // the claude command on Windows is a .cmd shim, which can only be started through a shell
 const env = process.env
 const cwd = process.cwd()
 const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !env.CI
@@ -56,7 +57,7 @@ async function main() {
       return r.ok ? 0 : 1
     }
     case 'ai': {
-      const r = plan.action === 'status' ? { ok: true, text: aiStatus(env) } : aiUse(plan.action, env)
+      const r = plan.action === 'status' ? { ok: true, text: aiStatus(env) } : plan.action === 'use' ? aiUse(plan.args, env) : plan.action === 'test' ? await aiTest(env) : { ok: false, text: 'usage: meerkat ai status | use <claude|openai|openrouter> [model] | test' }
       out(r.text)
       return r.ok ? 0 : 1
     }
