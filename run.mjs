@@ -113,7 +113,7 @@ const subsOffMap = (list = []) => {
   }
   return m
 }
-const listJsonText = (checks) => JSON.stringify(checks.map((c) => ({ id: c.id, kind: c.group, tier: c.tier, lane: c.lane, seconds: c.estSeconds ?? null, title: c.title, optIn: c.optIn ?? null, pack: packOfCheck(c), suite: suiteIdOf(c), subs: c.subs ?? 1 })))
+const listJsonText = (checks) => JSON.stringify(checks.map((c) => ({ id: c.id, kind: c.group, tier: c.tier, lane: c.lane, seconds: c.estSeconds ?? null, title: c.title, optIn: c.optIn ?? null, pack: packOfCheck(c), suite: suiteIdOf(c), subs: c.subs ?? 1, origin: c.origin ?? 'bundled' })))
 function logDisabled(log, applied, configFile) {
   for (const d of applied.disabled) log(`[DISABLED] ${d.id}: turned off in ${configFile}${d.by ? ` (${d.by})` : ''}`)
   for (const ref of applied.disabledSubs ?? []) log(`[DISABLED] sub-check ${ref}: turned off in ${configFile}`)
@@ -222,7 +222,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     read.config.packs = [...new Set([...(read.config.packs ?? []), ...presetPacks(chosen.preset, appDir)])]
     if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
   }
-  const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs })
+  const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) })
   const checks = applied.checks
   if (!opts.list) {
     if (configFile) log(`config: ${configFile}`)
