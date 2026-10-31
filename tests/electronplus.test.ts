@@ -76,7 +76,7 @@ const CLEAN = newFolder({
     "protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true } }])",
     'function createWindow() {',
     '  const win = new BrowserWindow({',
-    "    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false },",
+    "    webPreferences: { preload: path.join(__dirname, '..', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, webviewTag: false },",
     '  })',
     "  win.webContents.setWindowOpenHandler(({ url }) => {",
     "    if (url.startsWith('https://docs.acme.example.com/')) shell.openExternal(url)",
@@ -88,7 +88,7 @@ const CLEAN = newFolder({
     "  win.loadURL('app://local/index.html')",
     '}',
     "protocol.handle('app', (request) => {",
-    "  const file = path.join(__dirname, 'renderer', 'index.html')",
+    "  const file = path.join(__dirname, '..', 'renderer', 'index.html')",
     '  return new Response(fs.readFileSync(file))',
     '})',
     "ipcMain.handle('notes:list', (event) => {",
@@ -211,7 +211,7 @@ describe('the electron-plus pack', () => {
 })
 
 describe('no em dashes in the new files', () => {
-  for (const f of ['thorough/rules-electron-plus.mjs', 'thorough/electron-plus.mjs', 'packs/electron-plus/electron-plus.mjs', 'electronplus.test.ts']) {
+  for (const f of ['thorough/rules-electron-plus.mjs', 'thorough/electron-plus.mjs', 'packs/electron-plus/electron-plus.mjs', 'tests/electronplus.test.ts']) {
     test(f, () => {
       expect(readFileSync(join(ROOT, f), 'utf8')).not.toContain(String.fromCharCode(0x2014))
     })

@@ -23,6 +23,23 @@ It runs the checks your project needs, shows what passed, what failed and what c
 4. **It keeps the evidence.** Every check's command, exit code, timing and full output is saved, so a failure can be understood later, by you or by an AI.
 
 
+
+## What it looks like
+
+The pictures below are drawn by Meerkat's real screens with made-up sample data.
+
+**The menu** shows your version and, in yellow, the newest version when an update is waiting.
+
+![The menu with the preset list and an update bar](docs/images/menu.png)
+
+**After a run** a results screen opens. Tab or the arrow keys switch between findings (worst first), every check with its time, and a timeline.
+
+![Results screen, findings tab, with the bug counter by severity](docs/images/results-findings.png)
+
+![Results screen, checks tab](docs/images/results-checks.png)
+
+![Results screen, timeline tab](docs/images/results-timeline.png)
+
 ## The systems at a glance
 
 | System | What it does | Read more |
@@ -525,4 +542,4 @@ Meerkat's own tests: `npm test`. After adding or changing a check, run `node too
 
 ## After a run
 
-In a terminal, a finished run opens a results screen with three sections: the findings (worst first, in colour and in words), every check with its time, and a timeline of the whole run. `c` copies the findings folder, `l` opens a log, `?` lists the keys. See docs/commands.md.
+In a terminal, a finished run opens the results screen shown above. `c` copies the findings folder, `l` opens a log, `?` lists the keys. See [docs/commands.md](docs/commands.md).

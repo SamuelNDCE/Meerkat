@@ -290,7 +290,7 @@ describe('the mutation pack', () => {
     expect(tq.subs).toBe(M.ALL_TQ_RULES.length)
   })
   test('the source files use no em dashes', () => {
-    for (const f of ['thorough/mutation.mjs', 'thorough/mutation-support.mjs', 'thorough/mutation-quality.mjs', 'packs/mutation/mutation.mjs', 'mutation.test.ts', 'mutation-diff.test.ts', 'mutation-quality.test.ts', 'docs/mutation.md']) {
+    for (const f of ['thorough/mutation.mjs', 'thorough/mutation-support.mjs', 'thorough/mutation-quality.mjs', 'packs/mutation/mutation.mjs', 'tests/mutation.test.ts', 'tests/mutation-diff.test.ts', 'tests/mutation-quality.test.ts', 'docs/mutation.md']) {
       const p = join(ROOT, f)
       if (statSync(p, { throwIfNoEntry: false })) expect(readFileSync(p, 'utf8').includes(String.fromCharCode(0x2014)), f).toBe(false)
     }

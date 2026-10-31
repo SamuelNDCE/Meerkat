@@ -15,7 +15,7 @@ const run = (files: Record<string, string>) => {
     execFileSync('git', ['-C', d, 'init', '-q'])
     execFileSync('git', ['-C', d, 'add', '-A'])
     try {
-      return execFileSync('node', [join(__dirname, 'thorough', 'desktop.mjs'), 'electron-node-integration', '--root', d], { encoding: 'utf8' })
+      return execFileSync('node', [join(__dirname, '..', 'thorough', 'desktop.mjs'), 'electron-node-integration', '--root', d], { encoding: 'utf8' })
     } catch (e) {
       // exit 1 means the check found the deliberate problem: its output is what we read
       return String((e as { stdout?: string }).stdout ?? '')

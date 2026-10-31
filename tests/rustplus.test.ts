@@ -15,7 +15,7 @@ import { CHECK_TABLES } from '../thorough/rules-rust-plus.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SCRIPT = 'thorough/rust-plus.mjs'
-const NEW_FILES = ['thorough/rules-rust-plus.mjs', 'thorough/rust-plus.mjs', 'packs/rust-plus/rust-plus.mjs', 'rustplus.test.ts']
+const NEW_FILES = ['thorough/rules-rust-plus.mjs', 'thorough/rust-plus.mjs', 'packs/rust-plus/rust-plus.mjs', 'tests/rustplus.test.ts']
 const made: string[] = []
 afterAll(() => {
   for (const d of made) rmSync(d, { recursive: true, force: true })
