@@ -374,7 +374,7 @@ const pyMutableDefault = (root) => {
 }
 
 // ---- py-assert-in-prod: assert used to check input in non-test Python. Python removes asserts under -O, so the check vanishes.
-const ASSERT_CHECK = /^(?:not\s+)?(?:isinstance|callable|len|hasattr)\s*\(|\bis\s+(?:not\s+)?None\b|^[\w.]+\s+in\s|\b(?:is_admin|is_staff|is_superuser|is_authenticated|is_authorized|is_owner|authorized|authenticated|has_perm\w*|has_permission\w*|permission\w*|can_\w+|role|roles|owner|password|passwd|token|csrf\w*|signature|auth\w*|allowed)\b|\b(?:request|req|session|form|params|payload|body|user_input)\b[\w.[\]'"]{0,40}\s*(?:==|!=|<=|>=|<|>|\bin\b)|^(?:not\s+)?[\w.]{1,40}\.(?:startswith|endswith|isdigit|isalnum|isalpha|match)\(/
+const ASSERT_CHECK = /^(?:not\s+)?(?:isinstance|callable|len|hasattr)\s*\(|\bis\s+(?:not\s+)?None\b|^[\w.]+\s+in\s|\b(?:is_admin|is_staff|is_superuser|is_authenticated|is_authorized|is_owner|authorized|authenticated|has_perm\w*|has_permission\w*|permission\w*|can_\w+|role|roles|owner|password|passwd|token|csrf\w*|signature|auth\w*|allowed)\b|\b(?:request|req|session|form|params|payload|body|user_input)\b[\w.[\]'" ]{0,40}\s*(?:==|!=|<=|>=|<|>|\bin\b)|^(?:not\s+)?[\w.]{1,40}\.(?:startswith|endswith|isdigit|isalnum|isalpha|match)\(/
 const pyAssertInProd = (root) => {
   const allow = allowSet(root)
   const f = []

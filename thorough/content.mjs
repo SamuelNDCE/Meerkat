@@ -23,8 +23,8 @@ const MAX_TEXT_BYTES = 2 * 2 ** 20
 const COMMENT = /^\s*(\/\/|\/\*|\*|#|<!--|--)/
 const PLACEHOLDER = /\{\{\s*\w+\s*\}\}|\{\w+\}|%\(\w+\)s|%(?:\d+\$)?[sdif]/g
 // U+FEFF (byte-order mark) is left out on purpose: it is used to strip or add BOMs in code, and the Trojan Source class is bidi overrides and zero-width joiners or spaces.
-const INVISIBLE = /[‪-‮⁦-⁩​-‏⁠]/g
-const BIDI = /[‪-‮⁦-⁩]/
+const INVISIBLE = /[\u202A-\u202E\u2066-\u2069\u200B-\u200F\u2060]/g
+const BIDI = /[\u202A-\u202E\u2066-\u2069]/
 // A short list of very common misspellings, each with its correction. Matched as whole words in Markdown and comment lines only.
 const TYPOS = [
   ['teh', 'the'], ['hte', 'the'], ['taht', 'that'], ['waht', 'what'], ['wiht', 'with'], ['recieve', 'receive'], ['recieved', 'received'],
@@ -210,7 +210,7 @@ const changelogVsVersion = (root) => {
   if (allowed(allow, id, 'package.json')) return finish(id, [], 'allowed by .meerkat-content-allow')
   let version
   try {
-    version = JSON.parse(readText(root, 'package.json').replace(/^﻿/, '')).version
+    version = JSON.parse(readText(root, 'package.json').replace(/^\uFEFF/, '')).version
   } catch {
     return finish(id, [], 'skipped: package.json does not parse (json-valid reports that)')
   }
@@ -254,7 +254,7 @@ function localeGroups(root) {
     if (!LOCALE_DIR.test(x) || !LOCALE_NAME.test(posix.basename(x)) || !small(root, x)) continue
     let data
     try {
-      data = JSON.parse(readText(root, x).replace(/^﻿/, ''))
+      data = JSON.parse(readText(root, x).replace(/^\uFEFF/, ''))
     } catch {
       continue
     }
@@ -340,7 +340,7 @@ const jsonDuplicateKeys = (root) => {
   const f = []
   for (const x of files(root, JSON_FILE)) {
     if (allowed(allow, id, x) || !small(root, x)) continue
-    const text = readText(root, x).replace(/^﻿/, '')
+    const text = readText(root, x).replace(/^\uFEFF/, '')
     try {
       JSON.parse(text)
     } catch {
@@ -354,7 +354,7 @@ const jsonDuplicateKeys = (root) => {
 // ---- csv-consistent: every row of a CSV has as many columns as its header
 // Rows of a CSV as arrays of fields, each with the line it starts on. Handles quoted fields with commas, quotes and line breaks.
 function csvRows(text) {
-  const t = text.replace(/^﻿/, '')
+  const t = text.replace(/^\uFEFF/, '')
   const rows = []
   let row = []
   let field = ''
@@ -506,7 +506,7 @@ const CONTENT_FILES = {
   'spell-common-typos': { run: spellCommonTypos, ...fx({ 'README.md': 'This is teh readme.\n' }, spellCommonTypos) },
   'unicode-control-chars': {
     run: unicodeControlChars,
-    ...fx({ 'src/app.js': 'const admin = false // ‮ }\n' }, unicodeControlChars),
+    ...fx({ 'src/app.js': 'const admin = false // \u202E }\n' }, unicodeControlChars),
   },
 }
 

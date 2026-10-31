@@ -124,12 +124,13 @@ const lockfileIntegrity = (root) => {
 // ---- risky-code: calls that are usually a security mistake
 const RISKY = [
   [/\beval\s*\(/, 'eval() runs text as code', /\.(m?[jt]sx?|cjs|py|php|rb|svelte|vue)$/],
-  [/\bnew\s+Function\s*\(/, 'new Function() runs text as code', /\.(m?[jt]sx?|cjs|svelte|vue)$/],
+  [/(?<![\w$.:])(?:new\s+)?Function\s*\(\s*(?!\))/, 'new Function() runs text as code', /\.(m?[jt]sx?|cjs|svelte|vue)$/],
   [/document\.write\s*\(/, 'document.write() with page content', /\.(m?[jt]sx?|svelte|vue|html?)$/],
-  [/\.innerHTML\s*=(?!=)/, 'innerHTML assignment (script injection unless the value is trusted)', /\.(m?[jt]sx?|svelte|vue)$/],
+  [/\.(?:inner|outer)HTML\s*(?:=(?!=)|\+=)/, 'innerHTML assignment (script injection unless the value is trusted)', /\.(m?[jt]sx?|svelte|vue)$/],
+  [/\.insertAdjacentHTML\s*\(\s*['"][a-zA-Z]+['"]\s*,\s*(?!['"\x60][^'"\x60$\n]*['"\x60]\s*\))/, 'innerHTML assignment through insertAdjacentHTML (script injection unless the value is trusted)', /\.(m?[jt]sx?|svelte|vue)$/],
   [/dangerouslySetInnerHTML/, 'dangerouslySetInnerHTML (script injection unless the value is trusted)', /\.(jsx|tsx)$/],
   [/\bchild_process\b[\s\S]{0,40}\bexec\s*\(\s*(?:`[^`]*\$\{|[^)]*\+)/, 'exec() with a built-up command string (shell injection)', /\.(m?[jt]s|cjs)$/],
-  [/\bos\.system\s*\(|subprocess\.[a-z_]+\([^)]*shell\s*=\s*True/, 'a shell command from Python (shell injection if any part is user input)', /\.py$/],
+  [/\bos\.system\s*\(|subprocess\.[A-Za-z_]+\([^)]*shell\s*=\s*True/, 'a shell command from Python (shell injection if any part is user input)', /\.py$/],
   [/\bpickle\.loads?\s*\(|\byaml\.load\s*\((?![^)]*Loader\s*=\s*(?:yaml\.)?SafeLoader)/, 'pickle or yaml.load can run code from the data', /\.py$/],
   [/verify\s*=\s*False|rejectUnauthorized\s*:\s*false|InsecureSkipVerify\s*:\s*true|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['"]?0/, 'TLS certificate checks turned off', SOURCE],
   [/createHash\(\s*['"](?:md5|sha1)['"]\)|hashlib\.(?:md5|sha1)\(|\bMD5\.|\bSHA1\./, 'MD5 or SHA-1 (broken for security uses)', SOURCE],

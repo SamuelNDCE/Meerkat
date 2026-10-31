@@ -80,8 +80,8 @@ const define = (id, rules, ok, fixture) => {
 
 // ---- cors-wildcard: any site may read responses that carry credentials
 const CORS_CREDENTIALS = /credentials['"]?\s*[:=,\]]\s*['"]?true\b/i
-const corsWildcard = pat(codeOrConfig, /\borigin['"]?\s*[:=,]\s*(?:true|['"]\*['"])/i, (t, h) =>
-  CORS_CREDENTIALS.test(t.slice(h.at, h.at + 300)) ? 'allows every website to send requests with credentials (any origin plus credentials)' : null)
+const corsWildcard = pat(codeOrConfig, /\borigin['"]?\s*[:=,]\s*(?:true|['"]\*['"])|Access-Control-Allow-Origin['"]?\s*[:=,)]\s*['"]\*['"]/i, (t, h) =>
+  CORS_CREDENTIALS.test(t.slice(Math.max(0, h.at - 200), h.at + 300)) ? 'allows every website to send requests with credentials (any origin plus credentials)' : null)
 const corsReflect = {
   files: code,
   scan: (t) => hits(t, /Access-Control-Allow-Origin['"]?\s*[:=,)]\s*[^\n;]*?\b(?:req|request|r|ctx)\b[^\n;]*?origin/i)
@@ -148,10 +148,19 @@ const SQL_KW = /\b(?:SELECT|INSERT|UPDATE|DELETE|select|insert|update|delete)\b/
 const SQL_TEMPLATE = /\b(?:query|execute|executemany|raw|exec|prepare|queryRaw|queryRawUnsafe|executeRaw|executeRawUnsafe)\s*\(\s*`(?=[^`]*\b(?:SELECT|INSERT|UPDATE|DELETE|select|insert|update|delete)\b)[^`]*\$\{/
 const SQL_CONCAT = /\b(?:query|execute|executemany|raw|exec|prepare|sql_query|raw_sql)\s*\(\s*(['"])(?:(?!\1)[^\n])*?\b(?:SELECT|INSERT|UPDATE|DELETE|select|insert|update|delete)\b(?:(?!\1)[^\n])*?\1\s*(?:\+|%|\.format\s*\()/
 const SQL_FORMAT = /\b(?:query|execute\w*|executemany|raw|exec|prepare|queryRaw\w*|executeRaw\w*|sql_query|raw_sql|Query\w*|Exec\w*)\s*\(\s*(?=[^\n]*\b(?:SELECT|INSERT|UPDATE|DELETE|select|insert|update|delete)\b)(?:f(['"])[^\n]*?\{|fmt\.Sprintf\(|format!\(|&format!\(|(['"])[^\n]*?\2\s*\.format\()/
+// A line holding a whole SQL statement shape in a string literal that is joined to a value on the same line (+, %, .format, an f-string,
+// $"...{x}", a template, "...$x", "...#{x}", Sprintf, String.format) or that ends in a + or . so the value comes on the next line.
+const SQL_SHAPE = /\b(?:SELECT\b[^"'\x60\n]{1,200}\bFROM|INSERT\s+INTO|UPDATE\s+[\w.\x60"\[\]]{1,60}\s+SET|DELETE\s+FROM)\b/i
+const SQL_JOIN = /["'\x60]\s*(?:\+|%\s*[\w(]|\.format\s*\(|\.\s*\$|\.\s*$|\.\s*[A-Za-z_]\w*\s*\.)|\bf["'][^"'\n]*\{|\$@?"[^"\n]*\{|\x60[^\x60\n]*\$\{|"[^"\n]*(?:\$\w|#\{)|\b(?:fmt\.Sprintf|String\.format|format!|sprintf|Format)\s*\(/
+const RB_SQL_INTERP = /\.(?:where|having|order|group|joins|find_by_sql|select|pluck|exists\?|delete_all|update_all|execute|exec_query)\s*\(\s*"[^"\n]{0,200}#\{/
 const sqlBuilt = {
   files: code,
   scan: (t) => {
     const found = new Map()
+    for (const [i, line] of t.split('\n').entries()) {
+      if (line.length > 600 || COMMENT.test(line)) continue
+      if ((SQL_SHAPE.test(line) && SQL_JOIN.test(line)) || RB_SQL_INTERP.test(line)) found.set(i + 1, { line: i + 1, why: 'builds an SQL statement by joining text and values together (use placeholders such as $1 or ?)' })
+    }
     for (const re of [SQL_TEMPLATE, SQL_CONCAT, SQL_FORMAT]) {
       for (const h of hits(t, re)) if (!found.has(h.line)) found.set(h.line, { line: h.line, why: 'builds an SQL statement by joining text and values together (use placeholders such as $1 or ?)' })
     }
@@ -160,7 +169,7 @@ const sqlBuilt = {
 }
 
 // ---- path-traversal-pattern: a file read or sent with a path taken straight from the request
-const REQ = /\b(?:req|request|ctx|c)\.(?:query|params|body|args|form|values|GET|POST|files|json)\b|\br\.URL\.Query\(|\bc\.(?:Query|Param)\(|\$_(?:GET|POST|REQUEST|COOKIE)\b|\bparams\[/
+const REQ = /\b(?:req|request|ctx|c)\.(?:query|params|body|args|form|values|GET|POST|files|json)\b|\blocation\.(?:search|hash)\b|\bURLSearchParams\b|\bsearchParams\b|\br\.URL\.Query\(|\bc\.(?:Query|Param)\(|\$_(?:GET|POST|REQUEST|COOKIE)\b|\bparams\[/
 const FILE_API = /(?:\b(?:readFile\w*|createReadStream|createWriteStream|sendFile|download|writeFile\w*|unlink\w*|readdir\w*|send_file|send_from_directory|ReadFile|os\.Open|os\.ReadFile|os\.Create|File::open|fs::read\w*|fs::write\w*)|(?<![.\w])open)\s*\(/
 const PATH_GUARD = /path\.(?:resolve|normalize|basename)|os\.path\.basename|filepath\.(?:Clean|Rel|Base)|startsWith\(|is_relative_to|realpath|secure_filename|safe_join|canonicalize/
 // The first argument of the call at hit h (the path, for every file API here).
@@ -193,19 +202,19 @@ const pathTraversal = {
 }
 
 // ---- open-redirect-pattern: a redirect to an address taken from the request, with no allow-list check
-const REDIRECT = /\bredirect\s*\(|\bRedirect\s*\(|['"]Location['"]\s*(?:[,:\]=])/
+const REDIRECT = /\bredirect\s*\(|\bRedirect\s*\(|['"]Location['"]\s*(?:[,:\]=])|['"]Location:|(?<![\w$.])(?:window\.|document\.|self\.|top\.)?location(?:\.href)?\s*=(?!=)|\blocation\.(?:assign|replace)\s*\(/
 const ALLOW_CHECK = /allow|whitelist|includes\(|indexOf\(|startsWith\(\s*['"]\/|isSafe|isLocal|is_safe_url|allowed_hosts|url_has_allowed|isRelative/i
 const openRedirect = {
   files: code,
   scan: (t) => hits(t, REDIRECT)
-    .filter((h) => REQ.test(h.text) && !ALLOW_CHECK.test(near(t, h.line, 4, 10)))
+    .filter((h) => REQ.test(h.m[0].endsWith('(') ? h.text + ' ' + callText(t, h.at + h.m[0].length - 1) : h.text) && !ALLOW_CHECK.test(near(t, h.line, 4, 10)))
     .map((h) => ({ line: h.line, why: 'sends people to an address taken from the request with no allow-list check (send them only to your own pages)' })),
 }
 
 // ---- regex-dos: a regular expression that can take exponential time
 const regexSources = (t) => [
   ...hits(t, /(?<=[=(,:\[!&|?{;]\s*|\breturn\s+)\/((?:[^\/\\\n]|\\.)+)\/[dgimsuy]*/).map((h) => ({ line: h.line, src: h.m[1] })),
-  ...hits(t, /new\s+RegExp\s*\(\s*(['"`])((?:(?!\1)[^\n\\]|\\.)*)\1/).map((h) => ({ line: h.line, src: h.m[2] })),
+  ...hits(t, /new\s+RegExp\s*\(\s*(['"`])((?:(?!\1)[^\n\\]|\\.)*)\1/).map((h) => ({ line: h.line, src: h.m[2].replace(/\\\\/g, '\\') })),
   ...hits(t, /\bre\.(?:compile|match|search|fullmatch|sub|findall|finditer|split)\s*\(\s*r?(['"])((?:(?!\1)[^\n\\]|\\.)*)\1/).map((h) => ({ line: h.line, src: h.m[2] })),
 ]
 const repeatRisk = (src) => {
