@@ -2,7 +2,7 @@
 // `meerkat`: the command line front door. Plans the command with lib/cli.mjs, then does it.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { helpText, loadPresets, packAdd, packList, packRemove, planCommand, presetsText } from '../lib/cli.mjs'
+import { helpText, loadPresets, packAdd, packList, packRemove, planCommand, presetsText, rootCommand } from '../lib/cli.mjs'
 import { buildBugReport } from '../lib/bugreport.mjs'
 import { afterRun, runMenu, spawnRun } from '../lib/menu.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
@@ -50,6 +50,11 @@ async function main() {
     case 'bug':
       out(buildBugReport({ env }))
       return 0
+    case 'root': {
+      const r = rootCommand(plan.action, plan.folder, env)
+      out(r.text)
+      return r.ok ? 0 : 1
+    }
     case 'ai': {
       const r = plan.action === 'status' ? { ok: true, text: aiStatus(env) } : aiUse(plan.action, env)
       out(r.text)

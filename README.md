@@ -36,13 +36,23 @@ Install the `meerkat` command once, from the folder you cloned:
 npm link
 ```
 
-Then, in any project:
+Then, in any project folder:
 
 ```
-meerkat verify this
+meerkat verify
 ```
 
-That runs the quick checks on the current folder and draws the live board: a progress bar that turns red where a check failed, what is running now, every check with its time, and a timeline. Run `meerkat` on its own for a menu. Without `npm link`, use `node path/to/Meerkat/run.mjs --app <folder> --preset quick`.
+Or point it at a folder, by pasting its path or by its name:
+
+```
+meerkat verify C:\code\my-app
+```
+
+```
+meerkat verify my-app
+```
+
+That runs the quick checks and draws the live board: a progress bar that turns red where a check failed, what is running now, every check with its time, and a timeline. Run `meerkat` on its own for a menu. Without `npm link`, use `node path/to/Meerkat/run.mjs --app <folder> --preset quick`.
 
 ![The board after a run with one failure: the failed check in red, a timeline of what ran when](docs/images/board-fail.png)
 
@@ -53,14 +63,15 @@ Type it the way you type any command. Words, not flags:
 | You type | What happens |
 |---|---|
 | `meerkat` | a menu: pick a preset, pick checks one by one, create a preset, read the last report or a log, update |
-| `meerkat verify this` | the quick checks on this folder (`here`, `.` or a folder path work too) |
-| `meerkat full`, `meerkat security`, `meerkat ui` | any preset name: [the table below](#ways-to-run-it) |
+| `meerkat verify [folder]` | the quick checks. The folder is a pasted path or a project name; leave it off for the current folder |
+| `meerkat full [folder]`, `meerkat security [folder]`, `meerkat ui [folder]` | any preset name: [the table below](#ways-to-run-it) |
+| `meerkat root add <folder>` | tell Meerkat where your projects live, so `meerkat verify my-app` finds `my-app` there (it also looks in the current folder, its parent, and next to Meerkat) |
 | `meerkat last`, `meerkat why <check>`, `meerkat logs` | read back the last run |
 | `meerkat presets`, `meerkat list` | what can be run |
 | `meerkat bug` | prints a bug report to paste into a GitHub issue (secrets are removed first; nothing is sent) |
 | `meerkat update` | check GitHub for a newer Meerkat; see [Updating](#updating) |
 | `meerkat pack add <folder>` | add your own folder of packs |
-| `meerkat ai use openai` | choose the model for the [AI checks](#ai-checks) |
+| `meerkat ai use openai` | choose the model for the [AI checks](#ai-checks) (`claude`, `openai` or `openrouter`; `meerkat ai status` shows the choice) |
 
 When a run ends in a terminal, Meerkat asks whether you want to open a log, see the report or run it again. In a pipe, in CI or when an AI agent calls it, there are no prompts and the output is plain lines.
 

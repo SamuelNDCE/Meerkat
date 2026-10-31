@@ -20,6 +20,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { extname, join } from 'node:path'
+import { findBinary } from '../lib/which.mjs'
 import { finish, main, notRun, readText, trackedFiles, withFixture } from './kit.mjs'
 import { redact, SECRET_FILE, SENSITIVE_PATH } from './redact.mjs'
 
@@ -54,6 +55,31 @@ export function findRoutes(root) {
   return out
 }
 
+const CLAUDE = ['claude', '-p', '--model', 'haiku', '--tools', '', '--setting-sources', 'user', '--strict-mcp-config', '--disable-slash-commands', '--no-session-persistence']
+const OPENAI_SCRIPT = fileURLToPath(new URL('./ai-openai.mjs', import.meta.url))
+const savedProvider = () => {
+  try {
+    return JSON.parse(readFileSync(join(homedir(), '.meerkat-ai.json'), 'utf8')).provider
+  } catch {
+    return null
+  }
+}
+
+// What the person is told is receiving their code: the service and where it is, not a program path.
+const describeModel = (cmd) => {
+  if (cmd.includes(OPENAI_SCRIPT)) {
+    const base = process.env.MEERKAT_AI_BASE_URL ?? (process.env.MEERKAT_AI_KEY ? '(set MEERKAT_AI_BASE_URL)' : process.env.OPENROUTER_API_KEY ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1')
+    let host = base
+    try {
+      host = new URL(base).host
+    } catch {
+      /* keep the text as it is */
+    }
+    return `an OpenAI-compatible service at ${host}`
+  }
+  return cmd[0] === 'claude' ? 'Claude (your own Claude Code login)' : cmd[0]
+}
+
 // The model command: environment, then the user's own file. Never the repository.
 const aiCommand = () => {
   const check = (v) => (Array.isArray(v) && v.length && v.every((a) => typeof a === 'string') ? v : null)
@@ -68,9 +94,11 @@ const aiCommand = () => {
   } catch {
     /* no user file */
   }
-  // A model key in the environment means the person wants that service: use the OpenAI-compatible command (thorough/ai-openai.mjs).
-  if (process.env.MEERKAT_AI_KEY || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY) return [process.execPath, fileURLToPath(new URL('./ai-openai.mjs', import.meta.url))]
-  return ['claude', '-p', '--model', 'haiku', '--tools', '', '--setting-sources', 'user', '--strict-mcp-config', '--disable-slash-commands', '--no-session-persistence']
+  // An explicit choice (`meerkat ai use claude`) is honoured before anything in the environment.
+  if (savedProvider() === 'claude') return CLAUDE
+  // With no choice made, your own Claude login is used when the claude command exists. A model key in the environment is used only when it does not.
+  if (!findBinary('claude', process.env) && (process.env.MEERKAT_AI_KEY || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY)) return [process.execPath, OPENAI_SCRIPT]
+  return CLAUDE
 }
 
 const ask = (cmd, prompt, timeoutMs = 180000) =>
@@ -156,7 +184,7 @@ const routeAudit = async (root) => {
   const hard = prepared.reduce((n, p) => n + p.hard, 0)
   if (hard) return notRun(`${hard} value(s) in a known secret format were found in the route code. Nothing was sent. Remove the secret (and rotate it), then run again`)
   const kb = Math.round(prepared.reduce((n, p) => n + p.text.length, 0) / 1024)
-  console.log(`Sending ${prepared.length} route(s), about ${kb} KB of code, to the model: ${cmd[0]}`)
+  console.log(`Sending ${prepared.length} route(s), about ${kb} KB of code, to the model: ${describeModel(cmd)}`)
   const found = []
   for (const p of prepared) {
     let reply
@@ -254,7 +282,7 @@ const diffReview = async (root) => {
     chunks[chunks.length - 1] += p
   }
   if (chunks.length > MAX_CHUNKS) return notRun(`the change is too large to review in full (${chunks.length} parts, limit ${MAX_CHUNKS}); a partial review is not reported as a pass`)
-  console.log(`Sending the diff against ${base} (${Math.round(clean.text.length / 1024)} KB in ${chunks.length} part(s)) to the model: ${cmd[0]}`)
+  console.log(`Sending the diff against ${base} (${Math.round(clean.text.length / 1024)} KB in ${chunks.length} part(s)) to the model: ${describeModel(cmd)}`)
   const found = []
   for (const c of chunks) {
     let reply

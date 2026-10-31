@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
-import { helpText, listPresets, packAdd, packList, packRemove, planCommand, presetsText } from './cli.mjs'
+import { findProject, helpText, listPresets, packAdd, packList, packRemove, planCommand, presetsText } from './cli.mjs'
 import { buildBugReport } from './bugreport.mjs'
 import { initialState, lineStep, listRunChecks, menuItems, menuStep, parseCheckList, parseKeys, renderPicker, saveProjectPreset, savePersonalPreset } from './menu.mjs'
 import { applyUpdate, checkForUpdate, maybeAutoUpdate, runUpdateCommand } from './update.mjs'
@@ -41,14 +41,14 @@ describe('planCommand', () => {
 
   test('meerkat run <preset> [where]', () => {
     expect(plan(['run', 'ci'])).toMatchObject({ args: ['--app', cwd, '--preset', 'ci'] })
-    expect(plan(['run', 'ui', 'x'])).toMatchObject({ args: ['--app', resolve(cwd, 'x'), '--preset', 'ui'] })
+    expect(plan(['run', 'ui', './x'])).toMatchObject({ args: ['--app', resolve(cwd, 'x'), '--preset', 'ui'] })
     expect(plan(['run'])).toMatchObject({ kind: 'error' })
     expect(plan(['run', 'nonsense'])).toMatchObject({ kind: 'error' })
   })
 
   test('extra flags pass through untouched', () => {
     expect(plan(['quick', '--keep-going', '--ui'])).toMatchObject({ args: ['--app', cwd, '--preset', 'quick', '--keep-going', '--ui'] })
-    expect(plan(['verify', 'x', '--include', 'ai', '--only', 'a,b'])).toMatchObject({ args: ['--app', resolve(cwd, 'x'), '--preset', 'quick', '--include', 'ai', '--only', 'a,b'] })
+    expect(plan(['verify', './x', '--include', 'ai', '--only', 'a,b'])).toMatchObject({ args: ['--app', resolve(cwd, 'x'), '--preset', 'quick', '--include', 'ai', '--only', 'a,b'] })
   })
 
   test('personal and project presets work as the first word', () => {
@@ -67,7 +67,7 @@ describe('planCommand', () => {
 
   test('list, self-test and init carry the app folder', () => {
     expect(plan(['list'])).toMatchObject({ kind: 'list', args: ['--app', cwd, '--list'] })
-    expect(plan(['self-test', 'x'])).toMatchObject({ kind: 'self-test', args: ['--app', resolve(cwd, 'x'), '--self-test'] })
+    expect(plan(['self-test', './x'])).toMatchObject({ kind: 'self-test', args: ['--app', resolve(cwd, 'x'), '--self-test'] })
     expect(plan(['init'])).toMatchObject({ kind: 'init', args: ['--app', cwd, '--init'] })
   })
 
@@ -467,5 +467,26 @@ describe('buildBugReport', () => {
     const list = listRunChecks(join(dir, 'runs', '20261031-000000-fast'))
     expect(list.map((c) => c.id)).toEqual(['c', 'b', 'a'])
     expect(list[0].time).toBe('2.5s')
+  })
+})
+
+describe('the folder word: a pasted path or the name of a project', () => {
+  const cwd2 = resolve('/work/here')
+  test('a pasted path, with or without quotes, is used as it is', () => {
+    expect(planCommand(['verify', '"C:\Users\me\my app"'], { cwd: cwd2, presets: {} })).toMatchObject({ args: expect.arrayContaining(['--app']) })
+    expect(planCommand(['verify', '../other'], { cwd: cwd2, presets: {} })).toMatchObject({ args: ['--app', resolve(cwd2, '../other'), '--preset', 'quick'] })
+  })
+  test('a bare name is found in the current folder, its parent, or an added root; an unknown name says where it looked', () => {
+    const exists = (p: string) => p.toLowerCase().endsWith('plume')
+    const list = (d: string) => (d === resolve('/work') ? ['Plume', 'other'] : [])
+    expect(findProject('plume', { cwd: cwd2, exists, list })).toMatchObject({ folder: resolve('/work', 'Plume') })
+    const none = findProject('ghost', { cwd: cwd2, exists, list })
+    expect(none.folder).toBeNull()
+    expect(none.searched.length).toBeGreaterThan(1)
+    expect(planCommand(['verify', 'ghost-project-name-xyz'], { cwd: cwd2, presets: {} })).toMatchObject({ kind: 'error' })
+  })
+  test('root commands and the help lead with commands', () => {
+    expect(planCommand(['root', 'add', './dev'], { cwd: cwd2, presets: {} })).toMatchObject({ kind: 'root', action: 'add', folder: resolve(cwd2, 'dev') })
+    expect(helpText({})).toContain('meerkat verify <folder>')
   })
 })
