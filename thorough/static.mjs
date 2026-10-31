@@ -3,7 +3,7 @@
 // Limits are set in .meerkat-budgets.json under "static". A finding you accept goes in the check's allow file (named in each message).
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, posix } from 'node:path'
-import { finish, isText, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isText, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.static ?? {}
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|cs|svelte|vue)$/i
@@ -47,9 +47,10 @@ const envExample = (root) => {
 // ---- broken-imports: a relative import that points at nothing
 const EXTS = ['', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.json', '.svelte', '.vue', '.d.ts']
 const brokenImports = (root) => {
+  const allow = allowList(root, '.meerkat-imports-allow')
   const f = []
   for (const x of trackedFiles(root)) {
-    if (!/\.(m?[jt]sx?|cjs|svelte|vue)$/i.test(x) || /(^|\/)(node_modules|dist|build)\//.test(x)) continue
+    if (!/\.(m?[jt]sx?|cjs|svelte|vue)$/i.test(x) || /(^|\/)(node_modules|dist|build)\//.test(x) || isFixture(x)) continue
     const t = readText(root, x)
     const re = /(?:from\s+|import\s+|import\(\s*|require\(\s*)['"](\.{1,2}\/[^'"?#]*)['"]/g
     for (const m of t.matchAll(re)) {
@@ -63,7 +64,7 @@ const brokenImports = (root) => {
           return false
         }
       })
-      if (!ok) f.push(`${x}:${lineOf(t, m.index)} imports ${m[1]}, which does not exist`)
+      if (!ok && !allow.has(x) && !allow.has(`${x}:${lineOf(t, m.index)}`)) f.push(`${x}:${lineOf(t, m.index)} imports ${m[1]}, which does not exist (accept it in .meerkat-imports-allow)`)
     }
   }
   return finish('broken-imports', f, 'every relative import resolves to a file')

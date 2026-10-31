@@ -87,7 +87,7 @@ Any `NV_` variable you set wins over a check's built-in default and over a profi
 
 ## What it does not do
 
-- It does not replace review, the soak period or the clean-machine install test that the step into `stable` needs ([`promotion-gate.md`](../release/promotion-gate.md)).
+- It does not replace review, the soak period or the clean-machine install test that the step into `stable` needs (`promotion-gate.md`, in the NeuralVault repository).
 - It does not promote anything. `verify:promotion` only reports.
 - Fast is not a security audit. The deep security checks (mutation testing, fuzzing, and the opt-in staging scan and Snyk scan) are in thorough.
 - Tools that are not installed (Docker for ZAP, Nuclei, Snyk) are opt-in and report NOT RUN until installed.

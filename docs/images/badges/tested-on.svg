@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="153" height="22" role="img" aria-label="tested on: Windows 11">
+  <title>tested on: Windows 11</title>
+  <clipPath id="r"><rect width="153" height="22" rx="4"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="73" height="22" fill="#30363d"/>
+    <rect x="73" width="80" height="22" fill="#555e6b"/>
+  </g>
+  <g fill="#fff" font-family="Verdana,DejaVu Sans,sans-serif" font-size="11" text-anchor="middle">
+    <text x="36.5" y="15">tested on</text>
+    <text x="113" y="15" font-weight="bold">Windows 11</text>
+  </g>
+</svg>

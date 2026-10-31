@@ -3,6 +3,7 @@
 // No matching file is a pass ("no files"). The tool not being installed is exit 75 (NOT RUN). Any file the tool rejects is exit 1.
 import { spawnSync } from 'node:child_process'
 import { trackedFiles } from './kit.mjs'
+import { findBinary } from '../lib/which.mjs'
 
 const argv = process.argv
 const dash = argv.indexOf('--')
@@ -20,9 +21,19 @@ if (!files.length) {
   console.log(`${cmd}: no files match ${pattern}`)
   process.exit(0)
 }
+// No shell: the tool's real program is found first. A Windows .cmd or .bat shim cannot be started without one, so for those a file name
+// that cmd.exe would read as something other than a name is refused, and every name is passed with ./ so it can never look like an option.
+const resolved = findBinary(cmd) ?? cmd
+const needsShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(resolved)
+const unsafe = needsShell ? files.filter((f) => /[&|<>^%()"!`]/.test(f)) : []
+if (unsafe.length) {
+  console.log(`${cmd}: refusing to start it through cmd.exe with these file names: ${unsafe.slice(0, 3).join(', ')}. Rename them.`)
+  process.exit(1)
+}
+const named = files.map((f) => (f.startsWith('-') ? `./${f}` : f))
 let worst = 0
-for (let i = 0; i < files.length; i += 50) {
-  const r = spawnSync(cmd, [...opts, ...files.slice(i, i + 50)], { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' })
+for (let i = 0; i < named.length; i += 50) {
+  const r = spawnSync(resolved, [...opts, ...named.slice(i, i + 50)], { cwd: root, stdio: 'inherit', shell: needsShell })
   if (r.error?.code === 'ENOENT') {
     console.log(`NOT RUN: ${cmd} is not installed`)
     process.exit(75)

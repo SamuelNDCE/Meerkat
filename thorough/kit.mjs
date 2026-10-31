@@ -39,6 +39,9 @@ export function trackedFiles(root) {
   }
 }
 
+// Folders that hold deliberately broken files for tests: the hygiene checks leave them alone.
+export const isFixture = (f) => /(^|\/)(fixtures?|testdata|__fixtures__|test-fixtures)\//i.test(f)
+
 export const readText = (root, f) => {
   try {
     return readFileSync(join(root, f), 'utf8')

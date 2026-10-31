@@ -9,7 +9,7 @@ It is JSON, no code.
 
 ```json
 {
-  "builtin": true,
+  "packs": ["rust", "security", "hygiene"],
   "extraChecks": ["tools/meerkat-checks"],
   "disable": ["ui-axe"],
   "override": {
@@ -26,8 +26,8 @@ It is JSON, no code.
 
 | Setting | What it does |
 |---|---|
-| `builtin` | Use Meerkat's own checks. `false` means only the ones you add. |
-| `extraChecks` | Folders of check files (see below), relative to the config file. A check with the **same id as a built-in one replaces it**, which is how you swap one tool for another. |
+| `packs` | Which packs of checks to use (`rust`, `security`, `hygiene`, `ui`, `node`, ...). With no config file, `--init` picks them for the folder. |
+| `extraChecks` | Folders of check files (see below), relative to the config file. A check with the **same id as one from a pack replaces it**, which is how you swap one tool for another. |
 | `disable` | Turn checks off. Every run lists them as `[DISABLED]`, so nothing is ever turned off silently. |
 | `override` | Change one check: `tier`, `lane`, `weight`, `alone`, `estSeconds`, `cost`, `timeoutSeconds`, `paths`, `after`, `needs`, `optIn`, `title`, `run` (the command) and `selfTest`. |
 | `budget` | How much a run may use at once: slots (`cpu`, default 10 or the number of threads if fewer), the most checks together (`maxParallel`, default 10) and memory to leave free (`reserveGB`, default 3). |
@@ -87,7 +87,7 @@ There is one look. Tune it in `~/.nv-verify-theme.json` (outside any repo):
 ```
 
 Colours are `#rrggbb` or a name (`green`, `cyan`, ...). A value that is not valid is ignored. Spinners: `dots`, `line`, `arc`, `bounce`, `blocks`.
-Status is always a word on screen, so the look never hides a result. `NO_COLOR` turns colour off; `NV_VERIFY_PLAIN=1` gives plain lines.
+Status is always a word on screen, so the look never hides a result. `NO_COLOR` turns colour off; `MEERKAT_PLAIN=1` gives plain lines.
 
 ## 5. Try it without a project
 

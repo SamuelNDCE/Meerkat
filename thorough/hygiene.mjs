@@ -3,7 +3,10 @@
 // Limits can be changed in .meerkat-budgets.json under "hygiene" (see docs/customizing.md).
 import { existsSync, statSync, readdirSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
-import { finish, isText, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isText, main, readBudgets, readText, trackedFiles as allTracked, withFixture } from './kit.mjs'
+
+// The hygiene checks leave folders of deliberately broken test files (fixtures/) alone.
+const trackedFiles = (root) => allTracked(root).filter((f) => !isFixture(f))
 
 const limits = (root) => readBudgets(root)?.hygiene ?? {}
 const BINARY = /\.(exe|dll|so|dylib|zip|7z|rar|tar|gz|iso|dmg|msi|jar|class|pdb|node|wasm)$/i

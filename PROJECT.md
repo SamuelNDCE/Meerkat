@@ -17,13 +17,20 @@ A private placeholder created 2026-10-30 under the `perpetual-technologies-offic
 > \*Corrected 2026-10-30: superseded. This repository is now the source of truth for the tool; change it here. NeuralVault keeps only a small launcher (and, until its pull request lands, an older copy that is deleted by that pull request, so do not edit that copy).
 - **Name.** The tool was renamed from "validation tool" to Meerkat on 2026-10-29. Check for trademark or name clashes before making the repository or the name public (not checked).
 - **Pushing.** Commit as yourself, no AI co-author line, stage files by name, and open a pull request for anything beyond README and PROJECT.md edits.
-- **Licence.** None chosen yet. Do not add one without Samuel. The code carries no copyright or proprietary headers (removed 2026-10-31 at Samuel's instruction, because it will probably be open source); do not add them back.
+- **Licence.** None chosen yet. Do not add one without Samuel. \* The code carries no copyright or proprietary headers (removed 2026-10-31 at Samuel's instruction, because it will probably be open source); do not add them back.
 
 ## Where things are
 
 | Need | Where |
 |---|---|
-| What Meerkat is | `README.md` here, `docs/testing/validation-tool-overview.md` in NeuralVault |
-| The tool's contract for people who change it | `docs/testing/validation-tool.md` in NeuralVault |
-| The code | this repository's root: `run.mjs`, `lib/`, `checks/`, `thorough/`, `fixtures/`, `rules/` |
+| What Meerkat is | `README.md` here, `docs/testing/validation-tool-overview.md` in NeuralVault \* |
+| The tool's contract for people who change it | `docs/testing/validation-tool.md` in NeuralVault \* |
+| The code | this repository's root: `run.mjs`, `lib/`, `checks/`, `thorough/`, `fixtures/`, `rules/` \* |
 | Its tests | `npm test` here (Meerkat's own tests, no app needed) |
+
+> \*Corrected 2026-10-31: the licence is the Perpetual Community Licence 1.0 (`PCL-1.0`) in `LICENSE`, chosen and approved by Samuel. Do not change its text without him; `docs/licence-notes.md` records how it was checked and what is open. Source files still carry no headers.
+
+> \*Corrected 2026-10-31: where things are now. What Meerkat is and how to use it: `README.md`, with `docs/writing-checks.md`, `docs/logs.md` and `docs/customizing.md`. The code: `run.mjs`, `lib/`, `packs/`, `thorough/`, `fixtures/`, `tools/`. The checks of the NeuralVault app are an example, not part of Meerkat: `examples/neuralvault/` (its contract and notes are in `examples/neuralvault/docs/`). There is no built-in set of checks any more; checks come from packs. Per-user files are `~/.meerkat*.json`, and run logs are in `~/.meerkat/logs`.
+
+- **No machine paths, no NeuralVault names in the generic code.** The tool's own code (`run.mjs`, `lib/`, `packs/`, `thorough/`) must work for any project. Anything specific to one app goes under `examples/`.
+- **Every check proves itself.** A new check ships with a `selfTest` on a small broken fixture and an `expectMatch` for the reason it must fail; after adding or changing checks run `node tools/gen-checks.mjs`.

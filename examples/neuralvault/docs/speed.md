@@ -1,6 +1,6 @@
 # Can Meerkat run faster?
 
-Analysis and proposals only. No code was changed anywhere. Code was read on NeuralVault `origin/dev` on 2026-10-30, under `apps/desktop-electron/scripts/verify/`. Times are the measured ones in [`checks.md`](checks.md) (Run A = fast tier 2026-10-28, Run B = thorough tier 2026-10-28).
+Analysis and proposals only. No code was changed anywhere. Code was read on NeuralVault `origin/dev` on 2026-10-30, under `apps/desktop-electron/scripts/verify/`. Times are the measured ones in [`checks.md`](measured-times.md) (Run A = fast tier 2026-10-28, Run B = thorough tier 2026-10-28).
 
 **Rule that must not be traded for speed:** Meerkat never passes quietly when something is missing. A NOT RUN is a failure, a check is never skipped to look green, and no baseline or allow-list is edited to get green. Ideas that would weaken this are marked WEAKENS and are not recommended.
 
