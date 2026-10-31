@@ -47,7 +47,7 @@ describe('model', () => {
     const m = createModel({ checks, timings, tier: 'fast' })
     m.start(checks[1], 1000)
     expect(m.snapshot(61000).find((r) => r.id === 'b')).toMatchObject({ status: 'RUNNING', elapsedMs: 60000, slow: false })
-    expect(m.snapshot(1000 + 90000 * 1.6).find((r) => r.id === 'b')?.slow).toBe(true)
+    expect(m.snapshot(1000 + 90000 * 3.1).find((r) => r.id === 'b')?.slow).toBe(true)
     m.settle(checks[1], { status: 'FAIL', detail: 'boom', outputFile: 'C:/tmp/b.log' }, 5000)
     expect(m.snapshot(9000).find((r) => r.id === 'b')).toMatchObject({ status: 'FAIL', elapsedMs: 5000, outputFile: 'C:/tmp/b.log' })
     expect(outputFileFrom('no file named')).toBeNull()
@@ -404,7 +404,7 @@ describe('the real run: live board, streamed output, end-of-run report', () => {
     const text = finalReport({ results, tier: 'fast', timings: { checks: { a: { fast: [2000] } } }, totalMs: 61_000, env: { MEERKAT_LOG_DIR: dir } }).join(NL)
     expect(text).toContain('SUMMARY [ 1:01 ] 3 checks: 1 passed (1 slow), 1 failed, 1 not run')
     expect(text).toContain('SLOWEST   a 0:20')
-    expect(text).toContain('SLOW      a took 0:20, usually 0:02')
+    expect(text).toContain('SLOW      a took 0:20, usually 2.0s')
     expect(text).toContain('FAIL      b: boom')
     expect(text).toContain('output: ')
     // the log's lines are not repeated by default: the full log is opened on purpose
@@ -557,7 +557,7 @@ describe('the loading screen', () => {
     const all = out.join('')
     expect(all).toContain('one')
     expect(all).toContain('two')
-    expect(all.endsWith(ESC + '[?25h')).toBe(true)
+    expect(all.endsWith(ESC + '[?25h' + ESC + '[?1049l')).toBe(true) // the splash lives on the alternate screen and leaves it clean
     expect(createSplash({ enabled: false }).enabled).toBe(false)
   })
 })
@@ -605,7 +605,7 @@ describe('the countdown is a simulation of the rest of the run, and the list scr
   })
   test('on a short screen the board fits and shows the hidden counts', () => {
     const rows = Array.from({ length: 30 }, (_, i) => ({ id: 'check-' + i, lane: 'free', status: i === 20 ? 'RUNNING' : i < 20 ? 'PASS' : 'WAITING', ms: 1000, begunAt: 0, endedAt: 1000, startedAt: i === 20 ? 0 : null, typicalMs: 5000, expectedMs: 5000, after: [] }))
-    const text = renderLive({ rows, started: 0, now: 3000, tick: 1, fraction: 0.5, etaMs: 10_000, color: false, width: 110, height: 40 }).join(String.fromCharCode(10))
+    const text = renderLive({ rows, started: 0, now: 3000, tick: 1, fraction: 0.5, etaMs: 10_000, color: false, width: 110, height: 40, grouped: false }).join(String.fromCharCode(10))
     expect(text).toMatch(/↑ \d+ more above/)
     expect(text.split(String.fromCharCode(10)).length).toBeLessThanOrEqual(40)
   })

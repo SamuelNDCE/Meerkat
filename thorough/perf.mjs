@@ -225,7 +225,7 @@ const deps = (root) => {
   try {
     pkg = JSON.parse(readText(root, 'package.json'))
   } catch {
-    return notRun('no readable package.json here')
+    return finish('perf-deps', [], 'not applicable: no readable package.json here (no npm dependencies)')
   }
   const direct = Object.keys(pkg.dependencies ?? {}).length + Object.keys(pkg.devDependencies ?? {}).length
   const f = []

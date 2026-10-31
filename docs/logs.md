@@ -14,6 +14,10 @@ Every run saves what is needed to understand a failure long after the terminal i
       report.md
       summary.json
       timeline.jsonl
+      findings.json                  what the run detected (see findings.md in docs)
+      findings.md
+      findings.sarif
+      detections.jsonl
       <check>.log                  one per check
       <check>.selftest.log         one per check, in a --self-test run
 ```
@@ -68,12 +72,30 @@ For a program or an AI to read. `schema` is 1.
 | `selection` | `ran`, `skipped`, `covered`, `disabled` |
 | `waited` | for each check that waited: `reason` and `waitedMs` |
 | `configFile` | the config that applied, or null |
-| `results` | one entry per check: `id`, `title`, `status`, `detail`, `ms`, `command`, `exitCode`, `startedAt`, `logFile`, `outputFile` (failures only) |
+| `files` | `{ findings, report, sarif, detections }`: the paths of the four detection files (`findings.json`, `findings.md`, `findings.sarif`, `detections.jsonl`) |
+| `findings` | `{ total, bySeverity, new, known, fixed }` |
+| `results` | one entry per check: `id`, `title`, `status`, `detail`, `ms`, `command`, `exitCode`, `startedAt`, `logFile`, `outputFile` (failures only), `files.total` (how many files the check examined; only when it reported it) |
 
 ## `timeline.jsonl`
 
-One JSON object per line, in order: `{ "t": 1840, "event": "end", "id": "eslint", "status": "FAIL", "ms": 4210, "at": "..." }`. `t` is milliseconds from the start of the run. Events are `start` (with the lane) and `end`.
+One JSON object per line, in order: `{ "t": 1840, "event": "end", "id": "eslint", "status": "FAIL", "ms": 4210, "at": "..." }`. `t` is milliseconds from the start of the run. Events are `start` (with the lane) and `end`. An `end` event carries `files: { "total": 940 }` when the check reported how many files it examined, and no `files` field otherwise.
+
+## The detection files
+
+Every run also writes `findings.json` (every finding: what, where, which rule, which check, script or tool found it, evidence, fix hint, new or known, first seen), `findings.md` (the same for a person), `findings.sarif` (SARIF 2.1.0 for GitHub code scanning) and `detections.jsonl` (one line per detection event in time order, including every failed sub-check and every NOT RUN with its reason). A cross-run history in `~/.meerkat/findings/` makes new, known and fixed survive the pruning of old runs. A check can print `MEERKAT-FINDING <severity> <rule-id> <path>:<line> <message>` lines, which are taken out of the output like the lines below. Schema, protocol and a GitHub upload example: [findings.md](findings.md).
+
+## Sub-checks (`MEERKAT-SUB`)
+
+A check script can report one result per rule by printing, one per line, to stdout: `MEERKAT-SUB <PASS|FAIL|NA> <rule-id> <short reason>` (rule id `/^[a-z0-9][a-z0-9-]{0,60}$/`, reason up to 200 characters, control characters removed, anything else that starts with `MEERKAT-SUB` is dropped, at most 2000 per check). The runner takes the lines out of the output like the file-progress lines, so they never reach the shown last line; they are kept apart and written into the check's `<check>.log` after the output under `--- sub-checks ---`, one line per rule. The exit code still decides: exit 0 with a `FAIL` line fails the check (`sub-check <id> failed`). `summary.json` has `suite`, `subs`, `subTotal`, `subPass`, `subFail`, `subNa` on each result plus `subTotals` and `suites` for the run, `report.md` has a "Suites" table with every failed sub-check, and the `end` events of `timeline.jsonl` carry `subs: { total, pass, fail, na }`. A check with no sub lines counts as one sub-check. Full description for check authors: docs/suites.md.
+
+## File progress (`MEERKAT-FILE`)
+
+A check script can tell the live board which file it is reading by printing, one per line, to stderr: `MEERKAT-FILE <relative path>` for the current file and `MEERKAT-FILES <done>/<total>` for the count. Meerkat reads these lines out of the output and removes them, so they never appear in a saved log or in `--json` output. The scripts in `thorough/` print them through `thorough/kit.mjs`, and only when Meerkat sets `MEERKAT_PROGRESS` (`1` when the live board is on, `count` otherwise, which sends only the count). A path with control characters or longer than 120 characters is ignored.
 
 ## Safety
 
 Log text is data. When Meerkat prints it, control characters are removed so nothing in a log can move the cursor or rewrite earlier lines, and Meerkat opens a log path only if it is inside its own log folder.
+
+## Check log format
+
+Every check's `<check>.log` starts with a header (check, title, kind, command, folder, result, exit code, `started` and `ended` times and how long it took, and a `findings:` line when it produced any), then a line `--- output ---`, then everything the check printed, then the sub-check block. A check that could not run (NOT RUN) gets a short log too: the same header, `exit code: n/a (the check never started)`, then the reason and what to do, so `meerkat why <check>` always has something to show.

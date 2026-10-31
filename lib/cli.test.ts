@@ -133,14 +133,15 @@ describe('menu key handling', () => {
   const items = menuItems(none)
   test('the menu has the groups and items asked for', () => {
     const headings = items.filter((i) => i.kind === 'heading').map((i) => i.label)
-    expect(headings).toEqual(['Everything', 'By kind', 'Combinations', 'More'])
+    expect(headings).toEqual(['Run', 'More'])
+    expect(headings).not.toContain('Fast and combined')
     const labels = items.filter((i) => i.kind === 'item').map((i) => i.label)
-    for (const l of ['quick', 'full', 'security-fast', 'refactor', 'app-fast', 'release', 'Choose checks one by one', 'Create a preset', 'See the last report', 'Read a log', 'Update Meerkat', 'Quit']) expect(labels).toContain(l)
+    for (const l of ['quick', 'full', 'security', 'functionality', 'ui', 'performance', 'refactor', 'ci', 'release', 'More presets...', 'Choose checks one by one', 'Create a preset', 'See the last report', 'Read a log', 'Check for updates', 'Quit']) expect(labels).toContain(l)
   })
 
   test('a Mine group appears when there are personal or project presets', () => {
     const withMine = menuItems({ user: { mine: { tier: 'fast', groups: [] } }, project: {} })
-    expect(withMine.filter((i) => i.kind === 'heading').map((i) => i.label)).toContain('Mine')
+    expect(withMine.filter((i) => i.kind === 'heading').map((i) => i.label)).toContain('Your presets')
   })
 
   test('the cursor starts on the first item and skips headings', () => {
@@ -149,7 +150,7 @@ describe('menu key handling', () => {
     let st = s
     for (let i = 0; i < 2; i++) st = menuStep(st, 'down').state
     expect(items[st.cursor].kind).toBe('item')
-    expect(items[st.cursor].label).toBe('security-fast') // quick, full, then past the "By kind" heading
+    expect(items[st.cursor].label).toBe('security') // quick, full, security: the Run list
   })
 
   test('up wraps to the last item; j and k work like the arrows', () => {
@@ -170,7 +171,7 @@ describe('menu key handling', () => {
 
   test('a number jumps to that item', () => {
     const s = menuStep(initialState(items), '3').state
-    expect(items[s.cursor].label).toBe('security-fast')
+    expect(items[s.cursor].label).toBe('security')
   })
 
   test('multi-select: Space toggles, Enter needs something ticked', () => {
@@ -355,6 +356,7 @@ describe('update', () => {
 
   test('mode off never calls exec', () => {
     const env = { MEERKAT_USER_CONFIG: join(dir, 'u.json') }
+    writeUserConfig({ updates: 'off' }, env)
     const calls: Call[] = []
     const r = maybeAutoUpdate({ repoDir: repo, exec: fakeExec({}, calls), env, home: dir })
     expect(r).toMatchObject({ ran: false })

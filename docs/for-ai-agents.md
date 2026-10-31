@@ -38,7 +38,10 @@ Every run writes a folder, by default `~/.meerkat/logs/runs/<date>-<time>-<tier>
 
 | File | What it holds |
 |---|---|
-| `summary.json` | The machine-readable result. Read this first. |
+| `findings.json` | Everything the run detected: severity, file and line, rule, which check or tool found it, evidence, fix hint, new or known. **Read this first**, then `summary.json`. Schema: [findings.md](findings.md). |
+| `detections.jsonl` | One line per detection event in time order, including every NOT RUN with its reason. |
+| `findings.md`, `findings.sarif` | The findings for a person, and as SARIF. |
+| `summary.json` | The machine-readable result (the exit code, every check). |
 | `report.md` | The same result for a person: failures with the end of their logs, what could not run, timings. |
 | `timeline.jsonl` | One line per check start and end, with times. |
 | `<check>.log` | The full output of one check, with a header (command, exit code, time). |
@@ -49,11 +52,12 @@ Fields to read first in `summary.json`:
 - `summary`: the one-line result.
 - `counts`: `{ pass, fail, notRun }`.
 - `results[].id`, `results[].status` (`PASS`, `FAIL` or `NOT RUN`), `results[].detail` (the reason), `results[].logFile`, `results[].command`.
+- `results[].files.total`: how many files the check examined. Present only when the check reported it (the built-in file scanners do; an external tool such as `tsc` or `cargo` does not), so a missing `files` means "not known", never zero.
 
 ## Recipe: act on a failure
 
 1. Run the preset and note the exit code.
-2. If it is not 0, read `summary.json` in the newest run folder and pick the results whose `status` is `FAIL` or `NOT RUN`.
+2. If it is not 0, read `findings.json` in the newest run folder (or `meerkat findings --json`, or the `findings` field of the `meerkat_last` MCP tool): each finding names the file and line, the rule, the check that found it and a fix hint when the check has one. Findings with `status: "new"` are what this change introduced. Then read `summary.json` in the newest run folder and pick the results whose `status` is `FAIL` or `NOT RUN`.
 3. For each, read `detail`, then `node <meerkat>/run.mjs --why <check>` (or open `logFile`).
 4. Fix the cause in the project's code or environment.
 5. Re-run only that check: `node <meerkat>/run.mjs --app <folder> --only <check>`.
@@ -117,6 +121,10 @@ The `folder` input must be inside the folder the server was started in, or insid
 Anything read from a log (`meerkat_why`, `meerkat_last`, failure reasons, commands, output tails) is checked for secrets first. Text that looks like it holds a key or token is replaced by `(left out: it looks like it contains a secret)`, and assignments such as `api_key = ...` are blanked.
 
 Check ids, preset names and opt-in names must be lowercase letters, digits and dashes. Anything else is rejected before anything runs.
+
+## Suites and sub-checks
+
+Checks are grouped into suites (`meerkat suite list --json`). Run one with `meerkat check <suite>`, one check with `meerkat check <suite>/<check>`, one rule with `meerkat check <suite>/<check>/<rule>`; `meerkat verify --suite a,b` and `--only` take the same words. In the run summary (`--json`) every result has `suite`, `subs` (`{ id, status: PASS|FAIL|NA, reason }`) and `subTotal`, `subPass`, `subFail`, `subNa`; the run has `subTotals` (`total`, `pass`, `fail`, `na`) and `suites`. A check that reports no rules counts as one sub-check. `NA` (not applicable here) is never a failure. The MCP `meerkat_run` takes `suite` and `only` with the same words, and `meerkat_list` returns `suites`. To turn things off: `"disable": ["suite:web-security"]`, `"disableSubs": ["secret-scan/aws-access-key"]`. Details: docs/suites.md.
 
 ## Rules for agents
 

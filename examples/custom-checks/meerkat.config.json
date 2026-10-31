@@ -1,0 +1,23 @@
+{
+  "packs": ["security", "hygiene"],
+  "customChecks": [
+    {
+      "id": "e2e",
+      "title": "End-to-end tests",
+      "cmd": "npm",
+      "args": ["run", "test:e2e"],
+      "suite": "my-app",
+      "group": "functionality",
+      "tier": "thorough",
+      "timeoutSeconds": 600,
+      "weight": "heavy",
+      "install": "install Node.js, then run npm install"
+    }
+  ],
+  "suites": {
+    "my-app": {
+      "label": "My app",
+      "purpose": "The tests only this app has: the end-to-end run and the checkout smoke test."
+    }
+  }
+}

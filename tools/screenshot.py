@@ -33,11 +33,11 @@ lines = text.split('\n')
 cells = []  # per line: list of (char, fg, bg, bold)
 sgr = re.compile(r'\x1b\[([0-9;]*)([A-Za-z])')
 for line in lines:
-    fg, bg, bold = DEF_FG, DEF_BG, False
+    fg, bg, bold, inv = DEF_FG, DEF_BG, False, False
     row, pos = [], 0
     for m in sgr.finditer(line):
         for ch in line[pos:m.start()]:
-            row.append((ch, fg, bg, bold))
+            row.append((ch, bg, fg, bold) if inv else (ch, fg, bg, bold))
         pos = m.end()
         if m.group(2) != 'm':
             continue
@@ -45,8 +45,13 @@ for line in lines:
         i = 0
         while i < len(p):
             v = p[i]
-            if v == 0: fg, bg, bold = DEF_FG, DEF_BG, False
+            if v == 0: fg, bg, bold, inv = DEF_FG, DEF_BG, False, False
             elif v == 1: bold = True
+            elif v == 7: inv = True
+            elif v == 27: inv = False
+            elif 40 <= v <= 47: bg = BASIC[v - 10]
+            elif 100 <= v <= 107: bg = BASIC[v - 10]
+            elif v == 49: bg = DEF_BG
             elif v in BASIC: fg = BASIC[v]
             elif v == 38 and i + 1 < len(p) and p[i + 1] == 2: fg = tuple(p[i + 2:i + 5]); i += 4
             elif v == 48 and i + 1 < len(p) and p[i + 1] == 2: bg = tuple(p[i + 2:i + 5]); i += 4
@@ -54,7 +59,7 @@ for line in lines:
             elif v == 48 and i + 1 < len(p) and p[i + 1] == 5: bg = c256(p[i + 2]); i += 2
             i += 1
     for ch in line[pos:]:
-        row.append((ch, fg, bg, bold))
+        row.append((ch, bg, fg, bold) if inv else (ch, fg, bg, bold))
     cells.append(row)
 
 W = max(len(r) for r in cells)

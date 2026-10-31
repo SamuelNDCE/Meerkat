@@ -6,8 +6,9 @@ import { join } from 'node:path'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { isAlone } from '../lib/runner.mjs'
+import { declaredSubs, groupBySuite, suiteIdOf } from '../lib/suites.mjs'
 
-const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'ai']
+const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'web-plus', 'lang', 'config', 'content', 'git', 'desktop', 'api', 'health', 'data-science', 'packaging', 'ci-systems', 'privacy', 'engines', 'secrets-plus', 'code-patterns', 'infra-plus', 'web-hardening', 'functionality-run', 'mutation', 'robustness', 'electron-plus', 'rust-plus', 'ai']
 const KINDS = [
   ['security', 'Security', 'Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review.'],
   ['functionality', 'Functionality', 'Does it build, type-check, lint and pass its tests; is the repository in order.'],
@@ -25,7 +26,9 @@ for (const pack of PACKS) for (const c of await loadChecks(join(MEERKAT_DIR, 'pa
 
 const count = (f) => rows.filter(f).length
 const slug = (label) => label.toLowerCase()
-const summary = `**${rows.length} checks** across ${PACKS.length} packs: ${count((r) => r.c.tier === 'fast')} quick, ${count((r) => r.c.tier === 'thorough')} thorough, ${count((r) => r.c.optIn)} opt-in. ` + KINDS.map(([k, label]) => `[${label} ${count((r) => r.c.group === k)}](#${slug(label)}-checks)`).join(' · ')
+const suiteCount = new Set(rows.map((r) => suiteIdOf({ ...r.c, pack: r.pack }))).size
+const subCount = rows.reduce((n, r) => n + declaredSubs(r.c), 0)
+const summary = `**${rows.length} checks** in ${suiteCount} suites with ${subCount} sub-checks (a check that declares no rules counts as one), across ${PACKS.length} packs: ${count((r) => r.c.tier === 'fast')} quick, ${count((r) => r.c.tier === 'thorough')} thorough, ${count((r) => r.c.optIn)} opt-in. ` + KINDS.map(([k, label]) => `[${label} ${count((r) => r.c.group === k)}](#${slug(label)}-checks)`).join(' · ')
 
 const sections = KINDS.map(([kind, label, about]) => {
   const mine = rows.filter((r) => r.c.group === kind).sort((a, b) => (a.c.tier === b.c.tier ? a.c.id.localeCompare(b.c.id) : a.c.tier === 'fast' ? -1 : 1))
@@ -33,9 +36,12 @@ const sections = KINDS.map(([kind, label, about]) => {
   return [`### ${label} checks`, '', `${about} ${mine.length} checks.`, '', '| Check | Tier | Weight | Time | What it does | Pack |', '|---|---|---|---|---|---|', ...lines].join('\n')
 })
 
-const block = `<!-- checks:start -->\n${summary}\n\n${sections.join('\n\n')}\n<!-- checks:end -->`
+const suiteRows = groupBySuite(rows.map((r) => ({ ...r.c, pack: r.pack }))).map((sx) => `| \`${sx.id}\` | ${esc(sx.label)} | ${sx.checks.length} | ${sx.checks.reduce((n, c) => n + declaredSubs(c), 0)} | ${esc(sx.purpose)} |`)
+const suiteTable = ['### Suites', '', 'You pick a suite; it runs its checks, and each check reports its own sub-checks. See docs/suites.md.', '', '| Suite | Name | Checks | Sub-checks | What it covers |', '|---|---|---|---|---|', ...suiteRows].join('\n')
+const blockFor = (file) => (file === 'README.md' ? `<!-- checks:start -->\n${summary}\n\n${sections.join('\n\n')}\n<!-- checks:end -->` :`<!-- checks:start -->\n${summary}\n\n${suiteTable}\n\n${sections.join('\n\n')}\n<!-- checks:end -->`)
 
 const patch = (file) => {
+  const block = blockFor(file)
   const text = readFileSync(join(MEERKAT_DIR, file), 'utf8')
   const nl = text.includes('\r\n') ? '\r\n' : '\n'
   const re = /<!-- checks:start -->[\s\S]*?<!-- checks:end -->/
