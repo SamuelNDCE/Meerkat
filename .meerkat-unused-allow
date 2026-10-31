@@ -1,0 +1,5 @@
+# Scripts run by hand or by a path nothing imports
+tools/make-badges.mjs
+tools/gen-checks.mjs
+tools/measure-presets.mjs
+lib/cargo-lock-run.mjs

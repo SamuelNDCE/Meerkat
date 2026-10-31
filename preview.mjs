@@ -126,7 +126,7 @@ if (DUMP) process.on('exit', () => writeFileSync(DUMP, [...dumped, ...(last.leng
 if (!FINAL) process.stdout.write(`${ESC}?1049h${ESC}?25l`)
 if (!FINAL) process.on('exit', () => {
   process.stdout.write(`${ESC}?25h${ESC}?1049l`)
-  if (last.length) console.log(last.join('\n'))
+  if (last.length) process.stdout.write('\r' + last.map((l) => `${l}${ESC}K`).join('\n') + '\n')
 })
 process.on('SIGINT', () => process.exit(130))
 let tick = 0

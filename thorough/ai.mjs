@@ -18,7 +18,9 @@ import { execFileSync, spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
+import { fileURLToPath } from 'node:url'
 import { extname, join } from 'node:path'
+import { resolveAi } from '../lib/aimodel.mjs'
 import { finish, main, notRun, readText, trackedFiles, withFixture } from './kit.mjs'
 import { redact, SECRET_FILE, SENSITIVE_PATH } from './redact.mjs'
 
@@ -30,6 +32,7 @@ const ROUTE_RES = [
   [/#\[tauri::command\]/, 'ipc'],
 ]
 const SOURCE = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.rs', '.py', '.go'])
+process.noDeprecation = true // see lib/aiconfig.mjs: the claude shim needs a shell on Windows
 const MAX_ROUTES = 200
 const CHUNK = 60000
 const MAX_CHUNKS = 6
@@ -53,24 +56,10 @@ export function findRoutes(root) {
   return out
 }
 
-// The model command: environment, then the user's own file. Never the repository.
-const aiCommand = () => {
-  const check = (v) => (Array.isArray(v) && v.length && v.every((a) => typeof a === 'string') ? v : null)
-  try {
-    if (process.env.MEERKAT_AI_CMD) return check(JSON.parse(process.env.MEERKAT_AI_CMD)) ?? undefined
-  } catch {
-    return undefined
-  }
-  try {
-    const c = check(JSON.parse(readFileSync(join(homedir(), '.meerkat-ai.json'), 'utf8')).cmd)
-    if (c) return c
-  } catch {
-    /* no user file */
-  }
-  return ['claude', '-p', '--model', 'haiku', '--tools', '', '--setting-sources', 'user', '--strict-mcp-config', '--disable-slash-commands', '--no-session-persistence']
-}
+// The model command and what to tell the person about it come from lib/aimodel.mjs (also used by `meerkat ai ...`).
+const aiChoice = () => resolveAi()
 
-const ask = (cmd, prompt, timeoutMs = 180000) =>
+const ask = (choice, prompt, timeoutMs = 180000) =>
   new Promise((ok, bad) => {
     const cwd = mkdtempSync(join(tmpdir(), 'meerkat-ai-'))
     const done = (fn, v) => {
@@ -78,7 +67,8 @@ const ask = (cmd, prompt, timeoutMs = 180000) =>
       rmSync(cwd, { recursive: true, force: true })
       fn(v)
     }
-    const ch = spawn(cmd[0], cmd.slice(1), { cwd, shell: process.platform === 'win32' && cmd[0] === 'claude', stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+    const cmd = choice.cmd
+    const ch = spawn(cmd[0], cmd.slice(1), { cwd, env: { ...process.env, ...choice.env }, shell: process.platform === 'win32' && cmd[0] === 'claude', stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
     let out = ''
     let err = ''
     const t = setTimeout(() => {
@@ -146,19 +136,19 @@ const routeAudit = async (root) => {
   // Source files with a sensitive-looking name are not sent, so an audit that skipped one with routes in it would be partial: NOT RUN.
   const skipped = trackedFiles(root).filter((x) => SOURCE.has(extname(x).toLowerCase()) && SENSITIVE_PATH.test(x) && !/(^|\/)(node_modules|dist|build|target|vendor|tests?|__tests__|fixtures?)\//i.test(x) && (!readText(root, x) || ROUTE_RES.some(([re]) => re.test(readText(root, x)))))
   if (skipped.length) return notRun(`route code in file(s) with a sensitive-looking name was left out (${skipped.slice(0, 3).join(', ')}); audit them by hand or rename them`)
-  const cmd = aiCommand()
-  if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
+  const choice = aiChoice()
+  if (choice.error) return notRun(choice.error)
   const prepared = list.map((r) => ({ r, ...redact(r.code) }))
   if (prepared.some((p) => p.long)) return notRun(`a route's code has a line over 4,000 characters (minified or pasted code), which cannot be cleaned safely. Nothing was sent`)
   const hard = prepared.reduce((n, p) => n + p.hard, 0)
   if (hard) return notRun(`${hard} value(s) in a known secret format were found in the route code. Nothing was sent. Remove the secret (and rotate it), then run again`)
   const kb = Math.round(prepared.reduce((n, p) => n + p.text.length, 0) / 1024)
-  console.log(`Sending ${prepared.length} route(s), about ${kb} KB of code, to the model: ${cmd[0]}`)
+  console.log(`Sending ${prepared.length} route(s), about ${kb} KB of code, to the model: ${choice.label}`)
   const found = []
   for (const p of prepared) {
     let reply
     try {
-      reply = await ask(cmd, frame(`Route: ${p.r.kind} ${p.r.name} in ${p.r.file}:${p.r.line}`, p.text))
+      reply = await ask(choice, frame(`Route: ${p.r.kind} ${p.r.name} in ${p.r.file}:${p.r.line}`, p.text))
     } catch (e) {
       return reachable(e)
     }
@@ -207,8 +197,8 @@ const diffReview = async (root) => {
   // --text and no filters: a .gitattributes file in the change must not be able to hide code behind "Binary files differ".
   const diff = execFileSync('git', ['-C', root, '-c', 'core.attributesFile=', 'diff', '--text', '--no-textconv', '--no-ext-diff', '--unified=3', `${base}...HEAD`, '--', ...files.map((x) => `:(literal)${x}`)], { encoding: 'utf8', maxBuffer: 64 * 2 ** 20, stdio: ['ignore', 'pipe', 'ignore'] })
   if (diff.includes('\0')) return notRun('part of the change is binary and cannot be reviewed as text; nothing was sent')
-  const cmd = aiCommand()
-  if (!cmd) return notRun('MEERKAT_AI_CMD is not a JSON array of strings')
+  const choice = aiChoice()
+  if (choice.error) return notRun(choice.error)
   // Size is checked before any pattern runs over the text, so a huge diff cannot be used to make the redaction slow.
   if (diff.length > CHUNK * MAX_CHUNKS) return notRun(`the change is too large to review in full (${Math.round(diff.length / 1024)} KB, limit ${Math.round((CHUNK * MAX_CHUNKS) / 1024)} KB); a partial review is not reported as a pass`)
   // Secrets are looked for in the diff as git prints it, and in each side of it as the file has it (the + / - / space marker removed, the
@@ -251,12 +241,12 @@ const diffReview = async (root) => {
     chunks[chunks.length - 1] += p
   }
   if (chunks.length > MAX_CHUNKS) return notRun(`the change is too large to review in full (${chunks.length} parts, limit ${MAX_CHUNKS}); a partial review is not reported as a pass`)
-  console.log(`Sending the diff against ${base} (${Math.round(clean.text.length / 1024)} KB in ${chunks.length} part(s)) to the model: ${cmd[0]}`)
+  console.log(`Sending the diff against ${base} (${Math.round(clean.text.length / 1024)} KB in ${chunks.length} part(s)) to the model: ${choice.label}`)
   const found = []
   for (const c of chunks) {
     let reply
     try {
-      reply = await ask(cmd, frame('Diff: review only the added lines.', c))
+      reply = await ask(choice, frame('Diff: review only the added lines.', c))
     } catch (e) {
       return reachable(e)
     }

@@ -40,7 +40,10 @@ const license = (root) => {
           try {
             const j = JSON.parse(readText(p, 'package.json').replace(/^﻿/, '') || '{}')
             const l = typeof j.license === 'string' ? j.license : j.license?.type
-            if (l && copyleft.test(l) && !/LGPL/i.test(l)) f.push(`dependency ${name} is ${l} (check it fits how you ship)`)
+            // "MIT OR GPL-3.0" lets you choose MIT, so an expression is a problem only when every choice is copyleft ("AND" needs both).
+            const strong = (alt) => copyleft.test(alt) && !/LGPL/i.test(alt)
+            const choices = l ? String(l).replace(/[()]/g, ' ').split(/\s+OR\s+/i) : []
+            if (choices.length && choices.every(strong)) f.push(`dependency ${name} is ${l} (check it fits how you ship)`)
           } catch {
             /* unreadable package.json: not this check's job */
           }

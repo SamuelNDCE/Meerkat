@@ -1,0 +1,10 @@
+# Meerkat
+
+> Meerkat is a one-command project checker for Node projects: it runs build, test, security, UI and performance checks, exits 0 only when every selected check passed, and saves a plain report (summary.json, report.md, per-check logs). It runs on Node 20 or newer with no dependencies and sends nothing over the network. It can also be run as an MCP server so an AI client can call it as tools.
+
+- [README](README.md): what Meerkat is and how to install and run it
+- [For AI agents](docs/for-ai-agents.md): how to call it, exit codes, where logs are, how to act on a failure, the MCP server
+- [Writing checks](docs/writing-checks.md): how to add a check
+- [Logs](docs/logs.md): what each log and report file holds
+- [Customizing](docs/customizing.md): config, presets and packs
+- [Checks](docs/checks.md): the list of built-in checks
