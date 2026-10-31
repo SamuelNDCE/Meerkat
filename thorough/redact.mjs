@@ -21,7 +21,7 @@ const NAME = String.raw`[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|pa
 const QUOTED = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*)(["'\`])(?:\\.|(?!\2)[^\n\\]){3,500}?\2`, 'gi')
 // An opening quote after a secret-named assignment with nothing closing it on the line, including a quote at the very end of the line
 // (the value starts on the next line). An empty string ('' or "") is not matched.
-const OPEN_QUOTE = new RegExp(String.raw`\b(${NAME}["'\`]?[ \t]*[:=][ \t]*(?:\r?\n[ \t]*){0,3}(["'\`]))(?!<hidden>)([^\n]*)$`, 'gim')
+const OPEN_QUOTE = new RegExp(String.raw`\b(${NAME}["'\`]?\s{0,64}[:=]\s{0,64}(["'\`]))(?!<hidden>)([^\n]*)$`, 'gim')
 const AUTH_LINE = /\b(authorization["'`]?\s*[:=]\s*)(.+)$/gim
 
 const MAX_LINE = 4000
