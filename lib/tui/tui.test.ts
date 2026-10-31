@@ -103,7 +103,7 @@ describe('the live view with a fake run', () => {
     writeFileSync(log, ['one', 'two', 'three'].join('\n') + '\n')
     const stream = fakeStream()
     let t = 0
-    const tui = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, now: () => t, color: false, tickMs: 3_600_000, env: { NV_VERIFY_LOG_DIR: dir } })
+    const tui = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, now: () => t, color: false, tickMs: 3_600_000, env: { MEERKAT_LOG_DIR: dir } })
     tui.start(checks[1])
     t = 5000
     tui.settle(checks[1], { status: 'FAIL', detail: 'boom', outputFile: log }, 5000)
@@ -127,7 +127,7 @@ describe('plain fallback and run log', () => {
     expect(canUseUi({ isTTY: true, env: {} })).toBe(true)
     expect(canUseUi({ isTTY: false, env: {} })).toBe(false)
     expect(canUseUi({ isTTY: true, env: { CI: '1' } })).toBe(false)
-    expect(canUseUi({ isTTY: true, env: { NV_VERIFY_PLAIN: '1' } })).toBe(false)
+    expect(canUseUi({ isTTY: true, env: { MEERKAT_PLAIN: '1' } })).toBe(false)
   })
   test('the run log keeps the last 20 runs and survives a missing or broken file', () => {
     const file = join(dir, 'h.json')
@@ -233,7 +233,7 @@ describe('a status file is untrusted text', () => {
     const outside = join(dir, 'secret.txt')
     writeFileSync(inside, 'tail line')
     writeFileSync(outside, 'not for the screen')
-    const env = { NV_VERIFY_LOG_DIR: logs }
+    const env = { MEERKAT_LOG_DIR: logs }
     expect(safeLogPath(inside, { env })).not.toBeNull()
     expect(safeLogPath(outside, { env })).toBeNull()
     expect(safeLogPath(join(logs, '..', 'secret.txt'), { env })).toBeNull()
@@ -401,7 +401,7 @@ describe('the real run: live board, streamed output, end-of-run report', () => {
       { id: 'b', status: 'FAIL', ms: 3000, detail: 'boom', outputFile: log },
       { id: 'c', status: 'NOT RUN', ms: 0, detail: 'stopped after the first failure' },
     ]
-    const text = finalReport({ results, tier: 'fast', timings: { checks: { a: { fast: [2000] } } }, totalMs: 61_000, env: { NV_VERIFY_LOG_DIR: dir } }).join(NL)
+    const text = finalReport({ results, tier: 'fast', timings: { checks: { a: { fast: [2000] } } }, totalMs: 61_000, env: { MEERKAT_LOG_DIR: dir } }).join(NL)
     expect(text).toContain('SUMMARY [ 1:01 ] 3 checks: 1 passed (1 slow), 1 failed, 1 not run')
     expect(text).toContain('SLOWEST   a 0:20')
     expect(text).toContain('SLOW      a took 0:20, usually 0:02')
@@ -422,13 +422,13 @@ describe('a saved-output path is never taken from text, and never read from outs
     writeFileSync(secret, 'not for the screen')
     const out: string[] = []
     const stream = { columns: 120, rows: 50, write: (x: string) => out.push(x) }
-    const tui = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, color: false, tickMs: 3_600_000, env: { NV_VERIFY_LOG_DIR: dir } })
+    const tui = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, color: false, tickMs: 3_600_000, env: { MEERKAT_LOG_DIR: dir } })
     tui.start(checks[1])
     tui.settle(checks[1], { status: 'FAIL', detail: `boom [full output: ${secret}]` }, 1000)
     tui.key('o')
     expect(tui.frame().join(NL)).not.toContain('not for the screen')
     tui.stop()
-    const text = finalReport({ results: [{ id: 'b', status: 'FAIL', ms: 1000, detail: `boom [full output: ${secret}]` }], tier: 'fast', timings, totalMs: 1000, env: { NV_VERIFY_LOG_DIR: dir } }).join(NL)
+    const text = finalReport({ results: [{ id: 'b', status: 'FAIL', ms: 1000, detail: `boom [full output: ${secret}]` }], tier: 'fast', timings, totalMs: 1000, env: { MEERKAT_LOG_DIR: dir } }).join(NL)
     expect(text).not.toContain('not for the screen')
     expect(text).not.toContain('output:')
   })
@@ -437,7 +437,7 @@ describe('a saved-output path is never taken from text, and never read from outs
     mkdirSync(logs)
     const outside = join(dir, 'outside.txt')
     writeFileSync(outside, 'outside content')
-    const text = finalReport({ results: [{ id: 'b', status: 'FAIL', ms: 1000, detail: 'boom', outputFile: outside }], tier: 'fast', timings, totalMs: 1000, env: { NV_VERIFY_LOG_DIR: logs } }).join(NL)
+    const text = finalReport({ results: [{ id: 'b', status: 'FAIL', ms: 1000, detail: 'boom', outputFile: outside }], tier: 'fast', timings, totalMs: 1000, env: { MEERKAT_LOG_DIR: logs } }).join(NL)
     expect(text).not.toContain('outside content')
   })
   test('the runner returns the saved path as its own field', async () => {
@@ -445,7 +445,7 @@ describe('a saved-output path is never taken from text, and never read from outs
     mkdirSync(logs)
     const r = await runOne(
       { id: 'x', lane: 'free', run: { cmd: 'node', args: ['-e', 'process.exit(3)'], cwd: 'app' } } as never,
-      { repoRoot: dir, appDir: dir, env: { ...process.env, NV_VERIFY_LOG_DIR: logs }, platform: process.platform, exists: () => true, changedFiles: [] } as never,
+      { repoRoot: dir, appDir: dir, env: { ...process.env, MEERKAT_LOG_DIR: logs }, platform: process.platform, exists: () => true, changedFiles: [] } as never,
     )
     expect(r.status).toBe('FAIL')
     expect((r as any).outputFile).toContain('logs3')

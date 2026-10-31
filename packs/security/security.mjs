@@ -4,7 +4,25 @@
 // A Rust project also gets cargo-audit and more from the "rust" pack.
 import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
 
+const ST = `${MK}/thorough/static.mjs`
+const staticCheck = (id, title, tier = 'fast') => ({
+  id,
+  group: 'security',
+  tier,
+  lane: 'free',
+  weight: 'tiny',
+  title,
+  estSeconds: 3,
+  needs: ['node'],
+  run: { cmd: 'node', args: [ST, id], cwd: 'repo' },
+  selfTest: { cmd: 'node', args: [ST, id, '--fixtures'], cwd: 'repo', expectFail: true },
+})
+
 export default [
+  staticCheck('risky-code', 'Risky calls: eval, shell strings, disabled TLS checks, weak hashes, plain http'),
+  staticCheck('workflow-security', 'GitHub Actions: pinned actions, limited permissions, no script injection'),
+  staticCheck('dependency-pinning', 'Dependencies name a fixed version, not latest or *'),
+  staticCheck('lockfile-integrity', 'Locked packages are fetched securely and checksummed'),
   {
     id: 'secret-scan',
     group: 'security',

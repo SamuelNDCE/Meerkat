@@ -21,7 +21,7 @@ const NAME = String.raw`[a-z0-9_.-]*(?:api[_-]?key|secret|token|passw(?:or)?d|pa
 const QUOTED = new RegExp(String.raw`\b(${NAME}["'\`]?\s*[:=]\s*)(["'\`])(?:\\.|(?!\2)[^\n\\]){3,500}?\2`, 'gi')
 // An opening quote after a secret-named assignment with nothing closing it on the line, including a quote at the very end of the line
 // (the value starts on the next line). An empty string ('' or "") is not matched.
-const OPEN_QUOTE = new RegExp(String.raw`\b(${NAME}["'\`]?[ \t]*(?:\r?\n[ \t]*){0,8}[:=][ \t]*(?:\r?\n[ \t]*){0,8}(["'\`]))(?!<hidden>)([^\n]*)$`, 'gim')
+const OPEN_QUOTE = new RegExp(String.raw`\b(${NAME}["'\`]?\s{0,64}[:=]\s{0,64}(["'\`]))(?!<hidden>)([^\n]*)$`, 'gim')
 const AUTH_LINE = /\b(authorization["'`]?\s*[:=]\s*)(.+)$/gim
 
 const MAX_LINE = 4000
@@ -31,20 +31,22 @@ export function redact(text) {
   if (text.split('\n').some((l) => l.length > MAX_LINE)) return { text: '', hard: 0, soft: 0, long: true }
   let hard = 0
   let soft = 0
+  let multiline = 0
   let out = text
   for (const re of HARD) out = out.replace(re, () => (hard++, '<hidden>'))
-  out = out.replace(AUTH_LINE, (_, head) => (soft++, `${head}<hidden>`))
-  out = out.replace(QUOTED, (_, head) => (soft++, `${head}"<hidden>"`))
+  out = out.replace(AUTH_LINE, (whole, head) => (soft++, `${head}<hidden>`))
+  out = out.replace(QUOTED, (whole, head) => (soft++, whole.includes('\n') && multiline++, `${head}"<hidden>"`))
   // A secret-named assignment that opens a quote the pattern above could not close (a multi-line value, or one ending in a backslash):
   // the extent of the value is unknown, so it counts as a hard find and nothing is sent.
   out = out.replace(OPEN_QUOTE, (whole, head, quote, rest) => {
     // A truly empty string ending the statement ('' or "" then at most a closing mark) is fine; checked here in linear time.
     if (rest[0] === quote && rest[1] !== quote && /^[ \t]*[,;)}\]]?[ \t]*\r?$/.test(rest.slice(1))) return whole
     hard++
+    whole.includes('\n') && multiline++
     return `${head}<hidden>`
   })
-  out = out.replace(SOFT, (_, head) => (soft++, `${head}<hidden>`))
-  return { text: out, hard, soft }
+  out = out.replace(SOFT, (whole, head) => (soft++, whole.includes('\n') && multiline++, `${head}<hidden>`))
+  return { text: out, hard, soft, multiline }
 }
 
 // Paths whose contents are never sent, even in a diff.

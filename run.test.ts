@@ -1,5 +1,5 @@
 // The Meerkat orchestrator (the validation tool) (issue #3114): selection, lanes, statuses, the hard timeout and the loader.
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
@@ -14,18 +14,18 @@ import { parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
 import { execFileSync } from 'node:child_process'
 import { missingBinaries } from './lib/which.mjs'
 import { parseArgs } from './run.mjs'
-import { parseCells, planJobs } from './click-shards.mjs'
-import { assess, report } from './promotion-due.mjs'
-import { resolveWidth } from './click-shards.mjs'
+import { parseCells, planJobs } from './examples/neuralvault/scripts/click-shards.mjs'
+import { assess, report } from './examples/neuralvault/scripts/promotion-due.mjs'
+import { resolveWidth } from './examples/neuralvault/scripts/click-shards.mjs'
 import { applyProfile } from './lib/profiles.mjs'
 import { computeProgress, createProgress, etaMs, formatDuration, renderBar } from './lib/progress.mjs'
 import { createStatus, fanOut } from './lib/status.mjs'
 import { applyLearned, learnedSeconds, loadTimings, median, recordRun, saveTimings } from './lib/timings.mjs'
-import coreChecks from './checks/core.mjs'
+import coreChecks from './examples/neuralvault/core.mjs'
 
 let dir = ''
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'nv-verify-test-'))
+  dir = mkdtempSync(join(tmpdir(), 'meerkat-test-'))
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 
@@ -92,7 +92,7 @@ describe('statuses, order and fail-fast', () => {
   })
   test('bash is found the way the lanes find it on Windows, not only on PATH; elsewhere it is still required', async () => {
     const check = fake({ needs: ['bash'] })
-    const onWindows = await runOne(check, { ...ctx(), env: { PATH: '', NV_BASH: 'C:/Git/bin/bash.exe' }, platform: 'win32' })
+    const onWindows = await runOne(check, { ...ctx(), env: { PATH: '', MEERKAT_BASH: 'C:/Git/bin/bash.exe' }, platform: 'win32' })
     expect(onWindows.status).toBe('PASS')
     const elsewhere = await runOne(check, { ...ctx(), env: { PATH: '' }, platform: 'linux' })
     expect(elsewhere.status).toBe('NOT RUN')
@@ -150,7 +150,7 @@ describe('hard timeout', () => {
   })
   test('exit code decides pass or fail, and the last line is the detail', async () => {
     expect((await runOne(node('process.exit(0)'), ctx())).status).toBe('PASS')
-    const failed = await runOne(node('console.log("what is wrong"); process.exit(3)'), { ...ctx(), env: { ...process.env, NV_VERIFY_LOG_DIR: dir } })
+    const failed = await runOne(node('console.log("what is wrong"); process.exit(3)'), { ...ctx(), env: { ...process.env, MEERKAT_LOG_DIR: dir } })
     expect(failed.detail).toMatch(/^what is wrong {2}\[full output: .*\.log\]$/)
     const file = /full output: (.*)\]/.exec(failed.detail)![1]
     expect(readFileSync(file, 'utf8')).toContain('what is wrong')
@@ -168,18 +168,18 @@ describe('self-test', () => {
 })
 
 describe('lanes', () => {
-  test('cargo commands always go through the lock script from NV_CARGO_LOCK', () => {
-    const w = wrapForLane('cargo', 'cargo', ['build'], { NV_CARGO_LOCK: '/x/lock.sh', NV_BASH: 'bash' }, () => true, {})
+  test('cargo commands always go through the lock script from MEERKAT_CARGO_LOCK', () => {
+    const w = wrapForLane('cargo', 'cargo', ['build'], { MEERKAT_CARGO_LOCK: '/x/lock.sh', MEERKAT_BASH: 'bash' }, () => true, {})
     expect(w).toMatchObject({ cmd: 'bash', args: ['/x/lock.sh', 'cargo', 'build'] })
     // A script that is configured but missing is named; with nothing configured the built-in lock is used.
-    expect(wrapForLane('cargo', 'cargo', ['build'], { NV_CARGO_LOCK: '/x/lock.sh', NV_BASH: 'bash' }, () => false, {}).missing).toContain('cargo lock script not found')
+    expect(wrapForLane('cargo', 'cargo', ['build'], { MEERKAT_CARGO_LOCK: '/x/lock.sh', MEERKAT_BASH: 'bash' }, () => false, {}).missing).toContain('cargo lock script not found')
     expect(wrapForLane('cargo', 'cargo', ['build'], {}, () => false, {})).toMatchObject({ cmd: 'node', args: [expect.stringContaining('cargo-lock-run.mjs'), 'cargo', 'build'] })
-    expect(wrapForLane('cargo', 'cargo', ['build'], { NV_BASH: 'bash' }, () => true, { cargoLock: '/home/lock.sh' })).toMatchObject({ cmd: 'bash', args: ['/home/lock.sh', 'cargo', 'build'] })
+    expect(wrapForLane('cargo', 'cargo', ['build'], { MEERKAT_BASH: 'bash' }, () => true, { cargoLock: '/home/lock.sh' })).toMatchObject({ cmd: 'bash', args: ['/home/lock.sh', 'cargo', 'build'] })
   })
   test('electron lane uses the machine lock when present, runs directly when not', () => {
-    const w = wrapForLane('electron', 'npm', ['run', 'x'], { NV_ELECTRON_LOCK: '/x/e.sh', NV_BASH: 'bash' }, () => true)
+    const w = wrapForLane('electron', 'npm', ['run', 'x'], { MEERKAT_ELECTRON_LOCK: '/x/e.sh', MEERKAT_BASH: 'bash' }, () => true)
     expect(w.args?.[0]).toBe('/x/e.sh')
-    expect(w.env?.NV_ELECTRON_LOCK_HELD).toBe('1')
+    expect(w.env?.MEERKAT_ELECTRON_LOCK_HELD).toBe('1')
     // The machine lock is optional; the test safety layer is not.
     const lockless = wrapForLane('electron', 'npm', ['run', 'x'], {}, (p: string) => p.includes('test-safety'))
     expect(lockless).toMatchObject({ cmd: 'npm' })
@@ -372,12 +372,12 @@ describe('live progress display', () => {
 })
 
 describe('finding bash for a machine lock script', () => {
-  test('NV_BASH wins; non-Windows uses bash; Windows looks next to git then in Program Files; none means the built-in lock', () => {
-    expect(bashFor({ NV_BASH: 'C:/x/bash.exe' }, () => false, 'win32')).toBe('C:/x/bash.exe')
+  test('MEERKAT_BASH wins; non-Windows uses bash; Windows looks next to git then in Program Files; none means the built-in lock', () => {
+    expect(bashFor({ MEERKAT_BASH: 'C:/x/bash.exe' }, () => false, 'win32')).toBe('C:/x/bash.exe')
     expect(bashFor({}, () => false, 'linux')).toBe('bash')
     expect(bashFor({ PATH: '' , ProgramFiles: 'C:/Program Files' }, (p: string) => p.split('\\').join('/') === 'C:/Program Files/Git/bin/bash.exe', 'win32')?.split('\\').join('/')).toBe('C:/Program Files/Git/bin/bash.exe')
     expect(bashFor({ PATH: '' }, () => false, 'win32')).toBeNull()
-    const noBash = wrapForLane('cargo', 'cargo', ['build'], { NV_CARGO_LOCK: '/x/lock.sh', PATH: '' }, () => true, {})
+    const noBash = wrapForLane('cargo', 'cargo', ['build'], { MEERKAT_CARGO_LOCK: '/x/lock.sh', PATH: '' }, () => true, {})
     expect(noBash.cmd).toBe(process.platform === 'win32' ? 'node' : 'bash')
   })
 })
@@ -542,7 +542,7 @@ describe('the scheduler gives light checks the machine together and heavy ones r
   test('the thorough tier covers everything the fast tier does: each fast check is in it, or replaced by a wider one that is', async () => {
     const { loadChecks } = await import('./lib/load-checks.mjs')
     const all: any[] = []
-    for (const d of ['checks']) all.push(...((await loadChecks(join(process.cwd(), d))) as any[]))
+    for (const d of ['examples/neuralvault']) all.push(...((await loadChecks(join(process.cwd(), d))) as any[]))
     for (const pack of ['rust', 'security', 'hygiene', 'performance', 'refactor']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
     const thorough = new Set(selectChecks(all, { tier: 'thorough', mode: 'all' }).run.map((c: any) => c.id))
     const fast = selectChecks(all, { tier: 'fast', mode: 'all' }).run
@@ -605,8 +605,6 @@ describe('swapping checks and tools in and out with meerkat.config.json', () => 
     expect(out.checks.map((c: any) => c.id)).toEqual(['type-check', 'ui-axe', 'lint', 'brand-new'])
     expect((out.checks.find((c: any) => c.id === 'lint') as any).title).toBe('my lint')
     expect(out.notes.join(' ')).toContain('swapped')
-    const only = await applyConfig(built, read({ builtin: false, extraChecks: ['more'] }).config, { file: '/p/meerkat.config.json', load: async () => extra })
-    expect(only.checks.map((c: any) => c.id)).toEqual(['lint', 'brand-new'])
   })
 })
 
@@ -648,7 +646,7 @@ describe('starting a new project: --init', () => {
   test('it recognises a Cargo project, an Electron app, a Node project and anything else', () => {
     const has = (name: string) => (f: string) => f.split(String.fromCharCode(92)).join('/').endsWith('/' + name)
     expect(detect('/p', has('Cargo.toml')).kind).toBe('rust')
-    expect(detect('/p', has('Cargo.toml')).config).toEqual({ builtin: false, packs: ['rust', 'security', 'hygiene'] })
+    expect(detect('/p', has('Cargo.toml')).config).toEqual({ packs: ['rust', 'security', 'hygiene'] })
     expect(detect('/p', has('package.json')).kind).toBe('node')
     expect(detect('/p', () => false).kind).toBe('unknown')
     expect(detect('/p', (f: string) => f.includes('electron-run')).kind).toBe('electron')
@@ -658,13 +656,13 @@ describe('starting a new project: --init', () => {
     const write = (f: string, text: string) => void files.set(f, text)
     const first = initConfig('/p', { exists: (f: string) => files.has(f) || f.endsWith('Cargo.toml'), write })
     expect(first.written).toBe(true)
-    expect(JSON.parse([...files.values()][0])).toEqual({ builtin: false, packs: ['rust', 'security', 'hygiene'] })
+    expect(JSON.parse([...files.values()][0])).toEqual({ packs: ['rust', 'security', 'hygiene'] })
     const again = initConfig('/p', { exists: (f: string) => files.has(f) || f.endsWith('Cargo.toml'), write })
     expect(again.written).toBe(false)
     expect(again.message).toContain('already exists')
   })
   test('packs named in a config are loaded from Meerkat, and an unknown pack is a note', async () => {
-    const cfg = readConfig('/p/meerkat.config.json', () => JSON.stringify({ builtin: false, packs: ['rust', 'security', 'not-a-pack'] })).config
+    const cfg = readConfig('/p/meerkat.config.json', () => JSON.stringify({ packs: ['rust', 'security', 'not-a-pack'] })).config
     const out = await applyConfig([], cfg, { file: '/p/meerkat.config.json', load: async (dir: string) => (/rust$/.test(dir.split(String.fromCharCode(92)).join('/')) ? [fake({ id: 'rust-fmt' })] : /security$/.test(dir.split(String.fromCharCode(92)).join('/')) ? [fake({ id: 'secret-scan' })] : []) as any })
     expect(out.checks.map((c: any) => c.id)).toEqual(['rust-fmt', 'secret-scan'])
     expect(out.notes.join(' ')).toContain('not-a-pack')
@@ -689,10 +687,11 @@ describe('the shipped packs are well-formed and self-testable', () => {
   test('the hygiene, performance and AI packs load, and every check fails on its own broken case (the AI ones with a stand-in model)', async () => {
     const { loadChecks } = await import('./lib/load-checks.mjs')
     const all: any[] = []
-    for (const pack of ['hygiene', 'performance', 'ai', 'refactor']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
-    expect(all.length).toBeGreaterThanOrEqual(23)
+    for (const pack of ['hygiene', 'performance', 'ai', 'refactor', 'ui', 'security']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
+    expect(all.length).toBeGreaterThanOrEqual(33)
     expect(new Set(all.map((c) => c.id)).size).toBe(all.length)
     for (const c of all) {
+      if (c.id === 'npm-audit-all') continue // its self-test needs a network round trip; the others are offline
       expect(c.selfTest.expectFail).toBe(true)
       let code = 0
       try {
@@ -793,5 +792,78 @@ describe('{repo} and {app} in a check command', () => {
     // a passing check shows its last output line as the detail
     const slash = dir.split(String.fromCharCode(92)).join('/')
     expect(r.detail).toBe(`${slash}/a|${slash}/b`)
+  })
+})
+
+describe('logs: every run saves what is needed to understand a failure', () => {
+  test('a run folder gets a log per check, a summary, a timeline and a plain-text report, and --why and --last read them back', async () => {
+    const { createRecorder, makeRunDir, saveCheckLog, checkLogText, showLast, showWhy, writeRunReport } = await import('./lib/runlog.mjs')
+    const env = { MEERKAT_LOG_DIR: join(dir, 'logs') } as any
+    const runDir = makeRunDir(env, 'fast')!
+    expect(runDir).toContain('runs')
+    const rec = createRecorder()
+    const check = { id: 'lint', title: 'Lint', group: 'functionality', tier: 'fast', lane: 'free', weight: 'light' }
+    rec.start(check)
+    const result = { status: 'FAIL', detail: 'two problems' }
+    const file = saveCheckLog(runDir, 'lint', checkLogText({ check, spec: { cmd: 'eslint', args: ['.'], cwd: 'repo' }, result, code: 1, ms: 1234, startedAt: Date.now(), output: 'a.js:1 unused\nb.js:2 unused\n' }))!
+    rec.settle(check, result, 1234)
+    const report = writeRunReport({ dir: runDir, tier: 'fast', results: [{ id: 'lint', ...result, ms: 1234, logFile: file }], line: 'fast: 0 passed, 1 failed', exitCode: 1, ms: 1500, env, recorder: rec, selection: { ran: ['lint'], skipped: [], covered: [], disabled: [] }, scheduler: { slots: 10, maxParallel: 10, reserveGB: 3 } })
+    expect(report).toContain('## Failed (1)')
+    expect(report).toContain('b.js:2 unused')
+    expect(report).toContain('## Timeline')
+    for (const f of ['summary.json', 'timeline.jsonl', 'report.md', 'lint.log']) expect(readFileSync(join(runDir, f), 'utf8').length).toBeGreaterThan(10)
+    const summary = JSON.parse(readFileSync(join(runDir, 'summary.json'), 'utf8'))
+    expect(summary.counts).toEqual({ pass: 0, fail: 1, notRun: 0 })
+    expect(summary.results[0].logFile).toBe(file)
+    expect(showLast(env).text).toContain('Failed (1)')
+    expect(showWhy('lint', env).text).toContain('exit code: 1')
+    expect(showWhy('nope', env).ok).toBe(false)
+  })
+})
+
+describe('the built-in lock keeps one job at a time and clears a dead holder', () => {
+  test('the second job waits for the first, and a lock whose process has died is taken at once', async () => {
+    const { acquire } = await import('./lib/lock.mjs')
+    const lock = join(dir, 'a.lock')
+    const release = (await acquire(lock, { maxWaitMs: 1000 }))!
+    expect(await acquire(lock, { maxWaitMs: 300, pollMs: 50 })).toBeNull()
+    release()
+    const again = (await acquire(lock, { maxWaitMs: 1000 }))!
+    again()
+    mkdirSync(lock)
+    writeFileSync(join(lock, 'owner.json'), JSON.stringify({ pid: 2 ** 22 + 12345, since: 'x', cmd: 'gone' }))
+    const taken = await acquire(lock, { maxWaitMs: 1000, pollMs: 50 })
+    expect(taken).not.toBeNull()
+    taken!()
+  })
+})
+
+describe('the tool packs wrap well-known tools and prove them', () => {
+  test('every wrapper names its tool, an install line, a broken fixture that exists, and the reason it must fail for', async () => {
+    const { loadChecks } = await import('./lib/load-checks.mjs')
+    const { existsSync } = await import('node:fs')
+    const ids = new Set<string>()
+    for (const pack of ['node', 'python', 'go', 'web', 'docs', 'infra']) {
+      const list = (await loadChecks(join(process.cwd(), 'packs', pack))) as any[]
+      expect(list.length).toBeGreaterThan(0)
+      for (const c of list) {
+        expect(c.id.startsWith('bad-check-file')).toBe(false)
+        expect(ids.has(c.id)).toBe(false)
+        ids.add(c.id)
+        expect(c.needs.length).toBe(1)
+        expect(c.install).toBeTruthy()
+        expect(c.selfTest.expectFail).toBe(true)
+        expect(c.selfTest.expectMatch).toBeTruthy()
+        const target = c.selfTest.args.find((a: string) => a.startsWith('fixtures/tools/'))
+        expect(existsSync(join(process.cwd(), target.replace(/\/$/, '')))).toBe(true)
+      }
+    }
+    expect(ids.size).toBeGreaterThanOrEqual(19)
+  })
+  test('a self-test that fails for the wrong reason is reported, not passed', async () => {
+    const check = fake({ id: 'x', needs: [], selfTest: { cmd: process.execPath, args: ['-e', "console.log('some other error');process.exit(1)"], cwd: 'repo', expectFail: true, expectMatch: 'the expected reason' } })
+    const r = await runOne(check as any, ctx(), { selfTest: true })
+    expect(r.status).toBe('FAIL')
+    expect(r.detail).toContain('not for the expected reason')
   })
 })
