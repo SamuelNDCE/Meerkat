@@ -7,5 +7,5 @@ const SWIFT_FIXTURE = 'fixtures/tools/swift'
 
 export default [
   tool({ id: 'swiftlint', expect: 'Force Cast', bin: 'swiftlint', args: ['lint', '--strict'], fixture: ['lint', '--strict', '--path', `${SWIFT_FIXTURE}/Sources/Broken/main.swift`], install: 'install SwiftLint: brew install swiftlint (macOS), or see https://github.com/realm/SwiftLint', title: 'SwiftLint: Swift style and safety', weight: 'tiny', estSeconds: 10, paths: ['**/*.swift', '.swiftlint.yml'] }),
-  tool({ id: 'swift-build', expect: 'cannot convert', bin: 'swift', args: ['build'], fixture: ['build', '--package-path', SWIFT_FIXTURE], install: 'install the Swift toolchain from https://www.swift.org/download', title: 'Swift: the package builds', weight: 'medium', estSeconds: 60, paths: ['Package.swift', '**/*.swift'] }),
+  tool({ id: 'swift-build', expect: 'cannot convert', bin: 'swift', args: ['build'], fixture: ['build', '--package-path', SWIFT_FIXTURE], install: 'install the Swift toolchain from https://www.swift.org/download', title: 'Swift: the package builds', weight: 'heavy', estSeconds: 120, paths: ['Package.swift', '**/*.swift'] }),
 ]

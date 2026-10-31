@@ -48,6 +48,5 @@ const patch = (file) => {
   if (!re.test(text)) throw new Error(`${file} has no checks markers`)
   writeFileSync(join(MEERKAT_DIR, file), text.replace(re, () => block.replace(/\n/g, nl)))
 }
-patch('README.md')
 patch('docs/checks.md')
 console.log(summary.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'))

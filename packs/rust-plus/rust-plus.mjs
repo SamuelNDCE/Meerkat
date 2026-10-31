@@ -12,7 +12,7 @@ const check = (id, group, title) => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   suite: 'rust',
   subs: CHECK_TABLES[id].length,
   needs: ['node'],

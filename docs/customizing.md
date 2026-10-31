@@ -2,6 +2,16 @@
 
 Meerkat is built to fit a project, not the other way round. Everything below is a plain file you can change; nothing needs a rebuild.
 
+## Quick start: your first check in 5 minutes
+
+1. **Create a check.** In your project folder, run `meerkat check new --id e2e --cmd "npm run test:e2e" --yes`. Leave out `--yes` and it asks you the questions instead. Use a command your project already runs.
+2. **Run it on its own.** Run `meerkat check try e2e`. It shows PASS or FAIL, or NOT RUN when its program is missing.
+3. **See it labelled.** Run `meerkat check list`. `e2e` shows the tag `project`, because it went into this project's `meerkat.config.json`. Add `--personal` to step 1 to keep it for every project instead, and it shows `yours`.
+
+The check is `thorough` by default, so `meerkat full` runs it with the rest. `meerkat verify` runs only the quick checks and leaves it out.
+
+The sections below cover the other ways to add checks, presets and packs.
+
 ## 1. Choose what runs: `meerkat.config.json`
 
 Put a `meerkat.config.json` next to your app, or in the repository root, or point at one with `--config <file>` (`--no-config` ignores it).
@@ -39,6 +49,29 @@ never stop a run.
 **Changing a tool means proving the new one.** When an override changes `run`, the old self-test is dropped, because it belonged to the old tool.
 Give the new one a `selfTest` (a broken case it must fail), or `--self-test` fails for that check, loudly. Meerkat's rule stays the same for every
 tool you plug in: a check that cannot start is NOT RUN, and NOT RUN fails the run.
+
+## Leave files out: `.meerkatignore`
+
+Some files hold bad examples on purpose: a scanner's rule table, a fixture, generated or vendored code. The checks should not read them. Put a `.meerkatignore` at the project root, one pattern per line:
+
+```text
+# generated and vendored code
+dist-gen/
+vendor/**
+*.min.js
+# rule text that quotes bad examples
+rules/*.json
+!rules/keep-me.json
+```
+
+- A blank line or a line starting with `#` is skipped. Windows (CRLF) line endings work.
+- `dir/` ignores a folder and everything under it, at any depth unless the pattern also has a slash earlier in it (`docs/images/` is anchored to the root).
+- `*` matches within one path part. `**` crosses parts. `?` is one character.
+- `!pattern` brings back what an earlier line ignored. The last matching line wins.
+- Manifests, lockfiles, licences and `.meerkatignore` itself are never ignored, whatever the file says.
+- Without the file nothing changes. When it skips files, each check prints `ignored N files by .meerkatignore` on stderr.
+
+It applies to every check that reads the project's files through Meerkat's shared file list. Do not use it to hide a real problem: a missing `SECURITY.md` is a finding, a bad example inside a rule table is noise.
 
 ## Your own presets: say what they are for
 
@@ -121,7 +154,7 @@ Write them with commands instead of by hand: `meerkat check new` (asks; or `--id
 
 **3. Personal packs.** A folder of check files in `~/.meerkat/packs/<name>/` (or a folder named by `meerkat pack add`), switched on with `meerkat pack enable <name>`. Use it for checks you want in every project.
 
-**Tags.** Every check knows where it came from: bundled (ships with Meerkat, shown without a tag), personal (a personal pack or `~/.meerkat.json`; tag `yours`) or project (this project's config, `.meerkat/checks` or an `extraChecks` folder; tag `project`). The tag shows in `meerkat check list` (JSON field `origin`), on the board, in the end summary (`3 of them yours`), in `report.md` and `summary.json`, in `meerkat check show` and in the menu.
+**Tags.** Every check knows where it came from: bundled (ships with Meerkat, shown without a tag), personal (a personal pack or `~/.meerkat.json`; tag `yours`) or project (this project's config, `.meerkat/checks` or an `extraChecks` folder; tag `project`). The tag shows in `meerkat check list` (JSON field `origin`), on the board, in the end summary (`3 of them your own`), in `report.md` and `summary.json`, in `meerkat check show` and in the menu.
 
 **Not sure what to add? `meerkat recommend`.** It looks at the folder (package.json scripts such as test, test:e2e, lint, typecheck, build, check, verify and coverage; Playwright, Cypress, Vitest, Jest or Mocha config; Makefile targets; pytest or tox; Docker Compose; commands your CI runs) and lists tests you could run that no check covers. It never runs or writes anything; `meerkat recommend --add <id|all>` adds them after a question. A normal run with no checks of your own ends with one dim line, `Tip: meerkat recommend (N tests this project could run)`, never in `--json`, quiet, plain or CI output. Set `MEERKAT_NO_TIP=1` to hide it.
 

@@ -223,6 +223,25 @@ const manifestValid = (root) => {
   return finish('manifest-valid', f, 'every web app manifest has a name, icons and a start_url')
 }
 
+// Blocks where !important is the standard, expected way to win over inline styles and component rules: print styles and the reduced-motion override.
+const EXPECTED_IMPORTANT = /@media[^{]*(?:\bprint\b|prefers-reduced-motion|prefers-reduced-transparency)[^{]*\{/gi
+export function stripExpectedImportant(css) {
+  let out = ''
+  let last = 0
+  for (const m of css.matchAll(EXPECTED_IMPORTANT)) {
+    if (m.index < last) continue
+    let depth = 1
+    let i = m.index + m[0].length
+    while (i < css.length && depth > 0) {
+      depth += css[i] === '{' ? 1 : css[i] === '}' ? -1 : 0
+      i++
+    }
+    out += css.slice(last, m.index)
+    last = i
+  }
+  return out + css.slice(last)
+}
+
 // ---- css-important-overuse: !important beyond the budget (web.maxImportant, default 20) makes the cascade impossible to override
 const cssImportantOveruse = (root) => {
   const allow = allowSet(root)
@@ -232,7 +251,7 @@ const cssImportantOveruse = (root) => {
   for (const x of files(root, STYLE)) {
     if (allow.has(`css-important-overuse ${x}`) || allow.has('css-important-overuse .')) continue
     const css = readText(root, x).replace(/\/\*[\s\S]*?\*\//g, blankOut).replace(/^\s*\/\/.*$/gm, blankOut)
-    const n = (css.match(/!\s*important\b/gi) ?? []).length
+    const n = (stripExpectedImportant(css).match(/!\s*important\b/gi) ?? []).length
     if (n) {
       total += n
       counts.push([x, n])

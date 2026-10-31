@@ -5,7 +5,7 @@
 
 export const DOCKER_FILES = /(^|\/)(Dockerfile|Containerfile)(\.[^/]*)?$|(^|\/)[^/]+\.(dockerfile|containerfile)$/i
 export const YAML_FILES = /\.ya?ml$/i
-export const TF_FILES = /\.tf$/i
+export const TF_FILES = /\.tf(\.json)?$/i
 export const COMPOSE_FILES = /(^|\/)(docker-)?compose[^/]*\.ya?ml$/i
 export const GHA_FILES = /(^|\/)\.github\/workflows\/[^/]+\.ya?ml$/i
 
@@ -121,6 +121,8 @@ const docIsWorkload = (ctx) => {
 
 // Neighbour scans are bounded (a few hundred lines), so a hostile file cannot make them quadratic.
 const SPAN = 400
+// A secret-named env entry written as one flow mapping: { name: DB_PASSWORD, value: "x" }.
+const FLOW_SECRET = /name["']?\s*:\s*["']?[\w.-]{0,60}(?:password|passwd|secret|token|api_?key|private_?key)[^,}]{0,60},\s*value["']?\s*:\s*["']?[^\s"'${}][^,}]{0,200}/i
 
 // The text of the block a line sits in: its parent key and everything more indented than that key.
 function parentBlock(ctx) {
@@ -177,14 +179,15 @@ const withScope = (files, skip, rules) => rules.map((r) => ({ files, skipLine: s
 // =====================================================================================================================
 // Dockerfiles (ip-docker)
 // =====================================================================================================================
+const SECRET_PAIR = /(?:^|\s)["']?([A-Za-z_]{0,40}(?:PASSWORD|PASSWD|SECRET|TOKEN|API_?KEY|PRIVATE_KEY|ACCESS_KEY)[A-Za-z_]{0,40})["']?(?:\s*=\s*|\s+)["']?[^\s$"'=][^\s]{0,200}/gi
 const DOCKER_RULES = withScope(DOCKER_FILES, COMMENT, [
   T('docker-no-healthcheck', 'no HEALTHCHECK instruction, so the runtime cannot tell whether the app is working', (l, c) => once(c, 'hc', (t) => /^\s*FROM\s/im.test(t) && !/^\s*HEALTHCHECK\s/im.test(t)), 'FROM alpine:3.20\nRUN echo hi\n', 'FROM alpine:3.20\nHEALTHCHECK CMD true\n'),
   R('docker-healthcheck-none', 'HEALTHCHECK NONE switches the health check off', /^\s*HEALTHCHECK\s+NONE\b/i, 'HEALTHCHECK NONE', 'HEALTHCHECK CMD curl -f http://localhost/'),
   R('docker-apt-update-alone', 'apt-get update sits in its own RUN layer, so a later install can use a stale index', /^\s*RUN\s+apt-get\s+update\s*(#.*)?$/i, 'RUN apt-get update', 'RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*'),
-  T('docker-apt-install-no-yes', 'apt-get install has no -y, so the build can stop waiting for input', (l) => /\bapt(-get)?\s+install\b/.test(l) && !/\s-[a-zA-Z]*y|--yes\b|--assume-yes/.test(l), 'RUN apt-get install curl', 'RUN apt-get install -y curl'),
-  T('docker-apt-recommends', 'apt-get install pulls recommended packages (add --no-install-recommends)', (l) => /\bapt(-get)?\s+install\b/.test(l) && !/--no-install-recommends/.test(l), 'RUN apt-get install -y curl', 'RUN apt-get install -y --no-install-recommends curl'),
-  T('docker-apt-cache-left', 'apt package lists are left in the image (remove /var/lib/apt/lists in the same layer)', (l, c) => /\bapt(-get)?\s+install\b/.test(l) && !/\/var\/lib\/apt\/lists/.test(c.text), 'RUN apt-get install -y curl', 'RUN apt-get install -y curl && rm -rf /var/lib/apt/lists/*'),
-  R('docker-apt-upgrade', 'apt-get upgrade in an image makes the build depend on whatever is newest that day', /\bapt(-get)?\s+(dist-)?upgrade\b/, 'RUN apt-get upgrade -y', 'RUN apt-get install -y curl'),
+  T('docker-apt-install-no-yes', 'apt-get install has no -y, so the build can stop waiting for input', (l) => /\bapt(?:-get)?(?:\s+-\S+){0,4}\s+install\b/.test(l) && !/\s-[a-zA-Z]*y|--yes\b|--assume-yes/.test(l), 'RUN apt-get install curl', 'RUN apt-get install -y curl'),
+  T('docker-apt-recommends', 'apt-get install pulls recommended packages (add --no-install-recommends)', (l) => /\bapt(?:-get)?(?:\s+-\S+){0,4}\s+install\b/.test(l) && !/--no-install-recommends/.test(l), 'RUN apt-get install -y curl', 'RUN apt-get install -y --no-install-recommends curl'),
+  T('docker-apt-cache-left', 'apt package lists are left in the image (remove /var/lib/apt/lists in the same layer)', (l, c) => /\bapt(?:-get)?(?:\s+-\S+){0,4}\s+install\b/.test(l) && !/\/var\/lib\/apt\/lists/.test(c.text), 'RUN apt-get install -y curl', 'RUN apt-get install -y curl && rm -rf /var/lib/apt/lists/*'),
+  R('docker-apt-upgrade', 'apt-get upgrade in an image makes the build depend on whatever is newest that day', /\bapt(?:-get)?(?:\s+-\S+){0,4}\s+(?:dist-)?upgrade\b/, 'RUN apt-get upgrade -y', 'RUN apt-get install -y curl'),
   R('docker-apt-unauthenticated', 'a package install skips signature checks (--allow-unauthenticated or --force-yes)', /--allow-unauthenticated|--force-yes|AllowUnauthenticated/, 'RUN apt-get install --allow-unauthenticated x', 'RUN apt-get install -y x'),
   T('docker-apk-no-cache', 'apk add keeps its index in the image (add --no-cache)', (l) => /\bapk\s+add\b/.test(l) && !/--no-cache/.test(l), 'RUN apk add curl', 'RUN apk add --no-cache curl'),
   T('docker-yum-no-yes', 'yum or dnf install has no -y, so the build can stop waiting for input', (l) => /\b(yum|dnf)\s+install\b/.test(l) && !/\s-y\b|--assumeyes/.test(l), 'RUN dnf install curl', 'RUN dnf install -y curl'),
@@ -193,7 +196,7 @@ const DOCKER_RULES = withScope(DOCKER_FILES, COMMENT, [
   T('docker-pip-untrusted-host', 'pip install trusts an unverified host or fetches the index over plain http', (l) => /\bpip3?\s+install\b/.test(l) && /--trusted-host|--index-url\s+http:\/\/|-i\s+http:\/\//.test(l), 'RUN pip install --trusted-host pypi.example x', 'RUN pip install --no-cache-dir x==1.0'),
   T('docker-npm-dev-dependencies', 'npm install in the image also installs dev dependencies (add --omit=dev)', (l) => /\bnpm\s+(install|i)(\s|$)/.test(l) && !/--omit=dev|--production|--only=prod|\s-g\b/.test(l), 'RUN npm install', 'RUN npm install --omit=dev'),
   T('docker-npm-global-unpinned', 'a global npm package is installed without a version', (l) => /\bnpm\s+(install|i)\s+(-g|--global)\s+/.test(l) && !/@\d/.test(l), 'RUN npm install -g typescript', 'RUN npm install -g typescript@5.4.5'),
-  R('docker-curl-pipe-shell', 'a download is piped straight into a shell, so nothing is checked before it runs', /\b(curl|wget)\b[^|\n]{0,300}\|\s*(sudo\s+)?(ba|z)?sh\b/, 'RUN curl -fsSL https://example.com/install.sh | sh', 'RUN curl -fsSL -o install.sh https://example.com/install.sh && sha256sum -c install.sh.sha256'),
+  R('docker-curl-pipe-shell', 'a download is piped straight into a shell, so nothing is checked before it runs', /\b(curl|wget)\b[^|\n]{0,600}\|\s*(?:sudo(?:\s+-\S+){0,4}\s+)?(?:ba|z|da)?sh\b/, 'RUN curl -fsSL https://example.com/install.sh | sh', 'RUN curl -fsSL -o install.sh https://example.com/install.sh && sha256sum -c install.sh.sha256'),
   T('docker-download-no-checksum', 'a download is fetched with no checksum check in the file', (l, c) => /\b(curl|wget)\s/.test(l) && /https?:\/\//.test(l) && !/localhost|127\.0\.0\.1/.test(l) && !/sha256sum|sha512sum|shasum|sha256/.test(c.text), 'RUN curl -fsSL -o /tmp/x.tgz https://example.com/x.tgz', 'RUN curl -fsSL -o /tmp/x.tgz https://example.com/x.tgz && echo "abc  /tmp/x.tgz" | sha256sum -c -'),
   R('docker-download-http', 'a download in RUN uses plain http', /^\s*RUN\b.{0,300}\b(curl|wget)\b.{0,300}\bhttp:\/\//i, 'RUN wget http://example.com/x', 'RUN wget https://example.com/x'),
   R('docker-add-from-url', 'ADD fetches a URL at build time, with no checksum and a cache that cannot be reasoned about', /^\s*ADD\s+(--\S+\s+)*https?:\/\//i, 'ADD https://example.com/app.tgz /opt/', 'COPY app.tgz /opt/'),
@@ -208,9 +211,9 @@ const DOCKER_RULES = withScope(DOCKER_FILES, COMMENT, [
   R('docker-maintainer-deprecated', 'MAINTAINER is deprecated (use a LABEL)', /^\s*MAINTAINER\b/i, 'MAINTAINER me@example.com', 'LABEL maintainer="me@example.com"'),
   R('docker-onbuild', 'ONBUILD sets a trigger for whoever builds on top of this image', /^\s*ONBUILD\b/i, 'ONBUILD COPY . /app', 'COPY . /app'),
   R('docker-volume-sensitive', 'a VOLUME exposes a sensitive path (root home, SSH or cloud keys, the Docker socket, /etc)', /^\s*VOLUME\s+.*(\/etc\b|\/root\b|\.ssh\b|\.aws\b|\/var\/run\/docker\.sock|\/home\/)/i, 'VOLUME /root/.ssh', 'VOLUME /data'),
-  T('docker-secret-in-env', 'a secret-looking ARG or ENV holds a value in the image history', (l) => /^\s*(ARG|ENV)\s+[A-Za-z_]*(PASSWORD|PASSWD|SECRET|TOKEN|API_?KEY|PRIVATE_KEY|ACCESS_KEY)[A-Za-z_]*\s*=\s*[^\s$]/i.test(l) && !/_FILE\s*=/.test(l), 'ENV DB_PASSWORD=hunter2', 'ENV DB_PASSWORD_FILE=/run/secrets/db'),
+  T('docker-secret-in-env', 'a secret-looking ARG or ENV holds a value in the image history', (l) => { const m = /^\s*(?:ARG|ENV)\s+(.*)$/i.exec(l); if (!m) return false; for (const p of m[1].matchAll(SECRET_PAIR)) if (!/_FILE$/i.test(p[1])) return true; return false }, 'ENV DB_PASSWORD=hunter2', 'ENV DB_PASSWORD_FILE=/run/secrets/db'),
   R('docker-zero-width', 'a zero-width character is hidden in the file (it changes what the line does)', /[\u200B-\u200D\u2060\uFEFF]/, 'RUN echo\u200Bhi', 'RUN echo hi'),
-  T('docker-user-root-last', 'the last USER instruction is root, so the container runs as root', (l, c) => /^\s*USER\s+(root|0)\s*$/i.test(l) && !c.lines.slice(c.index + 1).some((x) => /^\s*USER\s/i.test(x)), 'USER root', 'USER app'),
+  T('docker-user-root-last', 'the last USER instruction is root, so the container runs as root', (l, c) => /^\s*USER\s+["']?(root|0)(:(root|0))?["']?\s*(#.*)?$/i.test(l) && !c.lines.slice(c.index + 1).some((x) => /^\s*USER\s/i.test(x)), 'USER root', 'USER app'),
   T('docker-no-user', 'no USER instruction, so the container runs as root (CIS-DI-0001)', (l, c) => once(c, 'nouser', (t) => { if (!/^\s*FROM\s/im.test(t)) return false; const u = [...t.matchAll(/^\s*USER\s+(\S+)/gim)]; return u.length === 0 || /^(?:root|0)(?::|$)/i.test(u[u.length - 1][1]) }), 'FROM alpine:3.20\nRUN true\n', 'FROM alpine:3.20\nUSER app\n'),
   R('docker-chmod-world-writable', 'chmod makes a path writable by everyone (777)', /^\s*RUN\b.{0,300}\bchmod\b.{0,300}(\b0?777\b|a\+rwx|o\+w\b)/i, 'RUN chmod 777 /app', 'RUN chmod 755 /app'),
   R('docker-setuid-bit', 'chmod sets the setuid or setgid bit (CIS-DI-0008)', /^\s*RUN\b.{0,300}\bchmod\b.{0,300}(\+s\b|\b[2467][0-7]{3}\b)/i, 'RUN chmod u+s /usr/bin/x', 'RUN chmod 755 /app'),
@@ -229,23 +232,23 @@ const POD_OK = `${POD}          securityContext:\n            allowPrivilegeEsca
 const WORKLOAD_CONTAINER = (id, title, missing, extraBad = '') => T(id, title, (l, c) => CONTAINERS.test(l) && docIsWorkload(c) && !docHas(c, missing), POD + extraBad, POD_OK)
 
 const K8S_RULES = withScope(YAML_FILES, COMMENT, [
-  R('k8s-privileged', 'a container runs privileged, with all host devices and most kernel rights', /^\s*privileged:\s*true\b/, 'privileged: true', 'privileged: false'),
-  R('k8s-priv-escalation-true', 'a container allows privilege escalation (allowPrivilegeEscalation true)', /^\s*allowPrivilegeEscalation:\s*true\b/, 'allowPrivilegeEscalation: true', 'allowPrivilegeEscalation: false'),
+  R('k8s-privileged', 'a container runs privileged, with all host devices and most kernel rights', /(?:^|[\s{,])["']?privileged["']?\s*:\s*["']?(?:true|yes|on)["']?(?=\s*(?:[,}#]|$))/i, 'privileged: true', 'privileged: false'),
+  R('k8s-priv-escalation-true', 'a container allows privilege escalation (allowPrivilegeEscalation true)', /(?:^|[\s{,])["']?allowPrivilegeEscalation["']?\s*:\s*["']?(?:true|yes|on)["']?(?=\s*(?:[,}#]|$))/i, 'allowPrivilegeEscalation: true', 'allowPrivilegeEscalation: false'),
   WORKLOAD_CONTAINER('k8s-priv-escalation-unset', 'allowPrivilegeEscalation is not set to false, so it defaults to allowed', /allowPrivilegeEscalation:\s*false\b/),
   WORKLOAD_CONTAINER('k8s-readonly-rootfs', 'the root filesystem is writable (set readOnlyRootFilesystem to true)', /readOnlyRootFilesystem:\s*true\b/),
   WORKLOAD_CONTAINER('k8s-run-as-non-root-absent', 'runAsNonRoot is not set to true, so the container may run as root', /runAsNonRoot:\s*true\b/),
-  R('k8s-run-as-user-zero', 'a container runs as user 0 (root)', /^\s*runAsUser:\s*0\s*(#.*)?$/, 'runAsUser: 0', 'runAsUser: 10001'),
+  R('k8s-run-as-user-zero', 'a container runs as user 0 (root)', /(?:^|[\s{,])["']?runAsUser["']?\s*:\s*["']?0["']?(?=\s*(?:[,}#]|$))/i, 'runAsUser: 0', 'runAsUser: 10001'),
   R('k8s-run-as-non-root-false', 'runAsNonRoot is set to false', /^\s*runAsNonRoot:\s*false\b/, 'runAsNonRoot: false', 'runAsNonRoot: true'),
   T('k8s-cap-add-dangerous', 'a dangerous Linux capability is added (SYS_ADMIN, NET_ADMIN, SYS_PTRACE and similar)', (l, c) => /^\s*-\s*["']?(SYS_ADMIN|NET_ADMIN|SYS_PTRACE|SYS_MODULE|SYS_RAWIO|NET_RAW)["']?\s*(#.*)?$/.test(l) && parentOf(c) === 'add', 'capabilities:\n  add:\n    - SYS_ADMIN\n', 'capabilities:\n  drop:\n    - ALL\n'),
   T('k8s-cap-add-all', 'every Linux capability is added back (add ALL)', (l, c) => /^\s*-\s*["']?ALL["']?\s*(#.*)?$/.test(l) && parentOf(c) === 'add', 'capabilities:\n  add:\n    - ALL\n', 'capabilities:\n  drop:\n    - ALL\n'),
   T('k8s-cap-drop-all-missing', 'capabilities are not dropped (drop ALL is the safe start)', (l, c) => /^\s*capabilities:\s*$/.test(l) && docIsWorkload(c) && !docHas(c, /drop:\s*(\[\s*)?(-\s*)?["']?ALL\b/), 'kind: Pod\nspec:\n  containers:\n    - name: a\n      securityContext:\n        capabilities:\n          add: [NET_BIND_SERVICE]\n', 'kind: Pod\nspec:\n  containers:\n    - name: a\n      securityContext:\n        capabilities:\n          drop: [ALL]\n'),
-  T('k8s-host-path-docker-socket', 'a hostPath mounts the Docker socket, which gives full control of the host', (l, c) => /^\s*path:\s*["']?\/var\/run\/docker\.sock\b/.test(l) && parentOf(c) === 'hostPath', 'volumes:\n  - name: sock\n    hostPath:\n      path: /var/run/docker.sock\n', 'volumes:\n  - name: data\n    hostPath:\n      path: /var/lib/app\n'),
+  T('k8s-host-path-docker-socket', 'a hostPath mounts the Docker socket, which gives full control of the host', (l, c) => (/^\s*path:\s*["']?\/var\/run\/docker\.sock\b/.test(l) && parentOf(c) === 'hostPath') || /hostPath["']?\s*:\s*\{[^}]{0,200}\/var\/run\/docker\.sock/.test(l), 'volumes:\n  - name: sock\n    hostPath:\n      path: /var/run/docker.sock\n', 'volumes:\n  - name: data\n    hostPath:\n      path: /var/lib/app\n'),
   T('k8s-host-path-root', 'a hostPath mounts the whole host root filesystem', (l, c) => /^\s*path:\s*["']?\/["']?\s*(#.*)?$/.test(l) && parentOf(c) === 'hostPath', 'volumes:\n  - name: root\n    hostPath:\n      path: /\n', 'volumes:\n  - name: data\n    hostPath:\n      path: /data\n'),
   T('k8s-host-path-system', 'a hostPath mounts a system folder of the host (/etc, /root, /proc, /sys, kubelet state)', (l, c) => /^\s*path:\s*["']?\/(etc|root|proc|sys|boot|dev|var\/lib\/kubelet)(\/|["']?\s*(#.*)?$)/.test(l) && parentOf(c) === 'hostPath', 'volumes:\n  - name: etc\n    hostPath:\n      path: /etc\n', 'volumes:\n  - name: data\n    hostPath:\n      path: /var/data\n'),
   R('k8s-host-path-any', 'a hostPath volume mounts a folder of the node (review that it is needed)', /^\s*hostPath:\s*(#.*)?$/, 'hostPath:', 'emptyDir: {}'),
-  R('k8s-host-network', 'the pod shares the host network namespace', /^\s*hostNetwork:\s*true\b/, 'hostNetwork: true', 'hostNetwork: false'),
-  R('k8s-host-pid', 'the pod shares the host process namespace', /^\s*hostPID:\s*true\b/, 'hostPID: true', 'hostPID: false'),
-  R('k8s-host-ipc', 'the pod shares the host IPC namespace', /^\s*hostIPC:\s*true\b/, 'hostIPC: true', 'hostIPC: false'),
+  R('k8s-host-network', 'the pod shares the host network namespace', /(?:^|[\s{,])["']?hostNetwork["']?\s*:\s*["']?(?:true|yes|on)["']?(?=\s*(?:[,}#]|$))/i, 'hostNetwork: true', 'hostNetwork: false'),
+  R('k8s-host-pid', 'the pod shares the host process namespace', /(?:^|[\s{,])["']?hostPID["']?\s*:\s*["']?(?:true|yes|on)["']?(?=\s*(?:[,}#]|$))/i, 'hostPID: true', 'hostPID: false'),
+  R('k8s-host-ipc', 'the pod shares the host IPC namespace', /(?:^|[\s{,])["']?hostIPC["']?\s*:\s*["']?(?:true|yes|on)["']?(?=\s*(?:[,}#]|$))/i, 'hostIPC: true', 'hostIPC: false'),
   R('k8s-host-port', 'a container binds a port on the node (hostPort)', /^\s*hostPort:\s*\d+/, 'hostPort: 8080', 'containerPort: 8080'),
   WORKLOAD_CONTAINER('k8s-resource-limits-absent', 'no resource limits are set, so one pod can use a whole node', /\blimits:/),
   WORKLOAD_CONTAINER('k8s-resource-requests-absent', 'no resource requests are set, so the scheduler cannot place the pod safely', /\brequests:/),
@@ -261,7 +264,7 @@ const K8S_RULES = withScope(YAML_FILES, COMMENT, [
   T('k8s-secrets-readable-role', 'a role can read secrets (get, list or watch on secrets)', (l, c) => /^\s*-\s*["']?secrets["']?\s*(#.*)?$/.test(l) && parentOf(c) === 'resources' && /^kind:\s*(Cluster)?Role\b/m.test(docAt(c)) && /verbs:[\s\S]{0,200}?["']?(get|list|watch|\*)["']?/.test(docAt(c)), 'kind: Role\nrules:\n  - resources:\n      - secrets\n    verbs:\n      - get\n', 'kind: Role\nrules:\n  - resources:\n      - configmaps\n    verbs:\n      - get\n'),
   T('k8s-ingress-no-tls', 'an Ingress has no tls section, so traffic is not encrypted', (l, c) => /^kind:\s*Ingress\b/.test(l) && !/^\s*tls:/m.test(docAt(c)), 'apiVersion: networking.k8s.io/v1\nkind: Ingress\nspec:\n  rules: []\n', 'apiVersion: networking.k8s.io/v1\nkind: Ingress\nspec:\n  tls:\n    - hosts: [shop.example.com]\n'),
   T('k8s-configmap-secret-key', 'a ConfigMap holds a key named like a secret (put secrets in a Secret)', (l, c) => /^\s+[\w.-]*(password|passwd|secret|token|api[_-]?key|private[_-]?key)[\w.-]*\s*:\s*\S/i.test(l) && /^kind:\s*ConfigMap\b/m.test(docAt(c)), 'kind: ConfigMap\ndata:\n  db_password: hunter2\n', 'kind: ConfigMap\ndata:\n  log_level: info\n'),
-  T('k8s-secret-literal-env', 'an env variable with a secret-looking name holds a literal value', (l, c) => /^\s*(-\s+)?value:\s*\S/.test(l) && backHas(c, /name:\s*["']?[\w.-]*(password|passwd|secret|token|api_?key|private_?key)/i, 2) && !/\$\{/.test(l), 'env:\n  - name: DB_PASSWORD\n    value: hunter2\n', 'env:\n  - name: DB_PASSWORD\n    valueFrom:\n      secretKeyRef:\n        name: db\n        key: pw\n'),
+  T('k8s-secret-literal-env', 'an env variable with a secret-looking name holds a literal value', (l, c) => FLOW_SECRET.test(l) || /^\s*(-\s+)?value:\s*\S/.test(l) && backHas(c, /name:\s*["']?[\w.-]*(password|passwd|secret|token|api_?key|private_?key)/i, 2) && !/\$\{/.test(l), 'env:\n  - name: DB_PASSWORD\n    value: hunter2\n', 'env:\n  - name: DB_PASSWORD\n    valueFrom:\n      secretKeyRef:\n        name: db\n        key: pw\n'),
   T('k8s-secret-manifest-stringdata', 'a Secret manifest holds its values in the file (stringData)', (l, c) => /^\s*stringData:\s*(#.*)?$/.test(l) && /^kind:\s*Secret\b/m.test(docAt(c)), 'kind: Secret\nstringData:\n  token: abc\n', 'kind: Secret\ntype: Opaque\n'),
   R('k8s-image-latest', 'an image uses the latest tag, which changes under you', /^\s*-?\s*image:\s*["']?[^\s"'@]+:latest\b["']?\s*(#.*)?$/, 'image: nginx:latest', 'image: nginx:1.27.0'),
   R('k8s-image-untagged', 'an image has no tag, so it means latest', /^\s*-?\s*image:\s*["']?[^\s"'@:$]+["']?\s*(#.*)?$/, 'image: nginx', 'image: nginx:1.27.0'),
@@ -308,7 +311,7 @@ const TF_RULES = withScope(TF_FILES, TF_COMMENT, [
   R('tf-ebs-unencrypted', 'an EBS volume is not encrypted', /^\s*encrypted\s*=\s*false\b/, 'encrypted = false', 'encrypted = true'),
   R('tf-rds-unencrypted', 'an RDS database is not encrypted at rest', /\bstorage_encrypted\s*=\s*false\b/, 'storage_encrypted = false', 'storage_encrypted = true'),
   T('tf-efs-unencrypted', 'an EFS file system does not set encrypted = true', (l, c) => /^\s*resource\s+"aws_efs_file_system"/.test(l) && !/encrypted\s*=\s*true/.test(c.text), 'resource "aws_efs_file_system" "f" {\n}\n', 'resource "aws_efs_file_system" "f" {\n  encrypted = true\n}\n'),
-  R('tf-iam-wildcard-action', 'an IAM policy allows every action (or every action of a service)', /^\s*actions?\s*=\s*(\[\s*)?"(\*|[a-z0-9-]+:\*)"/, 'actions = ["*"]', 'actions = ["s3:GetObject"]'),
+  R('tf-iam-wildcard-action', 'an IAM policy allows every action (or every action of a service)', /^\s*(?:actions?|Action)\s*=\s*(\[\s*)?"(\*|[a-z0-9-]+:\*)"|["']Action["']\s*:\s*\[?\s*"(\*|[a-z0-9-]+:\*)"/i, 'actions = ["*"]', 'actions = ["s3:GetObject"]'),
   R('tf-iam-wildcard-resource', 'an IAM policy applies to every resource', /^\s*resources?\s*=\s*(\[\s*)?"\*"/, 'resources = ["*"]', 'resources = ["arn:aws:s3:::bucket/*"]'),
   R('tf-public-ip-instance', 'an instance gets a public IP address', /\bassociate_public_ip_address\s*=\s*true\b/, 'associate_public_ip_address = true', 'associate_public_ip_address = false'),
   R('tf-cloudfront-old-tls', 'CloudFront allows TLS 1.0 or SSL 3 to viewers', /\bminimum_protocol_version\s*=\s*"(SSLv3|TLSv1|TLSv1_2016|TLSv1\.1_2016)"/, 'minimum_protocol_version = "TLSv1"', 'minimum_protocol_version = "TLSv1.2_2021"'),
@@ -373,7 +376,7 @@ const GHA_RULES = withScope(GHA_FILES, COMMENT, [
   R('gha-save-state-set-env-deprecated', 'the ::save-state, ::set-env or ::add-path commands are deprecated', /::(save-state|set-env|add-path)\b/, 'echo "::set-env name=A::b"', 'echo "A=b" >> "$GITHUB_ENV"'),
   R('gha-unsecure-commands', 'ACTIONS_ALLOW_UNSECURE_COMMANDS re-enables the disabled unsafe commands', /ACTIONS_ALLOW_UNSECURE_COMMANDS/, 'ACTIONS_ALLOW_UNSECURE_COMMANDS: true', 'ACTIONS_STEP_DEBUG: false'),
   T('gha-github-env-untrusted', 'an untrusted value is written into GITHUB_ENV, GITHUB_PATH or GITHUB_OUTPUT', (l) => /GITHUB_(ENV|PATH|OUTPUT)\b/.test(l) && /\$\{\{[^}]{0,200}\b(github\.event\.|inputs\.|github\.head_ref)/.test(l), 'run: echo "X=${{ github.event.issue.title }}" >> $GITHUB_ENV', 'run: echo "X=1" >> $GITHUB_ENV'),
-  T('gha-curl-pipe-shell', 'a run step pipes a download into a shell', (l, c) => inRun(c) && /\b(curl|wget)\b[^|\n]{0,300}\|\s*(sudo\s+)?(ba|z)?sh\b/.test(l), 'run: curl -fsSL https://x.io/i.sh | bash', 'run: curl -fsSL -o i.sh https://x.io/i.sh'),
+  T('gha-curl-pipe-shell', 'a run step pipes a download into a shell', (l, c) => inRun(c) && /\b(curl|wget)\b[^|\n]{0,600}\|\s*(?:sudo(?:\s+-\S+){0,4}\s+)?(?:ba|z|da)?sh\b/.test(l), 'run: curl -fsSL https://x.io/i.sh | bash', 'run: curl -fsSL -o i.sh https://x.io/i.sh'),
   T('gha-deploy-no-concurrency', 'a deploy or release workflow sets no concurrency group, so two runs can overlap', (l, c) => /^on:/.test(l) && /deploy|release/i.test(c.file) && !/^concurrency:/m.test(c.text), 'on: push\njobs:\n  x:\n    runs-on: a\n', 'on: push\nconcurrency: deploy\njobs:\n  x:\n    runs-on: a\n', { sample: '.github/workflows/deploy.yml' }),
   R('gha-broad-branch-trigger', 'a trigger matches every branch (branches: ["**"])', /^\s*branches:\s*\[?\s*["']?\*\*["']?\s*\]?\s*(#.*)?$/, "branches: ['**']", 'branches: [main]'),
   R('gha-cron-every-minute', 'a cron schedule runs every minute', /cron:\s*["']\*\s+\*\s+\*\s+\*\s+\*["']/, "cron: '* * * * *'", "cron: '0 6 * * 1'"),

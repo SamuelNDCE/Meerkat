@@ -80,8 +80,8 @@ const define = (id, rules, ok, fixture) => {
 
 // ---- cors-wildcard: any site may read responses that carry credentials
 const CORS_CREDENTIALS = /credentials['"]?\s*[:=,\]]\s*['"]?true\b/i
-const corsWildcard = pat(codeOrConfig, /\borigin['"]?\s*[:=,]\s*(?:true|['"]\*['"])/i, (t, h) =>
-  CORS_CREDENTIALS.test(t.slice(h.at, h.at + 300)) ? 'allows every website to send requests with credentials (any origin plus credentials)' : null)
+const corsWildcard = pat(codeOrConfig, /\borigin['"]?\s*[:=,]\s*(?:true|['"]\*['"])|Access-Control-Allow-Origin['"]?\s*[:=,)]\s*['"]\*['"]/i, (t, h) =>
+  CORS_CREDENTIALS.test(t.slice(Math.max(0, h.at - 200), h.at + 300)) ? 'allows every website to send requests with credentials (any origin plus credentials)' : null)
 const corsReflect = {
   files: code,
   scan: (t) => hits(t, /Access-Control-Allow-Origin['"]?\s*[:=,)]\s*[^\n;]*?\b(?:req|request|r|ctx)\b[^\n;]*?origin/i)
@@ -148,10 +148,19 @@ const SQL_KW = /\b(?:SELECT|INSERT|UPDATE|DELETE|select|insert|update|delete)\b/
 const SQL_TEMPLATE = /\b(?:query|execute|executemany|raw|exec|prepare|queryRaw|queryRawUnsafe|executeRaw|executeRawUnsafe)\s*\(\s*`(?=[^`]*\b(?:SELECT|INSERT|UPDATE|DELETE|select|insert|update|delete)\b)[^`]*\$\{/
 const SQL_CONCAT = /\b(?:query|execute|executemany|raw|exec|prepare|sql_query|raw_sql)\s*\(\s*(['"])(?:(?!\1)[^\n])*?\b(?:SELECT|INSERT|UPDATE|DELETE|select|insert|update|delete)\b(?:(?!\1)[^\n])*?\1\s*(?:\+|%|\.format\s*\()/
 const SQL_FORMAT = /\b(?:query|execute\w*|executemany|raw|exec|prepare|queryRaw\w*|executeRaw\w*|sql_query|raw_sql|Query\w*|Exec\w*)\s*\(\s*(?=[^\n]*\b(?:SELECT|INSERT|UPDATE|DELETE|select|insert|update|delete)\b)(?:f(['"])[^\n]*?\{|fmt\.Sprintf\(|format!\(|&format!\(|(['"])[^\n]*?\2\s*\.format\()/
+// A line holding a whole SQL statement shape in a string literal that is joined to a value on the same line (+, %, .format, an f-string,
+// $"...{x}", a template, "...$x", "...#{x}", Sprintf, String.format) or that ends in a + or . so the value comes on the next line.
+const SQL_SHAPE = /\b(?:SELECT\b[^"'\x60\n]{1,200}\bFROM|INSERT\s+INTO|UPDATE\s+[\w.\x60"\[\]]{1,60}\s+SET|DELETE\s+FROM)\b/i
+const SQL_JOIN = /["'\x60]\s*(?:\+|%\s*[\w(]|\.format\s*\(|\.\s*\$|\.\s*$|\.\s*[A-Za-z_]\w*\s*\.)|\bf["'][^"'\n]*\{|\$@?"[^"\n]*\{|\x60[^\x60\n]*\$\{|"[^"\n]*(?:\$\w|#\{)|\b(?:fmt\.Sprintf|String\.format|format!|sprintf|Format)\s*\(/
+const RB_SQL_INTERP = /\.(?:where|having|order|group|joins|find_by_sql|select|pluck|exists\?|delete_all|update_all|execute|exec_query)\s*\(\s*"[^"\n]{0,200}#\{/
 const sqlBuilt = {
   files: code,
   scan: (t) => {
     const found = new Map()
+    for (const [i, line] of t.split('\n').entries()) {
+      if (line.length > 600 || COMMENT.test(line)) continue
+      if ((SQL_SHAPE.test(line) && SQL_JOIN.test(line)) || RB_SQL_INTERP.test(line)) found.set(i + 1, { line: i + 1, why: 'builds an SQL statement by joining text and values together (use placeholders such as $1 or ?)' })
+    }
     for (const re of [SQL_TEMPLATE, SQL_CONCAT, SQL_FORMAT]) {
       for (const h of hits(t, re)) if (!found.has(h.line)) found.set(h.line, { line: h.line, why: 'builds an SQL statement by joining text and values together (use placeholders such as $1 or ?)' })
     }
@@ -160,7 +169,7 @@ const sqlBuilt = {
 }
 
 // ---- path-traversal-pattern: a file read or sent with a path taken straight from the request
-const REQ = /\b(?:req|request|ctx|c)\.(?:query|params|body|args|form|values|GET|POST|files|json)\b|\br\.URL\.Query\(|\bc\.(?:Query|Param)\(|\$_(?:GET|POST|REQUEST|COOKIE)\b|\bparams\[/
+const REQ = /\b(?:req|request|ctx|c)\.(?:query|params|body|args|form|values|GET|POST|files|json)\b|\blocation\.(?:search|hash)\b|\bURLSearchParams\b|\bsearchParams\b|\br\.URL\.Query\(|\bc\.(?:Query|Param)\(|\$_(?:GET|POST|REQUEST|COOKIE)\b|\bparams\[/
 const FILE_API = /(?:\b(?:readFile\w*|createReadStream|createWriteStream|sendFile|download|writeFile\w*|unlink\w*|readdir\w*|send_file|send_from_directory|ReadFile|os\.Open|os\.ReadFile|os\.Create|File::open|fs::read\w*|fs::write\w*)|(?<![.\w])open)\s*\(/
 const PATH_GUARD = /path\.(?:resolve|normalize|basename)|os\.path\.basename|filepath\.(?:Clean|Rel|Base)|startsWith\(|is_relative_to|realpath|secure_filename|safe_join|canonicalize/
 // The first argument of the call at hit h (the path, for every file API here).
@@ -193,25 +202,27 @@ const pathTraversal = {
 }
 
 // ---- open-redirect-pattern: a redirect to an address taken from the request, with no allow-list check
-const REDIRECT = /\bredirect\s*\(|\bRedirect\s*\(|['"]Location['"]\s*(?:[,:\]=])/
+const REDIRECT = /\bredirect\s*\(|\bRedirect\s*\(|['"]Location['"]\s*(?:[,:\]=])|['"]Location:|(?<![\w$.])(?:window\.|document\.|self\.|top\.)?location(?:\.href)?\s*=(?!=)|\blocation\.(?:assign|replace)\s*\(/
 const ALLOW_CHECK = /allow|whitelist|includes\(|indexOf\(|startsWith\(\s*['"]\/|isSafe|isLocal|is_safe_url|allowed_hosts|url_has_allowed|isRelative/i
 const openRedirect = {
   files: code,
   scan: (t) => hits(t, REDIRECT)
-    .filter((h) => REQ.test(h.text) && !ALLOW_CHECK.test(near(t, h.line, 4, 10)))
+    .filter((h) => REQ.test(h.m[0].endsWith('(') ? h.text + ' ' + callText(t, h.at + h.m[0].length - 1) : h.text) && !ALLOW_CHECK.test(near(t, h.line, 4, 10)))
     .map((h) => ({ line: h.line, why: 'sends people to an address taken from the request with no allow-list check (send them only to your own pages)' })),
 }
 
 // ---- regex-dos: a regular expression that can take exponential time
 const regexSources = (t) => [
   ...hits(t, /(?<=[=(,:\[!&|?{;]\s*|\breturn\s+)\/((?:[^\/\\\n]|\\.)+)\/[dgimsuy]*/).map((h) => ({ line: h.line, src: h.m[1] })),
-  ...hits(t, /new\s+RegExp\s*\(\s*(['"`])((?:(?!\1)[^\n\\]|\\.)*)\1/).map((h) => ({ line: h.line, src: h.m[2] })),
+  ...hits(t, /new\s+RegExp\s*\(\s*(['"`])((?:(?!\1)[^\n\\]|\\.)*)\1/).map((h) => ({ line: h.line, src: h.m[2].replace(/\\\\/g, '\\') })),
   ...hits(t, /\bre\.(?:compile|match|search|fullmatch|sub|findall|finditer|split)\s*\(\s*r?(['"])((?:(?!\1)[^\n\\]|\\.)*)\1/).map((h) => ({ line: h.line, src: h.m[2] })),
 ]
 const repeatRisk = (src) => {
   const s = src.replace(/\\./g, '~').replace(/\[(?:[^\]\\]|\\.)*\]/g, 'C')
   // A single repeated token inside an open-ended repeat, such as (a+)+, (.*)*, (\s*)* or ([a-z]+)*. Bounded repeats and longer bodies are left alone.
   if (/\((?:\?:)?(?:[~C.]|[a-zA-Z0-9])[+*]\)(?:[+*]|\{\d+,\})/.test(s)) return 'a group that repeats is itself repeated'
+  // A repeated token followed by an optional one inside an open-ended repeat, such as (\w+\s?)+: the optional part lets the same text split many ways.
+  if (/\((?:\?:)?(?:[~C.]|[a-zA-Z0-9])[+*](?:[~C.]|[a-zA-Z0-9])[?*]\)(?:[+*]|\{\d+,\})/.test(s)) return 'a group that repeats is itself repeated'
   for (const m of s.matchAll(/\((?:\?:)?([^()]*\|[^()]*)\)(?:[+*]|\{\d)/g)) {
     const alts = m[1].split('|').filter(Boolean)
     if (alts.some((a, i) => alts.some((b, j) => i !== j && b.startsWith(a)))) return 'a repeated choice where one option is the start of another'
@@ -233,6 +244,7 @@ const md5Password = {
     .filter((h) => /passw|passwd|\bpwd\b/i.test(near(t, h.line, 3, 0)))
     .map((h) => ({ line: h.line, why: 'MD4 or MD5 is used on what looks like a password (use bcrypt, scrypt or argon2)' })),
 }
+const TOKENISH = /token|secret|passw|nonce|session|api[_-]?key|\botp\b|csrf|reset|\bsalt\b|\bkey\b|\bpin\b|verif|invite|\bauth|\bcode\b|uuid|captcha|\bsid\b|\bid_?gen/i
 const weakCrypto = [
   pat(code, /\bcreate(?:De)?[Cc]ipher\s*\(/, 'createCipher uses no IV, so the same key always gives the same output (use createCipheriv with a random IV)'),
   pat(code, /\bcreate(?:De)?[Cc]ipheriv\s*\(\s*['"](?:des|rc4|bf|blowfish|aes-\d+-ecb)/i, 'a weak or unsafe cipher (DES, RC4, Blowfish or ECB mode) is named'),
@@ -241,8 +253,9 @@ const weakCrypto = [
   pat(code, /\bMODE_ECB\b/, 'ECB mode: identical blocks encrypt to identical output (use GCM, or CBC with a random IV)'),
   pat(code, /(?:Cipheriv|Decipheriv)\s*\([^\n]*?(?:Buffer\.from|new Buffer)\(\s*['"]|\b(?:key|iv|IV|secretKey)\s*[:=]\s*(?:Buffer\.from|new Buffer)\(\s*['"]|\b(?:AES|DES3?|ChaCha20\w*)\.new\(\s*b?['"]|\b(?:key|iv|IV|KEY)\s*=\s*b['"][^'"\n]{4,}['"]/,
     'a cipher key or IV is written into the code (load it from a secret store or an environment variable)'),
-  pat(code, /(?<!['"\`])\b(?:Math\.random|random\.(?:random|choice|randint|getrandbits))\s*\(/, (t, h) => /token|secret|passw|nonce|session|api[_-]?key|otp|csrf/i.test(h.text)
-    ? 'a random number from a generator that is not secure makes a token or secret (use crypto.randomBytes, Python secrets, or crypto/rand)'
+  // The generator call, or the name it is assigned to / the function it sits in (up to 3 lines above), says token, secret, key, code...
+  pat(code, /(?<!['"\`])(?:\b(?:Math\.random|random\.(?:random|choice|choices|randint|randrange|getrandbits|sample)|(?:Kernel\.|Random\.)?rand|mt_rand|lcg_value|uniqid|rand\.(?:Int|Intn|Int31n?|Int63n?|Uint32|Uint64|Float64|Read)|Random\.new|SecureRandom\.hex\(\s*\d{1,2}\s*\)\.to_i|new\s+(?:java\.util\.)?Random)\s*\(|\bnew\s+Random\b\s*(?!\())/, (t, h) => TOKENISH.test(near(t, h.line, 3, 0))
+    ? 'a random number from a generator that is not secure makes a token or secret (use crypto.randomBytes, Python secrets, SecureRandom, random_bytes or crypto/rand)'
     : null),
   md5Password,
 ]

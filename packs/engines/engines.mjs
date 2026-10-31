@@ -11,7 +11,7 @@ const make = (id, group, title) => ({
   weight: 'tiny',
   suite: 'config-files',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   needs: ['node'],
   run: { cmd: 'node', args: [ES, id], cwd: 'repo' },
   selfTest: { cmd: 'node', args: [ES, id, '--fixtures'], cwd: 'repo', expectFail: true },

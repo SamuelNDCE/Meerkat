@@ -6,7 +6,7 @@
 // What these checks cannot see: they read tracked files only, match text patterns rather than parsing Python, and cannot follow a variable
 // to find out what a pickle path really points at. A notebook that is not valid JSON is reported once, by notebook-valid-json.
 import { join, posix } from 'node:path'
-import { finish, isFixture, main, readBudgets, readText, sizeOf, trackedFiles, withFixture } from './kit.mjs'
+import { finding, finish, isFixture, main, readBudgets, readText, sizeOf, trackedFiles, withFixture } from './kit.mjs'
 
 const MB = 1024 * 1024
 const cfg = (root) => readBudgets(root)?.data ?? {}
@@ -297,7 +297,12 @@ const randomSeedMissing = (root) => {
   const f = []
   for (const [x, text] of byFile) {
     if (allow.has(x)) continue
-    if (TRAINS.test(text) && USES_RANDOM.test(text) && !SETS_SEED.test(text)) f.push(`${x} trains or samples with random numbers and never sets a seed`)
+    if (TRAINS.test(text) && USES_RANDOM.test(text) && !SETS_SEED.test(text)) {
+      f.push(`${x} trains or samples with random numbers and never sets a seed`)
+      // Reported as a finding even when the check only informs, so findings.json carries it (the first random call, or line 1 in a notebook).
+      const at = /\.py$/i.test(x) ? readText(root, x).split(/\r?\n/).findIndex((l) => USES_RANDOM.test(l)) + 1 : 0
+      finding('info', null, x, Math.max(at, 1), 'trains or samples with random numbers and never sets a seed')
+    }
   }
   return soft(ID, cfg(root).requireSeeds === true, f, 'every script that uses random numbers sets a seed', `${f.length} script(s) use random numbers and set no seed (set data.requireSeeds to true to fail on them)`)
 }

@@ -9,7 +9,7 @@ const make = (id, suite, title) => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   suite,
   needs: ['node'],
   run: { cmd: 'node', args: [PS, id], cwd: 'repo' },

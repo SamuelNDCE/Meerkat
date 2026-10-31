@@ -26,7 +26,9 @@ const whitespace = (root) => {
 }
 
 // ---- env-example: every environment variable the code reads is written down somewhere
-const COMMON_ENV = new Set(['NODE_ENV', 'PATH', 'HOME', 'USER', 'USERPROFILE', 'CI', 'PWD', 'TMPDIR', 'TEMP', 'TMP', 'SHELL', 'LANG', 'TERM', 'DEBUG', 'PORT', 'HOST', 'APPDATA', 'LOCALAPPDATA', 'NO_COLOR', 'FORCE_COLOR'])
+const COMMON_ENV = new Set(['NODE_ENV', 'PATH', 'HOME', 'USER', 'USERPROFILE', 'CI', 'PWD', 'TMPDIR', 'TEMP', 'TMP', 'SHELL', 'LANG', 'TERM', 'DEBUG', 'PORT', 'HOST', 'APPDATA', 'LOCALAPPDATA', 'NO_COLOR', 'FORCE_COLOR', 'APPIMAGE', 'PORTABLE_EXECUTABLE_FILE', 'PORTABLE_EXECUTABLE_DIR', 'VITE_DEV_SERVER_URL', 'ELECTRON_RUN_AS_NODE'])
+// Set by the runtime or the packager, never by the person running the app: Electron's own ELECTRON_* switches, npm's npm_* and NODE_* variables, GitHub's GITHUB_*.
+const RUNTIME_ENV = /^(?:ELECTRON_[A-Z_]+|npm_[A-Za-z0-9_]+|NODE_[A-Z_]+|GITHUB_[A-Z_]+|RUNNER_[A-Z_]+)$/
 const envExample = (root) => {
   const files = trackedFiles(root)
   const docs = files.filter((x) => /(^|\/)(\.env\.(example|sample|template)|README[^/]*|docs\/.*\.md)$/i.test(x)).map((x) => readText(root, x)).join('\n')
@@ -40,7 +42,7 @@ const envExample = (root) => {
       if (!used.has(name)) used.set(name, x)
     }
   }
-  const f = [...used].filter(([n]) => !COMMON_ENV.has(n) && !allow.has(n) && !docs.includes(n)).map(([n, x]) => `${n} is read in ${x} but is not in .env.example or the README (add it, or list it in .meerkat-env-allow)`)
+  const f = [...used].filter(([n]) => !COMMON_ENV.has(n) && !RUNTIME_ENV.test(n) && !allow.has(n) && !docs.includes(n)).map(([n, x]) => `${n} is read in ${x} but is not in .env.example or the README (add it, or list it in .meerkat-env-allow)`)
   return finish('env-example', f, 'every environment variable the code reads is documented')
 }
 
@@ -122,12 +124,13 @@ const lockfileIntegrity = (root) => {
 // ---- risky-code: calls that are usually a security mistake
 const RISKY = [
   [/\beval\s*\(/, 'eval() runs text as code', /\.(m?[jt]sx?|cjs|py|php|rb|svelte|vue)$/],
-  [/\bnew\s+Function\s*\(/, 'new Function() runs text as code', /\.(m?[jt]sx?|cjs|svelte|vue)$/],
+  [/(?<![\w$.:])(?:new\s+)?Function\s*\(\s*(?!\))/, 'new Function() runs text as code', /\.(m?[jt]sx?|cjs|svelte|vue)$/],
   [/document\.write\s*\(/, 'document.write() with page content', /\.(m?[jt]sx?|svelte|vue|html?)$/],
-  [/\.innerHTML\s*=(?!=)/, 'innerHTML assignment (script injection unless the value is trusted)', /\.(m?[jt]sx?|svelte|vue)$/],
+  [/\.(?:inner|outer)HTML\s*(?:=(?!=)|\+=)/, 'innerHTML assignment (script injection unless the value is trusted)', /\.(m?[jt]sx?|svelte|vue)$/],
+  [/\.insertAdjacentHTML\s*\(\s*['"][a-zA-Z]+['"]\s*,\s*(?!['"\x60][^'"\x60$\n]*['"\x60]\s*\))/, 'innerHTML assignment through insertAdjacentHTML (script injection unless the value is trusted)', /\.(m?[jt]sx?|svelte|vue)$/],
   [/dangerouslySetInnerHTML/, 'dangerouslySetInnerHTML (script injection unless the value is trusted)', /\.(jsx|tsx)$/],
   [/\bchild_process\b[\s\S]{0,40}\bexec\s*\(\s*(?:`[^`]*\$\{|[^)]*\+)/, 'exec() with a built-up command string (shell injection)', /\.(m?[jt]s|cjs)$/],
-  [/\bos\.system\s*\(|subprocess\.[a-z_]+\([^)]*shell\s*=\s*True/, 'a shell command from Python (shell injection if any part is user input)', /\.py$/],
+  [/\bos\.system\s*\(|subprocess\.[A-Za-z_]+\([^)]*shell\s*=\s*True/, 'a shell command from Python (shell injection if any part is user input)', /\.py$/],
   [/\bpickle\.loads?\s*\(|\byaml\.load\s*\((?![^)]*Loader\s*=\s*(?:yaml\.)?SafeLoader)/, 'pickle or yaml.load can run code from the data', /\.py$/],
   [/verify\s*=\s*False|rejectUnauthorized\s*:\s*false|InsecureSkipVerify\s*:\s*true|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['"]?0/, 'TLS certificate checks turned off', SOURCE],
   [/createHash\(\s*['"](?:md5|sha1)['"]\)|hashlib\.(?:md5|sha1)\(|\bMD5\.|\bSHA1\./, 'MD5 or SHA-1 (broken for security uses)', SOURCE],
@@ -135,6 +138,14 @@ const RISKY = [
   [/chmod\s+(?:-R\s+)?0?777|0o777|StrictHostKeyChecking\s*=\s*no/, 'world-writable permissions or SSH host checks off', /\.(sh|bash|py|m?[jt]s|cjs|ya?ml|rs|go)$/],
   [/['"]http:\/\/(?!localhost|127\.|0\.0\.0\.0|\[::1\]|example\.|www\.w3\.org|schemas\.|json-schema\.org)[a-z0-9.-]+\.[a-z]{2,}/i, 'a plain http:// address (not encrypted)', SOURCE],
 ]
+// innerHTML = '' or = '<svg ...>' (a plain string with no ${} and no + joining other text) injects nothing a visitor controls, so it is not a risk.
+const safeLiteralAssign = (t, m, why) => {
+  if (!why.startsWith('innerHTML')) return false
+  const from = m.index + m[0].length
+  const eol = t.indexOf('\n', from)
+  const rest = t.slice(from, eol < 0 ? t.length : eol).trim()
+  return /^(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`$\\]*`)\s*;?\s*(?:\/\/.*)?$/.test(rest)
+}
 const riskyCode = (root) => {
   const allow = allowList(root, '.meerkat-risky-allow')
   const f = []
@@ -143,8 +154,11 @@ const riskyCode = (root) => {
     const t = readText(root, x)
     for (const [re, why, only] of RISKY) {
       if (!only.test(x)) continue
-      const m = re.exec(t)
-      if (m && !allow.has(`${x}:${lineOf(t, m.index)}`)) f.push(`${x}:${lineOf(t, m.index)} ${why}`)
+      // Every hit counts, not just the first in a file: a second innerHTML or eval further down is a separate risk.
+      for (const m of t.matchAll(new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`))) {
+        if (safeLiteralAssign(t, m, why)) continue
+        if (!allow.has(`${x}:${lineOf(t, m.index)}`)) f.push(`${x}:${lineOf(t, m.index)} ${why}`)
+      }
     }
   }
   return finish('risky-code', f, 'none of the usual dangerous calls found (accept one in .meerkat-risky-allow)')

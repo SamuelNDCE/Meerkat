@@ -266,10 +266,12 @@ const rootPrivate = (root) => {
 
 // ---- npm: packages that look publishable (not private, with an entry point)
 
+// An Electron app's "main" is the app's own entry point, not something published to npm: it ships as an installer built by electron-builder or forge.
+const isDesktopApp = (pkg) => Boolean(pkg.build?.appId || pkg.build?.productName || pkg.devDependencies?.['electron-builder'] || pkg.dependencies?.['electron-builder'] || pkg.devDependencies?.['@electron-forge/cli'])
 const publishable = (root) =>
   named(root, 'package.json')
     .map((file) => ({ file, dir: dirOf(file), pkg: json(root, file) }))
-    .filter((p) => p.pkg && p.pkg.private !== true && (p.pkg.main || p.pkg.module || p.pkg.bin || p.pkg.exports))
+    .filter((p) => p.pkg && p.pkg.private !== true && (p.pkg.main || p.pkg.module || p.pkg.bin || p.pkg.exports) && !isDesktopApp(p.pkg))
 const NO_NPM = 'no package looks publishable (none is non-private with main, module, exports or bin)'
 
 const npmPublishFiles = (root) => {

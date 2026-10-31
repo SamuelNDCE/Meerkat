@@ -8,6 +8,6 @@ const MAVEN = 'install Maven from https://maven.apache.org/download.cgi'
 
 export default [
   tool({ id: 'maven-validate', expect: 'Non-parseable POM', bin: 'mvn', args: ['-q', '-B', 'validate'], fixture: ['-B', '-f', POM_FIXTURE, 'validate'], install: MAVEN, title: 'Maven: the project file (pom.xml) is valid', weight: 'tiny', estSeconds: 10, paths: ['pom.xml'] }),
-  tool({ id: 'maven-compile', expect: 'Non-parseable POM', bin: 'mvn', args: ['-q', '-B', 'compile'], fixture: ['-B', '-f', POM_FIXTURE, 'compile'], install: MAVEN, title: 'Maven: the Java code compiles', weight: 'medium', estSeconds: 60, paths: JAVA }),
-  tool({ id: 'maven-test', expect: 'Non-parseable POM', bin: 'mvn', args: ['-q', '-B', 'test'], fixture: ['-B', '-f', POM_FIXTURE, 'test'], install: MAVEN, title: 'Maven: the test suite', weight: 'medium', estSeconds: 90, paths: JAVA }),
+  tool({ id: 'maven-compile', expect: 'Non-parseable POM', bin: 'mvn', args: ['-q', '-B', 'compile'], fixture: ['-B', '-f', POM_FIXTURE, 'compile'], install: MAVEN, title: 'Maven: the Java code compiles', weight: 'heavy', estSeconds: 120, paths: JAVA }),
+  tool({ id: 'maven-test', expect: 'Non-parseable POM', bin: 'mvn', args: ['-q', '-B', 'test'], fixture: ['-B', '-f', POM_FIXTURE, 'test'], install: MAVEN, title: 'Maven: the test suite', weight: 'heavy', estSeconds: 120, paths: JAVA }),
 ]

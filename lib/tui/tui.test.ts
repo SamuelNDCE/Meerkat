@@ -372,7 +372,8 @@ describe('the real run: live board, streamed output, end-of-run report', () => {
     tui.stop()
     const all = stream.out.join('')
     expect(all).toContain(String.fromCharCode(27) + '[?1049l')
-    expect(all).toContain('MEERKAT fast')
+    expect(all).toContain('MEERKAT v')
+    expect(all).toContain(' . full')
     tui.stop() // a second stop is harmless
   })
   test('a narrow terminal gets the compact view, a wide one the board with the head', () => {
@@ -523,7 +524,7 @@ describe('themes: customisation that can never break a run', () => {
     expect(board({ ...THEMES.meerkat, bar: { ...THEMES.meerkat.bar, work: '#bb9af7' } })).toContain(ESC + '[38;2;187;154;247m')
     const noMascot = board({ ...THEMES.meerkat, mascot: false })
     expect(noMascot).not.toContain('▀')
-    expect(noMascot).toContain('MEERKAT fast')
+    expect(noMascot).toContain(' . full')
   })
   test('animation speed scales the ticks: a slower theme changes less from tick to tick', () => {
     const calm = (t: number) => board({ ...THEMES.meerkat, speed: 0.25 }, t)

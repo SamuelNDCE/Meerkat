@@ -10,7 +10,7 @@ const make = (id, title, group = 'functionality') => ({
   lane: 'free',
   weight: 'tiny',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   needs: ['node'],
   run: { cmd: 'node', args: [AS, id], cwd: 'repo' },
   selfTest: { cmd: 'node', args: [AS, id, '--fixtures'], cwd: 'repo', expectFail: true },

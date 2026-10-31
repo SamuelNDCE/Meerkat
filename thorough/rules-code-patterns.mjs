@@ -44,6 +44,30 @@ const TIMING_RE = /\b\w*(?:(?:auth|api|access|session|csrf|bearer|refresh)_?toke
 // A regex literal whose character class lists the characters (a scanner that looks for them): not a hidden character.
 const REGEX_CLASS_LINE = /[=(,:]\s*\/\[[^\]\n]{1,80}\]\/[gimsuy]*\s*[;,).]?\s*$/
 
+// A call whose parentheses are still open at the end of the line is joined with the next lines (up to 6) and the rule's regex runs on the
+// joined text, provided the match STARTS on this line. So a dangerous argument on the next line is still seen, and a rule that looks for
+// a missing argument (no timeout) sees the argument that is on the next line. Linear: bounded joins, lines over 400 characters are not joined.
+const openParens = (s) => {
+  let d = 0
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i)
+    if (c === 40) d++
+    else if (c === 41) d--
+  }
+  return d > 0
+}
+const joined = (re, base) => (line, ctx) => {
+  if (base(line, ctx)) return true
+  if (line.length > 400 || !openParens(line)) return false
+  let w = line
+  for (let i = ctx.index + 1; i < Math.min(ctx.lines.length, ctx.index + 7); i++) {
+    w += ' ' + ctx.lines[i].trim()
+    if (!openParens(w)) break
+  }
+  const m = re.exec(w)
+  return Boolean(m) && m.index < line.length && base(w, ctx)
+}
+
 const family = (ext, skipLine) => (id, title, re, bad, good, extra = {}) => ({
   id,
   title,
@@ -54,9 +78,34 @@ const family = (ext, skipLine) => (id, title, re, bad, good, extra = {}) => ({
   notIn: TEST_OUT,
   bad,
   good,
-  ...(re && !LITERAL.has(id) ? { test: outsideStrings(re) } : {}),
+  ...(re && !LITERAL.has(id) ? { test: joined(re, outsideStrings(re)) } : {}),
+  ...(re && LITERAL.has(id) ? { test: joined(re, (l) => re.test(l)) } : {}),
   ...extra,
 })
+
+// Names a file gives to child_process exec: { exec as run }, { exec: run }, promisify(exec), and namespace imports (cp.exec). Cached per text.
+const aliasCache = new Map()
+function execAliasRe(text) {
+  if (aliasCache.has(text)) return aliasCache.get(text)
+  const bare = new Set()
+  const ns = new Set()
+  for (const m of text.matchAll(/\{([^}\n]{1,200})\}\s*(?:=\s*require\(\s*|from\s*)['"](?:node:)?child_process['"]/g)) {
+    for (const it of m[1].split(',')) {
+      const x = /^\s*exec(?:Sync)?\s*(?:(?::|\s+as\s+)\s*(\w+))?\s*$/.exec(it)
+      if (x && x[1]) bare.add(x[1])
+    }
+  }
+  for (const m of text.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*(?:util\.)?promisify\(\s*(?:\w+\.)?exec(?:Sync)?\s*\)/g)) bare.add(m[1])
+  for (const m of text.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*require\(\s*['"](?:node:)?child_process['"]\s*\)|import\s+(?:\*\s+as\s+)?(\w+)\s+from\s*['"](?:node:)?child_process['"]/g)) ns.add(m[1] || m[2])
+  const tail = String.raw`\(\s*(?!['"][^'"\n]{0,300}['"]\s*[,)])`
+  const parts = []
+  if (bare.size) parts.push('(?<![\\w$.])(?:' + [...bare].join('|') + ')' + tail)
+  if (ns.size) parts.push('(?<![\\w$])(?:' + [...ns].join('|') + ')\\.exec(?:Sync)?' + tail)
+  const re = parts.length ? new RegExp(parts.join('|')) : null
+  if (aliasCache.size > 50) aliasCache.clear()
+  aliasCache.set(text, re)
+  return re
+}
 
 const PYF = family(['py'], PY_SKIP)
 const JSF = family(['js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx'], SLASH_SKIP)
@@ -73,6 +122,15 @@ export const PY = [
   PYF('py-subprocess-string', 'a subprocess call is given one string, not a list of arguments', /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\(\s*f?['"]/, 'subprocess.call("ls -l")', 'subprocess.call(["ls", "-l"])'),
   PYF('py-marshal-load', 'marshal, dill or jsonpickle loads data that can build arbitrary objects', /\bmarshal\.loads?\(|\bdill\.loads?\(|\bjsonpickle\.loads?\(|\bjsonpickle\.decode\(/, 'obj = marshal.loads(data)', 'obj = json.loads(data)'),
   PYF('py-shelve-open', 'shelve stores pickled objects, so opening untrusted data runs code', /\bshelve\.open\(/, 'db = shelve.open(path)', 'db = dbm.open(path)'),
+  PYF('py-shell-true', 'a subprocess call runs through a shell (shell=True), so a value in the command can inject more commands', undefined, 'import subprocess\nsubprocess.run(cmd, shell=True)', 'import subprocess\nsubprocess.run(cmd)', { test: (line, ctx) => /\bshell\s*=\s*True\b/.test(line) && /\bsubprocess\b|\bPopen\b|\bcheck_output\b|\bcheck_call\b/.test(ctx.text) }),
+  PYF('py-os-system-alias', 'os.system is reached through an import alias (from os import system, import os as x), so a value in the command can inject commands', undefined, 'from os import system\nsystem(cmd)', 'import os\nos.getcwd()', { test: (line, ctx) => {
+    if (!/\bsystem\b/.test(line) || !/\bos\b/.test(ctx.text)) return false
+    const names = new Set()
+    for (const m of ctx.text.matchAll(/^\s*from\s+os\s+import\s+([^\n#]+)/gm)) for (const it of m[1].split(',')) { const x = /^\s*\(?\s*system(?:\s+as\s+(\w+))?\s*\)?\s*$/.exec(it); if (x) names.add(x[1] || 'system') }
+    const mods = []
+    for (const m of ctx.text.matchAll(/^\s*import\s+os\s+as\s+(\w+)/gm)) mods.push(m[1])
+    return [...names].some((n) => new RegExp('(?<![\\w.])' + n + '\\s*\\(\\s*(?![\'"][^\'"\\n]{0,200}[\'"]\\s*\\))').test(line)) || mods.some((n) => new RegExp('\\b' + n + '\\.system\\s*\\(').test(line))
+  } }),
   PYF('py-exec-text', 'exec runs text as Python code', /(?<![\w.])exec\s*\(/, 'exec(user_code)', 'value = ast.literal_eval(text)'),
   PYF('py-compile-exec-mode', 'compile() builds code from text in exec or single mode', /\bcompile\([^\n]{0,200},\s*['"](?:exec|single)['"]/, 'compile(src, "<s>", "exec")', 'compile(src, "<s>", "eval")'),
   PYF('py-hardcoded-password', 'a password, secret or token is typed straight into the code', /(?<![A-Za-z0-9])(?:password|passwd|pwd|secret|api_key|apikey|token)\s*(?::\s*\w+(?:\[[^\]]{0,20}\])?\s*)?=\s*['"][^'"\s]{4,}['"]/i, 'password = "hunter22"', 'password = os.environ["PW"]'),
@@ -103,7 +161,12 @@ export const PY = [
 
 // ---------------------------------------------------------------- JavaScript and TypeScript (cp-js)
 export const JS = [
-  JSF('js-exec-variable', 'child_process exec runs a command string that is not a fixed literal', /(?<![\w$.])(?:child_process\.)?exec(?:Sync)?\(\s*(?!['"][^'"\n]{0,300}['"]\s*[,)])(?!\w+\??\s*:\s*[A-Za-z{\[])/, 'exec(cmd, done)', 'exec("ls -l", done)'),
+  JSF('js-exec-variable', 'child_process exec runs a command string that is not a fixed literal', /(?<![\w$.])(?:(?:child_process|childProcess|cp)\.)?exec(?:Sync)?\(\s*(?!['"][^'"\n]{0,300}['"]\s*[,)])(?!\w+\??\s*:\s*[A-Za-z{\[])/, 'exec(cmd, done)', 'exec("ls -l", done)'),
+  JSF('js-exec-alias', 'a child_process exec under another name (renamed import, namespace import or promisify) runs a command string that is not a fixed literal', undefined, "import { exec as run } from 'child_process'\nrun(cmd)", "import { exec as run } from 'child_process'\nrun('ls -l')", { test: (line, ctx) => {
+    if (!/exec/.test(ctx.text)) return false
+    const re = execAliasRe(ctx.text)
+    return Boolean(re) && joined(re, (l) => re.test(l))(line, ctx)
+  } }),
   JSF('js-spawn-shell', 'spawn or execFile is given shell: true, so arguments are parsed by a shell', /\bspawn(?:Sync)?\([^\n]{0,300}\bshell\s*:\s*true\b/, 'spawn("ls", [], { shell: true })', 'spawn("ls", [])'),
   JSF('js-require-variable', 'require is called with a name that is not a fixed string', /(?<![\w$.])require\(\s*(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|path\.|__dirname|process\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,200}\)/, 'const m = require(name)', 'const m = require("fs")'),
   JSF('js-require-url', 'a module is loaded from a web address', /(?<![\w$.])require\(\s*['"]https?:\/\//, 'require("https://x.example/a.js")', 'require("./a.js")'),
@@ -184,12 +247,15 @@ export const JAVA = [
   JVF('java-processbuilder-variable', 'ProcessBuilder gets a program name from a variable', /\bnew\s+ProcessBuilder\(\s*(?!"[^"\n]*"\s*[,)])/, 'new ProcessBuilder(cmd)', 'new ProcessBuilder("ls", "-l")'),
   JVF('java-object-stream-read', 'Java object deserialization (readObject) or XMLDecoder runs on data that may be untrusted', /\bObjectInputStream\b[^\n]{0,80}\.readObject\(\)|\bnew\s+XMLDecoder\(/, 'new ObjectInputStream(in).readObject()', 'new ObjectOutputStream(out).writeObject(o)'),
   JVF('java-xxe-parser-factory', 'an XML parser factory is created without secure processing or DTD limits', undefined, 'DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();', 'DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();\nf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);', { test: (line, ctx) => /\b(?:DocumentBuilderFactory|SAXParserFactory|XMLInputFactory|TransformerFactory)\.newInstance\(\)/.test(line) && !/FEATURE_SECURE_PROCESSING|setFeature\(|setProperty\(/.test(ctx.text) }),
-  JVF('java-weak-digest', 'MD2, MD5 or SHA-1 is used through MessageDigest (broken for security)', /\bMessageDigest\.getInstance\(\s*"(?:MD2|MD5|SHA-?1)"/, 'MessageDigest.getInstance("MD5")', 'MessageDigest.getInstance("SHA-256")'),
+  JVF('java-weak-digest', 'MD2, MD5 or SHA-1 is used through MessageDigest (broken for security)', undefined, 'MessageDigest.getInstance("MD5")', 'MessageDigest.getInstance("SHA-256")', { test: (line, ctx) => /\bMessageDigest\s*\.\s*getInstance\(\s*"(?:MD2|MD5|SHA-?1)"/.test(line) || (/^\s*\.getInstance\(\s*"(?:MD2|MD5|SHA-?1)"/.test(line) && /MessageDigest\s*$/.test(ctx.lines[ctx.index - 1] ?? '')) }),
   JVF('java-cipher-default-ecb', 'AES is requested with no mode, so Java uses ECB', /\bCipher\.getInstance\(\s*"AES"\s*\)/, 'Cipher.getInstance("AES")', 'Cipher.getInstance("AES/GCM/PKCS5Padding")'),
   JVF('java-cipher-no-padding', 'a cipher is set to NoPadding (padding attacks or wrong lengths)', /\bCipher\.getInstance\(\s*"[^"\n]{0,60}\/NoPadding"/, 'Cipher.getInstance("AES/CBC/NoPadding")', 'Cipher.getInstance("AES/CBC/PKCS5Padding")'),
   JVF('java-trust-all-certificates', 'a TrustManager accepts every certificate (empty checkServerTrusted)', undefined, 'public void checkServerTrusted(X509Certificate[] c, String a) throws CertificateException {}', 'public void checkServerTrusted(X509Certificate[] c, String a) throws CertificateException { verify(c, a); }', { test: (line) => /\bcheckServerTrusted\s*\([^)\n]{0,200}\)[^{\n]{0,120}\{\s*\}/.test(line) }),
   JVF('java-hostname-verifier-true', 'a HostnameVerifier always returns true', /\(\s*\w+\s*,\s*\w+\s*\)\s*->\s*true\b|\bverify\s*\([^)\n]{0,120}\)\s*\{\s*return\s+true\s*;/, 'HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);', 'HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> hostname.equals("x.example"));'),
   JVF('java-random-secret', 'a token, nonce or key is made with java.util.Random or Math.random (use SecureRandom)', /\b(?:token|secret|password|nonce|salt|sessionId|apiKey)\w*\s*=\s*[^;\n]{0,80}(?:\bnew\s+Random\(|\bMath\.random\()/i, 'String token = new Random().nextLong() + "";', 'SecureRandom token = new SecureRandom();'),
+  JVF('java-random-token-method', 'java.util.Random or Math.random makes a value in a token, key, code or session method (use SecureRandom)', undefined, 'String newToken() {\n    return new Random().nextInt() + "";\n}', 'String newToken() {\n    return new SecureRandom().nextInt() + "";\n}', {
+    test: (line, ctx) => /\bnew\s+(?:java\.util\.)?Random\s*\(|\bMath\.random\s*\(|\bThreadLocalRandom\.current\(\)/.test(line) && /token|secret|passw|nonce|session|api[_-]?key|\botp\b|csrf|reset|\bsalt\b|\bkey\b|\bpin\b|verif|invite|\bauth|\bcode\b|uuid|captcha|\bsid\b/i.test(ctx.lines.slice(Math.max(0, ctx.index - 3), ctx.index + 3).join('\n')),
+  }),
   JVF('java-hardcoded-secret', 'a password, secret or key is typed straight into the code', /(?<![A-Za-z0-9])(?:password|passwd|secret|apiKey|api_key|privateKey)\w*\s*=\s*"[^"\n]{4,}"/i, 'String password = "hunter22";', 'String password = System.getenv("PW");'),
   JVF('java-statement-concat', 'SQL is built by concatenating a value into the string', /\.(?:executeQuery|executeUpdate|execute)\(\s*"[^"\n]{0,200}"\s*\+\s*\w/, 'stmt.executeQuery("SELECT * FROM u WHERE id=" + id);', 'ps.executeQuery();'),
   JVF('java-file-from-request', 'a file is opened at a path taken from the request', /\bnew\s+File(?:InputStream|OutputStream)?\(\s*(?:request|req)\.getParameter\(|\bPaths\.get\(\s*(?:request|req)\.getParameter\(/, 'new File(request.getParameter("f"))', 'new File(baseDir, "f.txt")'),
@@ -212,11 +278,11 @@ export const DNP = [
   CSF('cs-binary-formatter', 'a .NET formatter that can run code during deserialization is used (BinaryFormatter, LosFormatter, NetDataContractSerializer)', /\b(?:BinaryFormatter|LosFormatter|NetDataContractSerializer|SoapFormatter)\b/, 'new BinaryFormatter().Deserialize(s)', 'JsonSerializer.Deserialize<T>(s)'),
   CSF('cs-typename-handling', 'Json.NET TypeNameHandling is set to read type names from the data', /\bTypeNameHandling\s*=\s*TypeNameHandling\.(?:All|Auto|Objects|Arrays)\b/, 'settings.TypeNameHandling = TypeNameHandling.All;', 'settings.TypeNameHandling = TypeNameHandling.None;'),
   CSF('cs-accept-any-certificate', 'the TLS certificate callback always returns true', /\bServerCertificateCustomValidationCallback\s*=\s*[^\n]{0,80}=>\s*true\b|\(\s*\w+\s*,\s*\w+\s*,\s*\w+\s*,\s*\w+\s*\)\s*=>\s*true\b/, 'h.ServerCertificateCustomValidationCallback = (m, c, ch, e) => true;', 'h.ServerCertificateCustomValidationCallback = (m, c, ch, e) => e == SslPolicyErrors.None;'),
-  CSF('cs-process-variable', 'Process.Start runs a program named by a variable', /\bProcess\.Start\(\s*(?!"[^"\n]*"\s*\))[A-Za-z_]/, 'Process.Start(cmd)', 'Process.Start("notepad.exe")'),
+  CSF('cs-process-variable', 'Process.Start runs a program named by a variable', /\bProcess\.Start\(\s*(?!"[^"\n]*"\s*\))[A-Za-z_$@]|\bProcess\.Start\(\s*@?"[^"\n]{1,100}"\s*,\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|string\.Format\(|[A-Za-z_])|\bArguments\s*=\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|string\.Format\(|[A-Za-z_]\w*\s*[;,)])|\bFileName\s*=\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|[A-Za-z_]\w*\s*[;,)])/, 'Process.Start(cmd)', 'Process.Start("notepad.exe")'),
   CSF('cs-weak-hash', 'MD5 or SHA-1 is used (broken for security)', /\b(?:MD5|SHA1)\.Create\(|\bMD5CryptoServiceProvider\b|\bSHA1Managed\b/, 'var h = MD5.Create();', 'var h = SHA256.Create();'),
   CSF('cs-weak-cipher', 'DES, RC2 or 3DES is used (weak)', /\b(?:DESCryptoServiceProvider|TripleDESCryptoServiceProvider|RC2CryptoServiceProvider|DES\.Create\(|RC2\.Create\(|TripleDES\.Create\()/, 'var c = DES.Create();', 'var c = Aes.Create();'),
   CSF('cs-ecb-mode', 'ECB cipher mode is selected (identical blocks encrypt identically)', /\bCipherMode\.ECB\b/, 'c.Mode = CipherMode.ECB;', 'c.Mode = CipherMode.CBC;'),
-  CSF('cs-random-secret', 'a token, key or nonce is made with System.Random (not cryptographic)', /\b(?:token|key|secret|password|nonce|salt)\w*\s*=\s*[^;\n]{0,80}\bnew\s+Random\(/i, 'var token = new Random().Next().ToString();', 'var token = RandomNumberGenerator.GetBytes(32);'),
+  CSF('cs-random-secret', 'a token, key or nonce is made with System.Random (not cryptographic)', /\b(?:token|key|secret|password|nonce|salt)\w*\s*=\s*[^;\n]{0,80}\bnew\s+(?:System\.)?Random\(/i, 'var token = new Random().Next().ToString();', 'var token = RandomNumberGenerator.GetBytes(32);'),
   CSF('cs-sql-concat', 'SQL is built by concatenating a value into the string', /"(?:SELECT|INSERT|UPDATE|DELETE)\b[^"\n]{0,200}"\s*\+/, 'var q = "SELECT * FROM u WHERE id=" + id;', 'var q = "SELECT * FROM u WHERE id=@id";'),
   CSF('cs-xmltextreader', 'XmlTextReader is used, which does not lock down entity resolution', /\bnew\s+XmlTextReader\(/, 'var r = new XmlTextReader(s);', 'var r = XmlReader.Create(s, settings);'),
   CSF('cs-cookie-insecure', 'a cookie is set without HttpOnly or Secure', /\b(?:HttpOnly|Secure)\s*=\s*false\b/, 'new CookieOptions { HttpOnly = false }', 'new CookieOptions { HttpOnly = true }'),
@@ -229,7 +295,7 @@ export const DNP = [
   PHPF('php-unserialize-variable', 'unserialize is given data that is not a fixed string', /\bunserialize\s*\(\s*(?!['"][^'"\n]*['"]\s*\))/, 'unserialize($_COOKIE["d"])', 'json_decode($s, true)'),
   PHPF('php-extract-request', 'extract() turns request values into variables', /\bextract\s*\(\s*\$_(?:GET|POST|REQUEST|COOKIE)\b/, 'extract($_GET);', '$id = (int) $_GET["id"];'),
   PHPF('php-include-variable', 'include or require loads a file named by a variable', /(?<![\w$])(?:include|require)(?:_once)?\s*\(?\s*\$/, 'include $page;', 'include "header.php";'),
-  PHPF('php-shell-variable', 'a shell function runs a command from a variable', /(?<![\w>$.:])(?:system|exec|shell_exec|passthru|popen|proc_open)\s*\(\s*\$/, 'system($cmd);', 'system("ls");'),
+  PHPF('php-shell-variable', 'a shell function runs a command from a variable', /(?<![\w>$.:])(?:system|exec|shell_exec|passthru|popen|proc_open)\s*\(\s*(?:\$|"[^"\n]*\$\w|'[^'\n]*'\s*\.)|\x60[^\x60\n]*\$\w[^\x60\n]*\x60/, 'system($cmd);', 'system("ls");'),
   PHPF('php-random-token', 'a token, key or nonce is made with rand, mt_rand or uniqid (not cryptographic)', /\$(?:token|key|secret|password|nonce|salt)\w*\s*=\s*[^;\n]{0,60}\b(?:rand|mt_rand|uniqid)\s*\(/i, '$token = mt_rand();', '$token = bin2hex(random_bytes(16));'),
   PHPF('php-mysql-legacy', 'the removed mysql_* functions are used (no prepared statements)', /\bmysql_(?:query|connect|select_db|real_escape_string|fetch_array|fetch_assoc)\s*\(/, 'mysql_query($sql)', '$pdo->query($sql)'),
   PHPF('php-display-errors-on', 'display_errors is on, so errors and paths are shown to visitors', /\bini_set\s*\(\s*['"]display_errors['"]\s*,\s*['"]?(?:1|on|true)\b|\bdisplay_errors\s*=\s*(?:On|1|true)\b/i, "ini_set('display_errors', '1');", "ini_set('display_errors', '0');"),
@@ -238,8 +304,9 @@ export const DNP = [
   PHPF('php-libxml-loader-off-false', 'libxml entity loader is switched off, so XML external entities are read', /\blibxml_disable_entity_loader\s*\(\s*false\s*\)/, 'libxml_disable_entity_loader(false);', 'libxml_disable_entity_loader(true);'),
   PHPF('php-curl-verify-off', 'cURL does not verify the server certificate or host name', /CURLOPT_SSL_VERIFY(?:PEER|HOST)\s*,\s*(?:false|0)\b/, 'curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);', 'curl_setopt($c, CURLOPT_SSL_VERIFYPEER, true);'),
   RBF('rb-eval-params', 'eval or instance_eval runs text from params or the request', /(?<![\w.:])(?:eval|instance_eval|class_eval|module_eval)\s*\(?\s*(?:params|request|cookies)\b/, 'eval(params[:code])', 'eval("1 + 1")'),
-  RBF('rb-send-params', 'send, constantize or find a method or class named by params', /\.(?:send|public_send|constantize|safe_constantize|try)\(?\s*params\b/, 'User.send(params[:m])', 'User.where(id: params[:id])'),
+  RBF('rb-send-params', 'send, constantize or find a method or class named by params', /(?:^|[\s.(=,])(?:send|public_send|__send__|try|instance_variable_get|instance_variable_set|const_get|method|define_method)\(?\s*(?:params|request\.|cookies)\b|\b(?:params|request\.\w+|cookies)\b[^\n]{0,60}\.(?:constantize|safe_constantize|to_sym\.to_proc)\b|\.(?:constantize|safe_constantize)\(?\s*params\b/, 'User.send(params[:m])', 'User.where(id: params[:id])'),
   RBF('rb-marshal-load', 'Marshal.load can build arbitrary objects from data', /\bMarshal\.load\(/, 'obj = Marshal.load(data)', 'obj = JSON.parse(data)'),
+  RBF('rb-weak-digest', 'MD5 or SHA-1 is used through Digest or OpenSSL (broken for security)', /\bDigest::(?:MD5|SHA1)\b|\bOpenSSL::Digest(?:::(?:MD5|SHA1)\b|\.new\(\s*['"](?:MD5|SHA1)['"])|\bOpenSSL::Digest::(?:MD5|SHA1)\b/i, 'Digest::MD5.hexdigest(text)', 'Digest::SHA256.hexdigest(text)'),
   RBF('rb-yaml-unsafe', 'YAML is loaded with the unsafe loader (it can build Ruby objects)', /\bYAML\.unsafe_load(?:_file)?\(/, 'YAML.unsafe_load(s)', 'YAML.safe_load(s)'),
   RBF('rb-system-interpolation', 'a shell command has a #{} interpolation in its string', /(?<![\w.])(?:system|exec|spawn|IO\.popen|Open3\.\w+)\s*\(?\s*"[^"\n]{0,200}#\{|`[^`\n]{0,200}#\{/, 'system("ls #{dir}")', 'system("ls", dir)'),
   RBF('rb-permit-all', 'strong parameters allow every field (permit!)', /\.permit!/, 'params.permit!', 'params.require(:user).permit(:name)'),

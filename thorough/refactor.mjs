@@ -384,6 +384,9 @@ const JS_FILE = /\.[cm]?[jt]sx?$/
 const ENTRY = /(^|\/)(index|main)\.[cm]?[jt]sx?$|(^|\/)bin\/|^packs\/|\.(test|spec)\.[cm]?[jt]sx?$|\.config\.[cm]?[jt]sx?$|(^|\/)(tests?|examples?|docs?|scripts|fixtures?)\//
 const IMPORT = /(?:from\s+|import\s+|import\(\s*|require\(\s*)['"](\.{1,2}\/[^'"?#]*)['"]/g
 const EXTS = ['', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.json', '.d.ts']
+// Any quoted relative path counts as a reference too: new URL('./w.js', import.meta.url), new Worker('./w.js'), optional('./x.cjs'), a loader table.
+const QUOTED_PATH = /['"`](\.{1,2}\/[^'"`?#\s]+)['"`]/g
+const DOC_FILE = /\.(md|json|ya?ml|html?|txt|toml)$/i
 
 const packageEntries = (root) => {
   let pkg = null
@@ -413,13 +416,22 @@ const unusedFiles = (root) => {
       const bare = target.replace(/\.(m?js|cjs|jsx)$/, '')
       for (const c of [...EXTS.map((e) => target + e), ...EXTS.map((e) => bare + e), ...EXTS.map((e) => `${target}/index${e}`)]) if (known.has(c)) used.add(c)
     }
+    for (const m of t.matchAll(QUOTED_PATH)) {
+      const target = posix.normalize(posix.join(posix.dirname(x), m[1]))
+      const bare = target.replace(/\.(m?js|cjs|jsx)$/, '')
+      for (const c of [...EXTS.map((e) => target + e), ...EXTS.map((e) => bare + e)]) if (known.has(c) && c !== x) used.add(c)
+    }
   }
   const named = new Set(packageEntries(root))
+  // Documentation and manifests that name a file (a README line telling people to run it) count as use.
+  let docTexts = null
+  const docs = () => (docTexts ??= trackedFiles(root).filter((y) => DOC_FILE.test(y) && !/package-lock\.json$/.test(y)).map((y) => readText(root, y)))
   const f = []
   for (const x of files) {
     if (used.has(x) || named.has(x) || ENTRY.test(x) || allow.has(x)) continue
     // A path written into another file counts as a reference: runners and packs name their scripts by path.
     if ([...texts].some(([y, t]) => y !== x && t.includes(x))) continue
+    if (docs().some((t) => t.includes(x))) continue
     f.push(`${x} is not imported by any file and is not an entry point (delete it, or list it in .meerkat-unused-allow)`)
   }
   return finish('unused-files', f, 'every JavaScript and TypeScript file is imported or is an entry point')

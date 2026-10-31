@@ -169,6 +169,8 @@ const installScripts = (root) => {
         if (!key || !p?.hasInstallScript) continue
         const pkg = key.slice(key.lastIndexOf('node_modules/') + 'node_modules/'.length)
         if (allow.has(pkg)) continue
+        // An optional dependency that is tied to one operating system (fsevents on macOS) installs only there, as a prebuilt helper: not a risk on other machines.
+        if (p.optional === true && Array.isArray(p.os) && p.os.length) continue
         f.push(`${x}: ${pkg} ${p.version ?? ''} runs an install script when it is installed`.replace(/ {2,}/g, ' '))
       }
     }

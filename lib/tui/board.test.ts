@@ -181,7 +181,7 @@ describe('the after-run menu starts on a fresh line', () => {
     const writes: string[] = []
     const stdin = Object.assign(new EventEmitter(), { isTTY: true, setRawMode() {}, resume() {}, pause() {} })
     const stdout = { isTTY: true, columns: 100, rows: 30, write: (t: string) => (writes.push(String(t)), true) }
-    const p = afterRun({ runDir: null, env: { NO_COLOR: '1' }, stdin, stdout, args: null, cwd: process.cwd() })
+    const p = afterRun({ runDir: null, env: { NO_COLOR: '1', MEERKAT_OLD_MENU: '1' }, stdin, stdout, args: null, cwd: process.cwd() })
     setTimeout(() => stdin.emit('data', Buffer.from('q')), 30)
     await p
     const first = writes.findIndex((w) => w.includes('Verification finished'))

@@ -170,9 +170,9 @@ describe('origin', () => {
     const results = [{ id: 'e2e', status: 'PASS', ms: 5 }, { id: 'secret-scan', status: 'PASS', ms: 5 }]
     const text = finalReport({ results, tier: 'fast', totalMs: 10, checks: p.checks }).join('\n')
     expect(text).toContain('2 checks')
-    expect(text).toContain('1 of them yours')
+    expect(text).toContain('1 of them your own')
     const plain = finalReport({ results: [results[1]], tier: 'fast', totalMs: 10, checks: p.checks }).join('\n')
-    expect(plain).not.toContain('of them yours')
+    expect(plain).not.toContain('of them your own')
     expect(enrichResults(results, p.checks).map((r: any) => r.origin)).toEqual(['project', 'bundled'])
   })
 })

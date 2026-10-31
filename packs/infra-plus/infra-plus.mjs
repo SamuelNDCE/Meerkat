@@ -12,7 +12,7 @@ const make = (id, suite, title) => ({
   weight: 'tiny',
   suite,
   title,
-  estSeconds: 3,
+  estSeconds: 1,
   subs: CHECK_SUBS[id],
   needs: ['node'],
   run: { cmd: 'node', args: [IP, id], cwd: 'repo' },

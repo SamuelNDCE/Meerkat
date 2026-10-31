@@ -23,16 +23,52 @@ const files = (root, re) => trackedFiles(root).filter((x) => re.test(x) && !SKIP
 const indentOf = (line) => /^(\s*)/.exec(line)[1].length
 const snip = (s) => s.trim().slice(0, 80)
 
-// ---- yaml-valid: tabs used as indentation, a top-level key given twice in one document, quotes that are never closed.
+// ---- yaml-valid: tabs used as indentation, a key given twice in one mapping, quotes that are never closed, flow sequences and mappings
+// that are never closed (also across lines), and aliases (*name) with no anchor (&name) before them.
 // Lines inside a block scalar (| or >) are text, so they are not checked for indentation.
+const CLOSER = { '[': ']', '{': '}' }
+// Scans one line of a flow collection. Returns false when a quote stays open at the end of the line (give up on this collection).
+function scanFlow(s, from, stack, out, n) {
+  let q = ''
+  for (let i = from; i < s.length; i++) {
+    const c = s[i]
+    if (q) {
+      if (c === '\\' && q === '"') i++
+      else if (c === q) q = ''
+      continue
+    }
+    if ((c === '"' || c === "'") && /[\s[{,:]/.test(i ? s[i - 1] : ' ')) q = c
+    else if (c === '#' && /\s/.test(s[i - 1] ?? ' ')) break
+    else if (c === '[' || c === '{') stack.push(c)
+    else if (c === ']' || c === '}') {
+      const open = stack.pop()
+      if (open && CLOSER[open] !== c) {
+        out.push(`line ${n} closes a flow ${open === '[' ? 'sequence' : 'mapping'} with "${c}" but it was opened with "${open}"`)
+        return 'bad'
+      }
+      if (!stack.length) return 'closed'
+    }
+  }
+  return q ? 'quote' : 'open'
+}
 const yamlProblems = (text) => {
   const out = []
-  let keys = new Set()
+  let seen = [] // [{ indent, keys:Set }] the mappings of the current document
+  let anchors = new Set()
   let blockIndent = -1
-  text.replace(/\r/g, '').split('\n').forEach((raw, i) => {
+  let flow = null // { stack, base, line }
+  const template = /(?<!\$)\{\{/.test(text)
+  const lines = text.replace(/\r/g, '').split('\n')
+  const unclosed = () => {
+    out.push(`line ${flow.line} opens a flow ${flow.stack[0] === '[' ? 'sequence' : 'mapping'} that is never closed`)
+    flow = null
+  }
+  lines.forEach((raw, i) => {
     const n = i + 1
     if (/^(---|\.\.\.)\s*(#.*)?$/.test(raw)) {
-      keys = new Set()
+      if (flow) unclosed()
+      seen = []
+      anchors = new Set()
       blockIndent = -1
       return
     }
@@ -41,12 +77,30 @@ const yamlProblems = (text) => {
       if (indentOf(raw) > blockIndent) return
       blockIndent = -1
     }
+    if (flow) {
+      if (indentOf(raw) <= flow.base && !/^\s*[\]}]/.test(raw)) unclosed()
+      else {
+        const r = scanFlow(raw, 0, flow.stack, out, n)
+        if (r === 'closed' || r === 'bad' || r === 'quote') flow = null
+        return
+      }
+    }
     if (/^[ \t]*\t/.test(raw)) out.push(`line ${n} is indented with a tab (YAML indentation must be spaces)`)
-    const top = /^([A-Za-z_][\w.-]*|"[^"]*"|'[^']*')\s*:(\s|$)/.exec(raw)
-    if (top) {
-      const name = top[1].replace(/^["']|["']$/g, '')
-      if (keys.has(name)) out.push(`line ${n} repeats the top-level key "${name}"`)
-      keys.add(name)
+    const ind = indentOf(raw)
+    const item = /^(\s*)-\s+/.exec(raw)
+    if (item) seen = seen.filter((m) => m.indent <= ind)
+    const keyAt = item ? item[0].length : ind
+    const km = /^([A-Za-z_][\w.-]*|"[^"]*"|'[^']*')\s*:(\s|$)/.exec(raw.slice(keyAt))
+    if (km && !template) {
+      const name = km[1].replace(/^["']|["']$/g, '')
+      seen = seen.filter((m) => m.indent <= keyAt)
+      let m = seen[seen.length - 1]
+      if (!m || m.indent !== keyAt) {
+        m = { indent: keyAt, keys: new Set() }
+        seen.push(m)
+      }
+      if (m.keys.has(name)) out.push(keyAt === 0 ? `line ${n} repeats the top-level key "${name}"` : `line ${n} repeats the key "${name}" in the same mapping`)
+      m.keys.add(name)
     }
     if (/(?::|^\s*-)\s*[|>][-+0-9]*\s*(?:#.*)?$/.test(raw)) blockIndent = indentOf(raw)
     const open = /(?:^\s*-\s+|:\s+|^\s*)(["'])/.exec(raw)
@@ -54,7 +108,19 @@ const yamlProblems = (text) => {
       const rest = raw.slice(open.index + open[0].length)
       if (!rest.includes(open[1])) out.push(`line ${n} opens a ${open[1] === '"' ? 'double' : 'single'} quote that is never closed`)
     }
+    if (template) return
+    const bare = raw.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (s) => ' '.repeat(s.length))
+    const code = bare.replace(/(^|\s)#.*$/, '$1')
+    for (const a of code.matchAll(/(?:^|[\s[{,:])&([^\s,\]}[{]+)/g)) anchors.add(a[1])
+    for (const a of code.matchAll(/(?:^|[\s[{,])\*([A-Za-z_][\w-]*)(?=\s|$|[,\]}])/g)) if (!anchors.has(a[1])) out.push(`line ${n} uses the alias *${a[1]} but no &${a[1]} anchor comes before it`)
+    const fm = /^(\s*(?:-\s+)*)(?:(?:[^\s#'"[{][^#]*?|"[^"]*"|'[^']*')\s*:\s+)?(?=[[{])/.exec(code)
+    if (fm) {
+      const stack = []
+      const r = scanFlow(code, fm[0].length, stack, out, n)
+      if (r === 'open') flow = { stack, base: ind, line: n }
+    }
   })
+  if (flow) unclosed()
   return out
 }
 const yamlValid = (root) => {
@@ -120,6 +186,10 @@ const tomlProblems = (text) => {
     if (keys.has(name)) out.push(`line ${n} repeats the key "${name}"${table ? ` in [${table}]` : ''}`)
     keys.add(name)
     const value = m[2]
+    if (!value.trim() || value.startsWith('=')) {
+      out.push(`line ${n} has no value after the key "${name}"`)
+      return
+    }
     const trip = /^("""|''')/.exec(value)
     if (trip) {
       if (!value.slice(3).includes(trip[1])) multi = trip[1]

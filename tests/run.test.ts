@@ -1,0 +1,869 @@
+// The Meerkat orchestrator (the validation tool) (issue #3114): selection, lanes, statuses, the hard timeout and the loader.
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { lastLine } from '../lib/exec.mjs'
+import { globToRegExp, matchesAny } from '../lib/glob.mjs'
+import { loadChecks, validateCheck } from '../lib/load-checks.mjs'
+import { bashFor, wrapForLane } from '../lib/lanes.mjs'
+import { costOf, orderForSpeed, runAll, runOne, selectChecks, summarise } from '../lib/runner.mjs'
+import { applyConfig, findConfig, readConfig } from '../lib/config.mjs'
+import { detect, initConfig } from '../lib/init.mjs'
+import { parseGroups, PRESETS, resolvePreset } from '../lib/presets.mjs'
+import { execFileSync } from 'node:child_process'
+import { missingBinaries } from '../lib/which.mjs'
+import { parseArgs } from '../run.mjs'
+import { parseCells, planJobs } from '../examples/neuralvault/scripts/click-shards.mjs'
+import { assess, report } from '../examples/neuralvault/scripts/promotion-due.mjs'
+import { resolveWidth } from '../examples/neuralvault/scripts/click-shards.mjs'
+import { applyProfile } from '../lib/profiles.mjs'
+import { computeProgress, createProgress, etaMs, formatDuration, renderBar } from '../lib/progress.mjs'
+import { createStatus, fanOut } from '../lib/status.mjs'
+import { applyLearned, learnedSeconds, loadTimings, median, recordRun, saveTimings } from '../lib/timings.mjs'
+import coreChecks from '../examples/neuralvault/core.mjs'
+
+let dir = ''
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'meerkat-test-'))
+})
+afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+const ctx = () => ({ repoRoot: dir, appDir: dir, env: process.env, platform: process.platform, exists: () => true, changedFiles: [] })
+const fake = (over: Record<string, unknown> = {}) => ({
+  id: 'x',
+  group: 'functionality',
+  tier: 'fast',
+  lane: 'free',
+  title: 'x',
+  estSeconds: 1,
+  run: () => ({ ok: true, detail: '' }),
+  ...over,
+})
+const node = (code: string, over: Record<string, unknown> = {}) => fake({ run: { cmd: 'node', args: ['-e', code], cwd: 'app' }, ...over })
+const ids = (list: any[]) => list.map((c) => c.id)
+
+describe('glob and selection', () => {
+  test('** crosses folders, * does not', () => {
+    expect(globToRegExp('src/**').test('src/a/b.ts')).toBe(true)
+    expect(globToRegExp('apps/*.json').test('apps/x/y.json')).toBe(false)
+    expect(matchesAny(['packages/**'], ['packages/core/src/lib.rs'])).toBe(true)
+    expect(matchesAny(['Cargo.toml'], ['docs/a.md'])).toBe(false)
+  })
+  test('fast tier drops thorough checks, opt-in checks need --include', () => {
+    const checks = [fake({ id: 'a' }), fake({ id: 'b', tier: 'thorough' }), fake({ id: 'c', optIn: 'staging' })]
+    expect(ids(selectChecks(checks, { tier: 'fast', mode: 'all' }).run)).toEqual(['a'])
+    expect(ids(selectChecks(checks, { tier: 'thorough', mode: 'all' }).run)).toEqual(['a', 'b'])
+    expect(selectChecks(checks, { tier: 'thorough', mode: 'all', include: ['staging'] }).run).toHaveLength(3)
+  })
+  test('--changed skips checks whose paths did not change, keeps path-less ones', () => {
+    const checks = [fake({ id: 'a', paths: ['src/**'] }), fake({ id: 'b', paths: ['docs/**'] }), fake({ id: 'c' })]
+    const sel = selectChecks(checks, { tier: 'fast', mode: 'changed', changedFiles: ['src/x.ts'] })
+    expect(ids(sel.run)).toEqual(['a', 'c'])
+    expect(ids(sel.skipped)).toEqual(['b'])
+  })
+  test('--only picks by id regardless of tier', () => {
+    const checks = [fake({ id: 'a' }), fake({ id: 'b', tier: 'thorough' })]
+    expect(ids(selectChecks(checks, { tier: 'fast', only: ['b'], mode: 'all' }).run)).toEqual(['b'])
+  })
+})
+
+describe('statuses, order and fail-fast', () => {
+  test('missing tool is NOT RUN, never a pass', async () => {
+    const r = await runOne(fake({ needs: ['no-such-binary-xyz'] }), ctx())
+    expect(r.status).toBe('NOT RUN')
+    expect(missingBinaries(['node'])).toEqual([])
+  })
+  test('stops at the first failure unless --keep-going', async () => {
+    const mk = () => [fake({ id: 'bad', estSeconds: 1, run: () => ({ ok: false, detail: 'boom' }) }), fake({ id: 'later', estSeconds: 2 })]
+    const stop = await runAll(mk(), ctx(), { parallel: 1 })
+    expect(stop.map((r: any) => r.status)).toEqual(['FAIL', 'NOT RUN'])
+    const keep = await runAll(mk(), ctx(), { parallel: 1, keepGoing: true })
+    expect(keep.map((r: any) => r.status)).toEqual(['FAIL', 'PASS'])
+  })
+  test('a check that needs a failed dependency is NOT RUN', async () => {
+    const res = await runAll(
+      [fake({ id: 'build', run: () => ({ ok: false, detail: 'no' }) }), fake({ id: 'win', after: ['build'], estSeconds: 5 })],
+      ctx(),
+      { keepGoing: true },
+    )
+    expect(res[1].status).toBe('NOT RUN')
+    expect(res[1].detail).toContain('build')
+  })
+  test('bash is found the way the lanes find it on Windows, not only on PATH; elsewhere it is still required', async () => {
+    const check = fake({ needs: ['bash'] })
+    const onWindows = await runOne(check, { ...ctx(), env: { PATH: '', MEERKAT_BASH: 'C:/Git/bin/bash.exe' }, platform: 'win32' })
+    expect(onWindows.status).toBe('PASS')
+    const elsewhere = await runOne(check, { ...ctx(), env: { PATH: '' }, platform: 'linux' })
+    expect(elsewhere.status).toBe('NOT RUN')
+    expect(elsewhere.detail).toContain('bash')
+  })
+  test('the one-line failure detail is the cause, not the routine log lines after it', () => {
+    const output = ['  PASS  something', 'VERIFICATION ERRORED: Error: Cannot find module', '2026-10-31T00:19:31Z INFO  [sidecar] state stopped', '2026-10-31T00:19:31Z INFO  [sidecar] ignored the exit'].join(String.fromCharCode(10))
+    expect(lastLine(output)).toContain('VERIFICATION ERRORED')
+    expect(lastLine('plain output' + String.fromCharCode(10) + 'last line')).toBe('last line')
+  })
+  test('summary line and exit code: failed or not run both fail the run', () => {
+    const ok = summarise('fast', [{ status: 'PASS' }], 2, 1500)
+    expect(ok.line).toBe('MEERKAT fast: 1 passed, 0 failed, 0 not run, 2 skipped in 1.5s')
+    expect(ok.exitCode).toBe(0)
+    expect(summarise('fast', [{ status: 'NOT RUN' }], 0, 0).exitCode).toBe(1)
+    expect(summarise('fast', [{ status: 'FAIL' }], 0, 0).exitCode).toBe(1)
+  })
+  test('cargo lane runs one at a time', async () => {
+    let live = 0
+    let peak = 0
+    const slow = (id: string) =>
+      fake({
+        id,
+        lane: 'cargo',
+        run: async () => {
+          live++
+          peak = Math.max(peak, live)
+          await new Promise((r) => setTimeout(r, 40))
+          live--
+          return { ok: true, detail: '' }
+        },
+      })
+    await runAll([slow('a'), slow('b'), slow('c')], ctx(), { parallel: 4 })
+    expect(peak).toBe(1)
+  })
+})
+
+describe('hard timeout', () => {
+  test('a function check that never settles is FAIL after its timeout', async () => {
+    const hang = fake({ id: 'hang', timeoutSeconds: 0.2, run: () => new Promise(() => {}) })
+    const r = await runOne(hang, ctx())
+    expect(r.status).toBe('FAIL')
+    expect(r.detail).toContain('timed out')
+  })
+  test('a command that hangs is killed and reported as FAIL', async () => {
+    const t0 = Date.now()
+    const r = await runOne(node('setInterval(() => {}, 1000)', { timeoutSeconds: 1 }), ctx())
+    expect(r.status).toBe('FAIL')
+    expect(r.detail).toContain('timed out')
+    expect(Date.now() - t0).toBeLessThan(15_000)
+  }, 20_000)
+  test('exit 75 is NOT RUN and shows the reason from the last line', async () => {
+    const r = await runOne(node('console.log("NOT RUN: k6 target env var is not set"); process.exit(75)'), ctx())
+    expect(r).toEqual({ status: 'NOT RUN', detail: 'k6 target env var is not set' })
+  })
+  test('exit code decides pass or fail, and the last line is the detail', async () => {
+    expect((await runOne(node('process.exit(0)'), ctx())).status).toBe('PASS')
+    const failed = await runOne(node('console.log("what is wrong"); process.exit(3)'), { ...ctx(), env: { ...process.env, MEERKAT_LOG_DIR: dir } })
+    expect(failed.detail).toMatch(/^what is wrong {2}\[full output: .*\.log\]$/)
+    const file = /full output: (.*)\]/.exec(failed.detail)![1]
+    expect(readFileSync(file, 'utf8')).toContain('what is wrong')
+  })
+})
+
+describe('self-test', () => {
+  test('a check that fails its broken case is trusted, one that passes it is not', async () => {
+    const good = node('process.exit(0)', { selfTest: { cmd: 'node', args: ['-e', 'process.exit(1)'], cwd: 'app', expectFail: true } })
+    const weak = node('process.exit(0)', { selfTest: { cmd: 'node', args: ['-e', 'process.exit(0)'], cwd: 'app', expectFail: true } })
+    expect((await runOne(good, ctx(), { selfTest: true })).status).toBe('PASS')
+    expect((await runOne(weak, ctx(), { selfTest: true })).status).toBe('FAIL')
+    expect((await runOne(fake(), ctx(), { selfTest: true })).detail).toContain('no selfTest')
+  })
+})
+
+describe('lanes', () => {
+  test('cargo commands always go through the lock script from MEERKAT_CARGO_LOCK', () => {
+    const w = wrapForLane('cargo', 'cargo', ['build'], { MEERKAT_CARGO_LOCK: '/x/lock.sh', MEERKAT_BASH: 'bash' }, () => true, {})
+    expect(w).toMatchObject({ cmd: 'bash', args: ['/x/lock.sh', 'cargo', 'build'] })
+    // A script that is configured but missing is named; with nothing configured the built-in lock is used.
+    expect(wrapForLane('cargo', 'cargo', ['build'], { MEERKAT_CARGO_LOCK: '/x/lock.sh', MEERKAT_BASH: 'bash' }, () => false, {}).missing).toContain('cargo lock script not found')
+    expect(wrapForLane('cargo', 'cargo', ['build'], {}, () => false, {})).toMatchObject({ cmd: 'node', args: [expect.stringContaining('cargo-lock-run.mjs'), 'cargo', 'build'] })
+    expect(wrapForLane('cargo', 'cargo', ['build'], { MEERKAT_BASH: 'bash' }, () => true, { cargoLock: '/home/lock.sh' })).toMatchObject({ cmd: 'bash', args: ['/home/lock.sh', 'cargo', 'build'] })
+  })
+  test('electron lane uses the machine lock when present, runs directly when not', () => {
+    const w = wrapForLane('electron', 'npm', ['run', 'x'], { MEERKAT_ELECTRON_LOCK: '/x/e.sh', MEERKAT_BASH: 'bash' }, () => true)
+    expect(w.args?.[0]).toBe('/x/e.sh')
+    expect(w.env?.MEERKAT_ELECTRON_LOCK_HELD).toBe('1')
+    // The machine lock is optional; the test safety layer is not.
+    const lockless = wrapForLane('electron', 'npm', ['run', 'x'], {}, (p: string) => p.includes('test-safety'))
+    expect(lockless).toMatchObject({ cmd: 'npm' })
+  })
+  test('every electron command gets the test safety layer, and a missing layer is NOT RUN, never a silent skip', () => {
+    const w = wrapForLane('electron', 'npm', ['run', 'x'], {}, () => true)
+    expect(w.env?.NV_TEST_SAFETY).toBe('1')
+    expect(wrapForLane('electron', 'npm', ['run', 'x'], {}, () => false).missing).toContain('test safety layer not built')
+  })
+  test('NV_TEST_SAFETY=off leaves the layer out (only the self-test of the layer itself does this)', () => {
+    const w = wrapForLane('electron', 'npm', ['run', 'x'], { NV_TEST_SAFETY: 'off' }, () => false)
+    expect(w).toMatchObject({ cmd: 'npm' })
+    expect(w.env?.NV_TEST_SAFETY).toBeUndefined()
+  })
+})
+
+describe('loader', () => {
+  test('a check file that throws on import becomes one FAIL naming the file, others still load', async () => {
+    writeFileSync(join(dir, 'broken.mjs'), 'throw new Error("kaput")\n')
+    writeFileSync(join(dir, 'notarray.mjs'), 'export default 5\n')
+    writeFileSync(join(dir, 'good.mjs'), "export default [{ id: 'g', group: 'ui', tier: 'fast', lane: 'free', title: 'g', run: { cmd: 'node', args: [] } }]\n")
+    const checks = await loadChecks(dir)
+    expect(ids(checks).sort()).toEqual(['bad-check-file-broken', 'bad-check-file-notarray', 'g'])
+    const bad = checks.find((c: any) => c.id === 'bad-check-file-broken')
+    const r = await runOne(bad, ctx())
+    expect(r.status).toBe('FAIL')
+    expect(r.detail).toContain('broken.mjs')
+  })
+  test('a missing checks folder is not an error', async () => {
+    expect(await loadChecks(join(dir, 'nope'))).toEqual([])
+  })
+  test('every core check is well formed, unique and has a self-test', () => {
+    const seen = new Set()
+    for (const c of coreChecks as any[]) {
+      expect(validateCheck(c)).toBeNull()
+      expect(c.selfTest, c.id).toBeTruthy()
+      expect(seen.has(c.id)).toBe(false)
+      seen.add(c.id)
+    }
+  })
+})
+
+// A stray backspace byte once sat where a word-boundary escape belonged in this regex, so the error line was never found.
+describe('lastLine', () => {
+  test('shows the error line, not the warning that cargo prints after it', () => {
+    expect(lastLine('URL: x\nerror: 4 vulnerabilities found!\nwarning: 12 allowed warnings found\n')).toBe('error: 4 vulnerabilities found!')
+  })
+  test('still finds the error line when the tool colours it', () => {
+    expect(lastLine('x\n\u001b[1m\u001b[31merror\u001b[0m: broken\nwarning: later')).toBe('error: broken')
+  })
+  test('falls back to the last line when there is no error line', () => {
+    expect(lastLine('one\ntwo\n')).toBe('two')
+  })
+})
+
+describe('arguments', () => {
+  test('flags parse', () => {
+    const o = parseArgs(['--thorough', '--only', 'a,b', '--include', 'staging', '--json', 'o.json', '--keep-going'])
+    expect(o).toMatchObject({ thorough: true, only: ['a', 'b'], include: ['staging'], json: 'o.json', keepGoing: true })
+    expect(parseArgs(['--changed', '--all']).errors).toHaveLength(1)
+    expect(parseArgs(['--wat']).errors[0]).toContain('--wat')
+  })
+})
+
+describe('click-through shards runner', () => {
+  test('no cells means one default cell', () => {
+    expect(parseCells('')).toEqual([{ label: 'default', env: {} }])
+  })
+
+  test('cells map to the gate knobs and a typo is an error', () => {
+    const cells = parseCells('theme=light; theme=dark,size=1024x720; motion=1')
+    expect(cells.map((c) => c.env)).toEqual([
+      { NV_CLICKS_THEME: 'light' },
+      { NV_CLICKS_THEME: 'dark', NV_CLICKS_SIZE: '1024x720' },
+      { NV_CLICKS_REDUCED_MOTION: '1' },
+    ])
+    expect(() => parseCells('colour=red')).toThrow(/NV_CLICKS_CELLS/)
+  })
+
+  test('one job per cell and shard', () => {
+    const jobs = planJobs(parseCells('theme=light;theme=dark'), 3)
+    expect(jobs).toHaveLength(6)
+    expect(jobs.filter((j) => j.cell.label === 'theme=light').map((j) => j.shard)).toEqual([1, 2, 3])
+  })
+})
+
+describe('promotion lag report', () => {
+  test('a hop is due at the threshold, stable never triggers, a missing branch is unknown not ok', () => {
+    const rows = assess({ 'dev>test': 99, 'test>beta': 100, 'beta>stable': 900 }, 100)
+    expect(rows.map((r) => r.due)).toEqual([false, true, false])
+    expect(assess({ 'dev>test': null, 'test>beta': 0, 'beta>stable': 0 })[0].due).toBe(false)
+    expect(report(rows, 100)).toMatch(/DUE: test -> beta/)
+    expect(report(assess({ 'dev>test': null, 'test>beta': 0, 'beta>stable': 0 }), 100)).toMatch(/unknown\s+UNKNOWN|UNKNOWN/)
+  })
+
+  test('the default cell can be listed next to others', () => {
+    expect(parseCells('default;theme=black').map((c) => c.label)).toEqual(['default', 'theme=black'])
+  })
+})
+
+describe('tuning for slower machines', () => {
+  const machine = (cpus: number, gb: number) => ({ cpus, freeBytes: gb * 2 ** 30 })
+
+  test('auto sizes the window count from cores and free memory, up to its ceiling', () => {
+    expect(resolveWidth('auto:6', 4, machine(12, 12))).toBe(6)
+    expect(resolveWidth('auto:6', 4, machine(4, 12))).toBe(2)
+    expect(resolveWidth('auto:6', 4, machine(12, 3))).toBe(2)
+    expect(resolveWidth('auto', 4, machine(2, 1))).toBe(1)
+    expect(resolveWidth('3', 4, machine(2, 1))).toBe(3)
+    expect(resolveWidth('', 4)).toBe(4)
+    expect(() => resolveWidth('lots', 4)).toThrow(/whole number or auto/)
+  })
+
+  test('a profile fills in only what the person has not set', () => {
+    const env: Record<string, string> = { NV_CLICKS_SHARDS: '5' }
+    const set = applyProfile('low', env)
+    expect(env.NV_CLICKS_SHARDS).toBe('5')
+    expect(env.NV_CLICKS_JOBS).toBe('2')
+    expect(set).not.toContain('NV_CLICKS_SHARDS=2')
+    expect(() => applyProfile('huge', {})).toThrow(/unknown profile/)
+  })
+
+  test("a check env is a default that an NV_ variable beats, but not in a self-test", async () => {
+    const check = { id: 'envy', group: 'functionality', tier: 'fast', lane: 'free', title: 't', needs: [], run: { cmd: 'node', args: ['-e', 'process.exit(process.env.NV_X === "user" ? 0 : 1)'], cwd: 'app', env: { NV_X: 'default' } }, selfTest: { cmd: 'node', args: ['-e', 'process.exit(process.env.NV_X === "fixture" ? 1 : 0)'], cwd: 'app', env: { NV_X: 'fixture' } } }
+    expect((await runOne(check as never, { ...ctx(), env: { ...process.env, NV_X: 'user' } })).status).toBe('PASS')
+    expect((await runOne(check as never, { ...ctx(), env: { ...process.env } })).status).toBe('FAIL')
+    expect((await runOne(check as never, { ...ctx(), env: { ...process.env, NV_X: 'user' } }, { selfTest: true })).status).toBe('PASS')
+  })
+
+  test('a check covered by a bigger one in the same run does not run on its own', () => {
+    const mk = (id: string, extra = {}) => ({ id, tier: 'thorough', ...extra })
+    const sel = selectChecks([mk('small', { supersededBy: 'big' }), mk('big')] as never, { tier: 'thorough', mode: 'all', changedFiles: null })
+    expect(sel.run.map((c: { id: string }) => c.id)).toEqual(['big'])
+    expect(sel.superseded.map((c: { id: string }) => c.id)).toEqual(['small'])
+    const alone = selectChecks([mk('small', { supersededBy: 'big' })] as never, { tier: 'thorough', mode: 'all', changedFiles: null })
+    expect(alone.run).toHaveLength(1)
+  })
+})
+
+describe('live progress display', () => {
+  const checks = [{ id: 'a', estSeconds: 10 }, { id: 'b', estSeconds: 30 }, { id: 'c', estSeconds: 60 }]
+
+  test('time and bar formatting', () => {
+    expect(formatDuration(0)).toBe('0:00')
+    expect(formatDuration(75_000)).toBe('1:15')
+    expect(formatDuration(3_725_000)).toBe('1:02:05')
+    expect(renderBar(0.5, 10)).toBe('█████░░░░░')
+    expect(renderBar(2, 4)).toBe('████')
+    expect(renderBar(Number.NaN, 4)).toBe('░░░░')
+  })
+
+  test('progress is weighted by estimate, counts part of a running check, and never reaches 100% while one runs', () => {
+    expect(computeProgress({ checks, done: new Set(['c']), running: new Map(), now: 0 }).fraction).toBeCloseTo(0.6)
+    const half = computeProgress({ checks, done: new Set(), running: new Map([['b', 0]]), now: 15_000 })
+    expect(half.fraction).toBeCloseTo(15 / 100)
+    const slow = computeProgress({ checks, done: new Set(['a', 'b']), running: new Map([['c', 0]]), now: 600_000 })
+    expect(slow.fraction).toBeLessThan(1)
+    expect(computeProgress({ checks, done: new Set(['a', 'b', 'c']), running: new Map(), now: 0 }).fraction).toBe(1)
+  })
+
+  test('time left only appears after a tenth of the work and is time spent scaled by what remains', () => {
+    expect(etaMs(0.05, 10_000)).toBeNull()
+    expect(etaMs(0.5, 60_000)).toBe(60_000)
+    expect(etaMs(1, 60_000)).toBeNull()
+  })
+
+  test('a terminal gets a redrawn block and one line per finished check; a pipe gets only the plain lines', () => {
+    let t = 0
+    const out: string[] = []
+    const stream = { columns: 100, write: (x: string) => { out.push(x) } }
+    const bar = createProgress({ title: 'VERIFY fast', checks, stream, enabled: true, now: () => t, color: false, tickMs: 1_000_000 })
+    bar.start(checks[0])
+    t = 12_000
+    bar.settle(checks[0], { status: 'PASS', detail: 'fine' }, 12_000)
+    bar.settle(checks[1], { status: 'FAIL', detail: 'broken' }, 1_000)
+    bar.stop()
+    const text = out.join('')
+    expect(text).toContain('✔ PASS')
+    expect(text).toContain('✖ FAIL')
+    expect(text).toContain('1 passed')
+    expect(text).toContain('1 failed')
+    expect(text).toContain('2/3 checks')
+    expect(text).toContain('?25h')
+    const piped: string[] = []
+    const plain = createProgress({ title: 'x', checks, stream: { write: (x: string) => { piped.push(x) } }, enabled: false })
+    plain.start(checks[0])
+    plain.stop()
+    expect(piped.join('')).toBe('')
+  })
+})
+
+describe('finding bash for a machine lock script', () => {
+  test('MEERKAT_BASH wins; non-Windows uses bash; Windows looks next to git then in Program Files; none means the built-in lock', () => {
+    expect(bashFor({ MEERKAT_BASH: 'C:/x/bash.exe' }, () => false, 'win32')).toBe('C:/x/bash.exe')
+    expect(bashFor({}, () => false, 'linux')).toBe('bash')
+    expect(bashFor({ PATH: '' , ProgramFiles: 'C:/Program Files' }, (p: string) => p.split('\\').join('/') === 'C:/Program Files/Git/bin/bash.exe', 'win32')?.split('\\').join('/')).toBe('C:/Program Files/Git/bin/bash.exe')
+    expect(bashFor({ PATH: '' }, () => false, 'win32')).toBeNull()
+    const noBash = wrapForLane('cargo', 'cargo', ['build'], { MEERKAT_CARGO_LOCK: '/x/lock.sh', PATH: '' }, () => true, {})
+    expect(noBash.cmd).toBe(process.platform === 'win32' ? 'node' : 'bash')
+  })
+})
+
+describe('measured times replace the written guesses', () => {
+  test('the middle of the last passes wins; failures and stopped checks are not recorded', () => {
+    expect(median([300, 100, 200])).toBe(200)
+    expect(median([100, 300])).toBe(200)
+    expect(median([])).toBeNull()
+    let t = recordRun({ checks: {} }, [{ id: 'a', status: 'PASS', ms: 293_000 }, { id: 'b', status: 'FAIL', ms: 5_000 }, { id: 'c', status: 'NOT RUN', ms: 0 }], 'fast')
+    expect(Object.keys(t.checks)).toEqual(['a'])
+    for (const ms of [100_000, 120_000, 110_000, 130_000, 140_000]) t = recordRun(t, [{ id: 'a', status: 'PASS', ms }], 'fast')
+    expect((t.checks as any).a.fast).toEqual([100_000, 120_000, 110_000, 130_000, 140_000])
+    expect(learnedSeconds(t, 'a', 'fast')).toBe(120)
+    expect(learnedSeconds(t, 'a', 'thorough')).toBeNull()
+  })
+  test('applyLearned changes only checks that have been measured, and keeps the written value', () => {
+    const t = recordRun({ checks: {} }, [{ id: 'proptest', status: 'PASS', ms: 293_000 }], 'fast')
+    const checks = [fake({ id: 'proptest', estSeconds: 3 }), fake({ id: 'other', estSeconds: 7 })] as any[]
+    expect(applyLearned(checks, t, 'fast')).toBe(1)
+    expect(checks[0].estSeconds).toBe(293)
+    expect(checks[0].writtenEstSeconds).toBe(3)
+    expect(checks[1].estSeconds).toBe(7)
+  })
+  test('the file round-trips, and a missing or broken file means no measurements, not a crash', () => {
+    const file = join(dir, 'timings.json')
+    expect(loadTimings(file)).toEqual({ checks: {} })
+    writeFileSync(file, '{ not json')
+    expect(loadTimings(file)).toEqual({ checks: {} })
+    const t = recordRun({ checks: {} }, [{ id: 'a', status: 'PASS', ms: 5_000 }], 'fast')
+    expect(saveTimings(file, t)).toBe(true)
+    expect(loadTimings(file)).toEqual(t)
+    expect(saveTimings(join(file, 'nested', 'x.json'), t)).toBe(false)
+  })
+})
+
+describe('the status file and the heartbeat', () => {
+  const checks = [fake({ id: 'build', lane: 'cargo', estSeconds: 100 }), fake({ id: 'tests', lane: 'cargo', estSeconds: 100 }), fake({ id: 'win', lane: 'electron', after: ['build'], estSeconds: 50 })] as any[]
+  test('it writes what is running, for how long, what waits and why, and what finished', () => {
+    let t = 0
+    const writes: any[] = []
+    const lines: string[] = []
+    const st = createStatus({ title: 'VERIFY fast', tier: 'fast', checks, file: 'f.json', write: (_f: string, d: any) => { writes.push(d) }, say: (l: string) => { lines.push(l) }, now: () => t, tickMs: 0, heartbeatMs: 30_000 })
+    st.start(checks[0])
+    st.queue([{ id: 'tests', reason: 'the cargo lane is busy' }, { id: 'win', reason: 'after build' }])
+    t = 60_000
+    st.settle(checks[0], { status: 'PASS', detail: '' }, 60_000)
+    const last = writes[writes.length - 1]
+    expect(last.state).toBe('running')
+    expect(last.counts).toMatchObject({ total: 3, finished: 1, passed: 1, failed: 0 })
+    expect(last.finished[0]).toMatchObject({ id: 'build', status: 'PASS' })
+    expect(last.percent).toBeGreaterThan(30)
+    st.start(checks[1])
+    t = 90_000
+    const mid = st.snapshot()
+    expect(mid.running[0]).toMatchObject({ id: 'tests', elapsedMs: 30_000, expectedMs: 100_000, overran: false })
+    expect(st.line()).toContain('running: tests 0:30/1:40')
+    t = 400_000
+    expect(st.snapshot().running[0].overran).toBe(true)
+    expect(st.line()).toContain('slower than usual')
+    st.stop('VERIFY fast: done')
+    const final = writes[writes.length - 1]
+    expect(final).toMatchObject({ state: 'done', percent: 100, summary: 'VERIFY fast: done' })
+  })
+  test('waiting reasons come from the scheduler', async () => {
+    const seen: any[] = []
+    const a = fake({ id: 'a', lane: 'cargo', run: async () => { await new Promise((r) => setTimeout(r, 30)); return { ok: true } } })
+    const b = fake({ id: 'b', lane: 'cargo' })
+    const c = fake({ id: 'c', lane: 'electron', after: ['a'] })
+    await runAll([a, b, c] as any[], ctx(), { hooks: { queue: (w: any[]) => { seen.push(w) } } })
+    const first = seen[0]
+    expect(first.find((w: any) => w.id === 'b').reason).toBe('the cargo lane is busy')
+    expect(first.find((w: any) => w.id === 'c').reason).toBe('after a')
+    expect(seen[seen.length - 1]).toEqual([])
+  })
+  test('a status file that cannot be written never stops the run, and fanOut calls every listener', () => {
+    const st = createStatus({ title: 't', tier: 'fast', checks, file: 'f.json', write: () => { throw new Error('disk full') }, now: () => 0, tickMs: 0 })
+    expect(() => { st.start(checks[0]); st.settle(checks[0], { status: 'PASS' }, 1); st.stop() }).not.toThrow()
+    const calls: string[] = []
+    const both = fanOut({ start: () => calls.push('a') }, null, { start: () => calls.push('b'), settle: () => calls.push('c') })
+    ;(both as any).start({})
+    ;(both as any).settle({})
+    ;(both as any).queue([])
+    expect(calls).toEqual(['a', 'b', 'c'])
+  })
+})
+
+describe('start order for speed', () => {
+  test('a check others wait on starts first, quick gates stay ahead of it, the rest keep cheapest first', () => {
+    const list = [
+      fake({ id: 'clippy', lane: 'cargo', estSeconds: 189 }),
+      fake({ id: 'parser', lane: 'cargo', estSeconds: 293 }),
+      fake({ id: 'fmt', lane: 'cargo', estSeconds: 5 }),
+      fake({ id: 'build', lane: 'cargo', estSeconds: 378 }),
+      fake({ id: 'axe', lane: 'electron', estSeconds: 83, after: ['build'] }),
+      fake({ id: 'clicks', lane: 'electron', estSeconds: 112, after: ['build'] }),
+    ]
+    const order = ids(orderForSpeed(list))
+    expect(order[0]).toBe('fmt')
+    expect(order[1]).toBe('build')
+    expect(order.indexOf('build')).toBeLessThan(order.indexOf('clippy'))
+    expect(order.indexOf('clippy')).toBeLessThan(order.indexOf('parser'))
+    expect(order).toHaveLength(list.length)
+  })
+  test('a dependency cycle does not loop forever', () => {
+    const order = orderForSpeed([fake({ id: 'a', after: ['b'] }), fake({ id: 'b', after: ['a'] })])
+    expect(order).toHaveLength(2)
+  })
+})
+
+describe('the scheduler gives light checks the machine together and heavy ones room', () => {
+  const sleepCheck = (id: string, ms: number, extra: Record<string, unknown> = {}) => fake({ id, estSeconds: 1, run: async () => { await new Promise((r) => setTimeout(r, ms)); return { ok: true, detail: '' } }, ...extra })
+  test('a check costs what it says, or the usual cost of its lane', () => {
+    expect(costOf({ lane: 'free' } as never).cpu).toBe(2)
+    expect(costOf({ lane: 'cargo', weight: 'tiny' } as never).cpu).toBe(1)
+    expect(costOf({ lane: 'cargo' } as never).cpu).toBeGreaterThan(3)
+    expect(costOf({ lane: 'free', cost: { cpu: 7 } } as never)).toMatchObject({ cpu: 7 })
+  })
+  test('with room, light checks run at the same time; the budget holds a heavy one back until there is room', async () => {
+    const order: string[] = []
+    const mk = (id: string, cpu: number) => sleepCheck(id, 60, { cost: { cpu, memGB: 0 }, run: async () => { order.push('start ' + id); await new Promise((r) => setTimeout(r, 60)); order.push('end ' + id); return { ok: true, detail: '' } } })
+    const res = await runAll([mk('heavy', 8), mk('light-a', 1), mk('light-b', 1)], ctx(), { parallel: 5, budget: { cpu: 8, reserveGB: 0 }, freeMemGB: () => 64 })
+    expect(res.map((r: any) => r.status)).toEqual(['PASS', 'PASS', 'PASS'])
+    expect(order.indexOf('end heavy')).toBeLessThan(order.indexOf('start light-a'))
+    expect(order.indexOf('start light-b')).toBeLessThan(order.indexOf('end light-a'))
+  })
+  test('little memory free means a heavy check waits, but one check can always run alone', async () => {
+    const res = await runAll([sleepCheck('big', 20, { cost: { cpu: 1, memGB: 50 } })], ctx(), { parallel: 2, budget: { cpu: 8, reserveGB: 3 }, freeMemGB: () => 1 })
+    expect(res[0].status).toBe('PASS')
+    const seen: string[] = []
+    const a = sleepCheck('a', 40, { cost: { cpu: 1, memGB: 0.1 }, run: async () => { seen.push('a'); await new Promise((r) => setTimeout(r, 40)); return { ok: true, detail: '' } } })
+    const b = sleepCheck('b', 10, { cost: { cpu: 1, memGB: 10 }, run: async () => { seen.push('b'); return { ok: true, detail: '' } } })
+    await runAll([a, b], ctx(), { parallel: 2, budget: { cpu: 8, reserveGB: 3 }, freeMemGB: () => 5 })
+    expect(seen).toEqual(['a', 'b'])
+  })
+  test('maxParallel caps how many run at once, and an "alone" check runs with nothing beside it', async () => {
+    let live = 0
+    let peak = 0
+    const mk = (id: string, extra: Record<string, unknown> = {}) => sleepCheck(id, 30, { cost: { cpu: 1, memGB: 0 }, run: async () => { live++; peak = Math.max(peak, live); await new Promise((r) => setTimeout(r, 30)); live--; return { ok: true, detail: '' } }, ...extra })
+    await runAll(['a', 'b', 'c', 'd', 'e'].map((i) => mk(i)), ctx(), { parallel: 9, budget: { cpu: 99, reserveGB: 0, maxParallel: 2 }, freeMemGB: () => 64 })
+    expect(peak).toBe(2)
+    peak = 0
+    const seen: number[] = []
+    const solo = mk('solo', { alone: true, run: async () => { seen.push(live); live++; await new Promise((r) => setTimeout(r, 30)); live--; return { ok: true, detail: '' } } })
+    await runAll([mk('x'), mk('y'), solo], ctx(), { parallel: 9, budget: { cpu: 99, reserveGB: 0, maxParallel: 5 }, freeMemGB: () => 64 })
+    expect(seen).toEqual([0])
+  })
+  test('weight classes: ten tiny checks run together, light ones five at a time, medium two, and "alone" runs by itself', async () => {
+    const peakFor = async (weight: string, count: number) => {
+      let live = 0
+      let peak = 0
+      const list = Array.from({ length: count }, (_, i) => sleepCheck(`${weight}${i}`, 40, { weight, run: async () => { live++; peak = Math.max(peak, live); await new Promise((r) => setTimeout(r, 40)); live--; return { ok: true, detail: '' } } }))
+      await runAll(list, ctx(), { parallel: 99, budget: { cpu: 10, reserveGB: 0, maxParallel: 10 }, freeMemGB: () => 64 })
+      return peak
+    }
+    expect(await peakFor('tiny', 14)).toBe(10)
+    expect(await peakFor('light', 9)).toBe(5)
+    expect(await peakFor('medium', 6)).toBe(2)
+    expect(await peakFor('heavy', 3)).toBe(1)
+    expect(await peakFor('alone', 3)).toBe(1)
+  })
+  test('the thorough tier covers everything the fast tier does: each fast check is in it, or replaced by a wider one that is', async () => {
+    const { loadChecks } = await import('../lib/load-checks.mjs')
+    const all: any[] = []
+    for (const d of ['examples/neuralvault']) all.push(...((await loadChecks(join(process.cwd(), d))) as any[]))
+    for (const pack of ['rust', 'security', 'hygiene', 'performance', 'refactor']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
+    const thorough = new Set(selectChecks(all, { tier: 'thorough', mode: 'all' }).run.map((c: any) => c.id))
+    const fast = selectChecks(all, { tier: 'fast', mode: 'all' }).run
+    expect(fast.length).toBeGreaterThan(10)
+    for (const c of fast as any[]) expect({ id: c.id, covered: thorough.has(c.id) || (!!c.supersededBy && thorough.has(c.supersededBy)) }).toEqual({ id: c.id, covered: true })
+  })
+  test('without a budget nothing changes: everything runs side by side as before', async () => {
+    const t0 = Date.now()
+    await runAll([sleepCheck('x', 80), sleepCheck('y', 80), sleepCheck('z', 80)], ctx(), { parallel: 5 })
+    expect(Date.now() - t0).toBeLessThan(230)
+  })
+  test('the full unit tests also run in the fast tier when every check runs (nothing differs from origin/dev)', () => {
+    const checks = [fake({ id: 'changed', supersededBy: 'all' }), fake({ id: 'all', tier: 'thorough', fastWhenAll: true }), fake({ id: 'other', tier: 'thorough' })]
+    const sel = selectChecks(checks, { tier: 'fast', mode: 'all', changedFiles: null })
+    expect(ids(sel.run)).toEqual(['all'])
+    expect(ids(sel.superseded)).toEqual(['changed'])
+    expect(ids(selectChecks(checks, { tier: 'fast', mode: 'changed', changedFiles: ['x'] }).run)).toEqual(['changed'])
+  })
+})
+
+describe('swapping checks and tools in and out with meerkat.config.json', () => {
+  const built = [fake({ id: 'type-check', run: { cmd: 'npm', args: ['run', 'check'], cwd: 'app' }, selfTest: { cmd: 'x', args: [], expectFail: true } }), fake({ id: 'ui-axe' }), fake({ id: 'lint' })] as any[]
+  const read = (obj: unknown) => readConfig('/p/meerkat.config.json', () => JSON.stringify(obj))
+  const slash = (f: string | null) => (f ?? '').split(String.fromCharCode(92)).join('/')
+  test('the file is found next to the app, then in the repo, or named on the command line', () => {
+    const has = (...files: string[]) => (f: string) => files.includes(slash(f))
+    expect(slash(findConfig({ explicit: '/x/c.json', appDir: '/a', repoRoot: '/r', exists: () => true }))).toMatch(/c\.json$/)
+    expect(slash(findConfig({ appDir: '/a', repoRoot: '/r', exists: has('/a/meerkat.config.json', '/r/meerkat.config.json') }))).toMatch(/a\/meerkat\.config\.json$/)
+    expect(findConfig({ appDir: '/a', repoRoot: '/r', exists: () => false })).toBeNull()
+  })
+  test('mistakes are reported as notes and the rest of the file still applies; a broken file is ignored', () => {
+    const r = read({ disable: 'nope', override: { lint: { colour: 'red', tier: 'thorough' } }, budget: { cpu: 0 }, extraChecks: 5 })
+    expect(r.notes.length).toBeGreaterThanOrEqual(4)
+    expect(r.config.override.lint).toEqual({ tier: 'thorough' })
+    const broken = readConfig('/p/c.json', () => '{ nope')
+    expect(broken.notes[0]).toContain('ignored')
+    expect(broken.config).toEqual({})
+  })
+  test('disable lists what it turned off; an unknown id is a note, not a silent nothing', async () => {
+    const out = await applyConfig(built, read({ disable: ['ui-axe', 'ghost'] }).config, { file: '/p/meerkat.config.json' })
+    expect(out.checks.map((c: any) => c.id)).toEqual(['type-check', 'lint'])
+    expect(out.disabled.map((d: any) => d.id)).toEqual(['ui-axe'])
+    expect(out.notes.join(' ')).toContain('ghost')
+  })
+  test('override changes a check; changing its tool drops the old self-test so the new tool must prove itself', async () => {
+    const out = await applyConfig(built, read({ override: { 'type-check': { tier: 'thorough', run: { cmd: 'pnpm', args: ['tsc'] } }, lint: { estSeconds: 9 }, ghost: { tier: 'fast' } } }).config, { file: '/p/meerkat.config.json' })
+    const t = out.checks.find((c: any) => c.id === 'type-check') as any
+    expect(t.tier).toBe('thorough')
+    expect(t.run).toMatchObject({ cmd: 'pnpm', args: ['tsc'], cwd: 'app' })
+    expect(t.selfTest).toBeUndefined()
+    expect((out.checks.find((c: any) => c.id === 'lint') as any).estSeconds).toBe(9)
+    expect(out.notes.join(' ')).toContain('ghost')
+    const bad = await applyConfig(built, read({ override: { lint: { lane: 'moon' } } }).config, { file: '/p/meerkat.config.json' })
+    expect((bad.checks.find((c: any) => c.id === 'lint') as any).lane).toBe('free')
+    expect(bad.notes.join(' ')).toContain('lane')
+  })
+  test('extra checks are added, and one with the same id swaps out the built-in one', async () => {
+    const extra = [fake({ id: 'lint', title: 'my lint' }), fake({ id: 'brand-new' })] as any[]
+    const out = await applyConfig(built, read({ extraChecks: ['more'] }).config, { file: '/p/meerkat.config.json', load: async () => extra })
+    expect(out.checks.map((c: any) => c.id)).toEqual(['type-check', 'ui-axe', 'lint', 'brand-new'])
+    expect((out.checks.find((c: any) => c.id === 'lint') as any).title).toBe('my lint')
+    expect(out.notes.join(' ')).toContain('swapped')
+  })
+})
+
+describe('presets: security only, UI only, app, each fast or full', () => {
+  const mk = (id: string, group: string, tier: string, after: string[] = []) => fake({ id, group, tier, after })
+  const checks = [
+    mk('build', 'functionality', 'fast'),
+    mk('lint', 'functionality', 'fast'),
+    mk('ui-quick', 'ui', 'fast', ['build']),
+    mk('ui-all', 'ui', 'thorough', ['build']),
+    mk('secrets', 'security', 'fast'),
+    mk('fuzz', 'security', 'thorough'),
+  ]
+  test('every preset names a tier and kinds of check; a project can add its own; an unknown name says what exists', () => {
+    expect(PRESETS.quick.tier).toBe('fast')
+    expect(PRESETS.security.groups).toEqual(['security'])
+    expect(resolvePreset('security-fast').preset).toMatchObject({ tier: 'fast', groups: ['security'] })
+    expect(resolvePreset('mine', { mine: { tier: 'thorough', groups: ['ui', 'bogus'] } }).preset).toMatchObject({ tier: 'thorough', groups: ['ui'] })
+    expect(resolvePreset('nope').error).toContain('Presets:')
+    expect(resolvePreset(undefined).preset).toBeNull()
+    expect(parseGroups('ui, security,bogus')).toEqual(['ui', 'security'])
+  })
+  test('a group limits the run to that kind of check, in the tier asked for', () => {
+    expect(ids(selectChecks(checks, { tier: 'fast', mode: 'all', groups: ['security'] }).run)).toEqual(['secrets'])
+    expect(ids(selectChecks(checks, { tier: 'thorough', mode: 'all', groups: ['security'] }).run).sort()).toEqual(['fuzz', 'secrets'])
+  })
+  test('a chosen check brings what it waits for, so a UI-only run still builds first', () => {
+    const run = ids(selectChecks(checks, { tier: 'fast', mode: 'all', groups: ['ui'] }).run)
+    expect(run.sort()).toEqual(['build', 'ui-quick'])
+    expect(run).not.toContain('lint')
+    expect(ids(selectChecks(checks, { tier: 'thorough', mode: 'all', groups: ['ui'] }).run).sort()).toEqual(['build', 'ui-all', 'ui-quick'])
+  })
+  test('no group means everything of the tier, as before', () => {
+    expect(ids(selectChecks(checks, { tier: 'fast', mode: 'all' }).run).sort()).toEqual(['build', 'lint', 'secrets', 'ui-quick'])
+  })
+})
+
+describe('starting a new project: --init', () => {
+  test('it recognises a Cargo project, an Electron app, a Node project and anything else', () => {
+    const has = (name: string) => (f: string) => f.split(String.fromCharCode(92)).join('/').endsWith('/' + name)
+    expect(detect('/p', has('Cargo.toml')).kind).toBe('rust')
+    expect(detect('/p', has('Cargo.toml')).config).toEqual({ packs: ['rust', 'security', 'hygiene'] })
+    expect(detect('/p', has('package.json')).kind).toBe('node')
+    expect(detect('/p', () => false).kind).toBe('unknown')
+    expect(detect('/p', (f: string) => f.includes('electron-run')).kind).toBe('electron')
+  })
+  test('it writes a config once and never overwrites one', () => {
+    const files = new Map<string, string>()
+    const write = (f: string, text: string) => void files.set(f, text)
+    const first = initConfig('/p', { exists: (f: string) => files.has(f) || f.endsWith('Cargo.toml'), write })
+    expect(first.written).toBe(true)
+    expect(JSON.parse([...files.values()][0])).toEqual({ packs: ['rust', 'security', 'hygiene'] })
+    const again = initConfig('/p', { exists: (f: string) => files.has(f) || f.endsWith('Cargo.toml'), write })
+    expect(again.written).toBe(false)
+    expect(again.message).toContain('already exists')
+  })
+  test('packs named in a config are loaded from Meerkat, and an unknown pack is a note', async () => {
+    const cfg = readConfig('/p/meerkat.config.json', () => JSON.stringify({ packs: ['rust', 'security', 'not-a-pack'] })).config
+    const out = await applyConfig([], cfg, { file: '/p/meerkat.config.json', load: async (dir: string) => (/rust$/.test(dir.split(String.fromCharCode(92)).join('/')) ? [fake({ id: 'rust-fmt' })] : /security$/.test(dir.split(String.fromCharCode(92)).join('/')) ? [fake({ id: 'secret-scan' })] : []) as any })
+    expect(out.checks.map((c: any) => c.id)).toEqual(['rust-fmt', 'secret-scan'])
+    expect(out.notes.join(' ')).toContain('not-a-pack')
+    const bad = readConfig('/p/c.json', () => JSON.stringify({ packs: ['Bad Name'] }))
+    expect(bad.notes.join(' ')).toContain('packs')
+  })
+})
+
+describe('the shipped packs are well-formed and self-testable', () => {
+  test('the rust and security packs load, every check validates and has a self-test', async () => {
+    const { loadChecks } = await import('../lib/load-checks.mjs')
+    for (const pack of ['rust', 'security']) {
+      const list = await loadChecks(join(process.cwd(), 'packs', pack))
+      expect(list.length).toBeGreaterThan(0)
+      for (const c of list as any[]) {
+        expect(c.id.startsWith('bad-check-file')).toBe(false)
+        expect(c.selfTest).toBeTruthy()
+        expect(['security', 'functionality', 'ui', 'performance', 'refactor']).toContain(c.group)
+      }
+    }
+  })
+  test('the hygiene, performance and AI packs load, and every check fails on its own broken case (the AI ones with a stand-in model)', async () => {
+    const { loadChecks } = await import('../lib/load-checks.mjs')
+    const all: any[] = []
+    for (const pack of ['hygiene', 'performance', 'ai', 'refactor', 'ui', 'security']) all.push(...((await loadChecks(join(process.cwd(), 'packs', pack))) as any[]))
+    expect(all.length).toBeGreaterThanOrEqual(33)
+    expect(new Set(all.map((c) => c.id)).size).toBe(all.length)
+    for (const c of all) {
+      if (c.id === 'npm-audit-all') continue // its self-test needs a network round trip; the others are offline
+      expect(c.selfTest.expectFail).toBe(true)
+      let code = 0
+      try {
+        execFileSync(c.selfTest.cmd, c.selfTest.args, { stdio: 'ignore', timeout: 60000 })
+      } catch (e: any) {
+        code = e.status
+      }
+      expect({ id: c.id, code }).toEqual({ id: c.id, code: 1 })
+    }
+  }, 180000)
+  test('the AI checks fail closed: an unreadable model reply, or a secret in the code, is NOT RUN and nothing is sent', () => {
+    for (const c of ['selftest-unreadable-reply', 'selftest-secret-blocked', 'selftest-diff-split-secret', 'selftest-diff-multiline-closed']) {
+      let code = 0
+      try {
+        execFileSync('node', [join(process.cwd(), 'thorough', 'ai.mjs'), c, '--fixtures'], { stdio: 'ignore' })
+      } catch (e: any) {
+        code = e.status
+      }
+      expect({ c, code }).toEqual({ c, code: 1 })
+    }
+  })
+  test("Meerkat's own code makes no network calls (no telemetry); only the user-configured perf check and the tools it runs may", async () => {
+    const { readdirSync, readFileSync, statSync } = await import('node:fs')
+    const files: string[] = []
+    const walk = (d: string) => {
+      for (const e of readdirSync(d)) {
+        const p = join(d, e)
+        if (statSync(p).isDirectory()) walk(p)
+        else if (/\.mjs$/.test(e)) files.push(p)
+      }
+    }
+    for (const d of ['lib']) walk(join(process.cwd(), d))
+    for (const f of ['run.mjs', 'watch.mjs', 'preview.mjs']) files.push(join(process.cwd(), f))
+    const bad = files.filter((f) => /(fetch\(|https?\.request|http\.get|https\.get|net\.connect|new WebSocket|XMLHttpRequest)/.test(readFileSync(f, 'utf8')))
+    expect(bad).toEqual([])
+  })
+  test('redaction: an unclosed secret quote (even at the end of a line) is a hard find; an empty string and ordinary code are not', async () => {
+    const { redact } = await import('../thorough/redact.mjs')
+    const tick = String.fromCharCode(96)
+    expect(redact(`const secret = ${tick}\nreal-value-on-the-next-line${tick}`).hard).toBeGreaterThan(0)
+    expect(redact('password = "hunter2hunter2').hard).toBeGreaterThan(0)
+    expect(redact("token = ''").hard).toBe(0)
+    expect(redact('secret\n  =\n  "hunter2 hunter2').hard).toBeGreaterThan(0)
+    expect(redact('secret =\n  "hunter2 hunter2').hard).toBeGreaterThan(0)
+    expect(redact('password:\n\n`one two three').hard).toBeGreaterThan(0)
+    expect(redact("secret =\n'''\nvalue\n'''").hard).toBeGreaterThan(0)
+    expect(redact('secret = "";').hard).toBe(0)
+    expect(redact('password = """hunter2 hunter2"""').hard).toBeGreaterThan(0)
+    expect(redact("secret = '''\nvalue\n'''").hard).toBeGreaterThan(0)
+    expect(redact('secret = "" + "a b c"').hard).toBeGreaterThan(0)
+    expect(redact('const x = compute(1, 2)').hard).toBe(0)
+    expect(redact('secret = "hello world"').text).not.toContain('hello')
+  })
+  test('a performance check with no budget is NOT RUN (exit 75), never a quiet pass', () => {
+    let code = 0
+    try {
+      execFileSync('node', [join(process.cwd(), 'thorough', 'perf.mjs'), 'sizes', '--root', dir], { stdio: 'ignore' })
+    } catch (e: any) {
+      code = e.status
+    }
+    expect(code).toBe(75)
+  })
+  test('the secret scanner finds planted secrets, finds none in a clean folder, skips test files by default, and never prints a whole secret', () => {
+    const scanner = join(process.cwd(), 'thorough', 'secret-scan.mjs')
+    const run = (args: string[]) => {
+      try {
+        return { code: 0, out: execFileSync('node', [scanner, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) }
+      } catch (e: any) {
+        return { code: e.status as number, out: String(e.stdout ?? '') }
+      }
+    }
+    const fixture = run(['--fixtures'])
+    expect(fixture.code).toBe(1)
+    expect(fixture.out).toContain('found 3')
+    writeFileSync(join(dir, 'clean.js'), 'const a = 1')
+    expect(run(['--root', dir]).code).toBe(0)
+    const key = 'AKIA' + 'IOSFODNN7EXAMPLE'
+    writeFileSync(join(dir, 'real.js'), `const k = '${key}'`)
+    const found = run(['--root', dir])
+    expect(found.code).toBe(1)
+    expect(found.out).toContain('aws-access-key-id')
+    expect(found.out).not.toContain(key) // only the first characters are shown
+    rmSync(join(dir, 'real.js'))
+    writeFileSync(join(dir, 'thing.test.js'), `const k = '${key}'`)
+    expect(run(['--root', dir]).code).toBe(0) // a test file is skipped...
+    expect(run(['--root', dir, '--include-tests']).code).toBe(1) // ...unless asked for
+    writeFileSync(join(dir, '.meerkat-secrets-allow'), 'thing.test.js')
+    expect(run(['--root', dir, '--include-tests']).code).toBe(0) // ...and an accepted path is left alone
+  })
+})
+
+describe('{repo} and {app} in a check command', () => {
+  test('they expand to the repository root and the app folder, in arguments and in the environment', async () => {
+    const r = await runOne(
+      { id: 'x', lane: 'free', run: { cmd: 'node', args: ['-e', "console.log(process.argv[1] + '|' + process.env.NV_T)", '{repo}/a'], cwd: 'app', env: { NV_T: '{app}/b' } } } as never,
+      { repoRoot: dir, appDir: dir, env: process.env, platform: process.platform, exists: () => true, changedFiles: [] } as never,
+    )
+    // a passing check shows its last output line as the detail
+    const slash = dir.split(String.fromCharCode(92)).join('/')
+    expect(r.detail).toBe(`${slash}/a|${slash}/b`)
+  })
+})
+
+describe('logs: every run saves what is needed to understand a failure', () => {
+  test('a run folder gets a log per check, a summary, a timeline and a plain-text report, and --why and --last read them back', async () => {
+    const { createRecorder, makeRunDir, saveCheckLog, checkLogText, showLast, showWhy, writeRunReport } = await import('../lib/runlog.mjs')
+    const env = { MEERKAT_LOG_DIR: join(dir, 'logs') } as any
+    const runDir = makeRunDir(env, 'fast')!
+    expect(runDir).toContain('runs')
+    const rec = createRecorder()
+    const check = { id: 'lint', title: 'Lint', group: 'functionality', tier: 'fast', lane: 'free', weight: 'light' }
+    rec.start(check)
+    const result = { status: 'FAIL', detail: 'two problems' }
+    const file = saveCheckLog(runDir, 'lint', checkLogText({ check, spec: { cmd: 'eslint', args: ['.'], cwd: 'repo' }, result, code: 1, ms: 1234, startedAt: Date.now(), output: 'a.js:1 unused\nb.js:2 unused\n' }))!
+    rec.settle(check, result, 1234)
+    const report = writeRunReport({ dir: runDir, tier: 'fast', results: [{ id: 'lint', ...result, ms: 1234, logFile: file }], line: 'fast: 0 passed, 1 failed', exitCode: 1, ms: 1500, env, recorder: rec, selection: { ran: ['lint'], skipped: [], covered: [], disabled: [] }, scheduler: { slots: 10, maxParallel: 10, reserveGB: 3 } })
+    expect(report).toContain('## Failed (1)')
+    expect(report).toContain('b.js:2 unused')
+    expect(report).toContain('## Timeline')
+    for (const f of ['summary.json', 'timeline.jsonl', 'report.md', 'lint.log']) expect(readFileSync(join(runDir, f), 'utf8').length).toBeGreaterThan(10)
+    const summary = JSON.parse(readFileSync(join(runDir, 'summary.json'), 'utf8'))
+    expect(summary.counts).toEqual({ pass: 0, fail: 1, notRun: 0 })
+    expect(summary.results[0].logFile).toBe(file)
+    expect(showLast(env).text).toContain('Failed (1)')
+    expect(showWhy('lint', env).text).toContain('exit code: 1')
+    expect(showWhy('nope', env).ok).toBe(false)
+  })
+})
+
+describe('the built-in lock keeps one job at a time and clears a dead holder', () => {
+  test('the second job waits for the first, and a lock whose process has died is taken at once', async () => {
+    const { acquire } = await import('../lib/lock.mjs')
+    const lock = join(dir, 'a.lock')
+    const release = (await acquire(lock, { maxWaitMs: 1000 }))!
+    expect(await acquire(lock, { maxWaitMs: 300, pollMs: 50 })).toBeNull()
+    release()
+    const again = (await acquire(lock, { maxWaitMs: 1000 }))!
+    again()
+    mkdirSync(lock)
+    writeFileSync(join(lock, 'owner.json'), JSON.stringify({ pid: 2 ** 22 + 12345, since: 'x', cmd: 'gone' }))
+    const taken = await acquire(lock, { maxWaitMs: 1000, pollMs: 50 })
+    expect(taken).not.toBeNull()
+    taken!()
+  })
+})
+
+describe('the tool packs wrap well-known tools and prove them', () => {
+  test('every wrapper names its tool, an install line, a broken fixture that exists, and the reason it must fail for', async () => {
+    const { loadChecks } = await import('../lib/load-checks.mjs')
+    const { existsSync } = await import('node:fs')
+    const ids = new Set<string>()
+    for (const pack of ['node', 'python', 'go', 'web', 'docs', 'infra']) {
+      const list = (await loadChecks(join(process.cwd(), 'packs', pack))) as any[]
+      expect(list.length).toBeGreaterThan(0)
+      for (const c of list) {
+        expect(c.id.startsWith('bad-check-file')).toBe(false)
+        expect(ids.has(c.id)).toBe(false)
+        ids.add(c.id)
+        expect(c.needs.length).toBe(1)
+        expect(c.install).toBeTruthy()
+        expect(c.selfTest.expectFail).toBe(true)
+        expect(c.selfTest.expectMatch).toBeTruthy()
+        const target = c.selfTest.args.find((a: string) => a.startsWith('fixtures/tools/'))
+        expect(existsSync(join(process.cwd(), target.replace(/\/$/, '')))).toBe(true)
+      }
+    }
+    expect(ids.size).toBeGreaterThanOrEqual(19)
+  })
+  test('a self-test that fails for the wrong reason is reported, not passed', async () => {
+    const check = fake({ id: 'x', needs: [], selfTest: { cmd: process.execPath, args: ['-e', "console.log('some other error');process.exit(1)"], cwd: 'repo', expectFail: true, expectMatch: 'the expected reason' } })
+    const r = await runOne(check as any, ctx(), { selfTest: true })
+    expect(r.status).toBe('FAIL')
+    expect(r.detail).toContain('not for the expected reason')
+  })
+})

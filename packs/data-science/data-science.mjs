@@ -10,7 +10,7 @@ const make = (id, group, title) => ({
   weight: 'tiny',
   suite: 'data-files',
   title,
-  estSeconds: 2,
+  estSeconds: 1,
   needs: ['node'],
   run: { cmd: 'node', args: [DS, id], cwd: 'repo' },
   selfTest: { cmd: 'node', args: [DS, id, '--fixtures'], cwd: 'repo', expectFail: true },

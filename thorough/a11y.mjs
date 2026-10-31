@@ -83,14 +83,23 @@ const linkText = check('link-text', 'every link has text a person can act on', (
 
 // ---- focus-visible: a stylesheet removes the focus outline and puts nothing in its place
 const focusVisible = check('focus-visible', 'no stylesheet removes the focus outline without a replacement', (root, add) => {
-  for (const x of filesMatching(root, STYLES)) {
-    const t = readText(root, x).replace(/\/\*[\s\S]*?\*\//g, '')
+  const sheets = filesMatching(root, STYLES).map((x) => [x, readText(root, x).replace(/\/\*[\s\S]*?\*\//g, '')])
+  const SHOWS_RING = /box-shadow\s*:|(?:^|[;\s])border(?:-[\w]+)?\s*:|background(?:-color)?\s*:|(?:^|[;\s{])outline(?:-width)?\s*:\s*(?!none|0(?:px)?(?![\w.-]))/i
+  // Every rule of every stylesheet, to see whether ANOTHER rule draws the focus ring for the same element: a parent's
+  // `.row:has(.btn:focus-visible)` outline, or a separate `.btn:focus-visible { outline: 2px solid }` rule.
+  const rules = sheets.flatMap(([, t]) => [...t.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => [m[1].trim(), m[2]]))
+  const ringElsewhere = (selector, body) => {
+    const names = selector.split(',').map((s) => s.trim().replace(/:(?:focus-visible|focus-within|focus)\b.*$/i, '').split(/[\s>+~]+/).pop()).filter((n) => n && n.length > 1)
+    return rules.some(([sel, b]) => b !== body && SHOWS_RING.test(b) && names.some((n) => sel.includes(`${n}:focus`)))
+  }
+  for (const [x, t] of sheets) {
     for (const m of t.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const selector = m[1].trim()
       const body = m[2]
       if (!/(?:^|[;\s{])outline(?:-width)?\s*:\s*(?:none|0(?:px)?)(?![\w.-])/i.test(body)) continue
       if (!/:focus|(?:^|[\s,>+~])(?:a|button|input|select|textarea)(?![\w-])/i.test(selector)) continue
       if (/box-shadow\s*:|(?:^|[;\s])border(?:-[\w]+)?\s*:|background(?:-color)?\s*:/i.test(body)) continue
+      if (ringElsewhere(selector, body)) continue
       add(x, lineOf(t, m.index + m[1].length - m[1].trimStart().length), `"${selector.slice(0, 60)}" removes the focus outline and sets nothing in its place (add a box-shadow, border or background)`)
     }
   }

@@ -135,7 +135,7 @@ describe('the board', () => {
     const checks = Array.from({ length: 30 }, (_, i) => ({ id: `check-${i}`, lane: 'free', group: groups[i % 5], source: 'built in', estSeconds: 1 }))
     const tui = createTui({ title: 'MEERKAT fast', checks: checks as never, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, now: () => 0, color: false, tickMs: 3_600_000 })
     expect(tui.frame().join('\n')).toContain('30 checks in 5 groups')
-    expect(tui.frame().join('\n')).toContain('g groups or every check')
+    expect(tui.frame().join('\n')).toContain('g groups')
     tui.key('g')
     expect(tui.frame().join('\n')).toContain('check-29')
     expect(tui.frame().join('\n')).not.toContain('30 checks in 5 groups')
