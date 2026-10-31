@@ -1,4 +1,4 @@
-# Notes on the Fair Credit Community Licence
+# Notes on the Perpetual Community Licence
 
 The licence is in [`LICENSE`](../LICENSE). This page explains how it was checked, what it borrows, and what is still open. It is not legal advice, and it has not been reviewed by a solicitor.
 
@@ -82,12 +82,12 @@ These are decisions for the author, and then for a solicitor.
 | D2: the contributor grant that lets the author relicense (section 11) | included, so a commercial licence is possible | drop it, and every contributor's work stays under this licence only |
 | D3: governing law (section 18.1) | England and Wales, assumed from the author's location | change to the right place |
 | D4: very small organisations (section 6) | all must publish the notice | exempt groups under a set size, or registered charities |
-| D5: the name | "Fair Credit Community Licence", a working title | rename it, and host the text on the Perpetual Technologies site if you want, unchanged |
+| D5: the name | settled: "Perpetual Community Licence" (PCL-1.0), to be hosted on the Perpetual Technologies site with the text identical to `LICENSE`. Note "PCL" is also the abbreviation of other things (Printer Command Language, Point Cloud Library), so the full name should be used where it matters | none |
 | D6: the no-telemetry promise (section 9.1) | binds the author too | promise "none today" only |
 | D7: a change date, as the Business Source License has | none | after, say, four years each version becomes MIT or Apache 2.0, which is very "for the people" but gives up the sale ban on old versions |
 
 ## What it is not
 
 - **Not open source in the strict sense.** It forbids selling the software and requires organisations to credit it, so the Open Source Initiative would not approve it. Call it source-available or a community licence.
-- **Not an SPDX-listed licence.** The identifier `FCCL-1.0` is not registered. Some tools will report it as unknown, which is why the README says what it is.
+- **Not an SPDX-listed licence.** The identifier `PCL-1.0` is not registered. Some tools will report it as unknown, which is why the README says what it is.
 - **Not reviewed by a lawyer.** A solicitor should read it before anyone relies on it in a dispute. The clause list above was checked against the published text of the five licences, not against case law.

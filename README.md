@@ -304,7 +304,7 @@ A pixel-art meerkat watches the run. It looks straight ahead and blinks, squints
 
 ## Licence
 
-Meerkat is under the [Fair Credit Community Licence 1.0](LICENSE) (a working name), written for this project and meant to be for people rather than for companies to take from:
+Meerkat is under the [Perpetual Community Licence 1.0](LICENSE), written for this project and meant to be for people rather than for companies to take from:
 
 - **People** can use, change and share it for anything, free.
 - **Organisations** can use it free too, but must say publicly that they use it, with a link to this repository.
