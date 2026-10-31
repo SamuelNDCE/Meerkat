@@ -23,7 +23,7 @@ meerkat <command> --help                help for any command (also: meerkat help
 | `meerkat repos [--scan <folder>]` | the git repositories Meerkat can find: name, path, branch (`--json` for scripts) | `--scan` looks in that folder too, once |
 | `meerkat recent` / `recent clear` | the last 12 projects you used, newest first (`--json`); `clear` empties the list | stored as paths only in `~/.meerkat.json` |
 
-Options for every run: `--ai` (include the AI checks), `--json` (print the result as JSON on stdout), `--plain` (no board), `--no-color`, `-q/--quiet` (only the result line), `--fail-fast`, `--keep-going`, `--group <kinds>`, `--include <name>`, `--only <ids>`, `--config <file>`, `--no-config`.
+Options for every run: `--ai` (include the AI checks), `--json` (print the result as JSON on stdout), `--plain` (no board), `--no-color`, `-q/--quiet` (only the result line), `--fail-fast`, `--keep-going`, `--group <kinds>`, `--include <name>` (`mutation` and `runtime` add the opt-in deeper checks), `--timeout-scale <n>` (1 to 10), `--only <ids>`, `--config <file>`, `--no-config`.
 
 ## Look at results
 
@@ -145,4 +145,4 @@ Three tabs, shown as `<  Findings (95) | Checks (154) | Timeline  >` with the ac
 - **2 Checks**: every check that ran or was skipped, with status, suite, time, a bar scaled to the slowest check and the reason when it did not pass. `s` cycles the status filter (all, problems, not run, passed). Enter opens the check (command, reason, findings, log path).
 - **3 Timeline**: a gantt of every check on one time axis, with how many ran at once on top. Enter opens the check.
 
-Keys: `c` copies the findings folder path (in a check detail: that check's log path), `l` shows the log, `y` copies the selected log path, `o` shows the report, `d` shows the repo changes, `r` runs again, `m` goes back to the menu, `q`, Esc or Ctrl+C is done, `?` lists the keys. `MEERKAT_OLD_MENU=1` brings back the old list.
+Keys: `c` copies the findings folder path (in a check detail: that check's log path), `l` shows the log, `y` copies the selected log path, `o` shows the report, `d` shows the repo changes, `r` runs again, `m` goes back to the menu, `q`, Esc or Ctrl+C is done, `?` lists the keys. `MEERKAT_OLD_MENU=1` brings back the old list. In PowerShell, set it for the current session with `$env:MEERKAT_OLD_MENU = '1'`, and remove it with `Remove-Item Env:MEERKAT_OLD_MENU`. Without a terminal (a pipe, CI or an AI agent) nothing is drawn, and the output is plain lines.
