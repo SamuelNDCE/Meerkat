@@ -6,6 +6,7 @@
 //   node preview.mjs --fail        one check fails, so you can see the alarm
 //   node preview.mjs --speed 20    faster (default 10: 10 seconds of run per second watched)
 //   node preview.mjs --once        print one still frame mid-run and exit
+//   node preview.mjs --final --speed 3000   run to the end at once and print the finished board (--fail for the alarm)
 //   node preview.mjs --plain       no colour
 //   node preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
 import { estimateRemaining } from './lib/eta.mjs'
@@ -35,14 +36,13 @@ const spec = [
   ['cargo-audit', 'free', 3, [], ['fetching advisory database', 'checking 560 crates']],
   ['type-check', 'free', 10, [], ['tsc -p tsconfig.json', 'tsc -p tsconfig.electron.json']],
   ['build-all', 'free', 10, [], ['vite build', 'transforming 1,840 modules', 'tsc -p tsconfig.electron.json']],
-  ['unit-tests-changed', 'free', 200, [], ['vitest: 40 / 530 files', 'vitest: 210 / 530 files', 'vitest: 480 / 530 files']],
+  ['unit-tests', 'free', 131, [], ['vitest: 40 / 530 files', 'vitest: 210 / 530 files', 'vitest: 480 / 530 files']],
   ['sidecar-fmt', 'cargo', 3, [], ['cargo fmt --check']],
   ['build-sidecar', 'cargo', 378, [], ['Compiling nv-core v1.1.0', 'Compiling nv-vault v1.1.0', 'Compiling nv-agents v1.1.0', 'Compiling nv-runtime v1.1.0', 'Compiling nv-sidecar v1.1.0', 'Linking nv-sidecar.exe']],
   ['vault-parser-proptest', 'cargo', 90, [], ['Compiling proptest', 'running 10 tests', 'test round_trips ... ok']],
   ['sidecar-clippy', 'cargo', 189, [], ['Checking nv-core', 'Checking nv-agents', 'Checking nv-sidecar (all targets)']],
   ['test-safety', 'electron', 3, ['build-all'], ['opening a hidden window', '5 native calls blocked']],
   ['ui-screens', 'electron', 13, ['build-sidecar'], ['Dashboard', 'Library', 'Settings']],
-  ['ui-axe', 'electron', 84, ['build-sidecar'], ['scanning Dashboard', 'scanning Library', 'scanning Settings: 0 serious']],
   ['click-through', 'electron', 112, ['build-sidecar'], ['6 windows open', 'pressing controls: 120 / 362', 'pressing controls: 300 / 362']],
 ]
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -97,11 +97,11 @@ if (has('--once')) {
     model.start(c, t0 + at * 1000 - 2000)
     model.settle(c, { status: 'PASS' }, 2000 + (id === 'type-check' || id === 'build-all' ? 8000 : 0))
   }
-  for (const id of ['build-sidecar', 'unit-tests-changed']) model.start(checks.find((c) => c.id === id), fakeNow - 120_000)
-  model.queue([{ id: 'ui-screens', reason: 'after build-sidecar' }, { id: 'ui-axe', reason: 'after build-sidecar' }, { id: 'click-through', reason: 'after build-sidecar' }, { id: 'vault-parser-proptest', reason: 'the cargo lane is busy' }, { id: 'sidecar-clippy', reason: 'the cargo lane is busy' }])
-  events.push({ at: t0 + 120_000, text: 'started build-sidecar: cargo build -p nv-sidecar' }, { at: t0 + 125_000, text: 'PASS test-safety: 5 native calls blocked' }, { at: t0 + 130_000, text: 'started unit-tests-changed' })
+  for (const id of ['build-sidecar', 'unit-tests']) model.start(checks.find((c) => c.id === id), fakeNow - 120_000)
+  model.queue([{ id: 'ui-screens', reason: 'after build-sidecar' }, { id: 'click-through', reason: 'after build-sidecar' }, { id: 'vault-parser-proptest', reason: 'the cargo lane is busy' }, { id: 'sidecar-clippy', reason: 'the cargo lane is busy' }])
+  events.push({ at: t0 + 120_000, text: 'started build-sidecar: cargo build -p nv-sidecar' }, { at: t0 + 125_000, text: 'PASS test-safety: 5 native calls blocked' }, { at: t0 + 130_000, text: 'started unit-tests' })
   note.set('build-sidecar', 'Compiling nv-agents v1.1.0')
-  note.set('unit-tests-changed', 'vitest: 210 / 530 files')
+  note.set('unit-tests', 'vitest: 210 / 530 files')
   const rows = model.snapshot(fakeNow).map((r) => ({ ...r, note: note.get(r.id) }))
   console.log(renderLive({ rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, color, theme }).join('\n'))
   process.exit(0)
@@ -116,14 +116,15 @@ const draw = (tick) => {
   last = frame(tick)
   process.stdout.write(`${ESC}H${last.slice(0, rows).map((l) => `${l}${ESC}K`).join('\n')}\n${ESC}J`)
 }
-process.stdout.write(`${ESC}?1049h${ESC}?25l`)
-process.on('exit', () => {
+const FINAL = has('--final')
+if (!FINAL) process.stdout.write(`${ESC}?1049h${ESC}?25l`)
+if (!FINAL) process.on('exit', () => {
   process.stdout.write(`${ESC}?25h${ESC}?1049l`)
   if (last.length) console.log(last.join('\n'))
 })
 process.on('SIGINT', () => process.exit(130))
 let tick = 0
-const timer = setInterval(() => draw(tick++), 80)
+const timer = FINAL ? null : setInterval(() => draw(tick++), 80)
 const ordered = orderForSpeed(checks)
 await runAll(ordered, { env: process.env, platform: process.platform, exists: () => true }, {
   keepGoing: true,
@@ -140,6 +141,10 @@ await runAll(ordered, { env: process.env, platform: process.platform, exists: ()
     queue: (w) => model.queue(w),
   },
 })
+if (FINAL) {
+  console.log(frame(0).join('\n'))
+  process.exit(0)
+}
 await sleep(400)
 draw(tick++)
 clearInterval(timer)
