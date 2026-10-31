@@ -678,6 +678,17 @@ describe('the shipped packs are well-formed and self-testable', () => {
       expect({ id: c.id, code }).toEqual({ id: c.id, code: 1 })
     }
   }, 180000)
+  test('the AI checks fail closed: an unreadable model reply, or a secret in the code, is NOT RUN and nothing is sent', () => {
+    for (const c of ['selftest-unreadable-reply', 'selftest-secret-blocked']) {
+      let code = 0
+      try {
+        execFileSync('node', [join(process.cwd(), 'thorough', 'ai.mjs'), c, '--fixtures'], { stdio: 'ignore' })
+      } catch (e: any) {
+        code = e.status
+      }
+      expect({ c, code }).toEqual({ c, code: 1 })
+    }
+  })
   test('a performance check with no budget is NOT RUN (exit 75), never a quiet pass', () => {
     let code = 0
     try {
