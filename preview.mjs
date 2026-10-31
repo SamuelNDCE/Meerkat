@@ -11,9 +11,12 @@
 //   node preview.mjs --speed 20    faster (default 10: 10 seconds of run per second watched)
 //   node preview.mjs --once        print one still frame mid-run and exit
 //   node preview.mjs --plain       no colour
+//   node preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
 import { computeProgress, etaMs } from './lib/progress.mjs'
 import { orderForSpeed, runAll } from './lib/runner.mjs'
 import { renderLive } from './lib/tui/live.mjs'
+import { colorLevel } from './lib/tui/color.mjs'
+import { renderGallery } from './lib/tui/gallery.mjs'
 import { createModel } from './lib/tui/model.mjs'
 
 const argv = process.argv.slice(2)
@@ -21,6 +24,10 @@ const has = (f) => argv.includes(f)
 const SPEED = has('--speed') ? Number(argv[argv.indexOf('--speed') + 1]) || 10 : 10
 const FAIL = has('--fail')
 const color = !has('--plain') && !process.env.NO_COLOR
+if (has('--head')) {
+  console.log(renderGallery({ mode: has('--256') ? '256' : color ? colorLevel(process.env) : false }))
+  process.exit(0)
+}
 const ESC = '\x1b['
 
 // Real names, lanes and dependencies of the fast tier; durations are the cold-run numbers (seconds).

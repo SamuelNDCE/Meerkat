@@ -18,6 +18,8 @@ import { knownStatus, safeLogPath, stripControl } from './safe.mjs'
 import { parseArgs } from '../../run.mjs'
 import { finalReport } from '../report.mjs'
 import { runCommand } from '../exec.mjs'
+import { runOne } from '../runner.mjs'
+import { colorLevel, to256 } from './color.mjs'
 
 let dir: string
 beforeEach(() => {
@@ -46,7 +48,7 @@ describe('model', () => {
     m.start(checks[1], 1000)
     expect(m.snapshot(61000).find((r) => r.id === 'b')).toMatchObject({ status: 'RUNNING', elapsedMs: 60000, slow: false })
     expect(m.snapshot(1000 + 90000 * 1.6).find((r) => r.id === 'b')?.slow).toBe(true)
-    m.settle(checks[1], { status: 'FAIL', detail: 'boom  [full output: C:/tmp/b.log]' }, 5000)
+    m.settle(checks[1], { status: 'FAIL', detail: 'boom', outputFile: 'C:/tmp/b.log' }, 5000)
     expect(m.snapshot(9000).find((r) => r.id === 'b')).toMatchObject({ status: 'FAIL', elapsedMs: 5000, outputFile: 'C:/tmp/b.log' })
     expect(outputFileFrom('no file named')).toBeNull()
   })
@@ -101,10 +103,10 @@ describe('the live view with a fake run', () => {
     writeFileSync(log, ['one', 'two', 'three'].join('\n') + '\n')
     const stream = fakeStream()
     let t = 0
-    const tui = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, now: () => t, color: false, tickMs: 3_600_000 })
+    const tui = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, now: () => t, color: false, tickMs: 3_600_000, env: { NV_VERIFY_LOG_DIR: dir } })
     tui.start(checks[1])
     t = 5000
-    tui.settle(checks[1], { status: 'FAIL', detail: `boom  [full output: ${log}]` }, 5000)
+    tui.settle(checks[1], { status: 'FAIL', detail: 'boom', outputFile: log }, 5000)
     tui.key('o')
     const screen = tui.frame().join('\n')
     expect(screen).toContain('FAIL')
@@ -397,10 +399,10 @@ describe('the real run: live board, streamed output, end-of-run report', () => {
     writeFileSync(log, ['a', 'b', 'c'].join(NL) + NL)
     const results = [
       { id: 'a', status: 'PASS', ms: 20_000, detail: '' },
-      { id: 'b', status: 'FAIL', ms: 3000, detail: `boom  [full output: ${log}]` },
+      { id: 'b', status: 'FAIL', ms: 3000, detail: 'boom', outputFile: log },
       { id: 'c', status: 'NOT RUN', ms: 0, detail: 'stopped after the first failure' },
     ]
-    const text = finalReport({ results, tier: 'fast', timings: { checks: { a: { fast: [2000] } } }, totalMs: 61_000 }).join(NL)
+    const text = finalReport({ results, tier: 'fast', timings: { checks: { a: { fast: [2000] } } }, totalMs: 61_000, env: { NV_VERIFY_LOG_DIR: dir } }).join(NL)
     expect(text).toContain('SUMMARY [ 1:01 ] 3 checks: 1 passed (1 slow), 1 failed, 1 not run')
     expect(text).toContain('SLOWEST   a 0:20')
     expect(text).toContain('SLOW      a took 0:20, usually 0:02')
@@ -411,5 +413,80 @@ describe('the real run: live board, streamed output, end-of-run report', () => {
     const clean = finalReport({ results: [{ id: 'a', status: 'PASS', ms: 1000, detail: '' }], tier: 'fast', timings, totalMs: 1000 }).join(NL)
     expect(clean).toContain('1 passed')
     expect(clean).not.toContain('FAIL')
+  })
+})
+
+describe('a saved-output path is never taken from text, and never read from outside the log folder', () => {
+  const NL = String.fromCharCode(10)
+  test('the board and the report ignore a path that only appears in a detail line', () => {
+    const secret = join(dir, 'secret.txt')
+    writeFileSync(secret, 'not for the screen')
+    const out: string[] = []
+    const stream = { columns: 120, rows: 50, write: (x: string) => out.push(x) }
+    const tui = createTui({ title: 'MEERKAT fast', checks, timings, tier: 'fast', stream: stream as never, input: { isTTY: false } as never, color: false, tickMs: 3_600_000, env: { NV_VERIFY_LOG_DIR: dir } })
+    tui.start(checks[1])
+    tui.settle(checks[1], { status: 'FAIL', detail: `boom [full output: ${secret}]` }, 1000)
+    tui.key('o')
+    expect(tui.frame().join(NL)).not.toContain('not for the screen')
+    tui.stop()
+    const text = finalReport({ results: [{ id: 'b', status: 'FAIL', ms: 1000, detail: `boom [full output: ${secret}]` }], tier: 'fast', timings, totalMs: 1000, env: { NV_VERIFY_LOG_DIR: dir } }).join(NL)
+    expect(text).not.toContain('not for the screen')
+    expect(text).not.toContain('output:')
+  })
+  test('a real field that points outside the log folder is refused too', () => {
+    const logs = join(dir, 'logs2')
+    mkdirSync(logs)
+    const outside = join(dir, 'outside.txt')
+    writeFileSync(outside, 'outside content')
+    const text = finalReport({ results: [{ id: 'b', status: 'FAIL', ms: 1000, detail: 'boom', outputFile: outside }], tier: 'fast', timings, totalMs: 1000, env: { NV_VERIFY_LOG_DIR: logs } }).join(NL)
+    expect(text).not.toContain('outside content')
+  })
+  test('the runner returns the saved path as its own field', async () => {
+    const logs = join(dir, 'logs3')
+    mkdirSync(logs)
+    const r = await runOne(
+      { id: 'x', lane: 'free', run: { cmd: 'node', args: ['-e', 'process.exit(3)'], cwd: 'app' } } as never,
+      { repoRoot: dir, appDir: dir, env: { ...process.env, NV_VERIFY_LOG_DIR: logs }, platform: process.platform, exists: () => true, changedFiles: [] } as never,
+    )
+    expect(r.status).toBe('FAIL')
+    expect((r as any).outputFile).toContain('logs3')
+    expect(r.detail).toContain('[full output:')
+  })
+})
+
+describe('colour level: truecolor, 256 colours, or shades, decided the way image tools do', () => {
+  const ESC = String.fromCharCode(27)
+  test('NO_COLOR wins, COLORTERM says truecolor, known terminals are trusted, TERM 256color, a modern Windows console', () => {
+    expect(colorLevel({ NO_COLOR: '1', COLORTERM: 'truecolor' }, 'linux')).toBe(false)
+    expect(colorLevel({ COLORTERM: 'truecolor' }, 'linux')).toBe('truecolor')
+    expect(colorLevel({ COLORTERM: '24bit' }, 'linux')).toBe('truecolor')
+    expect(colorLevel({ WT_SESSION: 'x' }, 'win32')).toBe('truecolor')
+    expect(colorLevel({ TERM_PROGRAM: 'vscode' }, 'linux')).toBe('truecolor')
+    expect(colorLevel({ TERM: 'xterm-256color' }, 'linux')).toBe('256')
+    expect(colorLevel({}, 'win32')).toBe('truecolor')
+    expect(colorLevel({}, 'linux')).toBe('256')
+  })
+  test('the 256-colour mapping uses the colour cube for colours and the grey ramp for greys', () => {
+    expect(to256([255, 0, 0])).toBe(196)
+    expect(to256([0, 0, 0])).toBe(16)
+    expect(to256([255, 255, 255])).toBe(231)
+    const grey = to256([128, 128, 128])
+    expect(grey).toBeGreaterThanOrEqual(232)
+    expect(grey).toBeLessThanOrEqual(255)
+  })
+  test('the sprite is drawn in each mode: 24-bit codes, 256-colour codes, or plain shades with no escape codes', () => {
+    const t = headLines('right', 'truecolor').join('')
+    const c = headLines('right', '256').join('')
+    const plain = headLines('right', false).join('')
+    expect(t).toContain(ESC + '[38;2;')
+    expect(t).not.toContain('38;5;')
+    expect(c).toContain(ESC + '[38;5;')
+    expect(c).not.toContain('38;2;')
+    expect(plain).not.toContain(ESC)
+    expect(plain).toContain('○') // the eye still shows
+  })
+  test('the shaded sprite has light and shade tones, a lit eye and whiskers', () => {
+    const t = headLines('left', 'truecolor').join('')
+    expect(new Set(t.match(/38;2;\d+;\d+;\d+/g)).size).toBeGreaterThan(8)
   })
 })
