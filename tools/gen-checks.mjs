@@ -8,7 +8,7 @@ import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { isAlone } from '../lib/runner.mjs'
 import { declaredSubs, groupBySuite, suiteIdOf } from '../lib/suites.mjs'
 
-const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'web-plus', 'lang', 'config', 'content', 'git', 'desktop', 'api', 'health', 'ai']
+const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'web-plus', 'lang', 'config', 'content', 'git', 'desktop', 'api', 'health', 'data-science', 'packaging', 'ci-systems', 'privacy', 'engines', 'secrets-plus', 'code-patterns', 'infra-plus', 'web-hardening', 'functionality-run', 'mutation', 'ai']
 const KINDS = [
   ['security', 'Security', 'Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review.'],
   ['functionality', 'Functionality', 'Does it build, type-check, lint and pass its tests; is the repository in order.'],

@@ -140,7 +140,7 @@ contextBridge.exposeInMainWorld('api', { version: () => '1.0.0' })
   },
   'python-lib': {
     files: {
-      'pyproject.toml': '[build-system]\nrequires = ["setuptools>=68"]\nbuild-backend = "setuptools.build_meta"\n\n[project]\nname = "example"\nversion = "1.0.0"\ndescription = "A small example library."\nreadme = "README.md"\nrequires-python = ">=3.9"\nlicense = { text = "MIT" }\n',
+      'pyproject.toml': '[build-system]\nrequires = ["setuptools>=68"]\nbuild-backend = "setuptools.build_meta"\n\n[project]\nname = "example"\nversion = "1.0.0"\ndescription = "A small example library."\nreadme = "README.md"\nrequires-python = ">=3.9"\nlicense = { text = "MIT" }\nclassifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License"]\n',
       'src/example/__init__.py': '"""A small example library."""\n\n\ndef add(a: int, b: int) -> int:\n    """Return the sum of a and b."""\n    return a + b\n',
       'tests/test_add.py': 'from example import add\n\n\ndef test_add():\n    assert add(1, 2) == 3\n',
       'README.md': readme('python-lib', 'Run `pip install .`.', 'Call `example.add(1, 2)`.'),

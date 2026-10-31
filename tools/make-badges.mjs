@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
 
-const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'web-plus', 'lang', 'config', 'content', 'git', 'desktop', 'api', 'health', 'ai']
+const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'web-plus', 'lang', 'config', 'content', 'git', 'desktop', 'api', 'health', 'data-science', 'packaging', 'ci-systems', 'privacy', 'engines', 'secrets-plus', 'code-patterns', 'infra-plus', 'web-hardening', 'functionality-run', 'mutation', 'ai']
 let checks = 0
 for (const p of PACKS) checks += (await loadChecks(join(MEERKAT_DIR, 'packs', p))).length
 
