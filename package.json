@@ -11,6 +11,8 @@
     "meerkat:doctor": "node doctor.mjs",
     "meerkat:promotion": "node promotion-due.mjs",
     "meerkat:watch": "node watch.mjs",
+    "preview": "node preview.mjs --speed 6",
+    "preview:head": "node preview.mjs --head",
     "test": "vitest run"
   },
   "devDependencies": {
