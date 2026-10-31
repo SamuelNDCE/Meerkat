@@ -90,6 +90,14 @@ describe('statuses, order and fail-fast', () => {
     expect(res[1].status).toBe('NOT RUN')
     expect(res[1].detail).toContain('build')
   })
+  test('bash is found the way the lanes find it on Windows, not only on PATH; elsewhere it is still required', async () => {
+    const check = fake({ needs: ['bash'] })
+    const onWindows = await runOne(check, { ...ctx(), env: { PATH: '', NV_BASH: 'C:/Git/bin/bash.exe' }, platform: 'win32' })
+    expect(onWindows.status).toBe('PASS')
+    const elsewhere = await runOne(check, { ...ctx(), env: { PATH: '' }, platform: 'linux' })
+    expect(elsewhere.status).toBe('NOT RUN')
+    expect(elsewhere.detail).toContain('bash')
+  })
   test('summary line and exit code: failed or not run both fail the run', () => {
     const ok = summarise('fast', [{ status: 'PASS' }], 2, 1500)
     expect(ok.line).toBe('MEERKAT fast: 1 passed, 0 failed, 0 not run, 2 skipped in 1.5s')
