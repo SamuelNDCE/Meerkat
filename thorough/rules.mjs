@@ -64,6 +64,7 @@ function matches(rule, text, file) {
 export function evaluate(root, rules, { files = trackedFiles(root), allow = new Set(), read = (f) => readText(root, f) } = {}) {
   const usable = files.filter((f) => !isFixture(f) && !VENDORED.test(f) && !MINIFIED.test(f))
   const found = []
+  const hits = [] // the same hits with file, line and severity, for the finding lines
   const na = []
   for (const rule of rules) {
     const mine = usable.filter((f) => wants(rule, f) && !(rule.notIn && rule.notIn.test(f)))
@@ -75,15 +76,18 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
       if (allow.has(`${rule.id} ${f}`) || allow.has(`${rule.id} *`)) continue
       const text = read(f)
       if (typeof text !== 'string') continue
-      for (const n of matches(rule, text, f)) found.push({ rule: rule.id, text: `${f}:${n} ${rule.title}`, file: f, line: n, title: rule.title, severity: rule.severity })
+      for (const n of matches(rule, text, f)) {
+        found.push({ rule: rule.id, text: `${f}:${n} ${rule.title}` })
+        hits.push({ rule: rule.id, file: f, line: n, title: rule.title, severity: rule.severity })
+      }
     }
   }
-  return { found, na, files: usable.length }
+  return { found, na, files: usable.length, hits }
 }
 
 // Prints one MEERKAT-SUB line per rule, then the findings; returns the exit code (0 pass, 1 findings).
 export function scanRules(name, root, rules, { allowFile, okNote = 'nothing found' } = {}) {
-  const { found, na } = evaluate(root, rules, { allow: readAllow(root, allowFile) })
+  const { found, na, hits: located } = evaluate(root, rules, { allow: readAllow(root, allowFile) })
   const hit = new Map()
   for (const f of found) hit.set(f.rule, (hit.get(f.rule) ?? 0) + 1)
   for (const r of rules) {
@@ -94,7 +98,7 @@ export function scanRules(name, root, rules, { allowFile, okNote = 'nothing foun
   }
   const fallback = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY) ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'
   // One finding line per hit (lib/findings.mjs), alongside the usual output below.
-  for (const f of found) finding(f.severity ?? fallback, f.rule, f.file, f.line, f.title)
+  for (const f of located) finding(f.severity ?? fallback, f.rule, f.file, f.line, f.title)
   if (!found.length) {
     console.log(`${name}: ${okNote}`)
     return 0
