@@ -3,7 +3,7 @@
 // or distribution is strictly prohibited.
 
 // The Meerkat terminal UI: a fake run (no real check, no real terminal), so it is fast and safe to run anywhere.
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
@@ -13,6 +13,7 @@ import { applyFilter, createModel, initialState, nextState, outputFileFrom, typi
 import { renderHistory, renderRows, sparkline } from './render.mjs'
 import { frameFromStatus, rowsFromStatus, staleNote } from './watch.mjs'
 import { mascotLines, moodOf, speechFor, withMascot } from './mascot.mjs'
+import { knownStatus, safeLogPath, stripControl } from './safe.mjs'
 import { parseArgs } from '../../run.mjs'
 
 let dir: string
@@ -156,7 +157,7 @@ describe('the watch viewer (reads a status file, never touches the run)', () => 
   test('every check becomes one row: finished, running, waiting', () => {
     const rows = rowsFromStatus(status, timings)
     expect(rows.map((r) => `${r.id}:${r.status}`)).toEqual(['a:PASS', 'c:FAIL', 'b:RUNNING', 'd:WAITING'])
-    expect(rows[1].outputFile).toBe('C:/tmp/c.log')
+    expect(rows[1].outputFile).toBeNull() // C:/tmp/c.log is not inside Meerkat's log folder, so it is never opened
     expect(rows[2]).toMatchObject({ slow: true, lane: 'cargo' })
     expect(rows[0].typicalMs).toBe(3000)
   })
@@ -203,5 +204,49 @@ describe('the meerkat', () => {
     const withArt = withMascot(head, [row('PASS')], { width: 100 })
     expect(withArt).toHaveLength(5)
     expect(withArt[0]).toContain('title line')
+  })
+})
+
+describe('a status file is untrusted text', () => {
+  const ESC = String.fromCharCode(27)
+  test('control characters never reach the screen', () => {
+    expect(stripControl(`red${ESC}[31m${ESC}]0;owned${String.fromCharCode(7)}x${String.fromCharCode(13)}y`)).toBe('red[31m]0;ownedxy')
+    expect(stripControl('a	b')).toBe('a b')
+    const hostile = { title: `T${ESC}[2J`, tier: 'fast', state: 'running', updatedAt: new Date().toISOString(), elapsedMs: 1, percent: 1, etaMs: null, summary: `S${ESC}[2J`, finished: [{ id: `id${ESC}[1A`, status: 'PASS', ms: 1, detail: `d${ESC}[0K` }], running: [], waiting: [] }
+    const text = frameFromStatus(hostile, { timings, color: false, width: 100 }).join('\n')
+    expect(text).not.toContain(ESC)
+  })
+  test('an unknown status is shown as NOT RUN, never as green', () => {
+    expect(knownStatus('PASS')).toBe('PASS')
+    expect(knownStatus('GREAT')).toBe('NOT RUN')
+    const rows = rowsFromStatus({ tier: 'fast', finished: [{ id: 'x', status: 'GREAT', ms: 1 }] }, timings)
+    expect(rows[0].status).toBe('NOT RUN')
+  })
+  test('only a file inside the log folder is opened', () => {
+    const logs = join(dir, 'logs')
+    mkdirSync(logs)
+    const inside = join(logs, 'c.log')
+    const outside = join(dir, 'secret.txt')
+    writeFileSync(inside, 'tail line')
+    writeFileSync(outside, 'not for the screen')
+    const env = { NV_VERIFY_LOG_DIR: logs }
+    expect(safeLogPath(inside, { env })).not.toBeNull()
+    expect(safeLogPath(outside, { env })).toBeNull()
+    expect(safeLogPath(join(logs, '..', 'secret.txt'), { env })).toBeNull()
+    expect(safeLogPath('//server/share/x.log', { env })).toBeNull()
+    expect(safeLogPath('//./pipe/x', { env })).toBeNull()
+    expect(safeLogPath(join(logs, 'missing.log'), { env })).toBeNull()
+    const mk = (path: string) => ({ tier: 'fast', finished: [{ id: 'c', status: 'FAIL', ms: 1, detail: `boom  [full output: ${path}]` }] })
+    expect(rowsFromStatus(mk(inside), timings, { env })[0].outputFile).not.toBeNull()
+    expect(rowsFromStatus(mk(outside), timings, { env })[0].outputFile).toBeNull()
+    // text earlier in a detail cannot pose as the path: only the one at the very end counts
+    const fake = { tier: 'fast', finished: [{ id: 'c', status: 'FAIL', ms: 1, detail: `[full output: ${inside}] and then more text` }] }
+    expect(rowsFromStatus(fake, timings, { env })[0].outputFile).toBeNull()
+  })
+  test('a log tail is shown as plain text', () => {
+    const f = join(dir, 'tail.log')
+    writeFileSync(f, `ok${ESC}[31m red${ESC}[0m${String.fromCharCode(13)}done
+`)
+    expect(tailOf(f, 3)).toEqual(['ok[31m red[0mdone'])
   })
 })
