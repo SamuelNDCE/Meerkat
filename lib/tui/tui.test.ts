@@ -261,15 +261,15 @@ describe('the live board', () => {
     { id: 'b', status: 'RUNNING', lane: 'cargo', startedAt: 0, typicalMs: 100_000, expectedMs: 100_000, note: 'Compiling nv-core' },
     { id: 'c', status: 'WAITING', lane: 'electron', reason: 'after b', typicalMs: 5000, expectedMs: 5000 },
   ]
-  test('the pixel head turns: left, front and right differ, every pose has the same size, blinks keep their direction', () => {
-    const names = ['left', 'center', 'right', 'blink-left', 'blink-center', 'blink-right', 'happy', 'wide']
+  test('the pixel head looks left and right, every pose has the same size, blinks keep their direction', () => {
+    const names = ['left', 'right', 'blink-left', 'blink-right', 'happy', 'wide']
     const heads = names.map((p) => headLines(p, true))
     expect(new Set(heads.map((h) => h.length)).size).toBe(1)
-    expect(heads[0]).toHaveLength(7)
-    expect(heads[0].join('')).not.toBe(heads[2].join(''))
-    expect(heads[0].join('')).not.toBe(heads[1].join(''))
-    expect(heads[3].join('')).not.toBe(heads[0].join('')) // a blink changes the eye
-    expect(heads[2].join('')).not.toBe(heads[5].join(''))
+    expect(heads[0]).toHaveLength(10)
+    expect(heads[0].join('')).not.toBe(heads[1].join('')) // left is not right
+    expect(heads[2].join('')).not.toBe(heads[0].join('')) // a blink changes the eye
+    expect(heads[3].join('')).not.toBe(heads[1].join(''))
+    expect(heads[5].join('')).not.toBe(heads[0].join('')) // wide-eyed
     expect(heads[0].join('')).toContain(String.fromCharCode(27) + '[38;2;')
   })
   test('without colour the same sprite is drawn in shades, and the eye still shows', () => {
@@ -278,9 +278,9 @@ describe('the live board', () => {
     expect(plain).toContain('○')
     expect(headLines('blink-left', false).join('')).not.toContain('○')
   })
-  test('it scans left, centre, right, centre while on watch, and reacts to the result', () => {
-    const seen = new Set([0, 20, 40, 60].map((tick) => poseFor({ mood: 'watch', tick })))
-    expect(seen).toEqual(new Set(['left', 'center', 'right']))
+  test('it looks left then right while on watch, and reacts to the result', () => {
+    const seen = new Set([0, 24, 48, 72].map((tick) => poseFor({ mood: 'watch', tick })))
+    expect(seen).toEqual(new Set(['left', 'right']))
     expect(poseFor({ mood: 'cheer', tick: 0 })).toBe('happy')
     expect(poseFor({ mood: 'alarm', tick: 0 })).toBe('wide')
   })
