@@ -1,8 +1,8 @@
 Required Notice: Copyright (c) 2026 SamuelNDCE (https://github.com/SamuelNDCE/Meerkat)
 
-# Fair Credit Community Licence 1.0
+# Perpetual Community Licence 1.0
 
-SPDX-style identifier: `FCCL-1.0` (not an SPDX-registered licence)
+SPDX-style identifier: `PCL-1.0` (not an SPDX-registered licence)
 
 **Summary (for convenience only; if it differs from the numbered terms, the numbered terms win).** People can use, change and share this software for anything, free. Organisations can use it free too, but must say publicly that they use it. Nobody may sell the software itself, or a service that is mainly the software. A company that builds the software into its own product and sells that product may do so, if it credits the software and links to its repository. The software collects no data about you.
 
@@ -51,7 +51,7 @@ An Individual has no duties under these terms except those in section 7 when the
 
 An Organisation may use the software inside the Organisation, on any number of machines, free of charge. It must, **within 60 days of first using the software and for as long as it keeps using it**, publish a Credit Notice somewhere the public can read, such as a credits, "open source" or "acknowledgements" page of its website or product, its public documentation, or the README of a public repository. The notice must say, in words at least as clear as:
 
-> This organisation uses Meerkat, by SamuelNDCE (https://github.com/SamuelNDCE/Meerkat), under the Fair Credit Community Licence.
+> This organisation uses Meerkat, by SamuelNDCE (https://github.com/SamuelNDCE/Meerkat), under the Perpetual Community Licence.
 
 1. It may add its own words, but must not state or suggest that the Licensor endorses it.
 2. One notice may cover an Organisation and its Affiliates if it names them or says it covers them.
@@ -137,5 +137,5 @@ Put this at the top of a source file:
 
 ```
 Copyright (c) 2026 SamuelNDCE (https://github.com/SamuelNDCE/Meerkat)
-Licensed under the Fair Credit Community Licence 1.0. See the LICENSE file.
+Licensed under the Perpetual Community Licence 1.0. See the LICENSE file.
 ```
