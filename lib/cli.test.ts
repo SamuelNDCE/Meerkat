@@ -19,7 +19,12 @@ describe('planCommand', () => {
     expect(plan([], { interactive: false })).toEqual({ kind: 'help' })
   })
 
-  test.each(['verify', 'test', 'check'])('%s runs the quick preset on the current folder', (word) => {
+  // The spec (docs/commands.md) makes `check` a noun: `check <id>` runs only those checks. `quick` is the third alias of verify.
+  test('a bare "check" is no longer the quick run: it asks which checks', () => {
+    expect(plan(['check'])).toMatchObject({ kind: 'error' })
+  })
+
+  test.each(['verify', 'test', 'quick'])('%s runs the quick preset on the current folder', (word) => {
     expect(plan([word])).toMatchObject({ kind: 'run', args: ['--app', cwd, '--preset', 'quick'] })
   })
 
@@ -487,6 +492,6 @@ describe('the folder word: a pasted path or the name of a project', () => {
   })
   test('root commands and the help lead with commands', () => {
     expect(planCommand(['root', 'add', './dev'], { cwd: cwd2, presets: {} })).toMatchObject({ kind: 'root', action: 'add', folder: resolve(cwd2, 'dev') })
-    expect(helpText({})).toContain('meerkat verify <folder>')
+    expect(helpText({})).toContain('meerkat verify')
   })
 })
