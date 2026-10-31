@@ -265,7 +265,7 @@ describe('the live board', () => {
     const names = ['left', 'right', 'blink-left', 'blink-right', 'happy', 'wide']
     const heads = names.map((p) => headLines(p, true))
     expect(new Set(heads.map((h) => h.length)).size).toBe(1)
-    expect(heads[0]).toHaveLength(10)
+    expect(heads[0]).toHaveLength(12)
     expect(heads[0].join('')).not.toBe(heads[1].join('')) // left is not right
     expect(heads[2].join('')).not.toBe(heads[0].join('')) // a blink changes the eye
     expect(heads[3].join('')).not.toBe(heads[1].join(''))
