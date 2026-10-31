@@ -82,7 +82,7 @@ More commands, for looking around and setting up. Each has `--help`, and `--json
 | `meerkat repos`, `meerkat recent` | the git repositories Meerkat can find on this PC, and the projects you used lately (`--json` for scripts) |
 | `meerkat check list`, `meerkat check show <id>` | every check that applies here; what one check does, what it needs and how long it takes |
 | `meerkat check <id> [more ids]` | run only these checks |
-| `meerkat preset list`, `preset show <name>`, `preset new`, `preset delete <name>` | see, make and remove presets (yours stay on your PC or in your project) |
+| `meerkat preset list`, `preset show <name>`, `preset new`, `preset edit <name>`, `preset delete <name>` | see, make, describe and remove presets (yours stay on your PC or in your project); `show` lists what a preset is for and every check it runs |
 | `meerkat pack list`, `pack enable <name>`, `pack disable <name>` | switch a pack of checks on or off for this project |
 | `meerkat doctor` | which checks would run here, which could not, and what to install |
 | `meerkat run list`, `run show`, `run log <check>` | past runs and their logs |
@@ -109,15 +109,15 @@ Measured on Meerkat's own repository, a small project, on one PC (median of 3 ru
 |---|---|---|---|
 | `meerkat quick` | every quick check: before every push | 26 | <1 s |
 | `meerkat fast` | every quick check (same as quick) | 26 | <1 s |
-| `meerkat full` | every check, the slow ones too: before a release | 33 | 1.3 s |
-| `meerkat thorough` | every check, the slow ones too (same as full) | 33 | 1.2 s |
+| `meerkat full` | every check, the slow ones too: before a release | 33 | 1.4 s |
+| `meerkat thorough` | every check, the slow ones too (same as full) | 33 | 1.4 s |
 
 #### By kind
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
 | `meerkat security-fast` | the quick security checks: secrets, risky code, advisories, workflows | 8 | <1 s |
-| `meerkat security` | every security check, the slow ones too | 9 | <1 s |
+| `meerkat security` | every security check, the slow ones too | 9 | 1.0 s |
 | `meerkat functionality-fast` | build, type check, lints and tests, quick | 10 | <1 s |
 | `meerkat functionality` | every functionality check, the slow ones too | 10 | <1 s |
 | `meerkat ui-fast` | the quick UI checks: pages, styles, accessibility basics | 4 | <1 s |
@@ -133,8 +133,8 @@ Measured on Meerkat's own repository, a small project, on one PC (median of 3 ru
 | `meerkat app-fast` | UI and functionality, quick | 14 | <1 s |
 | `meerkat app` | UI and functionality, thorough | 14 | <1 s |
 | `meerkat ci` | quick security and functionality checks, no windows: for a build server | 18 | <1 s |
-| `meerkat release` | everything, including the AI review: before shipping | 33 | 1.2 s |
-| `meerkat security-ai` | every security check plus the AI route audit and diff review | 9 | <1 s |
+| `meerkat release` | everything, including the AI review: before shipping | 33 | 1.3 s |
+| `meerkat security-ai` | every security check plus the AI route audit and diff review | 9 | 1.0 s |
 <!-- presets:end -->
 
 Options that go with any run:
@@ -151,6 +151,12 @@ Options that go with any run:
 | `--list-presets` | every preset: bundled, personal and the project's |
 
 A focused run brings what its checks need (a UI check pulls in the build it waits for). Make your own presets from the menu, or in `meerkat.config.json` (this project) or `~/.meerkat.json` (every project, just for you); each can also name `packs` to switch on.
+
+#### What a preset is for: press `d`
+
+Every preset has a one-line description and a longer purpose: what it is for, when to run it, and what it does not cover. In the menu, move to a preset and press `d` to read it. The screen shows where the preset comes from (bundled, personal or project), its purpose, its tier, kinds and packs, then every check it would run in this project, grouped by kind, with the time of each and the estimated total on this PC. Up and Down scroll when it is long; any other key goes back. `meerkat preset show <name>` prints the same, and `--json` gives it as data.
+
+Your own presets can carry the same two texts. `about` is one line (up to 200 characters) and `purpose` is a few sentences (up to 600). The menu's "Create a preset" and `meerkat preset new` ask for both (Enter skips). To add or change them later, on a preset you made: `meerkat preset edit <name> --about "..." --purpose "..."`. Bundled presets cannot be edited; make your own copy with `preset new`.
 
 ## Every check
 

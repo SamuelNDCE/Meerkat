@@ -39,6 +39,30 @@ never stop a run.
 Give the new one a `selfTest` (a broken case it must fail), or `--self-test` fails for that check, loudly. Meerkat's rule stays the same for every
 tool you plug in: a check that cannot start is NOT RUN, and NOT RUN fails the run.
 
+## Your own presets: say what they are for
+
+A preset is a named run: `tier` (`fast` or `thorough`), `groups` (the kinds of check), optional `include` and `packs`. Put it in `meerkat.config.json` under `presets` (this project, for everyone who uses the project) or in `~/.meerkat.json` (just you, every project). Two optional texts make it easy for people to choose the right one:
+
+```json
+{
+  "presets": {
+    "before-demo": {
+      "tier": "fast",
+      "groups": ["ui", "security"],
+      "about": "Pages and secrets, quick: the last look before a demo",
+      "purpose": "Run this the morning of a demo. It checks that the pages load and look right and that no key is left in the code. It does not run the tests or the slow checks, so run full first if you changed logic."
+    }
+  }
+}
+```
+
+- `about` is one line, up to 200 characters. It shows next to the name in `meerkat preset list` and in the menu.
+- `purpose` is a few sentences, up to 600: what it is for, when to run it, and what it does not cover. It shows in the menu when you press `d` on the preset, and in `meerkat preset show <name>`, next to the full list of checks it runs and the time.
+- Both are plain text. Line breaks and control characters are turned into spaces or dropped, the ends are trimmed, and anything over the limit is cut. A value that is not text is ignored with a `config:` note. Other keys in the preset are ignored.
+- A preset without them keeps working; `d` then says how to add one.
+
+From the command line: `meerkat preset new --name before-demo --about "..." --purpose "..."` (add `--project` to save in this project), and later `meerkat preset edit before-demo --purpose "..."`. Only presets you made can be edited; the bundled ones are fixed. Press `d` on yours in the menu to check how it reads.
+
 ## 2. Add a check of your own
 
 A check file exports an array of checks. This is the whole shape:

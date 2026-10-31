@@ -41,8 +41,9 @@ Options for every run: `--ai` (include the AI checks), `--json` (print the resul
 | `meerkat check list [folder]` | every check that applies, with kind, tier, weight and time (`--json` for scripts) |
 | `meerkat check show <id>` | what one check does, the tool it needs, how to install it, its limits and its time here |
 | `meerkat preset list` | every preset, with where it comes from (bundled, personal, project) |
-| `meerkat preset show <name>` | what a preset runs: its checks and the time it should take |
-| `meerkat preset new` | create a preset (asks; `--name`, `--tier`, `--group`, `--pack`, `--personal`, `--project` make it scriptable) |
+| `meerkat preset show <name>` | what a preset is for (its purpose) and every check it runs here, grouped by kind, with the time of each and the total on this PC; `--json` has `about`, `purpose`, `source` and `checks` |
+| `meerkat preset new` | create a preset (asks; `--name`, `--tier`, `--group`, `--pack`, `--about`, `--purpose`, `--personal`, `--project` make it scriptable) |
+| `meerkat preset edit <name>` | change the `--about` (one line, up to 200 characters) or `--purpose` (up to 600) of a preset you own; asks when no flag is given; `--dry-run` shows the change; bundled presets are refused |
 | `meerkat preset delete <name>` | remove one of yours |
 | `meerkat pack list [folder]` | packs, whether each is on for this project, and whether its tools are installed |
 | `meerkat pack enable <name> [folder]` / `disable` | switch a pack on or off for a project (edits `meerkat.config.json`) |
@@ -105,7 +106,7 @@ Flags, then environment variables, then the project's `meerkat.config.json`, the
 
 ## The project picker
 
-`meerkat` on its own, in a terminal, first asks which folder to check, then shows the preset menu with `Project: <path>` at the top. "Change project" in that menu returns to the picker.
+`meerkat` on its own, in a terminal, first asks which folder to check, then shows the preset menu with `Project: <path>` at the top. "Change project" in that menu returns to the picker. On a preset, `d` opens its details (the purpose and every check it runs here, with times); Up/Down scroll, any other key goes back. `u` updates and `q` quits. `d` works only in this menu: in the project picker and the folder browser, letters filter the list.
 
 The picker lists "Here" (the folder you are in, or its repository), "Recent", and "Repos found", then "Browse folders...", "Type or paste a path..." (a path or a project name, resolved like `meerkat verify <name>`) and, on Windows, "Choose another drive". Up/Down and Enter move and choose; typing narrows the lists, Backspace removes a letter, Esc clears the filter (and quits when there is none).
 
