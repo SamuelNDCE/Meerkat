@@ -13,7 +13,7 @@ import { finalReport } from './report.mjs'
 import { writeRunReport } from './runlog.mjs'
 import { runOne, selectChecks, table } from './runner.mjs'
 import { createSubCollector, enrichResults, judge, MAX_REASON, narrowSubs, normaliseSubs, parseSubLine, rollup, subCounts, subSummaryText, suiteRollup } from './subchecks.mjs'
-import { CHECK_SUITE, PACK_SUITE, parseRef, parseSubRef, resolveOnly, SUITE_CATEGORIES, SUITE_IDS, SUITES, suiteIdOf, suiteOf } from './suites.mjs'
+import { CHECK_SUITE, PACK_SUITE, packOfCheck, parseRef, parseSubRef, resolveOnly, SUITE_CATEGORIES, SUITE_IDS, SUITES, suiteIdOf, suiteOf } from './suites.mjs'
 import { suiteList, suiteListText, suiteShow } from './suitelist.mjs'
 import { groupRows } from './tui/group.mjs'
 import { MEERKAT_DIR } from './paths.mjs'
@@ -456,5 +456,24 @@ describe('suite list and suite show', () => {
     expect(show.checks.find((c: any) => c.id === 'secret-scan').here).toBe(true)
     expect(show.subChecks).toBeGreaterThan(0)
     expect(existsSync(dir)).toBe(true)
+  })
+})
+
+describe('completeness: every bundled check has a real suite, never "other"', () => {
+  const MUST_HAVE = ['git', 'desktop', 'api', 'health', 'web-plus', 'lang', 'config', 'content', 'quality', 'repo', 'a11y', 'security-plus', 'security', 'refactor', 'performance', 'infra', 'docs', 'hygiene', 'ui', 'web', 'ai', 'node']
+  test('no check of any bundled pack falls into other, and the list of packs checked is the whole packs folder', async () => {
+    for (const p of MUST_HAVE) expect(packs, 'pack ' + p + ' is missing').toContain(p)
+    const all = await everyCheck()
+    expect(all.length).toBeGreaterThan(200)
+    const other = all.filter((c) => suiteIdOf(c) === 'other').map((c) => packOfCheck(c) + '/' + c.id)
+    expect(other).toEqual([])
+    for (const p of packs) expect(PACK_SUITE[p as keyof typeof PACK_SUITE], 'pack ' + p + ' has no fallback suite').toBeTruthy()
+  })
+  test('a future check of any pack lands in that pack suite, not in other', () => {
+    for (const p of packs) {
+      const id = suiteIdOf({ id: 'a-future-check-of-' + p, source: 'pack ' + p })
+      expect(id, 'pack ' + p).not.toBe('other')
+      expect(SUITE_IDS).toContain(id)
+    }
   })
 })
