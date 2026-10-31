@@ -3,17 +3,17 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**360 checks** in 47 suites with 1401 sub-checks (a check that declares no rules counts as one), across 47 packs: 335 quick, 25 thorough, 18 opt-in. [Security 106](#security-checks) · [Functionality 205](#functionality-checks) · [UI 22](#ui-checks) · [Performance 16](#performance-checks) · [Refactor 11](#refactor-checks)
+**360 checks** in 47 suites with 1406 sub-checks (a check that declares no rules counts as one), across 47 packs: 335 quick, 25 thorough, 18 opt-in. [Security 106](#security-checks) · [Functionality 205](#functionality-checks) · [UI 22](#ui-checks) · [Performance 16](#performance-checks) · [Refactor 11](#refactor-checks)
 
-## Suites
+### Suites
 
 You pick a suite; it runs its checks, and each check reports its own sub-checks. See docs/suites.md.
 
 | Suite | Name | Checks | Sub-checks | What it covers |
 |---|---|---|---|---|
 | `secrets` | Secrets | 4 | 285 | Keys, tokens, passwords and private files that must never be committed. |
-| `risky-calls` | Risky code | 7 | 92 | Dangerous calls: eval, shell strings, disabled TLS checks, weak hashes, plain http. |
-| `injection-patterns` | Injection patterns | 7 | 69 | Code shapes that lead to SQL injection, path traversal, open redirects, regex DoS and XXE. |
+| `risky-calls` | Risky code | 7 | 95 | Dangerous calls: eval, shell strings, disabled TLS checks, weak hashes, plain http. |
+| `injection-patterns` | Injection patterns | 7 | 71 | Code shapes that lead to SQL injection, path traversal, open redirects, regex DoS and XXE. |
 | `crypto-and-auth` | Crypto and auth | 2 | 2 | Weak JWT settings and weak encryption modes. |
 | `supply-chain` | Supply chain | 8 | 23 | Dependency pinning, lockfile integrity, known-vulnerable packages, install scripts and look-alike names. |
 | `ci-workflows` | Workflow security | 3 | 36 | GitHub Actions: pinned actions, limited permissions, no script injection, no secrets echoed. |
