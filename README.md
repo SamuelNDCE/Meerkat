@@ -158,12 +158,16 @@ Every preset has a one-line description and a longer purpose: what it is for, wh
 
 Your own presets can carry the same two texts. `about` is one line (up to 200 characters) and `purpose` is a few sentences (up to 600). The menu's "Create a preset" and `meerkat preset new` ask for both (Enter skips). To add or change them later, on a preset you made: `meerkat preset edit <name> --about "..." --purpose "..."`. Bundled presets cannot be edited; make your own copy with `preset new`.
 
+## Suites and sub-checks
+
+Picking from hundreds of checks is slow, so checks are grouped into **suites** (`secrets`, `web-security`, `accessibility`, `rust` and so on). `meerkat suite list` shows them, `meerkat check secrets` runs one, `meerkat check secrets/secret-scan` runs one check of it. A check can also report each of its rules as a **sub-check** (`MEERKAT-SUB` lines), so a run says "1032 sub-checks: 1010 passed, 3 failed, 19 not applicable here" and the report names the exact rule that failed. A check that reports no rules counts as one sub-check, and `meerkat suite list` keeps the catalogue (everything Meerkat ships) apart from what applies to your folder. Turn a suite or a rule off with `"disable": ["suite:web-security"]` and `"disableSubs": ["secret-scan/aws-access-key"]`. Full description: [docs/suites.md](docs/suites.md).
+
 ## Every check
 
 Generated from the checks themselves (`node tools/gen-checks.mjs`), so it cannot drift from the code. **Weight** is how much of the machine a check needs; **Time** is the written estimate, and Meerkat learns the real time on your PC. **Opt-in** checks run only when asked for. **needs** names the tool a check wraps: without it, the check is NOT RUN and says how to install it.
 
 <!-- checks:start -->
-**249 checks** across 33 packs: 232 quick, 17 thorough, 3 opt-in. [Security 64](#security-checks) · [Functionality 138](#functionality-checks) · [UI 21](#ui-checks) · [Performance 15](#performance-checks) · [Refactor 11](#refactor-checks)
+**249 checks** in 47 suites with 249 sub-checks (a check that declares no rules counts as one), across 33 packs: 232 quick, 17 thorough, 3 opt-in. [Security 64](#security-checks) · [Functionality 138](#functionality-checks) · [UI 21](#ui-checks) · [Performance 15](#performance-checks) · [Refactor 11](#refactor-checks)
 
 ### Security checks
 
@@ -572,7 +576,7 @@ export default [
 ]
 ```
 
-Then share it as a **pack**: a folder `packs/<name>/` with check files, switched on with `"packs": ["name"]`. Choose weights honestly: a check that reads files is `tiny`, a build is `heavy`. The full guide, with the rules for good checks, is [`docs/writing-checks.md`](docs/writing-checks.md).
+Then share it as a **pack**: a folder `packs/<name>/` with check files, switched on with `"packs": ["name"]`. Choose weights honestly: a check that reads files is `tiny`, a build is `heavy`. The full guide, with the rules for good checks, is [`docs/writing-checks.md`](docs/writing-checks.md). Every check is run on 20 kinds of sample project to prove it never crashes or fails on a clean one: [`docs/compatibility.md`](docs/compatibility.md).
 
 **Connecting an app's own test harness** is the same thing: set a check's `run` to whatever starts that app's tests. Anyone may do this, for any app.
 

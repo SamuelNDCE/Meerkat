@@ -244,7 +244,7 @@ function changelogUpdated(root) {
   const skip = gate(root)
   if (skip !== null) return skip
   const tag = latestTag(root)
-  if (!tag) return notRun('no tag is reachable from HEAD, so there is no release to compare the changelog with')
+  if (!tag) return finish('changelog-updated', [], 'not applicable: no tag is reachable from HEAD, so there is no release to compare the changelog with')
   const diff = git(root, ['diff', '--name-only', tag, 'HEAD'])
   if (diff === null) return notRun(`could not compare the tree with ${clean(tag)}`)
   const changed = diff.split('\n').filter(Boolean)
@@ -262,16 +262,16 @@ function versionTagMatch(root) {
   const skip = gate(root)
   if (skip !== null) return skip
   const tag = latestTag(root)
-  if (!tag) return notRun('no tag is reachable from HEAD, so there is no release to compare the version with')
+  if (!tag) return finish('version-tag-match', [], 'not applicable: no tag is reachable from HEAD, so there is no release to compare the version with')
   const pkg = readText(root, 'package.json')
-  if (!pkg) return notRun('there is no package.json at the root to compare with the tag')
+  if (!pkg) return finish('version-tag-match', [], 'not applicable: there is no package.json at the root to compare with the tag')
   let version
   try {
     version = JSON.parse(pkg).version
   } catch {
     return notRun('package.json does not parse, so its version is unknown')
   }
-  if (typeof version !== 'string') return notRun('package.json has no version field')
+  if (typeof version !== 'string') return finish('version-tag-match', [], 'not applicable: package.json has no version field')
   if (!/^v?\d/i.test(tag)) return notRun(`the latest tag "${snip(tag)}" is not a version`)
   const allow = allowList(root)
   if (version === tag.replace(/^v/i, '') || allowed(allow, 'version-tag-match', tag)) {

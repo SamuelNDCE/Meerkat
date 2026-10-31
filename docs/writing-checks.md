@@ -60,6 +60,10 @@ export default [
 
 A run with a FAIL or a NOT RUN exits with an error. That is the point: nothing is skipped to look green.
 
+## One check, many rules
+
+A check that tests many rules can report each on its own by printing `MEERKAT-SUB <PASS|FAIL|NA> <rule-id> <reason>` lines to stdout; the exit code still decides. Declare `subs: <number of rules>` on the check so the catalogue counts it, and optionally `suite: '<suite>'` to choose its suite. See docs/suites.md.
+
 ## Rules for good checks
 
 - **Say exactly what is wrong.** The last line of output is the reason shown in the table, so print the one problem that matters last.
@@ -111,3 +115,7 @@ node run.mjs --why lint                  what did it print
 ```
 
 A check file that fails to load becomes one failing check that names the file, so a broken module can never make a run look clean.
+
+## When the check does not apply
+
+A check about one kind of file (Go, Cargo, Terraform) sets `appliesTo` to the globs of those files (the `tool()` helper uses its `paths`). A folder with none of them gets a PASS that says `not applicable: ...` and the tool is never started. A check written as a script prints `not applicable: <why>` and exits 0 in the same case. Use NOT RUN (exit 75) only for a missing tool, a missing git repository or a missing setting. `node tools/compat-matrix.mjs` proves it on 20 sample projects (docs/compatibility.md).

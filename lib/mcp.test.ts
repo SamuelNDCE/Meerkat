@@ -153,8 +153,8 @@ describe('tools', () => {
     const r = await call(ctx, 'meerkat_list', {})
     expect(calls[0].args).toEqual(['--list', '--app', root])
     expect(r.result.structuredContent.checks).toEqual([
-      { id: 'build', kind: 'functionality', tier: 'fast', lane: 'serial', seconds: 30, title: 'Build the app' },
-      { id: 'ai-review', kind: 'security', tier: 'thorough', lane: 'serial', seconds: 120, title: 'AI review', optIn: 'ai' },
+      { id: 'build', kind: 'functionality', tier: 'fast', lane: 'serial', seconds: 30, title: 'Build the app', suite: 'other' },
+      { id: 'ai-review', kind: 'security', tier: 'thorough', lane: 'serial', seconds: 120, title: 'AI review', optIn: 'ai', suite: 'other' },
     ])
     expect(parseListLine('garbage')).toBeNull()
   })

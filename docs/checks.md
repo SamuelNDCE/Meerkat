@@ -3,7 +3,61 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**249 checks** across 33 packs: 232 quick, 17 thorough, 3 opt-in. [Security 64](#security-checks) · [Functionality 138](#functionality-checks) · [UI 21](#ui-checks) · [Performance 15](#performance-checks) · [Refactor 11](#refactor-checks)
+**249 checks** in 47 suites with 249 sub-checks (a check that declares no rules counts as one), across 33 packs: 232 quick, 17 thorough, 3 opt-in. [Security 64](#security-checks) · [Functionality 138](#functionality-checks) · [UI 21](#ui-checks) · [Performance 15](#performance-checks) · [Refactor 11](#refactor-checks)
+
+### Suites
+
+You pick a suite; it runs its checks, and each check reports its own sub-checks. See docs/suites.md.
+
+| Suite | Name | Checks | Sub-checks | What it covers |
+|---|---|---|---|---|
+| `secrets` | Secrets | 3 | 3 | Keys, tokens, passwords and private files that must never be committed. |
+| `risky-calls` | Risky code | 3 | 3 | Dangerous calls: eval, shell strings, disabled TLS checks, weak hashes, plain http. |
+| `injection-patterns` | Injection patterns | 5 | 5 | Code shapes that lead to SQL injection, path traversal, open redirects, regex DoS and XXE. |
+| `crypto-and-auth` | Crypto and auth | 2 | 2 | Weak JWT settings and weak encryption modes. |
+| `supply-chain` | Supply chain | 7 | 7 | Dependency pinning, lockfile integrity, known-vulnerable packages, install scripts and look-alike names. |
+| `ci-workflows` | Workflow security | 2 | 2 | GitHub Actions: pinned actions, limited permissions, no script injection, no secrets echoed. |
+| `web-security` | Web security | 8 | 8 | CORS, cookies, CSP, unsafe links and inline handlers, mixed content and debug modes left on. |
+| `accessibility` | Accessibility | 10 | 10 | ARIA, link text, focus, zoom, captions, table headers and colour contrast. |
+| `html-and-css` | HTML and CSS | 9 | 9 | Valid markup, duplicate ids, image sizes, stylesheet lint and !important overuse. |
+| `seo-and-meta` | SEO and meta | 2 | 2 | Title, description, robots and sitemap. |
+| `code-quality` | Code quality | 10 | 10 | Whitespace, indentation, leftovers, empty catches, TODO hygiene and broken imports. |
+| `test-hygiene` | Test hygiene | 4 | 4 | Skipped or focused tests, duplicate test names and projects with no tests. |
+| `refactor` | Refactor | 9 | 9 | Duplicated code, dead code, long files and functions, deep nesting and complexity. |
+| `javascript` | JavaScript and TypeScript | 7 | 7 | Common JS and TS mistakes: loose equality, var, unhandled promises, any, ts-ignore. |
+| `slow-code-patterns` | Slow code patterns | 4 | 4 | Sync file calls in handlers, parsing or regex building inside loops, DOM queries in loops. |
+| `repo-docs` | Repository docs | 5 | 5 | README sections, security policy, contributing guide, code owners and changelog format. |
+| `repo-files` | Repository files | 12 | 12 | Large files, odd file names, case conflicts, symlinks, exec bits, gitignore and editorconfig. |
+| `licensing` | Licensing | 2 | 2 | A licence file exists and matches what the package says. |
+| `config-files` | Config files | 8 | 8 | JSON, YAML and TOML parse, env examples, line endings and Makefile tabs. |
+| `ci-config` | CI config | 4 | 4 | A CI pipeline exists, has time limits and pins its Node version. |
+| `content-and-docs` | Content and docs | 11 | 11 | Markdown, links, changelog, README usage, typos and hidden characters. |
+| `i18n` | Translations | 2 | 2 | Translation files have the same keys and placeholders. |
+| `data-files` | Data files | 3 | 3 | JSON with duplicate keys, inconsistent CSV, oversized data files. |
+| `api-contracts` | API contracts | 4 | 4 | OpenAPI and GraphQL schemas are valid and complete. |
+| `database` | Database | 4 | 4 | SQL migrations order and safety, missing indexes, Prisma schema basics. |
+| `api-resilience` | API resilience | 4 | 4 | Timeouts, rate limits, error leaks and bounded pagination. |
+| `desktop-apps` | Desktop and mobile apps | 14 | 14 | Electron, Tauri, Capacitor, Cordova and Android manifest security settings. |
+| `git-history` | Git history | 8 | 8 | Commit messages, large commits, binaries and secrets in history, author identity. |
+| `git-workflow` | Git workflow | 3 | 3 | Branch names, long-lived branches and pinned submodules. |
+| `release-versioning` | Release versioning | 4 | 4 | Semantic versions, tags that match the package, changelog kept up to date. |
+| `dependencies` | Dependencies | 11 | 11 | Lockfile in sync, unused, duplicate, wildcard or misplaced dependencies. |
+| `performance` | Performance | 11 | 11 | Size, start-up, memory, response time, load and build time against budgets. |
+| `node` | Node and TypeScript tools | 9 | 9 | ESLint, tsc, Prettier, circular imports, engines and tsconfig strictness. |
+| `rust` | Rust | 10 | 10 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
+| `python` | Python | 8 | 8 | ruff, mypy, pytest, bandit and dead code. |
+| `go` | Go | 4 | 4 | go vet and go test. |
+| `java` | Java | 3 | 3 | Maven validate, compile and test. |
+| `dotnet` | .NET | 2 | 2 | dotnet format and dotnet build. |
+| `php` | PHP | 2 | 2 | composer validate and phpstan. |
+| `ruby` | Ruby | 2 | 2 | RuboCop and RSpec. |
+| `swift` | Swift | 2 | 2 | SwiftLint and swift build. |
+| `dart` | Dart and Flutter | 2 | 2 | dart analyze and dart format. |
+| `terraform` | Terraform | 1 | 1 | terraform fmt. |
+| `kubernetes` | Kubernetes | 2 | 2 | Helm lint and kube-linter. |
+| `docker` | Docker and Compose | 3 | 3 | Dockerfile lint, pinned base images and Compose hygiene. |
+| `shell-scripts` | Shell scripts | 2 | 2 | ShellCheck and shell script hygiene. |
+| `ai-review` | AI review | 2 | 2 | AI route audit and AI diff review (opt-in, may call a paid model). |
 
 ### Security checks
 

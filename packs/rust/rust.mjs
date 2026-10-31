@@ -11,7 +11,8 @@ import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
 const FIX = `${MK}/fixtures`
 const RUST_PATHS = ['**/*.rs', 'Cargo.toml', '**/Cargo.toml', 'Cargo.lock', '.cargo/**', 'rust-toolchain.toml']
 
-export default [
+// Every check here is about Cargo projects: a folder with no Cargo.toml passes with "not applicable" (lib/applies.mjs).
+const CHECKS = [
   {
     id: 'rust-fmt',
     group: 'functionality',
@@ -103,3 +104,5 @@ export default [
     selfTest: { cmd: 'cargo', args: ['deny', '--manifest-path', `${FIX}/tools/cargo-deny/Cargo.toml`, 'check', 'licenses'], cwd: 'repo', expectFail: true, expectMatch: 'GPL|license' },
   },
 ]
+
+export default CHECKS.map((c) => ({ ...c, appliesTo: ['Cargo.toml', '**/Cargo.toml'] }))

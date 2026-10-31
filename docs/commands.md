@@ -38,7 +38,10 @@ Options for every run: `--ai` (include the AI checks), `--json` (print the resul
 
 | Command | Does |
 |---|---|
-| `meerkat check list [folder]` | every check that applies, with kind, tier, weight and time (`--json` for scripts) |
+| `meerkat suite list [folder]` | the suites (the general checks you pick): checks and sub-checks here against everything Meerkat ships, time, purpose (`--json` for scripts) |
+| `meerkat suite show <name> [folder]` | one suite: its purpose, its checks (and whether each applies here) and its sub-checks |
+| `meerkat check <suite>` / `<suite>/<check>` / `<suite>/<check>/<sub>` | run a whole suite, one check, or one check and report only one sub-check (see docs/suites.md) |
+| `meerkat check list [folder]` | every check that applies, nested under its suite (`--flat` for one line each), with kind, tier, weight and time (`--json` for scripts; rows have `suite` and `subChecks`) |
 | `meerkat check show <id>` | what one check does, the tool it needs, how to install it, its limits and its time here |
 | `meerkat preset list` | every preset, with where it comes from (bundled, personal, project) |
 | `meerkat preset show <name>` | what a preset is for (its purpose) and every check it runs here, grouped by kind, with the time of each and the total on this PC; `--json` has `about`, `purpose`, `source` and `checks` |

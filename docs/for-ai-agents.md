@@ -119,6 +119,10 @@ Anything read from a log (`meerkat_why`, `meerkat_last`, failure reasons, comman
 
 Check ids, preset names and opt-in names must be lowercase letters, digits and dashes. Anything else is rejected before anything runs.
 
+## Suites and sub-checks
+
+Checks are grouped into suites (`meerkat suite list --json`). Run one with `meerkat check <suite>`, one check with `meerkat check <suite>/<check>`, one rule with `meerkat check <suite>/<check>/<rule>`; `meerkat verify --suite a,b` and `--only` take the same words. In the run summary (`--json`) every result has `suite`, `subs` (`{ id, status: PASS|FAIL|NA, reason }`) and `subTotal`, `subPass`, `subFail`, `subNa`; the run has `subTotals` (`total`, `pass`, `fail`, `na`) and `suites`. A check that reports no rules counts as one sub-check. `NA` (not applicable here) is never a failure. The MCP `meerkat_run` takes `suite` and `only` with the same words, and `meerkat_list` returns `suites`. To turn things off: `"disable": ["suite:web-security"]`, `"disableSubs": ["secret-scan/aws-access-key"]`. Details: docs/suites.md.
+
 ## Rules for agents
 
 - Run one Meerkat run at a time. Two at once fight over the same builds, ports and windows.

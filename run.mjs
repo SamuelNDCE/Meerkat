@@ -20,6 +20,8 @@ import { createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, s
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
 import { runAll, selectChecks, summarise, table } from './lib/runner.mjs'
+import { enrichResults, narrowSubs, rollup } from './lib/subchecks.mjs'
+import { packOfCheck, resolveOnly, suiteIdOf } from './lib/suites.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
 import { mergePresets, parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
@@ -57,7 +59,7 @@ export function presetLines(project = {}, personal = {}) {
 }
 
 export function parseArgs(argv) {
-  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, listPresets: false, errors: [] }
+  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], suites: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, listPresets: false, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -70,6 +72,8 @@ export function parseArgs(argv) {
     else if (a === '--keep-going') o.keepGoing = true
     else if (a === '--fail-fast') o.failFast = true
     else if (a === '--only') o.only.push(...list(next()))
+    else if (a === '--suite') o.suites.push(...list(next()))
+    else if (a === '--list-json') o.listJson = true
     else if (a === '--include') o.include.push(...list(next()))
     else if (a === '--ai') o.include.push('ai')
     else if (a === '--json') o.json = next()
@@ -98,6 +102,26 @@ export function parseArgs(argv) {
   }
   if (o.changed && o.all) o.errors.push('--changed and --all cannot be used together')
   return o
+}
+
+// Small helpers that keep main() short (a refactor check holds Meerkat to its own length and complexity limits).
+const subsOffMap = (list = []) => {
+  const m = new Map()
+  for (const ref of list) {
+    const [cid, sid] = ref.split('/')
+    m.set(cid, (m.get(cid) ?? new Set()).add(sid))
+  }
+  return m
+}
+const listJsonText = (checks) => JSON.stringify(checks.map((c) => ({ id: c.id, kind: c.group, tier: c.tier, lane: c.lane, seconds: c.estSeconds ?? null, title: c.title, optIn: c.optIn ?? null, pack: packOfCheck(c), suite: suiteIdOf(c), subs: c.subs ?? 1 })))
+function logDisabled(log, applied, configFile) {
+  for (const d of applied.disabled) log(`[DISABLED] ${d.id}: turned off in ${configFile}${d.by ? ` (${d.by})` : ''}`)
+  for (const ref of applied.disabledSubs ?? []) log(`[DISABLED] sub-check ${ref}: turned off in ${configFile}`)
+}
+const warnUnmatched = (log, words) => words.forEach((w) => log(`warning: ${w.startsWith('suite ') ? `--suite ${w.slice(6)}` : `--only ${w}`} matches no check`))
+const selfTestChecks = (checks, opts) => {
+  const picked = opts.only.length || opts.suites.length ? resolveOnly(checks, opts.only, opts.suites, opts.include).ids : null
+  return checks.filter((c) => (picked ? picked.has(c.id) : !c.optIn || opts.include.includes(c.optIn)))
 }
 
 // --json-stdout: stdout carries one JSON object and nothing else, so notes go to stderr. -q/--quiet: only the final result line.
@@ -203,7 +227,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (!opts.list) {
     if (configFile) log(`config: ${configFile}`)
     for (const note of [...read.notes, ...applied.notes]) log(`config: ${note}`)
-    for (const d of applied.disabled) log(`[DISABLED] ${d.id}: turned off in ${configFile}`)
+    logDisabled(log, applied, configFile)
   }
   splash.step('Reading the times measured on this PC')
   // Use the times measured on this machine for the order, the bar and the time left; keep the written ones for any check not yet measured.
@@ -211,6 +235,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const timings = loadTimings(timingsFile)
   applyLearned(checks, timings, tier)
 
+  if (opts.listJson) return (baseLog(listJsonText(checks)), 0)
   if (opts.list) {
     for (const c of checks) {
       log(`${c.id.padEnd(24)} ${c.group.padEnd(13)} ${c.tier.padEnd(9)} ${c.lane.padEnd(9)} ~${String(c.estSeconds ?? '?').padStart(4)}s${c.optIn ? `  opt-in:${c.optIn}` : ''}  ${c.title}`)
@@ -218,7 +243,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
 
-  const ctx = { repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier) }
+  const ctx = { repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, disabledSubs: subsOffMap(applied.disabledSubs), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier) }
   let mode = opts.all || (tier === 'thorough' && !opts.changed) ? 'all' : 'changed'
   if (mode === 'changed') splash.step('Finding what changed against the base branch')
   if (mode === 'changed') ctx.changedFiles = gitChangedFiles(repoRoot, env)
@@ -237,6 +262,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let schedulerUsed = null
   let results
   let skippedCount = 0
+  let subOnly = new Map() // check id -> the sub-checks asked for with suite/check/sub
   let ranChecks = []
   let status = null
   if (!opts.list) {
@@ -248,7 +274,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
   }
   if (opts.selfTest) {
-    const withTest = checks.filter((c) => (opts.only.length ? opts.only.includes(c.id) : !c.optIn || opts.include.includes(c.optIn)))
+    const withTest = selfTestChecks(checks, opts)
     log(`self-test: ${withTest.length} checks`)
     const bar = createProgress({ title: `MEERKAT · ${label} self-test`, checks: withTest, enabled: liveBar })
     status = createStatus({ title: `MEERKAT · ${label} self-test`, tier, checks: withTest, file: statusPath(env), say: liveBar ? null : log })
@@ -257,7 +283,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     status.stop()
   } else {
     splash.step('Choosing the checks to run')
-    const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups })
+    const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites })
     splash.finish()
     if (opts.estimate) {
       // How long this run should take on this PC: the learned times, run through the same scheduling rules (lib/eta.mjs).
@@ -277,10 +303,10 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
     skippedCount = sel.skipped.length + applied.disabled.length
     ranChecks = sel.run
-    selection = { ran: sel.run.map((c) => c.id), skipped: sel.skipped.map((c) => `${c.id} (no files changed in its paths)`), covered: (sel.superseded ?? []).map((c) => `${c.id} (by ${c.supersededBy})`), disabled: applied.disabled.map((d) => d.id) }
+    selection = { ran: sel.run.map((c) => c.id), skipped: sel.skipped.map((c) => `${c.id} (no files changed in its paths)`), covered: (sel.superseded ?? []).map((c) => `${c.id} (by ${c.supersededBy})`), disabled: applied.disabled.map((d) => d.id), disabledSubs: applied.disabledSubs ?? [] }
     for (const s of sel.superseded ?? []) log(`[COVERED ] ${s.id}: not run on its own, ${s.supersededBy} covers it`)
     for (const s of sel.skipped) log(`[SKIPPED] ${s.id}: no files changed in its paths`)
-    for (const id of opts.only) if (!checks.some((c) => c.id === id)) log(`warning: --only ${id} matches no check`)
+    subOnly = (warnUnmatched(log, sel.unmatched), sel.subOnly)
     // --ui: the richer terminal view (lib/tui). Real terminal only; anywhere else the plain lines stay, and say so.
     const useUi = uiOk
     if (opts.ui && !useUi) log('note: --ui needs an interactive terminal (not a pipe, CI or MEERKAT_PLAIN=1); using the plain lines')
@@ -299,6 +325,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     // Keep what this run measured, so the next run's order, bar and time left are closer to the truth.
     saveTimings(timingsFile, recordRun(timings, results, tier))
   }
+  results = narrowSubs(results, subOnly) // `suite/check/sub` ids report only that sub-check
+  const full = enrichResults(results, ranChecks.length ? ranChecks : checks) // suite and sub-check counts for the saved files and --json
   const { line, exitCode } = summarise(opts.selfTest ? `${tier} self-test` : tier, results, skippedCount, Date.now() - started)
   status?.stop(line)
   // A finished real run adds one entry to the run log the terminal UI's history view reads (home folder, never the repo).
@@ -309,10 +337,10 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (!opts.selfTest) for (const l of finalReport({ results, tier, timings, totalMs: Date.now() - started, checks: ranChecks, grouped: opts.grouped, spans: spansFromRecorder(recorder) })) log(l)
   log(line)
   // Every check's log, a summary and a plain-text report are saved for this run (lib/runlog.mjs).
-  const report = writeRunReport({ dir: ctx.logDir, tier, preset: opts.preset, results, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })
+  const report = writeRunReport({ dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })
   if (report) log(`logs: ${ctx.logDir}   (node run.mjs --last shows the report, --why <check> one check's log)`)
-  if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, results }, null, 2))
-  if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, results }, givenLog)
+  if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
+  if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog)
   if (opts.quiet) baseLog(line)
   return exitCode
 }

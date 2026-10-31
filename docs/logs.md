@@ -74,6 +74,10 @@ For a program or an AI to read. `schema` is 1.
 
 One JSON object per line, in order: `{ "t": 1840, "event": "end", "id": "eslint", "status": "FAIL", "ms": 4210, "at": "..." }`. `t` is milliseconds from the start of the run. Events are `start` (with the lane) and `end`. An `end` event carries `files: { "total": 940 }` when the check reported how many files it examined, and no `files` field otherwise.
 
+## Sub-checks (`MEERKAT-SUB`)
+
+A check script can report one result per rule by printing, one per line, to stdout: `MEERKAT-SUB <PASS|FAIL|NA> <rule-id> <short reason>` (rule id `/^[a-z0-9][a-z0-9-]{0,60}$/`, reason up to 200 characters, control characters removed, anything else that starts with `MEERKAT-SUB` is dropped, at most 2000 per check). The runner takes the lines out of the output like the file-progress lines, so they never reach the shown last line; they are kept apart and written into the check's `<check>.log` after the output under `--- sub-checks ---`, one line per rule. The exit code still decides: exit 0 with a `FAIL` line fails the check (`sub-check <id> failed`). `summary.json` has `suite`, `subs`, `subTotal`, `subPass`, `subFail`, `subNa` on each result plus `subTotals` and `suites` for the run, `report.md` has a "Suites" table with every failed sub-check, and the `end` events of `timeline.jsonl` carry `subs: { total, pass, fail, na }`. A check with no sub lines counts as one sub-check. Full description for check authors: docs/suites.md.
+
 ## File progress (`MEERKAT-FILE`)
 
 A check script can tell the live board which file it is reading by printing, one per line, to stderr: `MEERKAT-FILE <relative path>` for the current file and `MEERKAT-FILES <done>/<total>` for the count. Meerkat reads these lines out of the output and removes them, so they never appear in a saved log or in `--json` output. The scripts in `thorough/` print them through `thorough/kit.mjs`, and only when Meerkat sets `MEERKAT_PROGRESS` (`1` when the live board is on, `count` otherwise, which sends only the count). A path with control characters or longer than 120 characters is ignored.
