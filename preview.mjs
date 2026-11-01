@@ -12,6 +12,7 @@
 //   node preview.mjs --flat        one line per check, as before (the default folds a run of more than 24 checks into groups; --grouped forces it)
 //   node preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
 import { writeFileSync } from 'node:fs'
+import { VERSION } from './lib/version.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
 import { orderForSpeed, runAll } from './lib/runner.mjs'
 import { renderLive } from './lib/tui/live.mjs'
@@ -134,7 +135,7 @@ const frame = (tick) => {
   const remaining = estimateRemaining(rows, t, { freeSlots: 11 })
   const target = allDone ? 1 : (t - base) / Math.max(1, t - base + remaining)
   shown = allDone ? 1 : Math.max(shown, shown + (target - shown) * 0.3)
-  return withNote(renderLive({ title: 'MEERKAT fast  C:/Users/SamuelNDCE/code/plume', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: HEIGHT, color, theme, grouped: GROUPED, statusState }))
+  return withNote(renderLive({ title: 'MEERKAT v' + VERSION + ' . fast', folder: 'C:/Users/SamuelNDCE/code/plume', preset: 'fast', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: HEIGHT, color, theme, grouped: GROUPED, statusState }))
 }
 
 if (has('--once')) {
@@ -161,7 +162,7 @@ if (has('--once')) {
   note.set('build-tauri', 'Compiling plume-sync v1.4.2')
   note.set('unit-tests', 'vitest: 210 / 530 files')
   const rows = model.snapshot(fakeNow).map((r) => (r.id === 'unit-tests' ? { ...r, note: note.get(r.id), lastOutputAt: fakeNow - 1500, currentFile: fakeFile('unit-tests', 210), filesDone: 210, filesTotal: 530 } : { ...r, note: note.get(r.id), lastOutputAt: r.status === 'RUNNING' ? fakeNow - 2500 : r.lastOutputAt }))
-  console.log(withNote(renderLive({ title: 'MEERKAT fast  C:/Users/SamuelNDCE/code/plume', rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, height: HEIGHT, color, theme, statusState })).join('\n'))
+  console.log(withNote(renderLive({ title: 'MEERKAT v' + VERSION + ' . fast', folder: 'C:/Users/SamuelNDCE/code/plume', preset: 'fast', rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, height: HEIGHT, color, theme, statusState })).join('\n'))
   process.exit(0)
 }
 
