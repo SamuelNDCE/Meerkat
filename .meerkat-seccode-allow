@@ -1,0 +1,4 @@
+# Sample text inside the check scripts: the rule has to be shown a bad case to prove it works.
+thorough/health.mjs:284
+thorough/api.mjs:287
+thorough/engines.mjs:569

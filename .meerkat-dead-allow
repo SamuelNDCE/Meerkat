@@ -1,0 +1,3 @@
+# Timing constants shared and documented in lib/timeouts.mjs.
+lib/timeouts.mjs:IDLE_EXTEND_MS
+lib/timeouts.mjs:HARD_CAP_FACTOR

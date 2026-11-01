@@ -33,11 +33,11 @@ const summary = `**${rows.length} checks** in ${suiteCount} suites with ${subCou
 const sections = KINDS.map(([kind, label, about]) => {
   const mine = rows.filter((r) => r.c.group === kind).sort((a, b) => (a.c.tier === b.c.tier ? a.c.id.localeCompare(b.c.id) : a.c.tier === 'fast' ? -1 : 1))
   const lines = mine.map(({ c, pack }) => `| \`${c.id}\` | ${c.tier} | ${weightOf(c)} | ${time(c.estSeconds ?? 5)} | ${esc(c.title)}${c.optIn ? ` *(opt-in: \`--include ${c.optIn}\`)*` : ''}${c.install ? ` *(needs: ${esc(c.needs?.[0] ?? '')})*` : ''} | ${pack} |`)
-  return [`### ${label} checks`, '', `${about} ${mine.length} checks.`, '', '| Check | Tier | Weight | Time | What it does | Pack |', '|---|---|---|---|---|---|', ...lines].join('\n')
+  return [`## ${label} checks`, '', `${about} ${mine.length} checks.`, '', '| Check | Tier | Weight | Time | What it does | Pack |', '|---|---|---|---|---|---|', ...lines].join('\n')
 })
 
 const suiteRows = groupBySuite(rows.map((r) => ({ ...r.c, pack: r.pack }))).map((sx) => `| \`${sx.id}\` | ${esc(sx.label)} | ${sx.checks.length} | ${sx.checks.reduce((n, c) => n + declaredSubs(c), 0)} | ${esc(sx.purpose)} |`)
-const suiteTable = ['### Suites', '', 'You pick a suite; it runs its checks, and each check reports its own sub-checks. See docs/suites.md.', '', '| Suite | Name | Checks | Sub-checks | What it covers |', '|---|---|---|---|---|', ...suiteRows].join('\n')
+const suiteTable = ['## Suites', '', 'You pick a suite; it runs its checks, and each check reports its own sub-checks. See docs/suites.md.', '', '| Suite | Name | Checks | Sub-checks | What it covers |', '|---|---|---|---|---|', ...suiteRows].join('\n')
 const blockFor = (file) => (file === 'README.md' ? `<!-- checks:start -->\n${summary}\n\n${sections.join('\n\n')}\n<!-- checks:end -->` :`<!-- checks:start -->\n${summary}\n\n${suiteTable}\n\n${sections.join('\n\n')}\n<!-- checks:end -->`)
 
 const patch = (file) => {

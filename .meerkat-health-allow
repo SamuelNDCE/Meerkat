@@ -1,0 +1,15 @@
+# A RegExp built per pass from a changing name or pattern cannot be hoisted out of the loop.
+regex-in-loop lib/discover.mjs
+regex-in-loop lib/tui/results.test.ts
+regex-in-loop tests/mutation-quality.test.ts
+regex-in-loop tests/mutation.test.ts
+regex-in-loop thorough/api.mjs
+regex-in-loop thorough/config.mjs
+regex-in-loop thorough/kit.mjs
+regex-in-loop thorough/lang.mjs
+regex-in-loop thorough/mutation-quality.mjs
+regex-in-loop thorough/refactor.mjs
+regex-in-loop thorough/repo-docs.mjs
+regex-in-loop thorough/robustness.mjs
+regex-in-loop thorough/static.mjs
+regex-in-loop tools/gen-coverage.mjs

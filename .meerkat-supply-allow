@@ -1,0 +1,15 @@
+# Accepted: a sample value in the history (commit 14fed29, a rules file). It is a made-up test value, not a live credential; history cannot be rewritten.
+14fed29 thorough/rules-code-patterns.mjs
+14fed29 thorough/rules-electron-plus.mjs
+14fed29 thorough/rules-secrets-plus.mjs
+e9f2a92 tools/accuracy-corpus.mjs
+e9f2a92 tools/accuracy-extra-code.mjs
+e9f2a92 tools/accuracy-extra-infra.mjs
+14fed29 cisystems.test.ts
+14fed29 lib/findings.test.ts
+14fed29 secretsplus.test.ts
+14fed29 thorough/data-science.mjs
+14fed29 thorough/engines.mjs
+14fed29 thorough/rules-web-hardening.mjs
+1f7900f run.test.ts
+6476bec run.test.ts
