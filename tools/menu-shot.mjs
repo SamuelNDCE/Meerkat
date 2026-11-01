@@ -3,8 +3,11 @@
 //   node tools/menu-shot.mjs > menu.ansi ; python tools/screenshot.py menu.ansi menu.png        the home screen (preset menu)
 //   node tools/menu-shot.mjs after-run > after.ansi ; python tools/screenshot.py after.ansi after-run.png   the screen after a run
 //   add "plain" for the no-colour, no-art version; "narrow" for 60 columns
+import { SAMPLE_NOTE } from '../lib/tui/resultssample.mjs'
 import { initialState, menuItems, menuStep, renderPicker, renderScreen, withUpdateBar } from '../lib/menu.mjs'
 
+const NL = String.fromCharCode(10)
+const ESC = String.fromCharCode(27) + '['
 const args = process.argv.slice(2)
 const color = !args.includes('plain')
 const width = args.includes('narrow') ? 60 : 100
@@ -30,7 +33,7 @@ if (args.includes('after-run')) {
   let state = initialState(menuItems({ user, project: {}, update }))
   state = menuStep(state, 'down').state // the highlight on the second item, as a person would see it
   lines = renderScreen(state, {
-    project: 'C:\\Users\\sam\\code\\shop-app',
+    project: 'C:\\Users\\SamuelNDCE\\code\\plume',
     version: '1.3.2',
     question: 'What would you like to run?',
     hint: '  Up/Down move   Enter choose   1-9 jump   u update   q quit',
@@ -45,3 +48,4 @@ if (args.includes('after-run')) {
   })
 }
 process.stdout.write(lines.map((l) => (l.style === 'raw' ? l.text : color && CODES[l.style] ? `${CODES[l.style]}${l.text}\x1b[0m` : l.text)).join('\n') + '\n')
+process.stdout.write(`${NL}${color ? `${ESC}1;33m  ${SAMPLE_NOTE}${ESC}0m` : `  ${SAMPLE_NOTE}`}${NL}`)

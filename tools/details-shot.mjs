@@ -32,5 +32,5 @@ const data = {
   checks,
   estimateSeconds: 63,
 }
-const view = renderDetails(data, { offset: args.includes('scroll') ? 6 : 0, project: 'C:/Users/sam/code/shop-app', version: '1.3.2', width, rows, color, level: color ? 'truecolor' : false, env: color ? {} : { NO_COLOR: '1' }, isTTY: true })
+const view = renderDetails(data, { offset: args.includes('scroll') ? 6 : 0, project: 'C:/Users/SamuelNDCE/code/plume', version: '1.3.2', width, rows, color, level: color ? 'truecolor' : false, env: color ? {} : { NO_COLOR: '1' }, isTTY: true })
 process.stdout.write(`${view.lines.map((l) => l.text).join('\n')}\n`)
