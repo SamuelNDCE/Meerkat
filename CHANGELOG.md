@@ -15,6 +15,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - the rule-table checks (Electron, Rust, secrets and the rest) leave test files, tests.rs and probe-* scripts alone; Rust unit tests are found by matching the braces of the #[cfg(test)] module, so code after it is scanned again
 - innerHTML set from a local helper's parameter is not reported when every call of the helper passes a literal or an ALL_CAPS constant (found on Plume's find bar)
 - Rust test code is found by the exact #[cfg(test)] module in the Rust rule tables too, and env::set_var in tests is no longer reported; test_support and probe-* scripts are left alone by the Electron context-isolation and secrets-plus checks
+- markdownlint no longer reads node_modules, .claude (agent worktrees), vendor, dist, build or target folders at any depth (on Plume this removed 498 findings from dependency documents)
 - a guide for adding a click-through test for your own app: docs/click-through.md
 - markdownlint skips the folders named fixtures, where documents are broken on purpose
 
