@@ -1,11 +1,51 @@
 {
-  "name": "meerkat",
-  "version": "0.3.1",
+  "name": "@samuelndce/meerkat",
+  "version": "0.3.11",
+  "description": "One command that checks your whole project before you ship it: security, correctness, accessibility, performance and code health. Zero dependencies, no telemetry, built for people and AI agents (MCP).",
+  "keywords": [
+    "verification",
+    "security-scanner",
+    "static-analysis",
+    "code-quality",
+    "cli",
+    "mcp",
+    "ai-agents",
+    "developer-tools",
+    "sarif",
+    "devsecops"
+  ],
   "license": "SEE LICENSE IN LICENSE",
-  "private": true,
-  "description": "Meerkat: one command that checks an app before a push, a promotion or a build.",
-  "engines": { "node": ">=20" },
-  "bin": { "meerkat": "bin/meerkat.mjs", "meerkat-mcp": "bin/meerkat-mcp.mjs" },
+  "author": "SamuelNDCE",
+  "homepage": "https://github.com/SamuelNDCE/Meerkat#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamuelNDCE/Meerkat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SamuelNDCE/Meerkat/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "meerkat": "bin/meerkat.mjs",
+    "meerkat-mcp": "bin/meerkat-mcp.mjs"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "packs/",
+    "thorough/",
+    "fixtures/",
+    "examples/",
+    "run.mjs",
+    "meerkat.config.json",
+    "llms.txt",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "meerkat": "node run.mjs",
     "meerkat:thorough": "node run.mjs --thorough",

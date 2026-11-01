@@ -289,7 +289,7 @@ const clone = { 'rev-parse --show-toplevel': `${repo}\n`, 'symbolic-ref': 'origi
 describe('update', () => {
   test('not a git clone', () => {
     const exec = fakeExec({ 'rev-parse --show-toplevel': new Error('not a git repository') })
-    expect(checkForUpdate({ repoDir: repo, exec })).toEqual({ ok: false, reason: 'not a git clone, update it the way you installed it' })
+    expect(checkForUpdate({ repoDir: repo, exec })).toEqual({ ok: false, reason: 'not a git clone, this copy was installed from a package: update it with npm install -g @samuelndce/meerkat@latest' })
   })
 
   test('a folder inside someone else\'s repository is not a clone of its own', () => {

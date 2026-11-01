@@ -41,7 +41,7 @@ Short forms exist only on the terminal screens, where the width forces them. The
 
 | What | Cap |
 |---|---|
-| a finding's `message` (findings.json, findings.md, findings.sarif, detections.jsonl, ai-prompt.md) | 8000 characters |
+| a finding's `message` (findings.json, findings.md, findings.sarif, detections.jsonl, meerkat-prompt-<date>-<time>-<preset>.md) | 8000 characters |
 | the reason of a sub-check (`MEERKAT-SUB`) | 2000 characters |
 | a NOT RUN reason | 8000 characters |
 | a suggested fix | 2000 characters |

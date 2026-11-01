@@ -54,7 +54,7 @@ describe('drawing', () => {
           expect(plain.length).toBeLessThanOrEqual(width)
           expect(plain).not.toMatch(/[\u0000-\u001f\u007f]/)
         }
-        expect(stripAnsi(lines[lines.length - 1])).toContain('Tab sections')
+        expect(stripAnsi(lines[lines.length - 1])).toMatch(/Tab (sections|tabs).*q done.*? help$/)
       })
     }
   }
@@ -135,5 +135,25 @@ describe('keys', () => {
     expect(seen[7]).toBe('all')
     s = { ...initialResultsState(), tab: 'checks' }
     expect(step(s, 's').state.status).toBe('problems')
+  })
+})
+
+// The key hints must never be cut off: at any width the footer fits, and the keys to quit and ask for help are always there.
+describe('footer hints', () => {
+  test('fit at every width from 40 to 200 and keep q and ? on every tab', async () => {
+    const { fitFooter } = await import('./results.mjs')
+    for (const tab of ['findings', 'checks', 'timeline']) {
+      for (let w = 40; w <= 200; w += 5) {
+        const text = fitFooter(tab, w)
+        expect(text.length, `${tab} at ${w}`).toBeLessThanOrEqual(w)
+        expect(text).toContain('q done')
+        expect(text).toContain('? help')
+      }
+    }
+  })
+  test('a terminal about 105 columns wide shows the prompt, rerun and menu keys', async () => {
+    const { fitFooter } = await import('./results.mjs')
+    const text = fitFooter('findings', 104)
+    for (const k of ['p AI prompt', 'r again', 'm menu', 'q done', '? help']) expect(text).toContain(k)
   })
 })

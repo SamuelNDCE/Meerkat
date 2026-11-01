@@ -2,6 +2,13 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## 0.3.11 (2026-11-01)
+
+- Hot fix: the key hints at the bottom of the results screen now always fit and keep quit and help
+- finding places keep their line numbers
+- the prompt file is named with the run's date and preset
+- the package is ready to install with npm
+
 ## 0.3.1 (2026-11-01)
 
 - README pictures: the running GIF is bigger with no empty block below it

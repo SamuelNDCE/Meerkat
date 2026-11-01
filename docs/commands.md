@@ -46,7 +46,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat findings [folder\|run-id] [--severity high] [--suite s] [--check id] [--new] [--fixed] [--limit n]` | what the run detected: severity, rule, file:line, message, new or known (`--json` for scripts) | |
 | `meerkat findings --fail-on <severity>` | exit 1 when any finding at or above that severity exists (for CI) | |
 | `meerkat findings --export sarif\|md\|json [file]` | copy the run's `findings.sarif`, `findings.md` or `findings.json` to a file, or print it | |
-| `meerkat prompt [folder\|run-id] [--last] [--no-copy] [--print]` | write `ai-prompt.md` into the run folder (every finding in full, plus what to do) and copy a short line to the clipboard that tells an AI to read it. The results screen does the same with `p` | `meerkat prompt --help` |
+| `meerkat prompt [folder\|run-id] [--last] [--no-copy] [--print]` | write `meerkat-prompt-<date>-<time>-<preset>.md` into the run folder (every finding in full, plus what to do) and copy a short line to the clipboard that tells an AI to read it. The results screen does the same with `p` | `meerkat prompt --help` |
 | `meerkat verify --ai-verify [--ai-verify-max N] [--yes]` | after the run, ask your configured model to double-check each medium, high and critical finding (off by default; asks first unless `--yes`; see `meerkat ai use`) | `v` on the results screen |
 | `meerkat finding <id> [run-id]` | one finding in full: what, evidence, who detected it (check, rule, pack, script, tool), the log, how to fix it, first seen | |
 

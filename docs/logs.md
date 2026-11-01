@@ -15,7 +15,7 @@ Every run saves what is needed to understand a failure long after the terminal i
       summary.json
       timeline.jsonl
       run.log                        the true log of the run, one timestamped line per fact
-      ai-prompt.md                   written by `meerkat prompt` (or the `p` key): a prompt for an AI
+      meerkat-prompt-<date>-<time>-<preset>.md                   written by `meerkat prompt` (or the `p` key): a prompt for an AI
       findings.json                  what the run detected (see findings.md in docs)
       findings.md
       findings.sarif
