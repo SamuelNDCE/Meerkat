@@ -69,6 +69,8 @@ Options for every run: `--max-run-minutes <n>` (stop the whole run after n minut
 |---|---|
 | `meerkat init [folder]` | write a starting `meerkat.config.json` |
 | `meerkat doctor [folder]` | for this project: which checks would run, which would be NOT RUN and what to install; `--json` |
+| `meerkat tools [folder]` | every optional outside tool, whether it is found, and one install command per ecosystem (npm, pip, cargo, system); `--json` |
+| `meerkat tools install [folder]` | put the missing npm-based tools in `~/.meerkat/tools` (never in the project, never global, `--ignore-scripts`); shows the list first and asks, or use `--yes`; `--dry-run` only shows the list |
 | `meerkat self-test [folder]` | prove every check fails on its broken case |
 | `meerkat ai status` / `use <provider> [model]` / `test` | choose the model for the AI checks; `use claude haiku`, `use openrouter deepseek/deepseek-chat` |
 | `meerkat update [check\|apply\|auto\|notify\|off\|status]` | updating Meerkat; looks up the latest version once a day (turn off with `meerkat update off`), never installs without you |

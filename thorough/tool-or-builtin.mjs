@@ -40,5 +40,6 @@ if (r.unavailable) {
   process.exit(75)
 }
 for (const f of r.findings.slice(0, 200)) console.log(f)
-console.log(r.findings.length ? `${tag}: ${r.findings.length} problem(s) in ${r.checked} file(s)` : `${tag}: no problems in ${r.checked} file(s)`)
-process.exit(r.findings.length ? 1 : 0)
+const summary = r.findings.length ? `${tag}: ${r.findings.length} problem(s) in ${r.checked} file(s)` : `${tag}: no problems in ${r.checked} file(s)`
+for (const line of [summary]) console.log(line)
+process.exitCode = r.findings.length ? 1 : 0
