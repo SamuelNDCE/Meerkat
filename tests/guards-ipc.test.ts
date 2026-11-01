@@ -37,7 +37,40 @@ describe('ipcMainIsGuardedParameter', () => {
   })
 })
 
+describe('ipcMainIsGuardedParameter fails closed on shapes it does not understand', () => {
+  const guarded = wrapper('    if (!e.senderFrame) throw 1')
+  test('shorthand hand-over of the real ipcMain', () => {
+    expect(ipcMainIsGuardedParameter(LINE, ctx(["const { ipcMain } = require('electron')", "require('./plugins-ipc.cjs').register({ app, ipcMain })"].join('\n')))).toBe(false)
+  })
+  test('a member expression as the value', () => {
+    expect(ipcMainIsGuardedParameter(LINE, ctx(`${guarded}\nrequire('./plugins-ipc.cjs').register({ app, ipcMain: electron.ipcMain })`))).toBe(false)
+  })
+  test('a wrapper whose only sender mention is a comment', () => {
+    expect(ipcMainIsGuardedParameter(LINE, ctx(wrapper('    // TODO check e.senderFrame here')))).toBe(false)
+  })
+  test('a wrapper that lacks a method the module uses', () => {
+    const own = ["function register({ ipcMain }) {", "  ipcMain.handle('a', () => 1)", "  ipcMain.on('b', () => 2)", '}'].join('\n')
+    const lines = own.split('\n')
+    const c = { file: 'plugins-ipc.cjs', lines, index: 1, text: own, project: { files: ['main.cjs', 'plugins-ipc.cjs'], read: (f: string) => (f === 'main.cjs' ? guarded : own) } }
+    expect(ipcMainIsGuardedParameter(lines[1], c)).toBe(false)
+  })
+  test('electron imported over several lines in the module itself', () => {
+    const own = ["const {", '  app,', '  ipcMain,', "} = require('electron')", LINE].join('\n')
+    expect(ipcMainIsGuardedParameter(LINE, { file: 'plugins-ipc.cjs', lines: own.split('\n'), index: 4, text: own, project: project(guarded) })).toBe(false)
+  })
+})
+
 describe('ipcHandlerCallsSenderHelper', () => {
+  test('not safe: the helper is only mentioned in a comment', () => {
+    const code = ['const fromAppPage = (e) => ok(e.senderFrame.url)', "ipcMain.handle('x', (e) => {", '  // call fromAppPage(e) here', '  return 1', '})'].join('\n')
+    const lines = code.split('\n')
+    expect(ipcHandlerCallsSenderHelper('', { lines, index: 1, text: code })).toBe(false)
+  })
+  test('not safe: the helper is called by the NEXT handler, not this one', () => {
+    const code = ['const fromAppPage = (e) => ok(e.senderFrame.url)', "ipcMain.handle('x', () => 1)", "ipcMain.handle('y', (e) => {", '  if (!fromAppPage(e)) throw 1', '})'].join('\n')
+    const lines = code.split('\n')
+    expect(ipcHandlerCallsSenderHelper('', { lines, index: 1, text: code })).toBe(false)
+  })
   const at = (code: string) => {
     const lines = code.split('\n')
     return { lines, index: lines.findIndex((l) => l.includes('ipcMain.handle')), text: code }
