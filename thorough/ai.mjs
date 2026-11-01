@@ -36,7 +36,7 @@ process.noDeprecation = true // see lib/aiconfig.mjs: the claude shim needs a sh
 const MAX_ROUTES = 200
 const CHUNK = 60000
 const MAX_CHUNKS = 6
-const safeText = (s) => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 120)
+const safeText = (s, max = 120) => String(s).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, max)
 
 export function findRoutes(root) {
   const out = []
@@ -104,7 +104,7 @@ function parse(reply) {
   let ok = false
   for (const l of lines) {
     const m = /^FINDING:\s*(critical|high|medium|low)\s*\|\s*([^|]*)\|\s*(.+)$/i.exec(l)
-    if (m) found.push({ sev: m[1].toLowerCase(), where: safeText(m[2].trim()), what: safeText(m[3].trim()) })
+    if (m) found.push({ sev: m[1].toLowerCase(), where: safeText(m[2].trim(), 300), what: safeText(m[3].trim(), 2000) })
     else if (l === 'OK') ok = true
     else return null
   }
@@ -114,7 +114,7 @@ function parse(reply) {
 
 const report = (name, found) => {
   const bad = found.filter((x) => x.sev === 'critical' || x.sev === 'high')
-  if (found.length > bad.length) console.log(`(${found.length - bad.length} medium or low finding(s): ${found.filter((x) => !bad.includes(x)).map((x) => `${x.where} ${x.what}`).join(' | ').slice(0, 600)})`)
+  if (found.length > bad.length) console.log(`(${found.length - bad.length} medium or low finding(s): ${found.filter((x) => !bad.includes(x)).map((x) => `${x.where} ${x.what}`).join(' | ').slice(0, 8000)})`)
   return finish(name, bad.map((x) => `${x.sev.toUpperCase()} ${x.where}: ${x.what}`), 'the model found nothing serious')
 }
 
