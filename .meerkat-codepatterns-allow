@@ -1,0 +1,2 @@
+# Spawn with shell:true is deliberate: Windows .cmd shims (npm, npx) need a shell, and lib/exec.mjs quotes every argument.
+js-spawn-shell lib/exec.mjs

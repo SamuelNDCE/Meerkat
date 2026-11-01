@@ -395,8 +395,8 @@ describe('failing test names and suggestions', () => {
 describe('docs/mutation.md', () => {
   test('the mutator table between the markers is the generated one', () => {
     const doc = readFileSync(join(ROOT, 'docs', 'mutation.md'), 'utf8')
-    const m = /<!-- MUTATORS:START -->\n([\s\S]*?)\n<!-- MUTATORS:END -->/.exec(doc)
+    const m = /<!-- MUTATORS:START -->\r?\n([\s\S]*?)\r?\n<!-- MUTATORS:END -->/.exec(doc)
     expect(m, 'markers missing').toBeTruthy()
-    expect(m![1]).toBe(M.renderMutatorDocs())
+    expect(m![1].replace(/\r/g, '')).toBe(M.renderMutatorDocs())
   })
 })

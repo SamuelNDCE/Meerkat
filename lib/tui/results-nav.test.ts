@@ -1,7 +1,7 @@
 // The results screen: the visible tab bar, the first-open hint, the small head, the fit at common sizes; the menu's Esc flow.
 import { describe, expect, test } from 'vitest'
 import { initialResultsState, renderResults, resultsStep, miniHead, showMiniHead, TAB_HELP, FIRST_HINT } from './results.mjs'
-import { sampleData } from './resultssample.mjs'
+import { bulkSampleData as sampleData } from './resultssample.mjs'
 import { stripAnsi, textWidth } from './cells.mjs'
 // @ts-expect-error plain JS module
 import { menuStep, presetMenuStep, pickerState, pickerStep, initialState } from '../menu.mjs'

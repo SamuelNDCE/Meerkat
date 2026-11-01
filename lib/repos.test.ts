@@ -438,3 +438,12 @@ describe('the repos and recent commands', () => {
     expect(menuItems({ user: {}, project: {} }).some((i: { label: string }) => i.label === 'Change project')).toBe(true)
   })
 })
+
+describe('writeUserConfig and prototype pollution', () => {
+  test('a __proto__, constructor or prototype key in the patch never reaches Object.prototype', () => {
+    const patch = JSON.parse('{"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}},"prototype":1,"updates":"off"}')
+    const next = writeUserConfig(patch, env)
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
+    expect(Object.keys(next)).toEqual(['updates'])
+  })
+})

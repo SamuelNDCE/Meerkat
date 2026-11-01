@@ -593,7 +593,7 @@ PROJECTS['native-langs'] = {
       '',
     ],
     'rust/Cargo.toml': [
-      '[package]\nname = "native-rust"\nversion = "0.2.0"\nedition = "2021"\nlicense = "MIT"\ndescription = "A small library"\n\n[dependencies]',
+      '[package]\nname = "native-rust"\nversion = "0.4.0"\nedition = "2021"\nlicense = "MIT"\ndescription = "A small library"\n\n[dependencies]',
       d('rust-wildcard-dep', 'a dependency with a wildcard version', 'serde = "*"'),
       'tokio = { version = "1.38", features = ["rt", "time"] }',
       '',

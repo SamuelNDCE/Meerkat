@@ -1,8 +1,11 @@
 # Files that hold bad examples on purpose: rule tables and sample text that the scanners must be able to match.
 # Real code (lib/, bin/, run.mjs and the check logic) stays scanned.
-thorough/rules-*.mjs
-tools/compat-fixtures.mjs
-tools/accuracy-corpus.mjs
-examples/
+# Sample corpora loaded by tools/accuracy-corpus.mjs: planted defects on purpose, so every scanner can be proven to find them.
 .vitest/
 docs/images/
+examples/
+tests/fixtures/
+thorough/rules-*.mjs
+tools/accuracy-corpus.mjs
+tools/accuracy-extra-*.mjs
+tools/compat-fixtures.mjs

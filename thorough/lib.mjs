@@ -6,7 +6,7 @@ import { appDirOf, repoRootOf } from '../lib/paths.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = repoRootOf(appDirOf());
-export const fixturesDir = path.resolve(here, '../fixtures'); // shared fixtures; an example keeps its own beside its scripts
+const fixturesDir = path.resolve(here, '../fixtures'); // shared fixtures; an example keeps its own beside its scripts
 export const EXIT_NOT_RUN = 75; // printed as "NOT RUN: <why>". A check that cannot run is never a pass.
 
 export function say(msg) { console.log(msg); }
@@ -15,7 +15,7 @@ export function notRun(msg) { console.log(`NOT RUN: ${msg}`); process.exit(EXIT_
 export function pass(msg) { console.log(`PASS: ${msg}`); process.exit(0); }
 
 /** Look a binary up on PATH, plus the usual Windows install spots. Returns a full path or null. */
-export function findBin(name, extra = []) {
+function findBin(name, extra = []) {
   const probe = process.platform === 'win32' ? 'where' : 'which';
   const r = spawnSync(probe, [name], { encoding: 'utf8' });
   if (r.status === 0 && r.stdout.trim()) return r.stdout.split(/\r?\n/)[0].trim();
@@ -48,7 +48,7 @@ export const hasFlag = (f) => process.argv.includes(f);
 export const argVal = (f) => { const i = process.argv.indexOf(f); return i > 0 ? process.argv[i + 1] : undefined; };
 
 /** Staging guard: the host must contain "staging" or be loopback. Never the live server. */
-export function looksLikeStaging(url) {
+function looksLikeStaging(url) {
   let u; try { u = new URL(url); } catch { return false; }
   if (!/^https?:$/.test(u.protocol)) return false;
   const h = u.hostname.toLowerCase();
@@ -56,7 +56,7 @@ export function looksLikeStaging(url) {
 }
 
 /** Wrap a cargo invocation in the machine build lock when one is configured (NV_CARGO_LOCK) or in the repo. */
-export function cargoCmd(args) {
+function cargoCmd(args) {
   const lock = process.env.NV_CARGO_LOCK || (existsSync(path.join(repoRoot, 'scripts/cargo-lock.sh')) ? path.join(repoRoot, 'scripts/cargo-lock.sh') : null);
   return lock ? { cmd: 'bash', args: [lock, 'cargo', ...args] } : { cmd: 'cargo', args };
 }

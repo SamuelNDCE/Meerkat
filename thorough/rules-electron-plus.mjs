@@ -471,7 +471,7 @@ export const EP_FUSES_BUILD = [
   pkg('ep-pkg-build-debug-flag', 'the package.json sets the Electron logging flag ELECTRON_ENABLE_LOGGING in a release script',
     /"(?:dist|release|package)"\s*:\s*"[^"]{0,200}ELECTRON_ENABLE_LOGGING/, '"dist": "ELECTRON_ENABLE_LOGGING=1 electron-builder"', '"dist": "electron-builder"'),
   build('ep-builder-win-cert-plaintext-path', 'the Windows certificate file is named with a machine-specific absolute path',
-    /\bcertificateFile"?\s*:\s*['"`](?:[A-Za-z]:[\\/]|\/home\/|\/Users\/)/, '"certificateFile": "C:\\\\Users\\\\Futur\\\\cert.pfx"', '"certificateFile": "${env.WIN_CERT_FILE}"'),
+    /\bcertificateFile"?\s*:\s*['"`](?:[A-Za-z]:[\\/]|\/home\/|\/Users\/)/, '"certificateFile": "C:\\\\Users\\\\alice\\\\cert.pfx"', '"certificateFile": "${env.WIN_CERT_FILE}"'),
   onFile(ENT, 'entitlements.mac.plist')('ep-entitlements-jit', 'the entitlements grant JIT memory (allow-jit), a hardened-runtime exception to confirm is needed',
     /com\.apple\.security\.cs\.allow-jit</, '<key>com.apple.security.cs.allow-jit</key>', '<key>com.apple.security.app-sandbox</key>', { severity: 'low' }),
   onFile(ENT, 'entitlements.mac.plist')('ep-entitlements-unsigned-memory', 'the entitlements allow unsigned executable memory (allow-unsigned-executable-memory), a hardened-runtime exception',

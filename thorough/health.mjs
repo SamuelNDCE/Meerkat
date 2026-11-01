@@ -13,7 +13,9 @@ const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?|coverage|\.
 const MINIFIED = /\.min\.(m?js|css)$/i
 const GENERATED = /(^|\/)(package-lock\.json|Cargo\.lock|yarn\.lock|pnpm-lock\.yaml)$|\.(lock|snap)$/i
 const SCRIPT = /\.(m?[jt]sx?|cjs)$/i
-const FRONTEND = /\.(m?[jt]sx?|cjs|html?|vue|svelte)$/i
+// Test code and test harnesses run once, so a loop smell there costs nothing that matters.
+const TEST_PATH = /(^|\/)(tests?|__tests__|spec|specs|e2e|cypress)\/|\.(test|spec)\.[cm]?[jt]sx?$/i
+const FRONTEND =/\.(m?[jt]sx?|cjs|html?|vue|svelte)$/i
 const STYLE_OR_MARKUP = /\.(m?[jt]sx?|cjs|css|scss|html?|vue|svelte)$/i
 const SOURCE_TEXT = /\.(m?[jt]sx?|cjs|json|html?|css|scss|rs|toml|ya?ml|py|go|sh|svelte|vue|xml|cfg|ini)$|(^|\/)(Makefile|Dockerfile)$/i
 const SERVER_FILE = /(^|\/)(server|app|api|routes?|handlers?|controllers?|index)\.[cm]?[jt]s$/i
@@ -22,7 +24,7 @@ const LOOP = /\b(for|while)\b(\s+await)?\s*\(/
 const HANDLER = /\(\s*(req|request|res|response|reply|ctx|event|evt)\b[^)]*\)\s*=>|\bfunction\b[^(]*\(\s*(req|request|res|response|reply|ctx)\b|\.(on|once|addEventListener)\s*\(.*,\s*(async\s+)?(\(|function\b)/
 const SYNC_IO = /\b(readFileSync|writeFileSync|appendFileSync|execSync|execFileSync|spawnSync)\s*\(/
 const JSON_CALL = /\bJSON\.(parse|stringify)\s*\(/g
-const DOM_QUERY = /\bdocument\.(querySelector|querySelectorAll|getElementById|getElementsByClassName|getElementsByTagName)\s*\(/
+const DOM_QUERY = /\bdocument\.(querySelector|querySelectorAll|getElementById|getElementsByClassName|getElementsByTagName)\s*\(\s*['"`]/ // a fixed selector or id: a lookup keyed by the loop variable differs on each pass and cannot be moved out
 const DATA_URI = /data:[a-z]+\/[a-z0-9.+-]+(?:;[^,\s'"`)]*)?,[^\s'"`)]*/gi
 const IMAGE = /\.(png|jpe?g|gif|bmp|tiff?)$/i
 const ALWAYS_LARGE_IMAGE = /\.(bmp|tiff?)$/i
@@ -131,7 +133,7 @@ const regexInLoop = (root) => {
   const allow = allowSet(root)
   const f = []
   for (const x of files(root, SCRIPT)) {
-    if (allowed(allow, id, x)) continue
+    if (allowed(allow, id, x) || TEST_PATH.test(x)) continue
     const cl = codeLines(readText(root, x))
     const inLoop = regions(cl, LOOP)
     cl.forEach((l, i) => {
@@ -147,7 +149,7 @@ const domQueryInLoop = (root) => {
   const allow = allowSet(root)
   const f = []
   for (const x of files(root, FRONTEND)) {
-    if (allowed(allow, id, x)) continue
+    if (allowed(allow, id, x) || TEST_PATH.test(x)) continue
     const cl = codeLines(readText(root, x))
     const inLoop = regions(cl, LOOP)
     cl.forEach((l, i) => {
@@ -395,7 +397,7 @@ main({
     ...fx({ ...budgets({ maxJsonInLoop: 1 }), 'a.js': 'for (const x of xs) {\n  JSON.parse(x)\n  JSON.parse(x)\n}\n' }, jsonParseInLoop),
   },
   'regex-in-loop': { run: regexInLoop, ...fx({ 'a.js': 'for (const x of xs) {\n  const r = new RegExp(x)\n}\n' }, regexInLoop) },
-  'dom-query-in-loop': { run: domQueryInLoop, ...fx({ 'app.js': 'for (const i of xs) {\n  document.getElementById(i)\n}\n' }, domQueryInLoop) },
+  'dom-query-in-loop': { run: domQueryInLoop, ...fx({ 'app.js': 'for (const i of xs) {\n  document.getElementById(\'list\').append(i)\n}\n' }, domQueryInLoop) },
   'large-inline-assets': {
     run: largeInlineAssets,
     ...fx({ ...budgets({ maxInlineKb: 1 }), 'page.html': '<img src="data:image/png;base64,' + 'A'.repeat(3000) + '">\n' }, largeInlineAssets),

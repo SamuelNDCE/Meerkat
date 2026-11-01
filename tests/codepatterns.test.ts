@@ -95,7 +95,7 @@ describe('hostile input stays fast', () => {
     '('.repeat(50_000) + 'a+'.repeat(20_000),
     'subprocess.run(' .repeat(6_000),
     'exec('.repeat(15_000),
-    '"'.repeat(50_000) + '‪'.repeat(20_000),
+    '"'.repeat(50_000) + '\u202a'.repeat(20_000),
     'checkServerTrusted('.repeat(6_000) + ' {',
     'requests.get('.repeat(8_000),
   ]

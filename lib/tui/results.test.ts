@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { FOOTER, SEVERITY_ORDER, axisLines, buildResultsData, compactSummary, concurrency, initialResultsState, renderResults, resultsStep, severityCode, tickLabel, tickStep, timelineRows, visibleChecks, visibleFindings } from './results.mjs'
 import { runResultsScreen } from './resultsapp.mjs'
-import { sampleData } from './resultssample.mjs'
+import { bulkSampleData as sampleData } from './resultssample.mjs'
 import { stripAnsi } from './cells.mjs'
 import { fitGroups, renderLive } from './live.mjs'
 import { createModel, isSlow } from './model.mjs'
@@ -37,7 +37,7 @@ describe('severity colours', () => {
   })
   test('the legend and the words are on screen, and without colour there are no escape codes', () => {
     const t = text(draw())
-    expect(t).toContain('red critical  orange high  yellow medium  white info')
+    expect(t).toContain('critical = fix before shipping   high = fix soon   medium = should fix   low, info = worth knowing')
     expect(draw({}, { color: false, level: false }).join('')).not.toContain('\x1b')
     expect(text(draw({}, { color: false, level: false }))).toContain('CRITICAL')
   })

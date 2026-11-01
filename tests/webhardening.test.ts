@@ -169,7 +169,8 @@ describe('regressions found in review', () => {
   })
   test('the private-key rule ignores public keys', () => {
     const r: any = [...PUBLISH].find((x: any) => x.id === 'private-key-file')
-    expect(r.path.test('certs/server.key') && !r.notIn.test('certs/server.key')).toBe(true)
+    const key = 'certs/server.key'
+    expect(r.path.test(key) && !r.notIn.test(key)).toBe(true)
     expect(r.notIn.test('scripts/backup-public-key.pem')).toBe(true)
   })
 })

@@ -1,0 +1,7 @@
+# Sample text inside the check scripts: the rule has to be shown a bad case to prove it works.
+# Made-up sample finding text for the README pictures (a SQL injection is described in it on purpose).
+thorough/health.mjs:286
+thorough/api.mjs:287
+thorough/engines.mjs:569
+lib/tui/resultssample.mjs:72
+lib/tui/resultssample.mjs:83
