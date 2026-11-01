@@ -1302,7 +1302,7 @@ export function runProject({ name, dir, work, timeoutSeconds = 60, overallSecond
   })
 }
 
-export async function runCorpus({ projects, work, concurrency = 4, say = () => {} }) {
+export async function runCorpus({ projects, work, concurrency = 4, overallSeconds, say = () => {} }) {
   mkdirSync(work, { recursive: true })
   const packs = await allPacks()
   const names = Object.keys(projects)
@@ -1312,7 +1312,7 @@ export async function runCorpus({ projects, work, concurrency = 4, say = () => {
     while (next < names.length) {
       const name = names[next++]
       say(`running ${name}`)
-      results[name] = await runProject({ name, dir: projects[name], work, packs })
+      results[name] = await runProject({ name, dir: projects[name], work, packs, ...(overallSeconds ? { overallSeconds } : {}) })
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, names.length) }, worker))

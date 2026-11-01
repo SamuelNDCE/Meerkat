@@ -12,6 +12,7 @@ import { evaluate, gapList, generateCorpus, isDetected, percent, recallTable, ru
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const skip = process.env.MEERKAT_SKIP_ACCURACY === '1'
+const onCi = Boolean(process.env.CI)
 const thresholds = JSON.parse(readFileSync(join(ROOT, 'docs', 'accuracy-thresholds.json'), 'utf8'))
 
 type Planted = { id: string; key: string; project: string; suite: string; check: string; alt: string[]; rule: string; file: string; line: number; description: string; detected?: boolean; inFindings?: boolean }
@@ -26,10 +27,12 @@ beforeAll(async () => {
   const corpus = generateCorpus(out)
   projects = corpus.projects
   planted = await withSuites(corpus.planted)
-  const results = await runCorpus({ projects, work: join(out, '.work'), concurrency: 5 })
+  // A shared CI runner (Windows most of all, where every process spawn is slow) shares two cores with the other test files, so a project that takes
+  // 40 s on a desktop can pass the 100 s kill and lose its findings.json. Giving the runs more time changes no rule and no threshold.
+  const results = await runCorpus({ projects, work: join(out, '.work'), concurrency: onCi ? 4 : 5, ...(onCi ? { overallSeconds: 300 } : {}) })
   ev = evaluate(planted, results)
   console.log(`accuracy corpus: ${ev.total} planted defects, ${ev.detected} detected by a check (${percent(ev.recall)}), ${ev.inFindings} in findings.json (${percent(ev.findingsRecall)})\n${recallTable(ev)}\n\nKNOWN GAPS (planted but not detected):\n${gapList(ev)}`)
-}, 500_000)
+}, onCi ? 1_200_000 : 500_000)
 
 afterAll(() => {
   if (out) rmSync(out, { recursive: true, force: true })
