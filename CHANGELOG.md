@@ -2,6 +2,15 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## 0.3.12 (2026-11-01)
+
+- Findings Meerkat itself calls notes (low, info, low confidence, probably a false alarm) are no longer counted as bugs
+- presence-style rules are rated low or medium instead of high
+- innerHTML through a sanitiser is trusted
+- the same fact is reported once
+- the longest check starts first and small checks run beside it instead of waiting
+- the badge says made with Perpetual Technologies
+
 ## 0.3.11 (2026-11-01)
 
 - Hot fix: the key hints at the bottom of the results screen now always fit and keep quit and help

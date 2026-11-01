@@ -1338,7 +1338,8 @@ export function placeOf(f) {
 export function isDetected(p, findings) {
   const checks = new Set([p.check, ...p.alt].filter(Boolean))
   return findings.some((f) => {
-    if (!checks.has(f.check)) return false
+    // A finding two checks reported is kept once (lib/findingsdoc.mjs); the other check is named in alsoDetectedBy and counts as having seen it too.
+    if (![f.check, ...(f.alsoDetectedBy ?? [])].some((c) => checks.has(c))) return false
     if (p.rule && f.rule && f.rule !== p.rule) return false
     const { files, lines } = placeOf(f)
     if (p.file) {

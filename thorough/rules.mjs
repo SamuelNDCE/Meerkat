@@ -30,6 +30,20 @@ const wants = (rule, file) => {
   return isText(file)
 }
 
+// Rules that report the absence or presence of a practice, or a pattern whose danger depends on where the value comes from, are not high: the check's
+// own group would rate them high. A rule not listed keeps the severity of its check.
+const RULE_SEVERITY = {
+  'gha-deploy-no-concurrency': 'low',
+  'gha-contents-write': 'low',
+  'release-workflow-no-sbom': 'low',
+  'lockfile-duplicate-versions-over-budget': 'low',
+  'lockfile-deprecated-entry': 'low',
+  'ep-pkg-electron-caret': 'low',
+  'ep-execute-js-variable': 'medium',
+  'ep-shell-path-variable': 'medium',
+  'js-require-variable': 'medium',
+}
+
 export function readAllow(root, allowFile) {
   const set = new Set()
   if (!allowFile) return set
@@ -98,7 +112,7 @@ export function scanRules(name, root, rules, { allowFile, okNote = 'nothing foun
   }
   const fallback = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY) ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'
   // One finding line per hit (lib/findings.mjs), alongside the usual output below.
-  for (const f of located) finding(f.severity ?? fallback, f.rule, f.file, f.line, f.title)
+  for (const f of located) finding(f.severity ?? RULE_SEVERITY[f.rule] ?? fallback, f.rule, f.file, f.line, f.title)
   if (!found.length) {
     console.log(`${name}: ${okNote}`)
     return 0

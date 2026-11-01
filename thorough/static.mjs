@@ -3,7 +3,7 @@
 // Limits are set in .meerkat-budgets.json under "static". A finding you accept goes in the check's allow file (named in each message).
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, posix } from 'node:path'
-import { finish, isFixture, isText, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finding, finish, isFixture, isText, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.static ?? {}
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|cs|svelte|vue)$/i
@@ -147,11 +147,15 @@ const safeLiteralAssign = (t, m, why) => {
   // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
   const atom = String.raw`(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\x60[^\x60$\\]*\x60|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)`
   if (new RegExp(String.raw`^${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)) return true
+  // A value passed through a sanitiser (DOMPurify.sanitize(x), sanitize(x), escapeHtml(x), esc(x)) is cleaned markup, not raw input.
+  if (new RegExp(String.raw`^(?:DOMPurify\.sanitize|(?:[A-Za-z_$][\w$.]*\.)?(?:sanitize|escape|esc|purify)\w*)\s*\(`, 'i').test(rest)) return true
   // cond ? CONST : '' picks between constants, so the condition decides which author-written markup is shown, never what it contains.
   return new RegExp(String.raw`^[^?]+\?\s*${atom}\s*:\s*${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)
 }
 const riskyCode = (root) => {
   const allow = allowList(root, '.meerkat-risky-allow')
+  const structured = []
+  const fallbackSeverity = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY ?? '') ? process.env.MEERKAT_DEFAULT_SEVERITY : 'high'
   const f = []
   for (const x of trackedFiles(root)) {
     if (!isText(x) || TESTISH.test(x) || /(^|\/)(node_modules|dist|build|vendor)\//.test(x) || x.endsWith('static.mjs') || allow.has(x)) continue
@@ -161,11 +165,18 @@ const riskyCode = (root) => {
       // Every hit counts, not just the first in a file: a second innerHTML or eval further down is a separate risk.
       for (const m of t.matchAll(new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`))) {
         if (safeLiteralAssign(t, m, why)) continue
-        if (!allow.has(`${x}:${lineOf(t, m.index)}`)) f.push(`${x}:${lineOf(t, m.index)} ${why}`)
+        if (!allow.has(`${x}:${lineOf(t, m.index)}`)) {
+          f.push(`${x}:${lineOf(t, m.index)} ${why}`)
+          // Every hit is reported with its own severity: innerHTML with a value the code does not show to be safe is a medium risk (it depends on where the
+          // value comes from), the other calls keep the check's own severity (high).
+          structured.push([why.startsWith('innerHTML') ? 'medium' : fallbackSeverity, why.startsWith('innerHTML') ? 'innerhtml-assignment' : 'risky-call', x, lineOf(t, m.index), why])
+        }
       }
     }
   }
-  return finish('risky-code', f, 'none of the usual dangerous calls found (accept one in .meerkat-risky-allow)')
+  const r = finish('risky-code', f, 'none of the usual dangerous calls found (accept one in .meerkat-risky-allow)', { structured: true })
+  for (const s of structured) finding(...s)
+  return r
 }
 
 // ---- workflow-security: GitHub Actions workflows that can be abused
