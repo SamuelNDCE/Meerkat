@@ -41,11 +41,12 @@ export const shellPathIsChecked = (line, ctx, lookBack = 10) => {
   if (!m) return false
   const v = m[1].replace(/\$/g, '\\$')
   const stmt = new RegExp(String.raw`^\s*(?:await\s+)?${GUARDS}\(\s*${v}\s*[,)][^\n]{0,100}$`)
+  const assigned = new RegExp(String.raw`(?<![\w$.])${v}\s*[-+*/|&]?=[^=]`)
   const early = new RegExp(String.raw`^\s*if\s*\(\s*!\s*${GUARDS}\(\s*${v}\s*[,)][^\n]{0,60}\)\s*(?:return|throw)\b`)
   for (let i = ctx.index; i >= 0 && i >= ctx.index - lookBack; i--) {
     const l = cut(ctx.lines[i])
     if (i < ctx.index && FN_HEADER.test(l)) break
-    if (stmt.test(l) || early.test(l)) return !new RegExp(String.raw`(?<![\w$.])${v}\s*[-+*/|&]?=[^=]`).test(ctx.lines.slice(i + 1, ctx.index + 1).join('\n'))
+    if (stmt.test(l) || early.test(l)) return !assigned.test(ctx.lines.slice(i + 1, ctx.index + 1).join('\n'))
   }
   // A constant folder: one declaration whose whole value is string literals, __dirname and app.getPath('name'), never assigned again.
   const decl = new RegExp(String.raw`^[ \t]*(?:const|let|var)\s+${v}\s*=\s*(?:${LIT}|path\.(?:join|resolve)\(\s*${PATH_ARG}(?:\s*,\s*${PATH_ARG}){0,6}\s*\)|app\.getPath\(\s*'\w+'\s*\))\s*;?\s*$`, 'm')
