@@ -26,6 +26,7 @@ import { spansFromRecorder } from './lib/tui/group.mjs'
 import { createControl, runAll, selectChecks, stopOnSignals, summarise, table } from './lib/runner.mjs'
 import { sweepSpawned } from './lib/exec.mjs'
 import { DEFAULT_RUN_MINUTES, loadBudgets } from './lib/timeouts.mjs'
+import { notProjectJson, notProjectMessage, projectCheck } from './lib/projectgate.mjs'
 import { enrichResults, narrowSubs, rollup } from './lib/subchecks.mjs'
 import { packOfCheck, resolveOnly, suiteIdOf, suiteInfo } from './lib/suites.mjs'
 import { tipLine } from './lib/recommend.mjs'
@@ -102,6 +103,7 @@ export function parseArgs(argv) {
     else if (a === '--app') o.app = next()
     else if (a === '--timeout-scale') o.timeoutScale = clampScale(next())
     else if (a === '--no-idle-kill') o.noIdleKill = true
+    else if (a === '--force') o.force = true
     else if (a === '--max-run-minutes') o.maxRunMinutes = Number(next())
     else o.errors.push(`unknown argument: ${a}`)
   }
@@ -192,6 +194,16 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const repoRoot = repoRootOf(appDir)
   process.env.MEERKAT_APP_DIR = process.env.NV_APP_DIR = appDir
   env.MEERKAT_APP_DIR = env.NV_APP_DIR = appDir
+  // Meerkat checks projects, not any folder (lib/projectgate.mjs). Reading back results, listing and --init need no project; --force runs anyway.
+  const readOnly = opts.init || opts.logs || opts.last || opts.why || opts.list || opts.listJson || opts.listPresets || opts.estimate
+  if (!readOnly && !opts.force && env.MEERKAT_NO_PROJECT_GATE !== '1') {
+    const gate = projectCheck(appDir)
+    if (!gate.ok && !gate.unreadable) {
+      fail(notProjectMessage(appDir))
+      if (opts.jsonStdout) (givenLog ?? ((l) => process.stdout.write(`${l}\n`)))(JSON.stringify(notProjectJson(appDir), null, 2))
+      return 2
+    }
+  }
   if (opts.init) {
     const made = initConfig(appDir)
     log(made.message)

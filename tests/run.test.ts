@@ -479,7 +479,7 @@ describe('start order for speed', () => {
     expect(order[0]).toBe('fmt')
     expect(order[1]).toBe('build')
     expect(order.indexOf('build')).toBeLessThan(order.indexOf('clippy'))
-    expect(order.indexOf('clippy')).toBeLessThan(order.indexOf('parser'))
+    expect(order.indexOf('parser')).toBeLessThan(order.indexOf('clippy')) // longest processing time first
     expect(order).toHaveLength(list.length)
   })
   test('a dependency cycle does not loop forever', () => {

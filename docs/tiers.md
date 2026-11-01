@@ -75,9 +75,13 @@ A check may say `scale: 'files'` (eslint, tsc, prettier, madge) or `scale: 'crat
 
 A check that is killed too early is a false failure, so the limit follows the estimate:
 
-- normal check: `max(estSeconds x 4, 60)` seconds
-- compile, test or build check: `estSeconds x 6`
-- both multiplied by the project-size factor above (never below 1), and never below the pack's own `timeoutSeconds`
+- tiny check (estimate 5 s or less): `max(estSeconds x 4, 60)` seconds
+- normal check: `max(estSeconds x 5, 120)` seconds (at least 5 times the estimate, never under 120 s)
+- compile, test or build check: `max(estSeconds x 8, 300)`
+- discovered `found-*` check on the windows lane: `max(estSeconds x 4, 420)`
+- all multiplied by the project-size factor above (never below 1), and never below the pack's own `timeoutSeconds`
+- and by a machine-load factor from 1 to 2: 1 on a quiet PC, rising to 2 when the processors are saturated (load average, or the busy share of processor time on Windows) or memory is nearly gone (under 15% free, full effect at 5%). It is read each time a check starts, so a PC that becomes busy mid-run gives later checks more time
+- the stuck guard is unchanged: a check that prints nothing for its idle limit (`found-*` checks: 180 s on the windows lane, 300 s elsewhere, or twice its estimate) is still stopped, however generous the limit; the hard cap of twice the limit for a check that is still printing is unchanged
 - `--timeout-scale <n>` (1 to 10) multiplies every limit; `.meerkat-budgets.json` may hold `"timeoutScale": n` and `"timeouts": { "<check-id>": seconds }` (an exact limit for that check)
 - a compile or test check that has printed anything in the last 30 s is not killed at the limit; it may run on to twice the limit
 - a check stopped by its limit reads `timed out after N s (limit is M s; raise it with --timeout-scale 2 or "timeouts": {"<check>": 1800} in .meerkat-budgets.json)` in the result line and in its log; the status stays FAIL
