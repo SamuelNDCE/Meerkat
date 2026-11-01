@@ -103,7 +103,8 @@ function listTrackedFiles(root) {
     const files = []
     const walk = (dir) => {
       for (const e of readdirSync(dir, { withFileTypes: true })) {
-        if (e.name === 'node_modules' || e.name === '.git' || e.name === 'target') continue
+        // With no git to say what is tracked, leave out what no project commits: dependency folders, virtual environments and tool caches.
+        if (e.name === 'node_modules' || e.name === '.git' || e.name === 'target' || /^(__pycache__|\.venv|venv|\.pytest_cache|\.mypy_cache|\.ruff_cache|\.tox)$/.test(e.name)) continue
         const p = join(dir, e.name)
         if (e.isDirectory()) walk(p)
         else files.push(relative(root, p).split('\\').join('/'))

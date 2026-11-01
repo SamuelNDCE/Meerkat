@@ -315,6 +315,13 @@ describe('real-code false positives stay fixed', () => {
     expect(run('thorough/privacy.mjs', 'geolocation-and-media-requests', bad).code).toBe(1)
   })
 
+  test('generated-files-tracked: in a folder with no git, a Python cache folder is not "tracked" output, a dist folder still is', () => {
+    const ok = folder({ 'a.py': 'x = 1\n', '__pycache__/a.cpython-311.pyc': 'x', '.gitignore': '__pycache__/\n' })
+    expect(run('thorough/repo-files.mjs', 'generated-files-tracked', ok).code).toBe(0)
+    const bad = folder({ 'a.py': 'x = 1\n', 'dist/bundle.js': 'x' })
+    expect(run('thorough/repo-files.mjs', 'generated-files-tracked', bad).code).toBe(1)
+  })
+
   test('history secret scan: empty JSON values and format placeholders are not secrets, a real token is', () => {
     const vcs = (dir: string, ...a: string[]) => execFileSync('git', ['-C', dir, ...a], { stdio: 'pipe' })
     const repo = (text: string) => {
