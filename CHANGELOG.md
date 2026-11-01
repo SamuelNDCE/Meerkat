@@ -2,6 +2,10 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## Unreleased
+
+- meerkat tools install works on Windows (it found the bare npm script instead of npm.cmd)
+
 ## 0.3.13 (2026-11-01)
 
 - The package is on npm: npm install -g @samuelndce/meerkat
