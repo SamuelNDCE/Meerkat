@@ -4,6 +4,10 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- risky-code ignores comments, strings in Rust and Python files, Rust unit-test modules, test and fixture files, XML namespace names and URL-prefix trims; an MD5 with no secret or signature nearby is an info note and does not fail the check (NeuralVault: 39 high findings down to 0)
+- the JavaScript await-in-loop, var, == and unhandled-promise checks, the PII check and the size and complexity checks leave test and probe files alone; the SQL-concat check leaves probe scripts alone
+- Rust documentation and error-style rules (undocumented pub items, String errors, discarded results, spawn handles) are low, not medium
+
 - meerkat doctor and the NeuralVault click-shards script start again: lib/paths.mjs now exports importFromApp (0.3.13 and 0.3.14 died with "does not provide an export named importFromApp")
 
 ## 0.3.14 (2026-11-01)
