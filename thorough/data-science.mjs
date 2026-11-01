@@ -385,7 +385,7 @@ main({
     run: notebookSize,
     ...fx({ 'big.ipynb': nb([{ cell_type: 'markdown', metadata: {}, source: 'x'.repeat(2048) }]), '.meerkat-budgets.json': budgets({ maxNotebookKb: 1 }) }, notebookSize),
   },
-  'notebook-absolute-paths': { run: notebookAbsolutePaths, ...fx({ 'load.ipynb': nb([code('df = read("C:\\Users\\Futur\\data.csv")')]) }, notebookAbsolutePaths) },
+  'notebook-absolute-paths': { run: notebookAbsolutePaths, ...fx({ 'load.ipynb': nb([code('df = read("C:\\Users\\alice\\data.csv")')]) }, notebookAbsolutePaths) },
   'notebook-pip-magics': { run: notebookPipMagics, ...fx({ 'setup.ipynb': nb([code('!pip install numpy pandas==2.2.2')]) }, notebookPipMagics) },
   'model-files-in-git': {
     run: (root) => heavyFiles(root, 'model-files-in-git', MODEL_FILE, 'model files', MB),

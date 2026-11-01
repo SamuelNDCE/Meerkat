@@ -5,13 +5,13 @@
 **One command that checks your project before you ship it.**<br>
 It runs the checks your project needs, shows what passed, what failed and what could not run, and saves a log of every one.
 
-<img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11">
+<img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11">
 
 ![Meerkat running: a progress bar with the time left, what is running now, every check with its time, and a timeline](docs/images/meerkat-run.gif)
 
 </div>
 
-**[Why](#why-meerkat) · [Quick start](#quick-start) · [Make it yours](#make-it-yours-add-your-own-checks) · [The meerkat command](#the-meerkat-command) · [Ways to run it](#ways-to-run-it) · [Every check](#every-check) · [What it works on](#what-it-works-on) · [Speed and your PC](#speed-and-your-pc) · [Logs](#logs-and-why-something-failed) · [For AI agents](#for-ai-agents) · [Add your own check](#add-your-own-check) · [Configuration](#configuration) · [AI checks](#ai-checks) · [Updating](#updating) · [Privacy](#privacy) · [CI](#using-it-in-ci) · [Environment variables](#environment-variables) · [Licence](#licence)**
+**[Why](#why-meerkat) · [Quick start](#quick-start) · [Make it yours](#make-it-yours-add-your-own-checks) · [The meerkat command](#the-meerkat-command) · [Ways to run it](#ways-to-run-it) · [Every check](#every-check) · [What it works on](#what-it-works-on) · [Speed and your PC](#speed-and-your-pc) · [Logs](#logs-and-why-something-failed) · [For AI agents](#for-ai-agents) · [Add your own check](#add-your-own-check) · [Configuration](#configuration) · [AI checks](#ai-checks) · [Updating](#updating) · [Privacy](#privacy) · [CI](#using-it-in-ci) · [Environment variables](#environment-variables) · [Licence](#licence) · [Versions](#versions-and-releases) · [Share yours](#share-what-you-build)**
 
 ## Why Meerkat
 
@@ -111,6 +111,30 @@ Meerkat runs its own checks and yours side by side. Pick the easiest way that fi
 Your own settings for every project live in `~/.meerkat.json`, and personal packs live in `~/.meerkat/packs/`. Settings for one project live in its `meerkat.config.json`, so the whole team gets them. Checks you add are labelled `yours` or `project` in lists, on the board and in the report, so you can always see where each came from.
 
 Details, and a 5-minute quick start: [docs/customizing.md](docs/customizing.md).
+
+## Run it without the menu
+
+Everything the menu does is also a command, so scripts, CI and AI agents never need the screen. Add `--plain` for plain lines and `--json` where a script needs data.
+
+| I want to | Type |
+|---|---|
+| run the quick checks on the current folder | `meerkat verify` |
+| run a preset on a project by path or name | `meerkat full C:\code\my-app` or `meerkat security my-app` |
+| run one suite, or one check of it | `meerkat check secrets` or `meerkat check secrets/secret-scan` |
+| run a few named checks | `meerkat check clippy rust-tests eslint` |
+| see what would run, and what could not | `meerkat doctor` and `meerkat check list` |
+| see how long a run is expected to take | `meerkat presets` |
+| include the slow extras | `meerkat full --include runtime,mutation` |
+| give slow machines or big projects more time | `meerkat full --timeout-scale 2` |
+| stop a run that goes on too long | `meerkat full --max-run-minutes 30` |
+| read the last report, one check's log, or the findings | `meerkat last`, `meerkat why <check>`, `meerkat findings` |
+| get findings for a tool (JSON, markdown, SARIF) | `meerkat findings --json`, or the files in the run folder |
+| add your own command as a check | `meerkat check new --id e2e --cmd "npm run test:e2e" --yes` |
+| list the tests your project already has | `meerkat discover` |
+| update Meerkat | `meerkat update` (see [Updating](#updating)) |
+| print a bug report to paste into an issue | `meerkat bug` |
+
+The exit code is 0 when everything passed, 1 when something failed and 75 when something could not run, so `meerkat verify && git push` in a shell that has `&&` does what it says. The full list of flags: [docs/commands.md](docs/commands.md).
 
 ## The meerkat command
 
@@ -512,6 +536,20 @@ The old `NV_VERIFY_*` names are still read.
 ## Examples
 
 `examples/neuralvault/` holds the checks of one real app, an Electron and Rust desktop app that clicks through every page in a hidden window, runs fuzzing and mutation tests, and queues its window and Rust jobs. It is there to copy from, and it is switched on like any pack (`"packs": ["neuralvault"]`). Its own notes are in `examples/neuralvault/docs/`.
+
+## Versions and releases
+
+Meerkat uses [semantic versioning](https://semver.org): a patch (0.2.1) fixes, a minor (0.3.0) adds, a major (1.0.0) changes how you use it. The version lives in one place, `package.json`, and everything that shows it (the menu, the results screen, the board, the badge) reads it from there. [CHANGELOG.md](CHANGELOG.md) lists what changed in each version.
+
+When a newer version is published here, the menu and the results screen show a yellow line with your version and the new one, and `meerkat update` installs it after you say yes. Maintainers cut a version with one command, which bumps `package.json`, writes the changelog entry and redraws the badge:
+
+```
+node tools/release.mjs minor "Added the happy results screen; fixed the timeline scroll"
+```
+
+## Share what you build
+
+Meerkat is meant to grow. If you wrote a check, a pack or a preset that other people would find useful, please share it: open an issue or a pull request at [github.com/SamuelNDCE/Meerkat](https://github.com/SamuelNDCE/Meerkat) (see [CONTRIBUTING.md](CONTRIBUTING.md)), or publish your pack folder anywhere and tell us. Checks that find real problems on real projects without false alarms are the most valuable. Meerkat never uploads your code or your results, so nothing you run is shared unless you choose to post it.
 
 ## Licence
 
