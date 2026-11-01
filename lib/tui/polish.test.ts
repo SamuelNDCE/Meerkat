@@ -22,10 +22,10 @@ describe('the happy all-clear screen', () => {
     expect(lines[1]).toContain('\x1b[1;32m')
     expect(t.join('\n')).toContain('Nothing was detected in this run')
   })
-  test('the happy meerkat is a new sprite: eyes shut in a cream arc, no blush', () => {
+  test('the happy meerkat is a new sprite: eyes shut in a light-brown arc, no blush', () => {
     const joy = buildProfile('joy').join('')
     expect(joy).not.toContain('R')
-    expect(joy).toContain('L')
+    expect(joy).toContain('T')
     expect(buildProfile('happy').join('')).not.toContain('R')
   })
   test('failures keep the red look and no ALL CLEAR', () => {
