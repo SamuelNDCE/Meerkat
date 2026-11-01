@@ -41,7 +41,10 @@
     "run.mjs",
     "meerkat.config.json",
     "llms.txt",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "!**/*.test.ts",
+    "!**/target/**",
+    "!**/node_modules/**"
   ],
   "publishConfig": {
     "access": "public"
