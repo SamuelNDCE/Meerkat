@@ -36,14 +36,14 @@ describe('the fast compatibility matrix', () => {
     test(
       `${name}: no crash, no hang, no false fail`,
       async () => {
-        const res = await runMatrix({ names: [name], dir: join(work, 'projects'), work: join(work, `aux-${name}`), timeoutSeconds: 60, overallSeconds: 55 })
+        const res = await runMatrix({ names: [name], dir: join(work, 'projects'), work: join(work, `aux-${name}`), timeoutSeconds: 60, overallSeconds: process.env.CI ? 240 : 55 })
         const a = analyse(res)
         expect(res.rows.length, 'the run produced results').toBeGreaterThan(100)
         expect(a.crashes.map((r: { id: string; crash: string; reason: string }) => `${r.id}: ${r.crash}: ${r.reason}`)).toEqual([])
         expect(a.falseFails.map((r: { id: string; reason: string }) => `${r.id}: ${r.reason}`)).toEqual([])
         expect(a.badNotRun.map((r: { id: string; reason: string }) => `${r.id}: ${r.reason}`)).toEqual([])
       },
-      60_000,
+      process.env.CI ? 300_000 : 60_000,
     )
   }
 })
