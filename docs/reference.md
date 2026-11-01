@@ -25,15 +25,12 @@ Every picture below is **sample data**: a made-up project, not a real run. Each 
 
 **When it finds problems**, the results screen lists them worst first. Each line says the severity in words and colour, the rule, the file and line, and why it matters. Critical means fix before shipping, high means fix soon, medium means should fix, low and info are worth knowing.
 
-![Results screen, findings tab](images/results-findings.png)
 
 Tab or the arrow keys move between the findings, every check with its time, and a timeline of the whole run. Up and Down scroll when there is more than fits.
 
 ![Using the results screen: scroll the findings, Tab to the checks, Tab to the timeline](images/results-scroll.gif)
 
-![Results screen, checks tab](images/results-checks.png)
 
-![Results screen, timeline tab](images/results-timeline.png)
 
 **When nothing is wrong**, Meerkat says so, and looks pleased about it.
 
@@ -92,7 +89,6 @@ That runs the quick checks and draws the live board: a progress bar that turns r
 
 Run `meerkat` on its own and it first asks which project: the folder you are in, projects you used lately, and the git repositories it finds on your PC. Type to filter, or browse folders and drives, or paste a path. Run `meerkat` on its own for a menu: Run lists quick, full, security, functionality, ui, performance, refactor, ci and release with an estimated time for the project on each row (`about 5 min`, `under 1 min`, `~40 s`), and "More presets..." opens every other preset. "Check for updates" looks for a newer version; a small spinner line at the top shows the daily look-up while it runs. Without `npm link`, use `node path/to/Meerkat/run.mjs --app <folder> --preset quick`. In the preset menu, `d` shows what a preset runs, `u` updates Meerkat, and Esc goes back to pick another project.
 
-![The board after a run with one failure: the failed check in red, a timeline of what ran when](images/board-fail.png)
 
 ## Make it yours: add your own checks
 

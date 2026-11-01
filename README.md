@@ -58,7 +58,8 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 | **Smart timeouts** | Limits scale with project size and your PC; `--timeout-scale` and `--max-run-minutes` when you want control |
 | **Estimates** | The menu and board show how long a run should take for this project, learned from your history |
 | **Deeper checks** | Mutation testing and runtime checks (clean-copy build, flaky tests, timezone matrix and more), on request |
-| **AI checks** | Optional. Off by default; they say what they will send before they send it |
+| **AI prompt** | Press `p` on the results screen for a ready-made prompt that hands every finding, in full, to an AI to verify and fix |
+| **AI checks and verification** | Optional. Off by default; they say what they will send before they send it |
 | **Updates** | Your version and the newest one are shown on the menu and results screen; one key installs it |
 | **Logs** | One folder per run named with the project and preset; `meerkat why <check>` explains a failure |
 
@@ -188,6 +189,20 @@ The exit code is 0 when everything passed, 1 when something failed and 75 when s
 ## For AI agents and scripts
 
 Meerkat is built to be driven by tools as well as people: plain output, `--json`, SARIF for code-scanning, an MCP server (`bin/meerkat-mcp.mjs`) with `meerkat_run`, `meerkat_last`, `meerkat_why` and more, and a stable findings protocol (`MEERKAT-FINDING` lines). Start at [docs/for-ai-agents.md](docs/for-ai-agents.md).
+
+### AI prompts and verification
+
+After a run, Meerkat can write a prompt for an AI that has never seen it:
+
+```
+meerkat prompt
+```
+
+On the results screen press `p`. Meerkat writes `ai-prompt.md` into the run folder and copies one short line to your clipboard that points your AI at it. The file explains what Meerkat is and what the results mean, then lists every finding in full (critical, high, medium, low, info), what could not run, and instructions to verify each finding, fix the real ones from the highest severity, and run `meerkat verify` again. Everything copied from your project is fenced and marked as untrusted data.
+
+Optional and off by default: `meerkat verify --ai-verify` (or `v` on the results screen) asks the model you chose with `meerkat ai use` to double-check each medium, high and critical finding. It tells you exactly what it will send (the finding, about 30 lines of code around it with secrets removed, and the rule description) and asks first unless you pass `--yes`. Verdicts only add notes to findings; nothing is deleted, and a model error means NOT RUN, never a pass.
+
+Every run also saves `run.log`, a timestamped record of how it went. Details: [docs/reference.md](docs/reference.md), [docs/logs.md](docs/logs.md), [docs/findings.md](docs/findings.md).
 
 ### Connect Meerkat to NeuralVault, Claude Code or any MCP client
 
