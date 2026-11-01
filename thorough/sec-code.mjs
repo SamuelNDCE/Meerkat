@@ -3,11 +3,11 @@
 // Run through the security-plus pack, or by hand:
 //   node thorough/sec-code.mjs <check> [--root <dir>]      node thorough/sec-code.mjs <check> --fixtures   (must exit 1)
 // A finding you accept goes in .meerkat-seccode-allow: a path (accepts the whole file) or path:line, one per line, # for comments.
-import { finish, main, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, main, readText, rustTestStart, trackedFiles, withFixture } from './kit.mjs'
 
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|kt|cs|svelte|vue)$/i
 const CONFIG = /\.(ya?ml|toml|json|ini|env|conf|cfg|properties|xml)$|(^|\/)\.env[^/]*$|(^|\/)(Dockerfile[^/]*|docker-compose[^/]*)$/i
-const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|tests?|__tests__|fixtures?|spec|examples?|docs?)\/|\.(test|spec)\.[a-z]+$|\.min\.(m?js|css)$|(^|\/)sec-code\.mjs$/i
+const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|tests?|__tests__|fixtures?|spec|examples?|docs?)\/|\.(test|spec)\.[a-z]+$|(^|\/)[\w.-]+_tests?\.(rs|go|py)$|(^|\/)test_[\w.-]+\.py$|\.min\.(m?js|css)$|(^|\/)sec-code\.mjs$/i
 const BINARY = /\.(png|jpe?g|gif|webp|ico|pdf|zip|gz|tgz|woff2?|ttf|otf|eot|mp[34]|mov|wasm|bin|exe|dll|so|dylib|lock|svg)$/i
 const COMMENT = /^\s*(\/\/|#|\/\*|\*|--\s)/
 
@@ -62,9 +62,11 @@ function runRules(root, rules) {
   for (const x of trackedFiles(root)) {
     if (SKIP.test(x) || BINARY.test(x) || allow.has(x)) continue
     const t = readText(root, x)
+    const testFrom = rustTestStart(x, t) // Rust unit tests sit in the same file, after #[cfg(test)]: not shipped code
     for (const r of rules) {
       if (!r.files(x)) continue
       for (const { line, why } of r.scan(t, x)) {
+        if (line && line >= testFrom) continue
         const where = line ? `${x}:${line}` : x
         if (!allow.has(where)) f.push(`${where} ${why}`)
       }

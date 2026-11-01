@@ -118,6 +118,17 @@ function listTrackedFiles(root) {
 // Folders that hold deliberately broken files for tests: the hygiene checks leave them alone.
 export const isFixture = (f) => /(^|\/)(fixtures?|testdata|__fixtures__|test-fixtures)\//i.test(f)
 
+// Test code is not shipped and holds fake secrets on purpose, so the secret checks leave it alone: test folders, *.test.* and *.spec.* files, *_test.rs/go/py
+// and test_*.py. Rust unit tests live in the same file as the code, in a module after #[cfg(test)]: rustTestStart gives the 1-based line where it begins.
+export const isTestFile = (f) => isFixture(f) || /(^|\/)(tests?|__tests__|e2e|spec|probes?)\//i.test(f) || /\.(test|spec)\.[a-z]+$/i.test(f) || /(^|\/)[\w.-]+_tests?\.(rs|go|py)$/i.test(f) || /(^|\/)test_[\w.-]+\.py$/i.test(f)
+export const rustTestStart = (file, text) => {
+  if (!/\.rs$/i.test(file)) return Infinity
+  const m = /^[ \t]*#\[cfg\(test\)\]/m.exec(text)
+  return m ? text.slice(0, m.index).split('\n').length : Infinity
+}
+// A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.
+export const FAKE_VALUE = /fake|dummy|placeholder|supersecret|not[-_]?(?:a[-_])?real|redacted|changeme|example|sample|[_-]test[_-]|your[-_]?(?:key|token|secret)/i
+
 // Settings files (.meerkat-budgets.json and every .meerkat-<area>-allow) may sit in the project root or, to keep the root tidy, in a .meerkat/ folder;
 // the folder wins when the file is in both.
 const CONFIG_NAME = /^\.meerkat-(?:budgets\.json|[a-z-]+-allow)$/

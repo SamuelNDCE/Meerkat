@@ -11,6 +11,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - a tool that cannot reach its service (cargo audit's advisory database, the npm registry) is NOT RUN instead of a failed check (thorough/offline-guard.mjs)
 - the results screen names every check that did not run (skipped, covered by a wider check, turned off) instead of leaving its description empty
 - ep-ipc-handler-no-sender-check no longer flags handlers whose sender is checked through a helper in the same file, or registered through an ipcMain parameter that every caller fills with a wrapper that checks the sender (found scanning Plume)
+- secret checks leave test code alone: Rust unit tests after #[cfg(test)], *_tests.rs, probe folders, values that say they are fake (FAKE_TOKEN, SUPERSECRET, the AWS documentation keys), and a private key header in a comment with no key under it. On NeuralVault this removed all 25 critical findings, every one of them a test fixture
 - markdownlint skips the folders named fixtures, where documents are broken on purpose
 
 ## 0.3.13 (2026-11-01)

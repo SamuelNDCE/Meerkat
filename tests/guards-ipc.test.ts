@@ -54,6 +54,11 @@ describe('ipcMainIsGuardedParameter fails closed on shapes it does not understan
     const c = { file: 'plugins-ipc.cjs', lines, index: 1, text: own, project: { files: ['main.cjs', 'plugins-ipc.cjs'], read: (f: string) => (f === 'main.cjs' ? guarded : own) } }
     expect(ipcMainIsGuardedParameter(lines[1], c)).toBe(false)
   })
+  test('ipcMain aliased inside the module', () => {
+    const own = ["function register({ ipcMain }) {", '  const m = ipcMain', "  ipcMain.handle('a', () => 1)", '}'].join('\n')
+    const lines = own.split('\n')
+    expect(ipcMainIsGuardedParameter(lines[2], { file: 'plugins-ipc.cjs', lines, index: 2, text: own, project: project(guarded) })).toBe(false)
+  })
   test('electron imported over several lines in the module itself', () => {
     const own = ["const {", '  app,', '  ipcMain,', "} = require('electron')", LINE].join('\n')
     expect(ipcMainIsGuardedParameter(LINE, { file: 'plugins-ipc.cjs', lines: own.split('\n'), index: 4, text: own, project: project(guarded) })).toBe(false)

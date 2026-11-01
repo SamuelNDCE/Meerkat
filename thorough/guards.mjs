@@ -148,11 +148,11 @@ const wrapperGuardsMethods = (other, name, methods) => {
 }
 export const ipcMainIsGuardedParameter = (_line, ctx) => {
   const text = ctx.text
-  if (/\belectron\.ipcMain\b/.test(text)) return false
-  for (const m of text.matchAll(/require\(\s*['"]electron['"]\s*\)|from\s+['"]electron['"]/g)) {
-    if (/\bipcMain\b/.test(text.slice(Math.max(0, m.index - 300), m.index))) return false
-  }
-  if (!/\(\s*\{[^}\n]{0,200}\bipcMain\b[^}\n]{0,200}\}\s*\)/.test(text)) return false
+  // The name may appear only as the one-line parameter destructure and as `ipcMain.method(`. An import, an alias, a destructure of anything else, `electron.ipcMain`,
+  // a spread or a multi-line header all leave a use behind, and then the finding stays.
+  const param = /\(\s*\{[^}\n]{0,200}\bipcMain\b[^}\n]{0,200}\}\s*\)/
+  if (!param.test(text)) return false
+  if (/\bipcMain\b/.test(stripComments(text).replace(param, ' ').replace(/\bipcMain\.[A-Za-z]+\(/g, ' '))) return false
   const methods = [...new Set([...text.matchAll(/\bipcMain\.([A-Za-z]+)\(/g)].map((m) => m[1]))]
   const project = ctx.project
   if (!project?.files?.length || !methods.length) return false
