@@ -2,7 +2,7 @@
 
 # Meerkat
 
-<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <a href="https://github.com/SamuelNDCE/Meerkat/actions/workflows/ci.yml"><img src="https://github.com/SamuelNDCE/Meerkat/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11"> <a href="https://perpetualtechnologies.co.uk"><img src="docs/images/badges/made-by.svg" alt="made by Perpetual Technologies"></a> <img src="docs/images/badges/works-with.svg" alt="works with NeuralVault and MCP">
+<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <a href="https://github.com/SamuelNDCE/Meerkat/actions/workflows/ci.yml"><img src="https://github.com/SamuelNDCE/Meerkat/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11"> <a href="https://perpetualtechnologies.co.uk"><img src="docs/images/badges/made-with.svg" alt="made with Perpetual Technologies"></a> <img src="docs/images/badges/works-with.svg" alt="works with NeuralVault and MCP">
 
 **One command that checks your whole project before you ship it.**<br>
 Security, correctness, accessibility, performance and code health, for any kind of app, with every result saved and explained.
@@ -119,7 +119,7 @@ Every picture here is **sample data**: a made-up project, not a real run.
 
 **2. Watch it run.** The animation at the top is the live board: what is running now, the status line, every group of checks with its time, and the timeline.
 
-**3. Read the results.** The results screen lists the findings worst first, each with its severity, rule, file, line and why it matters (critical means fix before shipping, high means fix soon, medium means should fix, low and info are worth knowing). Tab switches between the findings, every check with its time, and the timeline; Up and Down scroll.
+**3. Read the results.** The results screen lists the findings worst first, each with its severity, rule, file, line and why it matters (critical means fix before shipping, high means fix soon, medium means should fix, low and info are worth knowing). Tab switches between the findings, every check with its time, and the timeline; Up and Down scroll. The counts say **bugs** for critical, high and medium findings Meerkat is sure of, and **notes** for low and info findings and for anything it marks as probably a false alarm: Meerkat itself says a note is not a bug, so it is never counted as one.
 
 ![Using the results screen: scroll the findings, then the checks, then the timeline](docs/images/results-scroll.gif)
 
@@ -220,7 +220,7 @@ nv mcp test meerkat
 
 The read-only tools can only read results; `meerkat_run` is the one that starts a run, so grant it only to agents you want to run checks. **Claude Code:** `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs`. Other clients: [docs/for-ai-agents.md](docs/for-ai-agents.md).
 
-**About NeuralVault.** NeuralVault is an agent harness you own, made by [Perpetual Technologies](https://perpetualtechnologies.co.uk): it remembers how your business works, acts only where you allow it, and keeps a record of everything it does. Meerkat started as the verification layer for it, and works on any project on its own. Learn more at [perpetualtechnologies.co.uk](https://perpetualtechnologies.co.uk).
+**About NeuralVault.** NeuralVault is an agent harness you own, from [Perpetual Technologies](https://perpetualtechnologies.co.uk): it remembers how your business works, acts only where you allow it, and keeps a record of everything it does. Meerkat is made with Perpetual Technologies: it started as the verification layer for NeuralVault, is used there, and works on any project on its own. Learn more at [perpetualtechnologies.co.uk](https://perpetualtechnologies.co.uk).
 
 ## Using it in CI
 

@@ -143,14 +143,16 @@ export const readBudgets = (root) => {
 export const isText = (f) => /\.(m?[jt]sx?|json|md|html?|css|scss|rs|toml|ya?ml|py|go|sh|ps1|txt|svelte|vue)$/i.test(f)
 
 // Print findings (capped) and return the exit code.
-export function finish(name, findings, okNote = 'nothing found') {
+// `structured` (an option) says the caller reports every finding itself with finding(), so the extras beyond the printed 25 are not repeated here.
+export function finish(name, findings, okNote = 'nothing found', { structured = false } = {}) {
   if (!findings.length) {
     console.log(`${name}: ${okNote}`)
     return 0
   }
   console.log(`${name}: found ${findings.length}`)
   for (const f of findings.slice(0, 25)) console.log(`  ${f}`)
-  if (findings.length > 25) {
+  if (findings.length > 25 && structured) console.log(`  ... and ${findings.length - 25} more`)
+  else if (findings.length > 25) {
     console.log(`  ... and ${findings.length - 25} more`)
     // The printed list stays short, but every finding beyond it is still reported to Meerkat (the finding protocol), so none is lost from findings.json.
     const sev = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY ?? '') ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'

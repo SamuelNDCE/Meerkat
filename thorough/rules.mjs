@@ -19,6 +19,7 @@
 //   needs     optional (files: string[]) => boolean: the rule is NA (not applicable) when it returns false (default: NA when no file matched the rule's ext/files)
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { RULE_SEVERITY } from '../lib/findings.mjs'
 import { configPath, finding, isFixture, isText, readText, trackedFiles } from './kit.mjs'
 
 const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|out|release)\//i
@@ -98,7 +99,7 @@ export function scanRules(name, root, rules, { allowFile, okNote = 'nothing foun
   }
   const fallback = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY) ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'
   // One finding line per hit (lib/findings.mjs), alongside the usual output below.
-  for (const f of located) finding(f.severity ?? fallback, f.rule, f.file, f.line, f.title)
+  for (const f of located) finding(f.severity ?? RULE_SEVERITY[f.rule] ?? fallback, f.rule, f.file, f.line, f.title)
   if (!found.length) {
     console.log(`${name}: ${okNote}`)
     return 0

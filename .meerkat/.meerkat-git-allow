@@ -32,3 +32,4 @@ commit-message-format 97c58b8
 commit-message-format a8165cf
 binary-in-history docs/images/results-scroll.gif
 binary-in-history docs/images/meerkat-run.gif
+commit-message-format aff354ef67
