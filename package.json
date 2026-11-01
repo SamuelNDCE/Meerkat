@@ -1,6 +1,6 @@
 {
   "name": "@samuelndce/meerkat",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "description": "One command that checks your whole project before you ship it: security, correctness, accessibility, performance and code health. Zero dependencies, no telemetry, built for people and AI agents (MCP).",
   "keywords": [
     "verification",

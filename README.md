@@ -69,6 +69,14 @@ Every check, with what it needs and how long it takes, is listed in [docs/checks
 
 You need [Node.js](https://nodejs.org) 20 or newer. There is nothing else to install.
 
+**From npm:**
+
+```
+npm install -g @samuelndce/meerkat
+```
+
+**Or from the repository:**
+
 ```
 git clone https://github.com/SamuelNDCE/Meerkat.git
 ```
