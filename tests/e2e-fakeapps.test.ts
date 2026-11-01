@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test, vi } from 'vitest'
 import { APPS, generate } from '../tools/fake-apps/index.mjs'
@@ -41,6 +41,15 @@ function hashTree(dir: string): string {
   return h.digest('hex')
 }
 
+// `npx vitest` puts Meerkat's own node_modules/.bin on PATH, so the fake apps would be checked with Meerkat's own copies of tsc and friends, which have
+// no react types for them. The runs must see only the tools a user's machine has, so those entries are taken out of PATH.
+function cleanPath(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const key = Object.keys(env).find((k) => k.toLowerCase() === 'path') ?? 'PATH'
+  const marker = join('node_modules', '.bin')
+  const kept = String(env[key] ?? '').split(delimiter).filter((p) => !p.includes(marker))
+  return { ...env, [key]: kept.join(delimiter) }
+}
+
 function meerkat(dir: string, args: string[], root: string): Run {
   const logRoot = join(root, 'logs')
   const t0 = Date.now()
@@ -48,7 +57,7 @@ function meerkat(dir: string, args: string[], root: string): Run {
     cwd: ROOT,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
-    env: { ...process.env, MEERKAT_LOG_DIR: logRoot, MEERKAT_TIMINGS: join(root, 'timings.json'), MEERKAT_PLAIN: '1', NO_COLOR: '1' },
+    env: { ...cleanPath(process.env), MEERKAT_LOG_DIR: logRoot, MEERKAT_TIMINGS: join(root, 'timings.json'), MEERKAT_PLAIN: '1', NO_COLOR: '1' },
   })
   const ms = Date.now() - t0
   const runs = join(logRoot, 'runs')
