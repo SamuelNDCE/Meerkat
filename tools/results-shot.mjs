@@ -20,5 +20,5 @@ const shots = {
   'finding-detail': [data, { ...initialResultsState(), detail: { kind: 'finding', id: data.findings.find((f) => f.severity === 'high').id, scroll: 0 } }],
   'check-detail': [data, { ...initialResultsState(), tab: 'checks', detail: { kind: 'check', id: 'clippy', scroll: 0 } }],
 }
-for (const [name, [d, state]] of Object.entries(shots)) writeFileSync(join(dir, `results-preview-${name}.ansi`), `${[...renderResults(state, d, opts), note].join('\n')}\n`)
+for (const [name, [d, state]] of Object.entries(shots)) writeFileSync(join(dir, `results-preview-${name}.ansi`), `${[...renderResults(state, d, name === 'happy' ? { ...opts, rows: 22 } : opts), note].join('\n')}\n`)
 console.log(Object.keys(shots).join(' '))

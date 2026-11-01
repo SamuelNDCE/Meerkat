@@ -9,8 +9,8 @@
   "scripts": {
     "meerkat": "node run.mjs",
     "meerkat:thorough": "node run.mjs --thorough",
-    "meerkat:watch": "node watch.mjs",
-    "preview": "node preview.mjs --speed 6",
+    "meerkat:watch": "node tools/watch.mjs",
+    "preview": "node tools/preview.mjs --speed 6",
     "test": "vitest run"
   },
   "devDependencies": {

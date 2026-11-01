@@ -724,7 +724,7 @@ describe('the shipped packs are well-formed and self-testable', () => {
       }
     }
     for (const d of ['lib']) walk(join(process.cwd(), d))
-    for (const f of ['run.mjs', 'watch.mjs', 'preview.mjs']) files.push(join(process.cwd(), f))
+    for (const f of ['run.mjs', 'tools/watch.mjs', 'tools/preview.mjs']) files.push(join(process.cwd(), f))
     const bad = files.filter((f) => /(fetch\(|https?\.request|http\.get|https\.get|net\.connect|new WebSocket|XMLHttpRequest)/.test(readFileSync(f, 'utf8')))
     expect(bad).toEqual([])
   })

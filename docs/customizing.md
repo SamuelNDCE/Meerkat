@@ -186,7 +186,7 @@ Status is always a word on screen, so the look never hides a result. `NO_COLOR` 
 ## 5. Try it without a project
 
 ```
-node preview.mjs --speed 6      a fake run, to see the board and animations
-node preview.mjs --fail         the same with a failure
-node preview.mjs --head         just the meerkat
+node tools/preview.mjs --speed 6      a fake run, to see the board and animations
+node tools/preview.mjs --fail         the same with a failure
+node tools/preview.mjs --head         just the meerkat
 ```

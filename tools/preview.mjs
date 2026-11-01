@@ -2,25 +2,25 @@
 // the real start order on made-up checks that take the times a cold fast run takes on Samuel's PC, sped up so a whole
 // run plays in about a minute.
 //
-//   node preview.mjs               play the run in this terminal (Ctrl+C to stop)
-//   node preview.mjs --fail        one check fails, so you can see the alarm
-//   node preview.mjs --speed 20    faster (default 10: 10 seconds of run per second watched)
-//   node preview.mjs --height 40   draw for a terminal 40 rows tall (the lists share the rows like the real board)
-//   node preview.mjs --once        print one still frame mid-run and exit
-//   node preview.mjs --final --speed 3000   run to the end at once and print the finished board (--fail for the alarm)
-//   node preview.mjs --plain       no colour
-//   node preview.mjs --flat        one line per check, as before (the default folds a run of more than 24 checks into groups; --grouped forces it)
-//   node preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
+//   node tools/preview.mjs               play the run in this terminal (Ctrl+C to stop)
+//   node tools/preview.mjs --fail        one check fails, so you can see the alarm
+//   node tools/preview.mjs --speed 20    faster (default 10: 10 seconds of run per second watched)
+//   node tools/preview.mjs --height 40   draw for a terminal 40 rows tall (the lists share the rows like the real board)
+//   node tools/preview.mjs --once        print one still frame mid-run and exit
+//   node tools/preview.mjs --final --speed 3000   run to the end at once and print the finished board (--fail for the alarm)
+//   node tools/preview.mjs --plain       no colour
+//   node tools/preview.mjs --flat        one line per check, as before (the default folds a run of more than 24 checks into groups; --grouped forces it)
+//   node tools/preview.mjs --head        just the meerkat: every pose side by side, and its colours (--256 for the 256-colour fallback)
 import { writeFileSync } from 'node:fs'
-import { VERSION } from './lib/version.mjs'
-import { estimateRemaining } from './lib/eta.mjs'
-import { orderForSpeed, runAll } from './lib/runner.mjs'
-import { renderLive } from './lib/tui/live.mjs'
-import { colorLevel } from './lib/tui/color.mjs'
-import { renderGallery } from './lib/tui/gallery.mjs'
-import { loadTheme } from './lib/tui/theme.mjs'
-import { createModel } from './lib/tui/model.mjs'
-import { SAMPLE_NOTE } from './lib/tui/resultssample.mjs'
+import { VERSION } from '../lib/version.mjs'
+import { estimateRemaining } from '../lib/eta.mjs'
+import { orderForSpeed, runAll } from '../lib/runner.mjs'
+import { renderLive } from '../lib/tui/live.mjs'
+import { colorLevel } from '../lib/tui/color.mjs'
+import { renderGallery } from '../lib/tui/gallery.mjs'
+import { loadTheme } from '../lib/tui/theme.mjs'
+import { createModel } from '../lib/tui/model.mjs'
+import { SAMPLE_NOTE } from '../lib/tui/resultssample.mjs'
 
 const argv = process.argv.slice(2)
 const has = (f) => argv.includes(f)
