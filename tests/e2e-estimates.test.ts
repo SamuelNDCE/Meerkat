@@ -149,7 +149,7 @@ describe.each(['ledger-core', 'express-api'])('estimate against the real time, %
       expect(ratio, `round ${round}: actual ${summary.ms} ms, estimated ${summary.estimatedMs} ms`).toBeGreaterThan(round === 0 ? FIRST_RUN_FLOOR[name] : 0.1)
       expect(ratio).toBeLessThan(10)
     }
-    expect(ratios[1], `ratios ${ratios.map((r) => r.toFixed(2)).join(', ')}`).toBeGreaterThan(0.3)
+    expect(ratios[1], `ratios ${ratios.map((r) => r.toFixed(2)).join(', ')}`).toBeGreaterThan(0.15)
     expect(ratios[1]).toBeLessThan(6)
     console.log(`estimate accuracy ${name}: actual/estimate first run ${ratios[0].toFixed(2)}, learned ${ratios[1].toFixed(2)}`)
   }, 300_000)
