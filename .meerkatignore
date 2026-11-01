@@ -9,3 +9,5 @@ thorough/rules-*.mjs
 tools/accuracy-corpus.mjs
 tools/accuracy-extra-*.mjs
 tools/compat-fixtures.mjs
+# Tool self-test files: each is broken on purpose so the tool must reject it (they are passed to the tools by name, not found by scanning).
+fixtures/tools/

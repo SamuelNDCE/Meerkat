@@ -37,6 +37,14 @@ const hasCommits = (root) => {
 }
 // The history checks cannot run on a plain folder: say so, never pass quietly.
 const needsRepo = (root, name) => (isRepo(root) ? null : notRun(`${name} reads git history, and ${root} is not a git repository`))
+// A shallow clone (CI checkouts use depth 1) has one commit that appears to add every file, so a history check would report false findings.
+const isShallow = (root) => {
+  try {
+    return git(root, ['rev-parse', '--is-shallow-repository']).trim() === 'true'
+  } catch {
+    return false
+  }
+}
 const noCommits = (name) => finish(name, [], 'the repository has no commits yet, so there is no history to check')
 const errLine = (e) => String(e?.message ?? e).split('\n')[0]
 
@@ -60,6 +68,7 @@ const gitHistorySecrets = (root) => {
   const gate = needsRepo(root, name)
   if (gate !== null) return gate
   if (!hasCommits(root)) return noCommits(name)
+  if (isShallow(root)) return notRun('this is a shallow clone, so the history is cut off and every file looks newly added. Fetch the full history (git fetch --unshallow)')
   const n = cfg(root).historyCommits ?? 200
   const allow = allowList(root)
   console.log(`scanning the added lines of the last ${n} commits (security.historyCommits)...`)
