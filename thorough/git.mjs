@@ -52,6 +52,13 @@ function gate(root) {
   return null
 }
 
+// A shallow clone (CI checkouts use depth 1) has one commit that appears to add every file, so the checks that read what a commit
+// touched or added would report false findings. They are NOT RUN there instead. Null when the history is complete.
+const shallowGate = (root) =>
+  git(root, ['rev-parse', '--is-shallow-repository'])?.trim() === 'true'
+    ? notRun('this is a shallow clone, so the history is cut off and every file looks newly added. Fetch the full history (git fetch --unshallow)')
+    : null
+
 // Recent commits, newest first. Fields are joined by the unit separator and each record ends with the record separator.
 function recent(root, n, fields) {
   const out = git(root, ['log', `-n${n}`, `--format=${fields}%x1e`])
@@ -130,6 +137,8 @@ function mergeCommitNoise(root) {
 function largeCommits(root) {
   const skip = gate(root)
   if (skip !== null) return skip
+  const shallow = shallowGate(root)
+  if (shallow !== null) return shallow
   const out = git(root, ['log', '-n200', '--no-merges', '--name-only', '--format=%x1e%H%x1f%s'])
   if (out === null) return notRun('could not read the commit log')
   const max = budget(root, 'maxFilesPerCommit', 200)
@@ -148,6 +157,8 @@ function largeCommits(root) {
 function binaryInHistory(root) {
   const skip = gate(root)
   if (skip !== null) return skip
+  const shallow = shallowGate(root)
+  if (shallow !== null) return shallow
   const max = budget(root, 'maxBlobKb', 1024)
   const base = git(root, ['rev-parse', '--verify', '-q', 'HEAD~200'])?.trim()
   const listing = git(root, ['rev-list', '--objects', 'HEAD', ...(base ? [`^${base}`] : [])])

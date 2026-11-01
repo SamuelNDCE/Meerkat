@@ -352,7 +352,7 @@ describe('typed or pasted folders', () => {
   test('a path works, with quotes, with ~, and a bare name is looked up like meerkat verify <name>', () => {
     mkdirSync(join(dir, 'my-ok-app'))
     expect(resolveTypedProject(`"${join(dir, 'my-ok-app')}"`, { cwd: dir, env, isDir })).toEqual({ folder: join(dir, 'my-ok-app') })
-    expect(resolveTypedProject('~/ok', { cwd: dir, env, home: '/home/me', isDir })).toEqual({ folder: resolve('/home/me/ok') })
+    expect(resolveTypedProject('~/ok', { cwd: dir, env, home: '/home/me', isDir })).toEqual({ folder: resolve(dir, '/home/me/ok') })
     expect(resolveTypedProject('my-ok-app', { cwd: dir, env, isDir })).toEqual({ folder: join(dir, 'my-ok-app') })
   })
   test('errors say what is wrong', () => {

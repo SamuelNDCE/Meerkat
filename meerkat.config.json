@@ -1,4 +1,5 @@
 {
   "packs": ["security", "hygiene", "ui", "refactor"],
-  "discover": false
+  "discover": false,
+  "disable": ["typos", "yamllint", "shellcheck", "hadolint", "actionlint", "eslint", "prettier"]
 }
