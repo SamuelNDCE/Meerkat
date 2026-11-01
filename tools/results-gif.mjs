@@ -16,18 +16,28 @@ const press = (key, times = 1) => {
   snap()
 }
 snap()
-// One frame per key press, a row at a time, so the scrolling reads as scrolling and not as a jump: the findings, then the checks, then the timeline.
+// Three rows per frame, so the scrolling reads as scrolling and not as a jump, and it keeps going until the list stops
+// moving (the last row), so the GIF always reaches the end of the findings, the checks and the timeline.
+const SKIP = 3
 const hold = (n) => { for (let i = 0; i < n; i++) snap() }
+const scrollToEnd = () => {
+  const tab = state.tab
+  for (let guard = 0; guard < 500; guard++) {
+    const before = state.cursor[tab]
+    for (let i = 0; i < SKIP; i++) state = resultsStep(state, 'down', data, { rows: opts.rows }).state
+    if (state.cursor[tab] === before) break
+    snap()
+  }
+  hold(4)
+}
 hold(6)
-for (let i = 0; i < 20; i++) press('down')
-hold(4)
+scrollToEnd()
 press('tab')
 hold(6)
-for (let i = 0; i < 18; i++) press('down')
-hold(4)
+scrollToEnd()
 press('tab')
 hold(6)
-for (let i = 0; i < 14; i++) press('down')
-hold(8)
+scrollToEnd()
+hold(4)
 writeFileSync(process.argv[2] ?? 'frames.txt', frames.join('\n\f\n'))
 console.log(`${frames.length} frames`)

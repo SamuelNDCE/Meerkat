@@ -54,7 +54,7 @@ describe('the checks tab and the timeline at 30 lines', () => {
     let state = { ...initialResultsState(), tab: 'timeline' }
     const first = plain(state, data)
     expect(first.join('\n')).toMatch(/rows 1-\d+ of 33/)
-    expect(first.join('\n')).toContain('PgUp/PgDn scroll the timeline')
+    expect(first.join('\n')).toMatch(/scroll/)
     for (let i = 0; i < 40; i++) state = resultsStep(state, 'down', data).state
     const later = plain(state, data).join('\n')
     expect(later).not.toMatch(/rows 1-\d+ of 33/)

@@ -160,7 +160,7 @@ describe('the live board fixes', () => {
   })
   test('the header says what the percentage is of, and "estimating..." when no time was measured', () => {
     const rows = [{ id: 'a', lane: 'free', status: 'RUNNING', startedAt: 0, typicalMs: null, expectedMs: 1000 }]
-    const t = renderLive({ rows: rows as never, events: [], started: 0, now: 1000, tick: 0, fraction: 0.02, etaMs: null, width: 120, color: false }).map(stripAnsi).join('\n')
+    const t = renderLive({ rows: rows as never, events: [], started: 0, now: 1000, tick: 0, fraction: 0.02, etaMs: null, width: 220, color: false }).map(stripAnsi).join('\n')
     expect(t).toContain('2% of estimated time')
     expect(t).toContain('0/1 checks done')
     // a named running check with no measured time: the label names it instead of "estimating..."

@@ -1,0 +1,2 @@
+# fixtures/ is published on purpose: meerkat self-test proves every check on these deliberately broken files, so an installed copy needs them.
+npm-pack-junk package.json

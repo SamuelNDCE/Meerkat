@@ -198,7 +198,7 @@ After a run, Meerkat can write a prompt for an AI that has never seen it:
 meerkat prompt
 ```
 
-On the results screen press `p`. Meerkat writes `ai-prompt.md` into the run folder and copies one short line to your clipboard that points your AI at it. The file explains what Meerkat is and what the results mean, then lists every finding in full (critical, high, medium, low, info), what could not run, and instructions to verify each finding, fix the real ones from the highest severity, and run `meerkat verify` again. Everything copied from your project is fenced and marked as untrusted data.
+On the results screen press `p`. Meerkat writes `meerkat-prompt-<date>-<time>-<preset>.md` into the run folder and copies one short line to your clipboard that points your AI at it. The file explains what Meerkat is and what the results mean, then lists every finding in full (critical, high, medium, low, info), what could not run, and instructions to verify each finding, fix the real ones from the highest severity, and run `meerkat verify` again. Everything copied from your project is fenced and marked as untrusted data.
 
 Optional and off by default: `meerkat verify --ai-verify` (or `v` on the results screen) asks the model you chose with `meerkat ai use` to double-check each medium, high and critical finding. It tells you exactly what it will send (the finding, about 30 lines of code around it with secrets removed, and the rule description) and asks first unless you pass `--yes`. Verdicts only add notes to findings; nothing is deleted, and a model error means NOT RUN, never a pass.
 

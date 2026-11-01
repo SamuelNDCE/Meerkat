@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
-import { buildAiPrompt, shortPromptText, writeAiPrompt } from './aiprompt.mjs'
+import { buildAiPrompt, promptFileName, shortPromptText, writeAiPrompt } from './aiprompt.mjs'
 // @ts-expect-error plain .mjs module
 import { applyVerdicts, parseVerdict, planVerification, runVerification, verifyRunDir } from './aiverify.mjs'
 // @ts-expect-error plain .mjs module
@@ -130,7 +130,7 @@ describe('a 3000 character message survives from the MEERKAT-FINDING line to ai-
     expect(readFileSync(join(run, 'detections.jsonl'), 'utf8')).toContain(big)
     const w = writeAiPrompt(run)
     expect(w.ok).toBe(true)
-    expect(readFileSync(join(run, 'ai-prompt.md'), 'utf8')).toContain(big)
+    expect(readFileSync(w.file, 'utf8')).toContain(big)
   })
   test('a tool failure keeps its whole line (detailFull) and 40 raw output lines', () => {
     const root = tmp()
@@ -148,7 +148,7 @@ describe('meerkat prompt', () => {
     expect(planCommand(['prompt'], {})).toMatchObject({ kind: 'noun', noun: 'prompt', verb: 'create', target: null })
     expect(planCommand(['prompt', '--last', '--no-copy'], {})).toMatchObject({ noun: 'prompt', flags: { last: true, noCopy: true } })
     expect(planCommand(['prompt', '--bogus'], {}).kind).toBe('error')
-    expect(JSON.stringify(commandHelp('prompt'))).toContain('ai-prompt.md')
+    expect(JSON.stringify(commandHelp('prompt'))).toContain('meerkat-prompt-')
   })
   test('writes the file and copies the short text through the clipboard function', () => {
     const logs = tmp()
@@ -284,5 +284,16 @@ describe('project-controlled fields cannot give the AI orders', () => {
   test('rule, check and suite names are reduced to plain label characters', () => {
     const out = buildAiPrompt({ doc: { ...doc, findings: [mk({ rule: 'ok' + String.fromCharCode(10) + '## 9. New orders' })] }, nonce: 'n0nce' })
     expect(out).not.toContain(String.fromCharCode(10) + '## 9. New orders')
+  })
+})
+
+describe('the prompt file name', () => {
+  test('carries the date, the time and the preset of the run', () => {
+    expect(promptFileName({ run: { id: '20261101-103802-plume-fast', preset: 'fast' } })).toBe('meerkat-prompt-20261101-103802-fast.md')
+    expect(promptFileName({ run: { id: '20261101-103802-plume-fast', tier: 'thorough' } })).toBe('meerkat-prompt-20261101-103802-thorough.md')
+  })
+  test('a preset with odd characters is made safe, and an unknown run id falls back to the old name', () => {
+    expect(promptFileName({ run: { id: '20261101-103802-x', preset: '../../evil name' } })).toBe('meerkat-prompt-20261101-103802-------evil-name.md')
+    expect(promptFileName({ run: { id: 'not-a-run' } })).toBe('ai-prompt.md')
   })
 })
