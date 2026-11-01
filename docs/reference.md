@@ -190,38 +190,38 @@ In a pipe, in CI, or when an AI agent calls it, nothing is drawn and the output 
 <!-- presets:start -->
 Measured on Meerkat's own repository, a small project, on one PC (median of 3 runs). Real projects take as long as their builds and tests; the quick checks that only read files stay at a second or two.
 
-### Everything
+#### Everything
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
-| `meerkat quick` | every quick check: before every push | 26 | 1.1 s |
-| `meerkat fast` | every quick check (same as quick) | 26 | 1.0 s |
-| `meerkat full` | every check, the slow ones too: before a release | 152 | 4.1 s |
-| `meerkat thorough` | every check, the slow ones too (same as full) | 152 | 3.9 s |
+| `meerkat quick` | every quick check: before every push | 292 | 10.2 s |
+| `meerkat fast` | every quick check (same as quick) | 292 | 10.4 s |
+| `meerkat full` | every check, the slow ones too: before a release | 294 | 10.5 s |
+| `meerkat thorough` | every check, the slow ones too (same as full) | 294 | 11.0 s |
 
-### By kind
+#### By kind
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
 | `meerkat security-fast` | the quick security checks: secrets, risky code, advisories, workflows | 8 | <1 s |
-| `meerkat security` | every security check, the slow ones too | 9 | 1.2 s |
+| `meerkat security` | every security check, the slow ones too | 9 | 1.4 s |
 | `meerkat functionality-fast` | build, type check, lints and tests, quick | 10 | <1 s |
 | `meerkat functionality` | every functionality check, the slow ones too | 10 | <1 s |
 | `meerkat ui-fast` | the quick UI checks: pages, styles, accessibility basics | 4 | <1 s |
 | `meerkat ui` | every UI check, the slow ones too | 4 | <1 s |
 | `meerkat performance-fast` | size, dependency weight, start-up time and memory | 1 | <1 s |
 | `meerkat performance` | every performance check: also response time, load and build time | 1 | <1 s |
-| `meerkat refactor` | is the code in good shape: duplicated code, dead code, files too long | 9 | <1 s |
+| `meerkat refactor` | is the code in good shape: duplicated code, dead code, files too long | 9 | 1.2 s |
 
-### Combinations
+#### Combinations
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
 | `meerkat app-fast` | UI and functionality, quick | 14 | <1 s |
 | `meerkat app` | UI and functionality, thorough | 14 | <1 s |
-| `meerkat ci` | quick security and functionality checks, no windows: for a build server | 18 | <1 s |
-| `meerkat release` | everything, including the AI review: before shipping | 152 | 4.0 s |
-| `meerkat security-ai` | every security check plus the AI route audit and diff review | 9 | 1.2 s |
+| `meerkat ci` | quick security and functionality checks, no windows: for a build server | 18 | 1.0 s |
+| `meerkat release` | everything, including the AI review: before shipping | 294 | 11.2 s |
+| `meerkat security-ai` | every security check plus the AI route audit and diff review | 9 | 1.3 s |
 <!-- presets:end -->
 
 Options that go with any run:

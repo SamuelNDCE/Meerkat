@@ -5,7 +5,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 ## 0.3.0 (2026-11-01)
 
 - Longest checks start first and timeouts have more leeway
-- the live board never flickers and keeps recent results in view
+- the live board never flickers and shows every group with its time in ALL CHECKS
 - fewer checks end NOT RUN (meerkat tools, built-in fallbacks)
 - projects are checked before a run
 - fake-app end-to-end tests

@@ -91,7 +91,7 @@ describe('the live board does not flicker', () => {
     const running = (t: number) => {
       const f = at(t)
       const a = f.findIndex((l) => l.includes('RUNNING NOW'))
-      const b = f.findIndex((l) => l.includes('RECENTLY DONE'))
+      const b = f.findIndex((l) => l.includes('ALL CHECKS'))
       return f.slice(a + 1, b).join(NL)
     }
     expect(LINGER_MS).toBeGreaterThanOrEqual(1500)
