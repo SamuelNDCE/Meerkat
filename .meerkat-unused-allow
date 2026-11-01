@@ -3,3 +3,10 @@ tools/make-badges.mjs
 tools/gen-checks.mjs
 tools/measure-presets.mjs
 lib/cargo-lock-run.mjs
+# One-off screenshot and sample-corpus scripts run by hand (node tools/<name>.mjs); nothing imports them.
+tools/details-shot.mjs
+tools/findings-shot.mjs
+tools/menu-shot.mjs
+tools/yourapp-shot.mjs
+tools/accuracy-extra-code.mjs
+tools/accuracy-extra-infra.mjs

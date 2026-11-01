@@ -6,3 +6,5 @@ tools/accuracy-corpus.mjs
 examples/
 .vitest/
 docs/images/
+# Sample corpora loaded by tools/accuracy-corpus.mjs: planted defects on purpose, so every scanner can be proven to find them.
+tools/accuracy-extra-*.mjs

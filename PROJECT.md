@@ -34,3 +34,5 @@ A private placeholder created 2026-10-30 under the `perpetual-technologies-offic
 
 - **No machine paths, no NeuralVault names in the generic code.** The tool's own code (`run.mjs`, `lib/`, `packs/`, `thorough/`) must work for any project. Anything specific to one app goes under `examples/`.
 - **Every check proves itself.** A new check ships with a `selfTest` on a small broken fixture and an `expectMatch` for the reason it must fail; after adding or changing checks run `node tools/gen-checks.mjs`.
+
+- **Meerkat's own budgets.** `.meerkat-budgets.json` holds this repository's own limits (long lines, function size, complexity, nesting, `any` in tests, JSON in loops), set just above what the code needs because Meerkat's style is long lines. They are not defaults for other projects. Every `.meerkat-*-allow` file names sample text, deliberate calls or old git history, each with a reason line; the self-run (`node run.mjs --app . --preset full --plain`) must show no failures and no findings.

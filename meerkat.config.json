@@ -1,3 +1,4 @@
 {
-  "packs": ["security", "hygiene", "ui", "refactor"]
+  "packs": ["security", "hygiene", "ui", "refactor"],
+  "discover": false
 }

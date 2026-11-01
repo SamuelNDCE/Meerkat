@@ -5,7 +5,7 @@ Generated from the checks themselves by `node tools/gen-checks.mjs`, so it canno
 <!-- checks:start -->
 **360 checks** in 47 suites with 1406 sub-checks (a check that declares no rules counts as one), across 47 packs: 335 quick, 25 thorough, 18 opt-in. [Security 106](#security-checks) · [Functionality 205](#functionality-checks) · [UI 22](#ui-checks) · [Performance 16](#performance-checks) · [Refactor 11](#refactor-checks)
 
-### Suites
+## Suites
 
 You pick a suite; it runs its checks, and each check reports its own sub-checks. See docs/suites.md.
 
@@ -59,7 +59,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `shell-scripts` | Shell scripts | 2 | 2 | ShellCheck and shell script hygiene. |
 | `ai-review` | AI review | 2 | 2 | AI route audit and AI diff review (opt-in, may call a paid model). |
 
-### Security checks
+## Security checks
 
 Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 106 checks.
 
@@ -172,7 +172,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `ai-route-audit` | thorough | light | 5.0 min | AI audit of every route, handler and IPC channel *(opt-in: `--include ai`)* | ai |
 | `npm-audit-all` | thorough | tiny | 15 s | npm audit, high severity, every dependency including dev ones | security |
 
-### Functionality checks
+## Functionality checks
 
 Does it build, type-check, lint and pass its tests; is the repository in order. 205 checks.
 
@@ -384,7 +384,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `tz-locale-matrix` | thorough | alone | 2.0 min | The tests pass in other time zones and locales too (UTC, Los Angeles, Kolkata, Kiritimati; Turkish, German) *(opt-in: `--include runtime`)* | robustness |
 | `unused-dependency-proof` | thorough | alone | 4.0 min | Production dependencies that are not imported can be removed without breaking tests or build *(opt-in: `--include runtime`)* | robustness |
 
-### UI checks
+## UI checks
 
 Pages and styles: accessibility basics and valid markup. 22 checks.
 
@@ -413,7 +413,7 @@ Pages and styles: accessibility basics and valid markup. 22 checks.
 | `wh-html` | fast | tiny | 1 s | Page markup avoids session ids in URLs, exposed private IPs, unsafe forms, risky iframes and leftover secrets | web-hardening |
 | `zoom-allowed` | fast | tiny | 1 s | The viewport setting allows pinch zoom | a11y |
 
-### Performance checks
+## Performance checks
 
 Size, start-up, memory, response time, load and build time, against budgets you set. 16 checks.
 
@@ -436,7 +436,7 @@ Size, start-up, memory, response time, load and build time, against budgets you 
 | `perf-endpoints` | thorough | light | 20 s | Response time: p95 of each configured endpoint | performance |
 | `perf-load` | thorough | medium | 30 s | Load burst: concurrent requests to a local server, error rate and p95 | performance |
 
-### Refactor checks
+## Refactor checks
 
 Is the code itself in good shape: duplicated code, dead code, files too long, circular imports. 11 checks.
 

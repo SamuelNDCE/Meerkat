@@ -688,7 +688,7 @@ async function harnessMain() {
     ['neg-zero', () => -0],
     ['empty-string', () => ''],
     ['string-1mb', () => 'a'.repeat(1 << 20)],
-    ['odd-unicode', () => 'a\ud800b\udc00‮‏x\u0000y'],
+    ['odd-unicode', () => 'a\ud800b\udc00\u202e\u200fx\u0000y'],
     ['nested-20-object', () => nest(20, false)],
     ['nested-20-array', () => nest(20, true)],
     ['nested-10000', () => nest(10000, false)],
@@ -809,7 +809,7 @@ def circ():
     o = {'name': 'c'}; o['self'] = o; o['list'] = [o]; return o
 rint = rnd.randint(-10**9, 10**9)
 corpus = [('None', lambda: None), ('nan', lambda: float('nan')), ('inf', lambda: float('inf')), ('neg-zero', lambda: -0.0), ('empty-string', lambda: ''),
- ('string-1mb', lambda: 'a' * (1 << 20)), ('odd-unicode', lambda: 'a\ud800b‮‏x\x00y'), ('nested-20-dict', lambda: nest(20, False)), ('nested-20-list', lambda: nest(20, True)),
+ ('string-1mb', lambda: 'a' * (1 << 20)), ('odd-unicode', lambda: 'a\ud800b\u202e\u200fx\x00y'), ('nested-20-dict', lambda: nest(20, False)), ('nested-20-list', lambda: nest(20, True)),
  ('nested-100000', lambda: nest(100000, True)), ('circular', circ), ('list-100000', lambda: list(range(100000))), ('huge-int', lambda: 10 ** 400), ('complex', lambda: complex(1, 2)),
  ('object', lambda: object()), ('lambda', lambda: (lambda: 1)), ('bytes', lambda: b'\xff\x00\xfe'), ('set', lambda: {1, 2}), ('numeric-string-400', lambda: '9' * 400),
  ('negative', lambda: -1), ('fraction', lambda: 2.5), ('negative-fraction', lambda: -0.5), ('beyond-safe-integer', lambda: 2 ** 53), ('random-int', lambda: rint)]
