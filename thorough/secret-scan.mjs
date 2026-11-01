@@ -14,6 +14,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, wr
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { argVal, fail, hasFlag, notRun, pass, repoRoot, say } from './lib.mjs'
+import { configPath } from './kit.mjs'
 
 const RULES = [
   { name: 'aws-access-key-id', re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
@@ -68,7 +69,7 @@ const globToRe = (g) => new RegExp(`^${g.replace(/[.+^${}()|[\]\\]/g, '\\$&').re
 function loadAllow(root) {
   const entries = []
   try {
-    for (const line of readFileSync(path.join(root, '.meerkat-secrets-allow'), 'utf8').split(/\r?\n/)) {
+    for (const line of readFileSync(configPath(root, '.meerkat-secrets-allow'), 'utf8').split(/\r?\n/)) {
       const t = line.trim()
       if (!t || t.startsWith('#')) continue
       const i = t.indexOf(':')

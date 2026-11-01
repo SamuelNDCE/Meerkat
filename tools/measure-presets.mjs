@@ -40,7 +40,7 @@ const SECTIONS = [
 
 const out = []
 for (const [title, names] of SECTIONS) {
-  out.push(`#### ${title}`, '', '| Command | What it runs | Checks | Time |', '|---|---|---|---|')
+  out.push(`### ${title}`, '', '| Command | What it runs | Checks | Time |', '|---|---|---|---|')
   for (const n of names) {
     const p = PRESETS[n]
     if (!p) continue

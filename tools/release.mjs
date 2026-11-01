@@ -57,7 +57,7 @@ function main(argv) {
   }
   const clPath = join(ROOT, 'CHANGELOG.md')
   const head = '# Changelog\n\nEvery released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.\n\n'
-  const old = existsSync(clPath) ? readFileSync(clPath, 'utf8').replace(/^# Changelog[\s\S]*?\n\n(?=## )/, '') : ''
+  const old = existsSync(clPath) ? readFileSync(clPath, 'utf8').replace(/^# Changelog[\s\S]*?\r?\n\r?\n(?=## )/, '') : ''
   writeFileSync(clPath, head + entry + '\n' + old)
   execFileSync(process.execPath, [join(ROOT, 'tools', 'make-badges.mjs')], { stdio: 'inherit' })
   console.log(`Done. Now commit package.json, CHANGELOG.md and docs/images/badges, push, and merge. Tag it: git tag v${next}`)

@@ -190,7 +190,7 @@ In a pipe, in CI, or when an AI agent calls it, nothing is drawn and the output 
 <!-- presets:start -->
 Measured on Meerkat's own repository, a small project, on one PC (median of 3 runs). Real projects take as long as their builds and tests; the quick checks that only read files stay at a second or two.
 
-#### Everything
+### Everything
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
@@ -199,7 +199,7 @@ Measured on Meerkat's own repository, a small project, on one PC (median of 3 ru
 | `meerkat full` | every check, the slow ones too: before a release | 294 | 10.5 s |
 | `meerkat thorough` | every check, the slow ones too (same as full) | 294 | 11.0 s |
 
-#### By kind
+### By kind
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
@@ -213,7 +213,7 @@ Measured on Meerkat's own repository, a small project, on one PC (median of 3 ru
 | `meerkat performance` | every performance check: also response time, load and build time | 1 | <1 s |
 | `meerkat refactor` | is the code in good shape: duplicated code, dead code, files too long | 9 | 1.2 s |
 
-#### Combinations
+### Combinations
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|

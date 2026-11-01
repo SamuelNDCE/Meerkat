@@ -13,10 +13,6 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - CI green on Windows, macOS and Linux
 - false positives fixed on real projects
 
-# Changelog
-
-Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
-
 ## 0.2.0 (2026-11-01)
 
 - Stuck-test guard: idle kill, skip keys, run deadline
