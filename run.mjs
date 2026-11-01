@@ -385,7 +385,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
     skippedCount = sel.skipped.length + applied.disabled.length
     ranChecks = sel.run
-    selection = { ran: sel.run.map((c) => c.id), skipped: sel.skipped.map((c) => `${c.id} (no files changed in its paths)`), covered: (sel.superseded ?? []).map((c) => `${c.id} (by ${c.supersededBy})`), disabled: applied.disabled.map((d) => d.id), disabledSubs: applied.disabledSubs ?? [] }
+    selection = { ran: sel.run.map((c) => c.id), skipped: sel.skipped.map((c) => `${c.id} (no files changed in its paths)`), covered: (sel.superseded ?? []).map((c) => `${c.id} (by ${c.supersededBy})`), disabled: applied.disabled.map((d) => d.id), disabledSubs: applied.disabledSubs ?? [], titles: Object.fromEntries([...sel.skipped, ...(sel.superseded ?? []), ...applied.disabled].map((c) => [c.id, (checks.find((k) => k.id === c.id) ?? c).title]).filter(([, t]) => t)) }
     for (const s of sel.superseded ?? []) log(`[COVERED ] ${s.id}: not run on its own, ${s.supersededBy} covers it`)
     for (const s of sel.skipped) log(`[SKIPPED] ${s.id}: no files changed in its paths`)
     subOnly = (warnUnmatched(log, sel.unmatched), sel.subOnly)

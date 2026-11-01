@@ -14,4 +14,9 @@ if (!existsSync(join(root, 'package.json'))) {
 const r = spawnSync('npm', ['audit', '--audit-level=high'], { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' })
 process.stdout.write(r.stdout ?? '')
 process.stderr.write(r.stderr ?? '')
+// An unreachable registry means nothing was checked: NOT RUN, not a failure.
+if (r.status !== 0 && /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|audit endpoint returned an error|network/i.test(`${r.stdout}${r.stderr}`) && !/vulnerabilit(y|ies)/i.test(r.stdout ?? '')) {
+  console.log('NOT RUN: the npm registry could not be reached; nothing was checked')
+  process.exit(75)
+}
 process.exit(r.status ?? 1)

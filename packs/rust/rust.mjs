@@ -59,7 +59,7 @@ const CHECKS = [
     estSeconds: 15,
     needs: ['cargo-audit'],
     paths: ['Cargo.lock', '.cargo/audit.toml'],
-    run: { cmd: 'cargo', args: ['audit'], cwd: 'repo' },
+    run: { cmd: 'node', args: [`${MK}/thorough/offline-guard.mjs`, '--offline', "couldn't fetch advisory database|failed to prepare fetch|failed to resolve|could not resolve host", '--', 'cargo', 'audit'], cwd: 'repo' },
     selfTest: { cmd: 'cargo', args: ['audit', '--no-fetch', '--file', `${FIX}/cargo-audit/Cargo.lock`], cwd: 'repo', expectFail: true },
   },
   {

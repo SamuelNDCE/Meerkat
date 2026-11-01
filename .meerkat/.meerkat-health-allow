@@ -4,6 +4,7 @@ regex-in-loop lib/tui/results.test.ts
 regex-in-loop tests/mutation-quality.test.ts
 regex-in-loop tests/mutation.test.ts
 regex-in-loop thorough/api.mjs
+regex-in-loop thorough/guards.mjs
 regex-in-loop thorough/config.mjs
 regex-in-loop thorough/kit.mjs
 regex-in-loop thorough/lang.mjs

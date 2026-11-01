@@ -39,3 +39,4 @@ tests/mutation.test.ts:256
 tests/mutation.test.ts:258
 tests/falsepositives.test.ts:291
 tests/falsepositives.test.ts
+tests/guards-ipc.test.ts

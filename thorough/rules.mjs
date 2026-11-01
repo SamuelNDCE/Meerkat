@@ -20,7 +20,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { RULE_SEVERITY } from '../lib/findings.mjs'
-import { configPath, finding, isFixture, isText, readText, trackedFiles } from './kit.mjs'
+import { configPath, finding, isFixture, isTestFile, isText, readText, trackedFiles } from './kit.mjs'
 
 const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|out|release)\//i
 const MINIFIED = /\.min\.(js|css)$/i
@@ -45,7 +45,7 @@ export function readAllow(root, allowFile) {
   return set
 }
 
-function matches(rule, text, file) {
+function matches(rule, text, file, project) {
   const out = []
   if (rule.whole && rule.re) {
     if (rule.re.test(text)) out.push(1)
@@ -55,7 +55,7 @@ function matches(rule, text, file) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (rule.skipLine && rule.skipLine.test(line)) continue
-    const ctx = { file, lines, index: i, text }
+    const ctx = { file, lines, index: i, text, project }
     const hit = rule.test ? rule.test(line, ctx) : rule.re.test(line)
     // A rule may carry unless(line, ctx): the code around the hit already makes it safe (a QA-only block, a path checked just before).
     if (hit && !(rule.unless && rule.unless(line, ctx))) out.push(i + 1)
@@ -64,11 +64,14 @@ function matches(rule, text, file) {
 }
 
 // Runs every rule over the tracked files. Returns { found: [{rule, text}], na: [ids], files }.
-export function evaluate(root, rules, { files = trackedFiles(root), allow = new Set(), read = (f) => readText(root, f) } = {}) {
-  const usable = files.filter((f) => !isFixture(f) && !VENDORED.test(f) && !MINIFIED.test(f))
+export function evaluate(root, rules, { files = trackedFiles(root), allow = new Set(), skipTests = false, read = (f) => readText(root, f) } = {}) {
+  // Test code and QA probe scripts are not shipped; the rule tables are about what ships.
+  const usable = files.filter((f) => !(skipTests ? isTestFile(f) : isFixture(f)) && !VENDORED.test(f) && !MINIFIED.test(f))
   const found = []
   const hits = [] // the same hits with file, line and severity, for the finding lines
   const na = []
+  // Other files of the project, for a guard that must look beyond the file with the hit (read on demand).
+  const project = { files: usable, read }
   for (const rule of rules) {
     const mine = usable.filter((f) => wants(rule, f) && !(rule.notIn && rule.notIn.test(f)))
     if (rule.needs ? !rule.needs(usable) : mine.length === 0) {
@@ -79,7 +82,7 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
       if (allow.has(`${rule.id} ${f}`) || allow.has(`${rule.id} *`)) continue
       const text = read(f)
       if (typeof text !== 'string') continue
-      for (const n of matches(rule, text, f)) {
+      for (const n of matches(rule, text, f, project)) {
         found.push({ rule: rule.id, text: `${f}:${n} ${rule.title}` })
         hits.push({ rule: rule.id, file: f, line: n, title: rule.title, severity: rule.severity })
       }
@@ -90,7 +93,7 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
 
 // Prints one MEERKAT-SUB line per rule, then the findings; returns the exit code (0 pass, 1 findings).
 export function scanRules(name, root, rules, { allowFile, okNote = 'nothing found' } = {}) {
-  const { found, na, hits: located } = evaluate(root, rules, { allow: readAllow(root, allowFile) })
+  const { found, na, hits: located } = evaluate(root, rules, { allow: readAllow(root, allowFile), skipTests: true })
   const hit = new Map()
   for (const f of found) hit.set(f.rule, (hit.get(f.rule) ?? 0) + 1)
   for (const r of rules) {

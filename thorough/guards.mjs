@@ -101,3 +101,86 @@ export const isConstantMarkup = (text, name) => {
   if (/[(+]|=>/.test(stripped)) return false
   return !new RegExp(String.raw`(?<![\w$.])${n}\s*(?:\.[\w$]+|\[[^\]]{0,80}\])*\s*[-+*/|&]?=[^=]`).test(text.replace(m[0], ''))
 }
+
+// `ipcMain.handle(...)` in a file that never imports ipcMain from electron: the name is a parameter, such as `function register({ ipcMain })`. When another
+// file of the project passes `ipcMain: guarded` and `guarded` is an object defined there whose every method this file uses stops a message from the wrong
+// sender, every handler registered here is checked. Fails closed: a call site written any other way (shorthand `{ ipcMain }`, a member or call expression, the
+// real ipcMain), a wrapper that lacks one of the methods used, no call site found at all, or an electron import in this file all keep the finding.
+const SENDER_TEST = /\.sender\b|senderFrame|isMainFrame|frameId/
+const EVENT_ARG = String.raw`(?:e|ev|event|_e|evt)`
+const escapeRe = (n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1')
+// A condition that looks at the sender itself and stops the handler: `if (... e.senderFrame ...)`.
+const directGuard = (code) => new RegExp(String.raw`\bif\s*\([^)\n]*(?:\.sender\b|senderFrame|isMainFrame|frameId)`).test(code)
+// `if (!helper(e)) ...` where helper is declared in the same file and its own first lines look at the sender. A mention elsewhere does not count.
+const callsSenderHelper = (code, text) => {
+  const body = stripComments(code)
+  // `if (!helper(e)) stop` or `if (helper(e)) run`; the second form with an else would run something for the wrong sender too.
+  if (/\belse\b/.test(body)) return false
+  for (const m of body.matchAll(new RegExp(String.raw`\bif\s*\(\s*!?\s*([A-Za-z_$][\w$]*)\(\s*${EVENT_ARG}\s*[,)]`, 'g'))) {
+    const decl = new RegExp(String.raw`^[ \t]*(?:const|let|var|function)\s+${escapeRe(m[1])}\b`, 'm').exec(text)
+    if (decl && SENDER_TEST.test(stripComments(text.slice(decl.index, decl.index + 400)).split('\n').slice(0, 4).join('\n'))) return true
+  }
+  return false
+}
+// `const name = { handle: ..., on: ... }`: each method in `methods` exists and its own body is guarded.
+const wrapperGuardsMethods = (other, name, methods) => {
+  const decl = new RegExp(String.raw`^[ \t]*(?:const|let|var)\s+${escapeRe(name)}\s*=\s*\{`, 'm').exec(other)
+  if (!decl || !methods.length) return false
+  const lines = stripComments(other.slice(decl.index)).split('\n').slice(0, 40)
+  const end = lines.findIndex((l, i) => i > 0 && /^\S/.test(l))
+  const region = end < 0 ? lines : lines.slice(0, end)
+  for (const method of methods) {
+    const at = region.findIndex((l, i) => i > 0 && new RegExp(String.raw`^\s*${escapeRe(method)}\s*(?::|\()`).test(l))
+    if (at < 0) return false
+    const indent = indentOf(region[at])
+    let stop = region.length
+    for (let i = at + 1; i < region.length; i++) {
+      if (region[i].trim() && indentOf(region[i]) <= indent) {
+        stop = i
+        break
+      }
+    }
+    const body = region.slice(at, stop).join('\n')
+    if (!directGuard(body) && !callsSenderHelper(body, other)) return false
+  }
+  return true
+}
+export const ipcMainIsGuardedParameter = (_line, ctx) => {
+  const text = ctx.text
+  // The name may appear only as the one-line parameter destructure and as `ipcMain.method(`. An import, an alias, a destructure of anything else, `electron.ipcMain`,
+  // a spread or a multi-line header all leave a use behind, and then the finding stays.
+  const param = /\(\s*\{[^}\n]{0,200}\bipcMain\b[^}\n]{0,200}\}\s*\)/
+  if (!param.test(text)) return false
+  if (/\bipcMain\b/.test(stripComments(text).replace(param, ' ').replace(/\bipcMain\.[A-Za-z]+\(/g, ' '))) return false
+  const methods = [...new Set([...text.matchAll(/\bipcMain\.([A-Za-z]+)\(/g)].map((m) => m[1]))]
+  const project = ctx.project
+  if (!project?.files?.length || !methods.length) return false
+  const base = ctx.file.split('/').pop().replace(/\.[cm]?[jt]s$/, '')
+  const required = new RegExp(String.raw`['"]\.{1,2}/(?:[^'"\n]*/)?${escapeRe(base)}(?:\.[cm]?[jt]s)?['"]`)
+  let sites = 0
+  for (const f of project.files) {
+    if (f === ctx.file || !/\.[cm]?[jt]sx?$/.test(f)) continue
+    const other = project.read(f)
+    if (typeof other !== 'string' || !required.test(other)) continue
+    // Every place this file hands something over as ipcMain must be a plain name of a guarded wrapper; shorthand or anything computed is not understood.
+    for (const m of other.matchAll(/[{,]\s*ipcMain\b\s*(?::\s*([^,}\n]*))?\s*(?=[,}])/g)) {
+      // `const { app, ipcMain } = require('electron')` and `import { ipcMain } from 'electron'` bring the name in; they hand nothing over.
+      const close = other.indexOf('}', m.index + m[0].length)
+      if (close >= 0 && /^\s*(?:=(?!=)|from\b)/.test(other.slice(close + 1, close + 20))) continue
+      sites++
+      const value = (m[1] ?? '').trim()
+      if (!/^[A-Za-z_$][\w$]*$/.test(value) || value === 'ipcMain') return false
+      if (!wrapperGuardsMethods(other, value, methods)) return false
+    }
+  }
+  return sites > 0
+}
+
+// An ipc handler whose own first lines stop on a sender-checking helper declared in the same file: `ipcMain.handle(ch, (e) => { if (!fromAppPage(e)) throw ... })`.
+// Only the handler's lines count: the window ends where the next ipcMain call starts.
+export const ipcHandlerCallsSenderHelper = (_line, ctx) => {
+  const rest = ctx.lines.slice(ctx.index + 1, ctx.index + 8)
+  const next = rest.findIndex((l) => /\bipcMain\./.test(l))
+  return callsSenderHelper([ctx.lines[ctx.index], ...(next < 0 ? rest : rest.slice(0, next))].join('\n'), ctx.text)
+}
