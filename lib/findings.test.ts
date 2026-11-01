@@ -155,7 +155,7 @@ describe('fallback extraction', () => {
     expect(f).toMatchObject({ severity: 'high', rule: 'eval-call', file: 'src/a.js', line: 2, confidence: 'medium', evidence: 'eval(y)', fix: 'npm i risky', status: 'new' })
     expect(f.detectedBy).toMatchObject({ check: 'risky', pack: 'security', origin: 'bundled', tool: null })
     const t = doc.findings.find((x: any) => x.check === 'lint')
-    expect(t.rawOutput).toHaveLength(25)
+    expect(t.rawOutput).toHaveLength(40)
     expect(t.file).toBeNull()
     expect(t.detectedBy.tool.name).toBe('eslint')
     expect(doc.findings.some((x: any) => x.check === 'e2e')).toBe(false)
