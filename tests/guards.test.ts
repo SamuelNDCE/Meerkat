@@ -74,3 +74,47 @@ describe('isConstantMarkup', () => {
     expect(isConstantMarkup('function f(icon) {\n  el.innerHTML = icon\n}\n', 'icon')).toBe(false)
   })
 })
+
+describe('guards stay narrow (a bypass must not hide a real risk)', () => {
+  test('a dev switch in an unrelated earlier block does not cover a later call', () => {
+    const code = ['if (QA) {', '  setup()', '}', 'ipc.handle("run", (e, js) => {', '  win.webContents.executeJavaScript(js)', '})'].join('\n')
+    expect(inDevOnlyBlock(ctxAt(code, 'executeJavaScript'))).toBe(false)
+  })
+  test('a callback written inside the dev block only exists when the block ran, so it is covered', () => {
+    const code = ['if (QA) {', '  ipc.handle("run", (e, js) => {', '    win.webContents.executeJavaScript(js)', '  })', '}'].join('\n')
+    expect(inDevOnlyBlock(ctxAt(code, 'executeJavaScript'))).toBe(true)
+  })
+  test('an or-condition, a negated switch, an else branch and a one-line if are not dev only', () => {
+    expect(inDevOnlyBlock(ctxAt(['if (QA || user.ok) {', '  run(js)', '}'].join('\n'), 'run(js)'))).toBe(false)
+    expect(inDevOnlyBlock(ctxAt(['if (!QA) {', '  run(js)', '}'].join('\n'), 'run(js)'))).toBe(false)
+    expect(inDevOnlyBlock(ctxAt(['if (QA) {', '  a()', '} else {', '  run(js)', '}'].join('\n'), 'run(js)'))).toBe(false)
+    expect(inDevOnlyBlock(ctxAt(['if (QA) setup()', 'run(js)'].join('\n'), 'run(js)'))).toBe(false)
+  })
+  test('an unrelated environment variable is not a dev switch', () => {
+    expect(inDevOnlyBlock(ctxAt(['if (process.env.USER_CODE) {', '  run(js)', '}'].join('\n'), 'run(js)'))).toBe(false)
+  })
+  test('a guard in an earlier function does not cover a later handler', () => {
+    const code = ['ipc.handle("a", (e, p) => {', '  need(p)', '})', 'ipc.handle("b", async (e, p) => {', '  await shell.trashItem(p)', '})'].join('\n')
+    expect(shellPathIsChecked('  await shell.trashItem(p)', ctxAt(code, 'shell.trashItem'))).toBe(false)
+  })
+  test('a folder built from a value, or changed later, is not a constant', () => {
+    const built = ["const dir = path.join(app.getPath('userData'), name)", 'ipc.handle("o", () => shell.openPath(dir))'].join('\n')
+    expect(shellPathIsChecked('ipc.handle("o", () => shell.openPath(dir))', ctxAt(built, 'shell.openPath'))).toBe(false)
+    const changed = ["let dir = '/plugins'", 'dir += extra', 'ipc.handle("o", () => shell.openPath(dir))'].join('\n')
+    expect(shellPathIsChecked('ipc.handle("o", () => shell.openPath(dir))', ctxAt(changed, 'shell.openPath'))).toBe(false)
+  })
+  test('a helper that is exported, passed on or called with a joined string is not fixed', () => {
+    const base = ['const load = (name) => {', '  return require(name)', '}']
+    const line = '  return require(name)'
+    expect(requireHelperOnlyFixed(line, ctxAt([...base, "load('a')", 'module.exports = { load }'].join('\n'), 'require(name)'))).toBe(false)
+    expect(requireHelperOnlyFixed(line, ctxAt([...base, "load('./x/' + id)"].join('\n'), 'require(name)'))).toBe(false)
+    expect(requireHelperOnlyFixed(line, ctxAt([...base, "load.call(null, id)"].join('\n'), 'require(name)'))).toBe(false)
+  })
+  test('a table with a variable value, or one that is assigned to, is not constant', () => {
+    const nl = '\n'
+    const tbl = (rows: string[], after = '') => ['const ICONS = {', ...rows, '}', after, 'foo()', ''].join(nl)
+    expect(isConstantMarkup(tbl(['  a: userInput,']), 'ICONS')).toBe(false)
+    expect(isConstantMarkup(tbl(["  a: '<i></i>',"], 'ICONS.a = input'), 'ICONS')).toBe(false)
+    expect(isConstantMarkup(tbl(["  a: '<i></i>',"], 'function f(ICONS) {}'), 'ICONS')).toBe(false)
+  })
+})
