@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Run the real tool when it is installed; when it is not, run Meerkat's small built-in fallback and say so ("built-in fallback").
 //   node thorough/tool-or-builtin.mjs --bin typos --fallback typos [--match REGEX] [--force-fallback] -- [tool options]
 // Exit: 0 clean, 1 findings, 75 NOT RUN (the fallback itself could not run, e.g. no shell).
