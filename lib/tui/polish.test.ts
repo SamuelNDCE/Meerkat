@@ -25,7 +25,7 @@ describe('the happy all-clear screen', () => {
   test('the happy meerkat is a new sprite: eyes shut in a light-brown arc, no blush', () => {
     const joy = buildProfile('joy').join('')
     expect(joy).not.toContain('R')
-    expect(joy).toContain('T')
+    expect(joy).toContain('M')
     expect(buildProfile('happy').join('')).not.toContain('R')
   })
   test('failures keep the red look and no ALL CLEAR', () => {
