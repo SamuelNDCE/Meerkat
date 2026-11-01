@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { stripAnsi, textWidth } from './cells.mjs'
 import { renderResults, initialResultsState } from './results.mjs'
-import { sampleData } from './resultssample.mjs'
+import { bulkSampleData as sampleData } from './resultssample.mjs'
 import { bugCounter, renderLive } from './live.mjs'
 import { createModel } from './model.mjs'
 // @ts-expect-error plain JS module
