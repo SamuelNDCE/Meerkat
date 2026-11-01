@@ -542,7 +542,7 @@ The old `NV_VERIFY_*` names are still read.
 
 ## Versions and releases
 
-Meerkat uses [semantic versioning](https://semver.org): a patch (0.2.1) fixes, a minor (0.3.0) adds, a major (1.0.0) changes how you use it. The version lives in one place, `package.json`, and everything that shows it (the menu, the results screen, the board, the badge) reads it from there. [CHANGELOG.md](../CHANGELOG.md) lists what changed in each version.
+Meerkat uses [semantic versioning](https://semver.org): a patch (1.2.4) fixes, a minor (1.3.0) adds, a major (2.0.0) changes how you use it. The version lives in one place, `package.json`, and everything that shows it (the menu, the results screen, the board, the badge) reads it from there. [CHANGELOG.md](../CHANGELOG.md) lists what changed in each version.
 
 When a newer version is published here, the menu and the results screen show a yellow line with your version and the new one, and `meerkat update` installs it after you say yes. Maintainers cut a version with one command, which bumps `package.json`, writes the changelog entry and redraws the badge:
 

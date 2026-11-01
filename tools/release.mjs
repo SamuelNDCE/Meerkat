@@ -2,8 +2,8 @@
 // from the notes you give it, and redraws the version badge. It changes files only; you commit, push and merge as usual, and every Meerkat
 // that looks for updates (lib/update.mjs reads package.json on main) then shows the new number.
 //   node tools/release.mjs patch "Fixed the stuck-test guard"        0.9.0 -> 0.9.1
-//   node tools/release.mjs minor "Added the happy results screen"    0.2.1 -> 0.3.0
-//   node tools/release.mjs major "..."                               0.3.0 -> 1.0.0
+//   node tools/release.mjs minor "Added the happy results screen"    1.2.3 -> 1.3.0
+//   node tools/release.mjs major "..."                               1.3.0 -> 2.0.0
 //   node tools/release.mjs 1.4.0 "..."                               set an exact version (must be newer)
 //   add --dry-run to print what would change
 import { execFileSync } from 'node:child_process'
