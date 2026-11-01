@@ -117,8 +117,9 @@ export function scan(root) {
         // The same for a constant that is the header alone (a constant named PEM_BEGIN that holds only the header text): the line ends right after it.
         if (rule.name === 'private-key-block') {
           const after = line.slice(m.index + m[0].length).replace(/\\n/g, '\n')
-          const below = lines.slice(i + 1, i + 4).join('\n') // a key body can follow after a blank line or a header such as Proc-Type
-          const noBody = !/^[\s"'`\\]*[A-Za-z0-9+/=]{10,}/.test(after) && !/(?:^|\n)[\s"'`]*[A-Za-z0-9+/=]{10,}/.test(below)
+          // A key body can follow after blank lines or armor headers (Proc-Type, DEK-Info), and a commented-out key has a comment prefix on every line.
+          const below = lines.slice(i + 1, i + 9).map((l) => l.replace(/^\s*(?:\/\/|#|\*|--\s?|\+|\.\.)?\s*["'`]?/, '')).join('\n')
+          const noBody = !/^[\s"'`\\]*[A-Za-z0-9+/=]{10,}/.test(after) && !/(?:^|\n)[A-Za-z0-9+/=]{10,}/.test(below)
           if (noBody && (/^\s*(?:\/\/|#|\*|\/\*|--\s)/.test(line) || /^["'`]?[\s)\],;}]*$/.test(after.trim()))) continue
         }
         if (allow.some((a) => a.rule === rule.name && line.includes(a.text))) continue

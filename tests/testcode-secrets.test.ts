@@ -39,6 +39,12 @@ describe('secret-scan', () => {
     const r = run('secret-scan.mjs', [], project({ 'src/lib.rs': `const K: &str = "${REAL_AWS}";\n\n#[cfg(test)]\nmod tests {}\n` }))
     expect(r.status).toBe(1)
   })
+  test('an encrypted key (armor headers before the body) and a commented-out key are still reported', () => {
+    const header = '-----BEGIN ' + 'RSA PRIVATE KEY-----'
+    const body = 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASC'
+    expect(run('secret-scan.mjs', [], project({ 'src/a.ts': `// ${header}\n// Proc-Type: 4,ENCRYPTED\n// DEK-Info: AES-128-CBC,ABCDEF\n//\n// ${body}\n` })).status).toBe(1)
+    expect(run('secret-scan.mjs', [], project({ 'key.pem': `${header}\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,ABCDEF\n\n${body}\n` })).status).toBe(1)
+  })
   test('code AFTER the test module closes is scanned again', () => {
     const r = run('secret-scan.mjs', [], project({ 'src/lib.rs': `#[cfg(test)]\nmod tests {\n    fn t() { let s = "{"; }\n}\n\nconst K: &str = "${REAL_AWS}";\n` }))
     expect(r.status).toBe(1)
