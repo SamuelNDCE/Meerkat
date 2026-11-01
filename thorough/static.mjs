@@ -196,7 +196,11 @@ const paramOnlyConstants = (t, at, param) => {
   }
   if (close < 0 || at < open || at > close) return false
   const p = param.replace(/\$/g, '\\$')
-  if (new RegExp(String.raw`\b(?:const|let|var)\s+(?:${p}\b|[\[{][^=;]*\b${p}\b)|[(,]\s*(?:\.\.\.)?${p}\s*(?:[,)=]|=>)|\b${p}\s*=>`).test(blank.slice(open + 1, close))) return false
+  // Fail closed on anything that could rebind the name or hide code from the blanking above: a nested function or class, a template with ${} or a backtick left
+  // in a comment, or a declaration of the name (const, let, var, destructuring) in the body.
+  const rawBody = t.slice(open + 1, close)
+  if (/=>|\bfunction\b|\bclass\b|\$\{|`/.test(rawBody.replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, ' '))) return false
+  if (new RegExp(String.raw`\b(?:const|let|var)\s+(?:(?<![\w$])${p}(?![\w$])|[\[{][^=;]*(?<![\w$])${p}(?![\w$]))`).test(blank.slice(open + 1, close))) return false
   const n = name.replace(/\$/g, '\\$')
   // A name inside a class name or string ('find-btn') is not a use of the helper.
   const uses = [...t.matchAll(new RegExp(String.raw`(?<![\w$.\-'"\x60])${n}(?![\w$\-])`, 'g'))]
