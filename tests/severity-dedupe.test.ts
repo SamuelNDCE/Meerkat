@@ -14,7 +14,7 @@ describe('severity of checks that report a practice or a notice', () => {
   test('deprecated dependencies, artifact retention, install scripts and the DevTools gate are not high', () => {
     expect(defaultSeverity({ id: 'deprecated-deps', group: 'security' })).toBe('low')
     expect(defaultSeverity({ id: 'github-actions-artifacts', group: 'security' })).toBe('low')
-    expect(defaultSeverity({ id: 'install-scripts', group: 'security' })).toBe('low')
+    expect(defaultSeverity({ id: 'install-scripts', group: 'security' })).toBe('medium')
     expect(defaultSeverity({ id: 'electron-devtools-prod', group: 'security' })).toBe('medium')
   })
   test('a check that is not listed keeps the severity of its group, and an explicit severity still wins', () => {
@@ -109,5 +109,33 @@ describe('version-tag-match: a version newer than the latest tag is not a mismat
   })
   test('older than the tag fails', () => {
     expect(run('0.9.0', 'v1.0.0').code).toBe(1)
+  })
+})
+
+describe('innerHTML severity is not lowered for values a visitor controls', () => {
+  const NL = String.fromCharCode(10)
+  const sev = (code: string) => {
+    const d = mkdtempSync(join(tmpdir(), 'meerkat-sev2-'))
+    try {
+      mkdirSync(join(d, 'src'))
+      writeFileSync(join(d, 'src', 'a.js'), code + NL)
+      execFileSync('git', ['-C', d, 'init', '-q'])
+      execFileSync('git', ['-C', d, 'add', '-A'])
+      try {
+        return execFileSync('node', [join(__dirname, '..', 'thorough', 'static.mjs'), 'risky-code', '--root', d], { encoding: 'utf8' })
+      } catch (e) {
+        return String((e as { stdout?: string }).stdout ?? '')
+      }
+    } finally {
+      rmSync(d, { recursive: true, force: true })
+    }
+  }
+  for (const value of ['location.hash', 'document.referrer', 'window.name', 'event.data', 'req.query.q', 'props.html', 'params.name', "items[Number(x)]"]) {
+    test(`${value} stays medium`, () => {
+      expect(sev('el.innerHTML = ' + value)).toMatch(/MEERKAT-FINDING medium innerhtml-assignment/)
+    })
+  }
+  test('a plain local name is low', () => {
+    expect(sev('el.innerHTML = iconMarkup')).toMatch(/MEERKAT-FINDING low innerhtml-assignment/)
   })
 })

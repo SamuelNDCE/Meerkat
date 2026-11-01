@@ -156,7 +156,10 @@ const bareValue = (t, m) => {
   const from = m.index + m[0].length
   const eol = t.indexOf('\n', from)
   const rest = t.slice(from, eol < 0 ? t.length : eol).trim()
-  return /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[[^\]]*\])*\s*;?\s*(?:\/\/.*)?$/.test(rest)
+  // Only a plain name or a dotted path, or a path indexed by a literal or a name. A value rooted at something a visitor controls (the URL, the page,
+  // an event, a request, props or query) is never downgraded: it stays medium.
+  if (!/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*"|\d+|[A-Za-z_$][\w$]*)\])*\s*;?\s*(?:\/\/.*)?$/.test(rest)) return false
+  return !/^(?:location|document|window|self|top|parent|event|evt|ev|e|req|request|res|params|query|props|searchParams|data|msg|message|input|userInput|body|url|href)\b/i.test(rest)
 }
 const riskyCode = (root) => {
   const allow = allowList(root, '.meerkat-risky-allow')
