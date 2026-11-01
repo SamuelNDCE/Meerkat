@@ -146,7 +146,7 @@ describe('versions and the remembered answer', () => {
   test('write then read; bad versions are not written, bad files are ignored', () => {
     const t0 = Date.parse('2026-10-31T10:00:00Z')
     expect(writeUpdateCache('1.4.0', t0, env)).toBe(true)
-    expect(readUpdateCache(env)).toEqual({ latest: '1.4.0', checkedAt: t0 })
+    expect(readUpdateCache(env)).toMatchObject({ latest: '1.4.0', checkedAt: t0 })
     expect(writeUpdateCache('evil', t0, env)).toBe(false)
     expect(readUpdateCache(env)?.latest).toBe('1.4.0')
     for (const bad of [{ latest: '1.4', checkedAt: '2026-10-31T10:00:00Z' }, { latest: '1.4.0', checkedAt: 'yesterday' }, { latest: 7, checkedAt: 1 }, 'text', [], null]) {
@@ -194,7 +194,7 @@ describe('versions and the remembered answer', () => {
     const run = (now: number) => maybeAutoUpdate({ repoDir: repo, exec: exec(calls), env, now, print: () => {}, onCheck: () => events.push('check'), onDone: () => events.push('done') })
     expect(run(t0)).toMatchObject({ ran: true })
     expect(events).toEqual(['check', 'done'])
-    expect(readUpdateCache(env)).toEqual({ latest: '1.4.0', checkedAt: t0 })
+    expect(readUpdateCache(env)).toMatchObject({ latest: '1.4.0', checkedAt: t0 })
     expect(updateNotice({ current: '1.3.2', env })).not.toBeNull()
     const n = calls.length
     expect(run(t0 + 3600e3)).toMatchObject({ ran: false })

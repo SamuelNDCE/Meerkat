@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## 0.3.0 (2026-11-01)
 
+- every update shows the yellow update line, including a fix published without a new version number
 - AI prompt: press p on the results screen (or run meerkat prompt) for a file that hands every finding in full to an AI
 - optional AI verification of findings (meerkat verify --ai-verify), fail-closed
 - findings, logs and the prompt keep full text (no 200 character cut); every run saves run.log
