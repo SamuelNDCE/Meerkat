@@ -55,8 +55,10 @@ function matches(rule, text, file) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (rule.skipLine && rule.skipLine.test(line)) continue
-    const hit = rule.test ? rule.test(line, { file, lines, index: i, text }) : rule.re.test(line)
-    if (hit) out.push(i + 1)
+    const ctx = { file, lines, index: i, text }
+    const hit = rule.test ? rule.test(line, ctx) : rule.re.test(line)
+    // A rule may carry unless(line, ctx): the code around the hit already makes it safe (a QA-only block, a path checked just before).
+    if (hit && !(rule.unless && rule.unless(line, ctx))) out.push(i + 1)
   }
   return out
 }
