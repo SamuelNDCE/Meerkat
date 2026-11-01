@@ -27,7 +27,7 @@ const license = (root) => {
     }
   }
   const cargo = readText(root, 'Cargo.toml')
-  if (/\[package\]/.test(cargo) && !/^\s*license(-file)?\s*=/m.test(cargo)) f.push('Cargo.toml has no license or license-file')
+  if (/\[package\]/.test(cargo) && !/^\s*license(-file)?(\.workspace)?\s*=/m.test(cargo)) f.push('Cargo.toml has no license or license-file')
   const nm = join(root, 'node_modules')
   if (existsSync(nm)) {
     const copyleft = /\b(A?GPL|SSPL|BUSL|Commons Clause)/i

@@ -247,13 +247,14 @@ const GESTURE = /\bon(click|submit|change|input|keydown|keyup|pointerdown|pointe
 // The call sits inside a named function (declared up to 40 lines above) and that function is called from a handler elsewhere in the file:
 // it runs on the gesture, not at load time.
 const FN_HEAD = /\bfunction\s+(\w+)\s*\(|\b(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|\w+\s*=>)/
-const calledFromGesture = (ls, i) => {
-  for (let k = i - 1; k >= Math.max(0, i - 40); k--) {
+// A caller that is itself a named function counts when that function is wired to a gesture (up to two functions deep: paste() called from onKey, onKey given to keydown).
+const calledFromGesture = (ls, i, depth = 0) => {
+  for (let k = i - 1; k >= Math.max(0, i - 60); k--) {
     const m = FN_HEAD.exec(ls[k])
     if (!m) continue
     const name = m[1] ?? m[2]
     const call = new RegExp(`\\b${name}\\s*\\(|[=:,(]\\s*${name}\\b`)
-    return ls.some((l, j) => j !== k && call.test(l) && GESTURE.test(ls.slice(Math.max(0, j - 8), j + 1).join('\n')))
+    return ls.some((l, j) => j !== k && call.test(l) && (GESTURE.test(ls.slice(Math.max(0, j - 8), j + 1).join('\n')) || (depth < 2 && calledFromGesture(ls, j, depth + 1))))
   }
   return false
 }

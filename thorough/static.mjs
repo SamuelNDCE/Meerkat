@@ -145,7 +145,10 @@ const safeLiteralAssign = (t, m, why) => {
   const eol = t.indexOf('\n', from)
   const rest = t.slice(from, eol < 0 ? t.length : eol).trim()
   // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
-  return /^(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`$\\]*`|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)\s*;?\s*(?:\/\/.*)?$/.test(rest)
+  const atom = String.raw`(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\x60[^\x60$\\]*\x60|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)`
+  if (new RegExp(String.raw`^${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)) return true
+  // cond ? CONST : '' picks between constants, so the condition decides which author-written markup is shown, never what it contains.
+  return new RegExp(String.raw`^[^?]+\?\s*${atom}\s*:\s*${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)
 }
 const riskyCode = (root) => {
   const allow = allowList(root, '.meerkat-risky-allow')

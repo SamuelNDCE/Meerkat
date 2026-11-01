@@ -134,7 +134,8 @@ const yamlValid = (root) => {
 }
 
 // ---- toml-valid: strings never closed, a key given twice in one table, a table header given twice or malformed.
-const TOML_NAME = /^[A-Za-z0-9_.\-"' ]+$/
+// A table name is bare keys and quoted keys joined by dots; a quoted key may hold any character, as in [target.'cfg(windows)'.dependencies].
+const TOML_NAME = /^(?:[A-Za-z0-9_\-]+|"[^"]*"|'[^']*')(?:\s*\.\s*(?:[A-Za-z0-9_\-]+|"[^"]*"|'[^']*'))*$|^[A-Za-z0-9_.\-"' ]+$/
 const brackets = (s) => {
   const t = s.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, '').replace(/#.*$/, '')
   return (t.match(/\[/g) ?? []).length - (t.match(/\]/g) ?? []).length
@@ -399,8 +400,25 @@ const nodeEngines = (root) => {
 // ---- tsconfig-strict: a repo with TypeScript source (test files alone do not count) has a tsconfig.json with strict on.
 const parseJsonc = (t) => {
   try {
-    const noComments = t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/[^\n]*/g, '$1')
-    return JSON.parse(noComments.replace(/,(\s*[}\]])/g, '$1'))
+    // Walk the text so comment markers inside strings (tsconfig globs such as "**/*.ts" contain /*) are kept.
+    let out = ''
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i]
+      if (c === '"') {
+        let j = i + 1
+        while (j < t.length && t[j] !== '"') j += t[j] === '\\' ? 2 : 1
+        out += t.slice(i, j + 1)
+        i = j
+      } else if (c === '/' && t[i + 1] === '/') {
+        while (i < t.length && t[i] !== '\n') i++
+        out += '\n'
+      } else if (c === '/' && t[i + 1] === '*') {
+        const end = t.indexOf('*/', i + 2)
+        i = end < 0 ? t.length : end + 1
+        out += ' '
+      } else out += c
+    }
+    return JSON.parse(out.replace(/,(\s*[}\]])/g, '$1'))
   } catch {
     return null
   }

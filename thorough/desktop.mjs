@@ -24,7 +24,9 @@ const ALLOW_WORDS = /allow|whitelist|allowlist|\.includes\(|\.has\(|protocol|isS
 const DEV_GATE = /isDev|isDevelopment|isPackaged|NODE_ENV|development|VITE_DEV|DEV_URL|\bQA\b|__DEV__|import\.meta\.env\.DEV/i
 const IPC_GUARD = /assert|grant|allow|whitelist|valid|sanitiz|normaliz|isOwnPage|safe|check|ensure|need\(|isAbsolute/i
 const IPC_HANDLER = /ipcMain\.(?:handle|on)\s*\(\s*[^,\n]+,\s*(?:async\s*)?(?:function\s*\w*\s*)?\(\s*\w+\s*,\s*(\w+)/g
-const BARE_EXPOSED = /\bipcRenderer\b(?!\s*\.\s*(?:invoke|send|on|once|removeListener|removeAllListeners|sendSync|sendTo|sendToHost)\b)|\brequire\s*\(|\bprocess\b(?!\s*\.\s*platform\b)/
+const BARE_EXPOSED = /\bipcRenderer\b(?!\s*\.\s*(?:invoke|send|on|once|removeListener|removeAllListeners|sendSync|sendTo|sendToHost)\b)|(?<=[:,{]\s*)\brequire\b|(?<=[:,{]\s*)\bprocess\b(?!\s*\.\s*(?:platform|arch|versions?)\b)/
+// require and process only count where they are handed over as a value (`fs: require('fs')`, `{ process }`). Calling require inside an
+// exposed function (`pathForFile: (f) => require('electron').webUtils.getPathForFile(f)`) exposes nothing.
 // The identifier p is the path or command (the first argument) of a file, shell or child process call inside the same handler.
 // Later arguments (the data written to a file, for example) do not count.
 const sinkFor = (p) => new RegExp(`\\b(?:fs|fsp|promises|child_process)\\.\\w+\\s*\\([^,\\n]*\\b${p}\\b|\\b(?:exec|execSync|execFile|execFileSync|spawn|spawnSync)\\s*\\([^,\\n]*\\b${p}\\b|\\bshell\\.\\w+\\s*\\([^,\\n]*\\b${p}\\b`)

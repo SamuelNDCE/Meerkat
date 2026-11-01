@@ -225,3 +225,108 @@ describe('false negatives stay detected', () => {
     expect(ipc.out).toMatch(/FAIL ep-ipc-handler-no-sender-check/)
   })
 })
+
+// Regression tests from the real-code accuracy pass (2026-11-01: Plume, an older Plume checkout, Polaris, a Next.js app, a Python pipeline).
+describe('real-code false positives stay fixed', () => {
+  const ELECTRON = JSON.stringify({ name: 'x', version: '1.0.0', main: 'main.js', devDependencies: { electron: '41.0.0' } })
+
+  test('electron-preload-exposure: require called inside an exposed function is fine, require handed over as a value is not', () => {
+    const ok = folder({ 'package.json': ELECTRON, 'preload.js': "contextBridge.exposeInMainWorld('api', {\n  pathFor: (f) => require('electron').webUtils.getPathForFile(f),\n  platform: process.platform,\n  read: (p) => ipcRenderer.invoke('read', p),\n})\n" })
+    expect(run('thorough/desktop.mjs', 'electron-preload-exposure', ok).code).toBe(0)
+    const bad = folder({ 'package.json': ELECTRON, 'preload.js': "contextBridge.exposeInMainWorld('api', {\n  fs: require('fs'),\n})\n" })
+    expect(run('thorough/desktop.mjs', 'electron-preload-exposure', bad).code).toBe(1)
+    const badProc = folder({ 'package.json': ELECTRON, 'preload.js': "contextBridge.exposeInMainWorld('api', { env: process.env })\n" })
+    expect(run('thorough/desktop.mjs', 'electron-preload-exposure', badProc).code).toBe(1)
+  })
+
+  test('tsconfig-strict: a tsconfig whose globs contain /* still parses, and strict off in it is still reported', () => {
+    const cfg = (strict: boolean) => JSON.stringify({ compilerOptions: { strict }, include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '**/*.mts'] }, null, 2)
+    const ok = folder({ 'src/a.ts': 'export const a: number = 1\n', 'tsconfig.json': cfg(true) })
+    expect(run('thorough/config.mjs', 'tsconfig-strict', ok).code).toBe(0)
+    const bad = folder({ 'src/a.ts': 'export const a: number = 1\n', 'tsconfig.json': cfg(false) })
+    expect(run('thorough/config.mjs', 'tsconfig-strict', bad).code).toBe(1)
+    const commented = folder({ 'src/a.ts': 'export const a: number = 1\n', 'tsconfig.json': '{\n  // comment\n  "compilerOptions": { "strict": true, /* x */ },\n}\n' })
+    expect(run('thorough/config.mjs', 'tsconfig-strict', commented).code).toBe(0)
+  })
+
+  test('toml-valid: a quoted key in a table header is valid, a broken header is not', () => {
+    const ok = folder({ 'Cargo.toml': "[package]\nname = \"a\"\n\n[target.'cfg(windows)'.dependencies]\nwindows = \"0.62\"\n" })
+    expect(run('thorough/config.mjs', 'toml-valid', ok).code).toBe(0)
+    const bad = folder({ 'Cargo.toml': '[package\nname = "a"\n' })
+    expect(run('thorough/config.mjs', 'toml-valid', bad).code).toBe(1)
+  })
+
+  test('skipped-tests: a comment that mentions #[ignore] is not a skipped test, a real one is', () => {
+    const ok = folder({ 'tests/a.rs': '// this one is #[ignore]d on CI by name only\n#[test]\nfn works() {}\n' })
+    expect(run('thorough/quality.mjs', 'skipped-tests', ok).code).toBe(0)
+    const bad = folder({ 'tests/a.rs': '#[test]\n#[ignore]\nfn works() {}\n' })
+    expect(run('thorough/quality.mjs', 'skipped-tests', bad).code).toBe(1)
+  })
+
+  test('risky-code: innerHTML picking between author-written constants is fine, picking a variable is not', () => {
+    const ok = folder({ 'a.js': 'el.innerHTML = (t && t.secure) ? ICON_LOCK : ""\n' })
+    expect(run('thorough/static.mjs', 'risky-code', ok).code).toBe(0)
+    const bad = folder({ 'a.js': 'el.innerHTML = t.secure ? ICON_LOCK : userHtml\n' })
+    expect(run('thorough/static.mjs', 'risky-code', bad).code).toBe(1)
+  })
+
+  test('unused-dependencies-quick: react-dom next to Next.js is needed at run time, on its own and unused it is reported', () => {
+    const base = { scripts: { dev: 'next dev' } }
+    const next = folder({ 'package.json': JSON.stringify({ ...base, dependencies: { next: '16.0.0', react: '19.0.0', 'react-dom': '19.0.0' } }), 'app/page.tsx': "import React from 'react'\nexport default () => null\n" })
+    expect(run('thorough/health.mjs', 'unused-dependencies-quick', next).code).toBe(0)
+    const plain = folder({ 'package.json': JSON.stringify({ dependencies: { react: '19.0.0', 'react-dom': '19.0.0' } }), 'src/a.js': "import React from 'react'\n" })
+    expect(run('thorough/health.mjs', 'unused-dependencies-quick', plain).code).toBe(1)
+  })
+
+  test('unused-files: framework route files and a script named by a page beside it are used, a lone orphan is not', () => {
+    const ok = folder({
+      'app/layout.tsx': 'export default function L() { return null }\n',
+      'app/blog/page.tsx': 'export default function P() { return null }\n',
+      'proto/index.html': '<script src="shell.js"></script>\n',
+      'proto/shell.js': 'console.log(1)\n',
+      'src/index.js': "import './used.js'\n",
+      'src/used.js': 'export const a = 1\n',
+    })
+    expect(run('thorough/refactor.mjs', 'unused-files', ok).code).toBe(0)
+    const bad = folder({ 'src/index.js': "import './used.js'\n", 'src/used.js': 'export const a = 1\n', 'src/orphan.js': 'export const b = 2\n' })
+    expect(run('thorough/refactor.mjs', 'unused-files', bad).code).toBe(1)
+  })
+
+  test('debug-leftovers: console.log in a script that reads process.argv is its output, in a plain module it is a leftover', () => {
+    const ok = folder({ 'score.js': "const [inPath] = process.argv.slice(2)\nconsole.log('done', inPath)\n" })
+    expect(run('thorough/quality.mjs', 'debug-leftovers', ok).code).toBe(0)
+    const bad = folder({ 'lib.js': "export function f(x) {\n  console.log('x is', x)\n  return x\n}\n" })
+    expect(run('thorough/quality.mjs', 'debug-leftovers', bad).code).toBe(1)
+  })
+
+  test('rp-cargo: license.workspace and publish = false satisfy the license and description rules, a bare package does not', () => {
+    const ok = folder({ 'Cargo.toml': '[package]\nname = "a"\nversion = "0.1.0"\nedition.workspace = true\nlicense.workspace = true\ndescription = "x"\n' })
+    expect(run('thorough/rust-plus.mjs', 'rp-cargo', ok).out).not.toMatch(/FAIL rcargo-missing-(license|edition)/)
+    const unpublished = folder({ 'Cargo.toml': '[package]\nname = "a"\nversion = "0.1.0"\nedition = "2021"\npublish = false\n' })
+    expect(run('thorough/rust-plus.mjs', 'rp-cargo', unpublished).out).not.toMatch(/FAIL rcargo-missing-(license|description)/)
+    const bad = folder({ 'Cargo.toml': '[package]\nname = "a"\nversion = "0.1.0"\nedition = "2021"\n' })
+    expect(run('thorough/rust-plus.mjs', 'rp-cargo', bad).out).toMatch(/FAIL rcargo-missing-license/)
+  })
+
+  test('geolocation-and-media-requests: a clipboard read in a function reached from a keydown handler is behind a gesture, one at load time is not', () => {
+    const ok = folder({ 'src/a.js': "async function paste() {\n  const t = await navigator.clipboard.readText()\n  use(t)\n}\nfunction onKey(e) {\n  if (e.key === 'v') paste()\n}\nel.addEventListener('keydown', onKey)\n" })
+    expect(run('thorough/privacy.mjs', 'geolocation-and-media-requests', ok).code).toBe(0)
+    const bad = folder({ 'src/a.js': 'navigator.geolocation.getCurrentPosition((p) => show(p))\n' })
+    expect(run('thorough/privacy.mjs', 'geolocation-and-media-requests', bad).code).toBe(1)
+  })
+
+  test('history secret scan: empty JSON values and format placeholders are not secrets, a real token is', () => {
+    const vcs = (dir: string, ...a: string[]) => execFileSync('git', ['-C', dir, ...a], { stdio: 'pipe' })
+    const repo = (text: string) => {
+      const dir = folder({ 'a.rs': text })
+      vcs(dir, 'init', '-q')
+      vcs(dir, 'add', '.')
+      vcs(dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'x')
+      return dir
+    }
+    const ok = repo('let a = r#"{"folder":"","password":"","notes":""}"#;\nlet b = format!(r#"{{"op":"unlock","password":"{pw}"}}"#);\nlet c = format!("{{\\"password\\":\\"{}\\"}}", p);\n')
+    expect(run('thorough/sec-supply.mjs', 'git-history-secrets', ok).code).toBe(0)
+    const bad = repo('let a = "password = hunter2Hunter2xyz9";\nlet k = "ghp_abcdefghijklmnopqrstuvwxyzABCDEFGHIJ";\n')
+    expect(run('thorough/sec-supply.mjs', 'git-history-secrets', bad).code).toBe(1)
+  })
+})

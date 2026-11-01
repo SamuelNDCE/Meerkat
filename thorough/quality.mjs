@@ -129,7 +129,7 @@ const debugLeftovers = (root) => {
   const f = []
   for (const x of files(root, SOURCE)) {
     const testy = TEST_FILE.test(x)
-    const cliish = /(^|\/)(bin|scripts|tools|cli)\//i.test(x) || bins.has(x) || /^#!/.test(readText(root, x))
+    const cliish = /(^|\/)(bin|scripts|tools|cli)\//i.test(x) || bins.has(x) || /^#!/.test(readText(root, x)) || /\brequire\.main\s*===\s*module\b|\bprocess\.argv\b|\bimport\.meta\.main\b/.test(readText(root, x))
     const lines = readText(root, x).split('\n')
     lines.forEach((line, i) => {
       const why = debugWhy(x, line, lines[i - 1] ?? '', testy, cliish, () => guardedBlock(lines, i))
@@ -152,8 +152,13 @@ const skippedTests = (root) => {
   const allow = allowSet(root)
   const f = []
   for (const x of files(root, SOURCE)) {
+    const hashComments = /\.(py|rb|sh|ya?ml|toml)$/i.test(x)
     readText(root, x).split('\n').forEach((line, i) => {
-      if (SKIPPED.some((re) => re.test(line)) && !allowed(allow, x, i + 1)) f.push(`${x}:${i + 1} skips a test: ${snip(line)}`)
+      // A comment that mentions #[ignore] or @Ignore is prose, not a skipped test.
+      const t = line.trim()
+      if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || (hashComments && t.startsWith('#'))) return
+      const code = line.replace(/\s\/\/.*$/, '')
+      if (SKIPPED.some((re) => re.test(code)) && !allowed(allow, x, i + 1)) f.push(`${x}:${i + 1} skips a test: ${snip(line)}`)
     })
   }
   return finish('skipped-tests', f, 'no test is skipped')
