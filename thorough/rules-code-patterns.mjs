@@ -4,6 +4,7 @@
 // Regexes are linear: bounded quantifiers ({0,200}) instead of open-ended spans, so a hostile 100 KB line cannot blow up.
 // Known limits: a rule that matches one line cannot see a call that is split over several lines (noted per rule where it matters).
 
+import { requireHelperOnlyFixed } from './guards.mjs'
 const PY_SKIP = /^\s*#/
 const SLASH_SKIP = /^\s*(\/\/|\/\*|\*)/
 const PHP_SKIP = /^\s*(\/\/|#|\/\*|\*)/
@@ -168,7 +169,7 @@ export const JS = [
     return Boolean(re) && joined(re, (l) => re.test(l))(line, ctx)
   } }),
   JSF('js-spawn-shell', 'spawn or execFile is given shell: true, so arguments are parsed by a shell', /\bspawn(?:Sync)?\([^\n]{0,300}\bshell\s*:\s*true\b/, 'spawn("ls", [], { shell: true })', 'spawn("ls", [])'),
-  JSF('js-require-variable', 'require is called with a name that is not a fixed string', /(?<![\w$.])require\(\s*(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|path\.|__dirname|process\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,200}\)/, 'const m = require(name)', 'const m = require("fs")'),
+  JSF('js-require-variable', 'require is called with a name that is not a fixed string', /(?<![\w$.])require\(\s*(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|path\.|__dirname|process\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,200}\)/, 'const m = require(name)', 'const m = require("fs")', { unless: requireHelperOnlyFixed }),
   JSF('js-require-url', 'a module is loaded from a web address', /(?<![\w$.])require\(\s*['"]https?:\/\//, 'require("https://x.example/a.js")', 'require("./a.js")'),
   JSF('js-fs-request-path', 'a file system call takes its path straight from the request', /\bfs\.(?:readFile|readFileSync|writeFile|writeFileSync|createReadStream|createWriteStream|unlink|unlinkSync|readdir|readdirSync|stat|statSync|access|appendFile|rm|rmSync)\(\s*(?:req|request|ctx|params|query|body)\b/, 'fs.readFile(req.query.file, cb)', 'fs.readFile(safePath(req.query.file), cb)'),
   JSF('js-new-buffer', 'new Buffer() is unsafe (it can expose old memory); use Buffer.from or Buffer.alloc', /\bnew\s+Buffer\s*\(/, 'const b = new Buffer(10)', 'const b = Buffer.alloc(10)'),

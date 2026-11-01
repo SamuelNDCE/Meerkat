@@ -4,7 +4,9 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- fewer false alarms: a hit the surrounding code already makes safe is skipped (a QA-only executeJavaScript, a path checked by need() before it reaches the shell, a require helper called only with fixed strings, markup from a constant table)
 - meerkat tools install works on Windows (it found the bare npm script instead of npm.cmd)
+- the CI job is allowed 30 minutes
 
 ## 0.3.13 (2026-11-01)
 

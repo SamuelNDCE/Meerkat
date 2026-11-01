@@ -17,6 +17,7 @@
 // Regexes are linear: bounded quantifiers ({0,200}) and no nested open spans, so a hostile 100 KB line cannot blow up.
 // Rules that need a sibling line (for example a handler body) look only at a fixed window of lines after the match.
 
+import { inDevOnlyBlock, shellPathIsChecked } from './guards.mjs'
 const JS = ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'jsx', 'tsx']
 const HTML = ['html', 'htm']
 const COMMENT = /^\s*(\/\/|\/\*|\*|<!--)/
@@ -151,7 +152,8 @@ export const EP_WINDOW = [
   js('ep-execute-js-variable', 'runs JavaScript from a variable inside a page (webContents.executeJavaScript with a bare variable)',
     /\bwebContents\.executeJavaScript\(\s*(?!process\.env\.)[A-Za-z_$][\w$.]*\s*[,)]/,
     'win.webContents.executeJavaScript(code)',
-    "win.webContents.executeJavaScript('document.title')"),
+    "win.webContents.executeJavaScript('document.title')",
+    { unless: (_l, ctx) => inDevOnlyBlock(ctx) }),
   js('ep-execute-js-concat', 'builds the script run inside a page from joined strings or template values',
     /\bexecuteJavaScript\(\s*(?:['"`][^'"`]{0,200}['"`]\s*\+|`[^`]{0,200}\$\{)/,
     'win.webContents.executeJavaScript(`window.user = ${input}`)',
@@ -229,7 +231,8 @@ export const EP_WINDOW = [
   js('ep-shell-path-variable', 'the system shell opens, reveals or trashes a path held in a bare variable; check the path first',
     /\bshell\.(?:openPath|showItemInFolder|trashItem)\(\s*[A-Za-z_$][\w$]*\s*[,)]/,
     'shell.openPath(filePath)',
-    "shell.openPath(app.getPath('logs'))"),
+    "shell.openPath(app.getPath('logs'))",
+    { unless: shellPathIsChecked }),
   js('ep-native-image-url', 'a native image is read from a value named like a URL instead of a local file',
     /\bnativeImage\.createFromPath\(\s*(?:url|href|link|imageUrl|src)\b/,
     'nativeImage.createFromPath(imageUrl)',

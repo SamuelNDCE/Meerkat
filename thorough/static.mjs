@@ -3,6 +3,7 @@
 // Limits are set in .meerkat-budgets.json under "static". A finding you accept goes in the check's allow file (named in each message).
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, posix } from 'node:path'
+import { isConstantMarkup } from './guards.mjs'
 import { finding, finish, isFixture, isText, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.static ?? {}
@@ -144,6 +145,9 @@ const safeLiteralAssign = (t, m, why) => {
   const from = m.index + m[0].length
   const eol = t.indexOf('\n', from)
   const rest = t.slice(from, eol < 0 ? t.length : eol).trim()
+  // A plain name or dotted path that is a top-level constant holding only text (const ICONS = { save: '<svg ...>' }) is author-written markup too.
+  const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*(?:\/\/.*)?$/.exec(rest)
+  if (root && isConstantMarkup(t, root[1])) return true
   // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
   const atom = String.raw`(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\x60[^\x60$\\]*\x60|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)`
   if (new RegExp(String.raw`^${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)) return true
