@@ -81,3 +81,23 @@ describe('longest processing time first', () => {
     expect(orderForSpeed(list).map((c: any) => c.id)).toEqual(['fmt', 'a', 'build', 'b', 'ui', 'c'])
   })
 })
+
+describe('a heavy check is not starved by a stream of small ones (the machine budget)', () => {
+  const budget = { cpu: 10, reserveGB: 0, maxParallel: 10, maxWindows: 3 }
+  test('the build starts within the first seconds and the small checks run beside it', async () => {
+    const list = [...Array.from({ length: 30 }, (_, i) => job(`l${String(i).padStart(2, '0')}`, 1, { weight: 'light' })), job('cargo-build', 40, { lane: 'cargo', weight: 'heavy' })]
+    const r = await simulate(orderForSpeed(list), { parallel: 9, budget, freeMemGB: () => 64 })
+    const buildStart = r.startedAt.get('cargo-build') as number
+    expect(buildStart).toBeLessThanOrEqual(3000)
+    const during = [...r.startedAt.entries()].filter(([id, t]) => id !== 'cargo-build' && t >= buildStart && t < buildStart + 40000).length
+    expect(during, 'small checks that started while the build ran').toBeGreaterThanOrEqual(20)
+    expect(r.makespan).toBeLessThanOrEqual(45)
+    expect(r.results.every((x: any) => x.status === 'PASS')).toBe(true)
+  })
+  test('without the hold-back the same run would put the build last (the old behaviour)', async () => {
+    const list = [...Array.from({ length: 30 }, (_, i) => job(`l${String(i).padStart(2, '0')}`, 1, { weight: 'light' })), job('cargo-build', 40, { lane: 'cargo', weight: 'heavy' })]
+    // The smallest checks first: the build waits for the end, which is what a run without the ordering and the hold-back looks like.
+    const r = await simulate(oldOrder(list), { parallel: 9, budget, freeMemGB: () => 64 })
+    expect(r.makespan).toBeGreaterThan(40)
+  })
+})

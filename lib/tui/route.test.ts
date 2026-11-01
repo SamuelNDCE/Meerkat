@@ -140,7 +140,7 @@ describe('the live bug counter', () => {
   test('a short terminal (under 24 rows) gets the one-line form instead of the stack', () => {
     const bugs = { critical: 2, high: 5, medium: 7, low: 3, info: 0, total: 17 }
     expect(bugCounter(bugs, { width: 120, color: false, height: 20 }).mode).toBe('line')
-    expect(bugCounter(bugs, { width: 120, color: false, height: 20 }).plain).toBe('bugs found: 17  (2 critical, 5 high, 7 medium, 3 low)')
+    expect(bugCounter(bugs, { width: 120, color: false, height: 20 }).plain).toBe('bugs found: 17  (2 critical, 5 high, 7 medium, 3 notes)')
   })
   test('width rules: 70 to 99 columns the one-line form, under 70 the total only, low-only counts show too', () => {
     const bugs = { critical: 1, high: 0, medium: 1, low: 0, info: 0, total: 2 }
@@ -181,7 +181,9 @@ describe('the live bug counter', () => {
     const m = createModel({ checks: [chk('a')] })
     m.settle(chk('a'), { status: 'FAIL' }, 1, Object.entries(sev).flatMap(([severity, n]) => Array.from({ length: n }, () => ({ severity }))))
     const lines = renderResults(initialResultsState(), data, { width: 100, rows: 30, color: false, level: false, env: {} }).map(stripAnsi).join('\n')
-    expect(m.bugs().total).toBe(data.findingCounts.total)
-    expect(lines).toContain(`${data.findingCounts.total} findings`)
+    // Low and info are notes, not bugs: the board total is the bug count of the results header.
+    const bugs = sev.critical + sev.high + sev.medium
+    expect(m.bugs().total).toBe(bugs)
+    expect(lines).toContain(`${data.findingCounts.bugs} bugs, ${data.findingCounts.total - data.findingCounts.bugs} notes`)
   })
 })

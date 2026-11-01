@@ -8,6 +8,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { finish, main, notRun, readBudgets, readText } from './kit.mjs'
+import { compareVersions } from '../lib/version.mjs'
 
 const TIMEOUT_MS = 60_000
 const MAX_BUFFER = 256 * 2 ** 20
@@ -288,6 +289,10 @@ function versionTagMatch(root) {
   if (version === tag.replace(/^v/i, '') || allowed(allow, 'version-tag-match', tag)) {
     return finish('version-tag-match', [], `package.json version ${clean(version)} matches the latest tag ${clean(tag)}`)
   }
+  // A version newer than the latest tag is the normal state between a merge and the tagging of the release: it is not a mismatch. Only a version
+  // that is older than the tag, or that is not comparable, is one.
+  const newer = compareVersions(version, tag.replace(/^v/i, ''))
+  if (newer !== null && newer > 0) return finish('version-tag-match', [], `package.json version ${clean(version)} is newer than the latest tag ${clean(tag)}: the release is not tagged yet`)
   return finish('version-tag-match', [`package.json says ${clean(version)} but the latest tag is ${clean(tag)}`])
 }
 
@@ -468,7 +473,7 @@ main({
     fixture: fx((d) => {
       commit(d, 'Add the package', { files: { 'package.json': '{"name":"x","version":"1.0.0"}\n' } })
       sh(d, ['tag', 'v1.0.0'])
-      commit(d, 'Bump the version', { files: { 'package.json': '{"name":"x","version":"1.0.1"}\n' } })
+      commit(d, 'Lower the version below the tag', { files: { 'package.json': '{"name":"x","version":"0.9.0"}\n' } })
     }, versionTagMatch),
   },
   'author-identity': {

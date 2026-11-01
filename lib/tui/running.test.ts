@@ -150,7 +150,8 @@ describe('the bug counter only grows, and only failed checks add to it', () => {
     const m = createModel({ checks: checks as never })
     m.settle(checks[1] as never, { status: 'FAIL' }, 1, [{ severity: 'critical' }, { severity: 'high' }, { severity: 'low' }])
     m.settle(checks[1] as never, { status: 'FAIL' }, 1, [])
-    expect(m.bugs().total).toBe(3)
+    expect(m.bugs().total).toBe(2)
+    expect(m.bugs().low).toBe(1)
   })
 })
 
