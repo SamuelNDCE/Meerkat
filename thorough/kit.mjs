@@ -120,13 +120,13 @@ export const isFixture = (f) => /(^|\/)(fixtures?|testdata|__fixtures__|test-fix
 
 // Test code is not shipped and holds fake secrets on purpose, so the secret checks leave it alone: test folders, *.test.* and *.spec.* files, *_test.rs/go/py
 // and test_*.py. Rust unit tests live in the same file as the code, in a module after #[cfg(test)]: rustTestStart gives the 1-based line where it begins.
-export const isTestFile = (f) => isFixture(f) || /(^|\/)(tests?|__tests__|e2e|spec|probes?)\//i.test(f) || /\.(test|spec)\.[a-z]+$/i.test(f) || /(^|\/)[\w.-]+_tests?\.(rs|go|py)$/i.test(f) || /(^|\/)test_[\w.-]+\.py$/i.test(f) || /(^|\/)tests\.rs$/i.test(f) || /(^|\/)probe-[\w.-]+$/i.test(f)
+export const isTestFile = (f) => isFixture(f) || /(^|\/)(tests?|__tests__|e2e|spec|probes?)\//i.test(f) || /\.(test|spec)\.[a-z]+$/i.test(f) || /(^|\/)[\w.-]+_tests?\.(rs|go|py)$/i.test(f) || /(^|\/)test_[\w.-]+\.py$/i.test(f) || /(^|\/)tests\.rs$/i.test(f) || /(^|\/)probe-[\w.-]+\.(?:[cm]?[jt]s|py)$/i.test(f)
 // Returns a function: is this 1-based line inside a `#[cfg(test)] mod name { ... }` block? Only that block counts (found by matching braces, with string and char
 // literals blanked first); an attribute that is not followed by a module, or a block that never closes, covers nothing.
 export const rustTestLines = (file, text) => {
   if (!/\.rs$/i.test(file) || !text.includes('#[cfg(test)]')) return () => false
   // Raw strings (r#"..."#), strings, char literals and comments are blanked (same length, newlines kept) so a brace inside one is not counted.
-  const blanked = text.replace(/\br(#*)"[\s\S]*?"\1|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\\n]|\\.)'|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (s) => s.replace(/[^\n]/g, ' '))
+  const blanked = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\\n]|\\.)'|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (s) => s.replace(/[^\n]/g, ' '))
   const ranges = []
   for (const m of blanked.matchAll(/^[ \t]*#\[cfg\(test\)\][ \t]*\r?\n(?:[ \t]*#\[[^\]\n]*\][ \t]*\r?\n)*[ \t]*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{/gm)) {
     let depth = 0

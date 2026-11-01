@@ -161,6 +161,7 @@ Meerkat is built to be extended without touching its code.
 | To | Do this |
 |---|---|
 | Add a command you already run | `meerkat check new --id e2e --cmd "npm run test:e2e" --yes` |
+| Add a real-window click-through for your app | [docs/click-through.md](docs/click-through.md) |
 | Get suggestions for tests your project can run | `meerkat recommend` |
 | Make a preset of your own | `meerkat preset new --name pre-push --tier fast --group security,ui --personal` |
 | Write a check in JavaScript | a file in `.meerkat/checks/`, found with no setting |

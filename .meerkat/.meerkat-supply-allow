@@ -18,3 +18,5 @@ e9f2a92 tools/accuracy-extra-infra.mjs
 tools/fake-apps/express-api.mjs
 tests/redact-remainder.test.ts
 tests/falsepositives.test.ts
+# Accepted: ccdec21 held a key-header sentence in a code comment (no key). History is not rewritten; the comment is reworded in the next commit.
+ccdec21 thorough/secret-scan.mjs
