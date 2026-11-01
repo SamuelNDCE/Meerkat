@@ -58,7 +58,10 @@ function main(argv) {
   const clPath = join(ROOT, 'CHANGELOG.md')
   const head = '# Changelog\n\nEvery released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.\n\n'
   const old = existsSync(clPath) ? readFileSync(clPath, 'utf8').replace(/^# Changelog[\s\S]*?\r?\n\r?\n(?=## )/, '') : ''
-  writeFileSync(clPath, head + entry + '\n' + old)
+  // Keep the file's own line endings (a CRLF file stays CRLF), so the whitespace check never sees a mix.
+  const crlf = old.includes(String.fromCharCode(13, 10))
+  const text = (head + entry + String.fromCharCode(10) + old).split(String.fromCharCode(13, 10)).join(String.fromCharCode(10))
+  writeFileSync(clPath, crlf ? text.split(String.fromCharCode(10)).join(String.fromCharCode(13, 10)) : text)
   execFileSync(process.execPath, [join(ROOT, 'tools', 'make-badges.mjs')], { stdio: 'inherit' })
   console.log(`Done. Now commit package.json, CHANGELOG.md and docs/images/badges, push, and merge. Tag it: git tag v${next}`)
   return 0
