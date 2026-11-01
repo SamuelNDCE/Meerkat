@@ -2,6 +2,11 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## 0.3.13 (2026-11-01)
+
+- The package is on npm: npm install -g @samuelndce/meerkat
+- releases publish to npm through trusted publishing (no stored token)
+
 ## 0.3.12 (2026-11-01)
 
 - Findings Meerkat itself calls notes (low, info, low confidence, probably a false alarm) are no longer counted as bugs
