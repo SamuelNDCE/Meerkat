@@ -13,3 +13,4 @@ regex-in-loop thorough/repo-docs.mjs
 regex-in-loop thorough/robustness.mjs
 regex-in-loop thorough/static.mjs
 regex-in-loop tools/gen-coverage.mjs
+regex-in-loop thorough/privacy.mjs

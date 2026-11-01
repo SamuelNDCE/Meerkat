@@ -10,3 +10,5 @@ tools/menu-shot.mjs
 tools/yourapp-shot.mjs
 tools/accuracy-extra-code.mjs
 tools/accuracy-extra-infra.mjs
+tools/results-shot.mjs
+tools/results-gif.mjs

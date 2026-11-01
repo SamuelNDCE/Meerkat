@@ -1,6 +1,6 @@
 // The polish pass on the terminal UI: the happy all-clear screen, the header order, 10+ check rows at 30 lines, a scrolling timeline,
 // the severity legend, and the rotating status line on the live board (real counters only).
-// @ts-nocheck
+// @ts-nocheck the .mjs modules under test have no type declarations
 import { describe, expect, test } from 'vitest'
 import { initialResultsState, renderResults, resultsStep, SEV_MEANING } from './results.mjs'
 import { cleanSampleData, sampleData, SAMPLE_NOTE } from './resultssample.mjs'
