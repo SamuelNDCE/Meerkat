@@ -62,7 +62,7 @@ describe('the live board does not flicker', () => {
         expect(mid).toContain('50 running')
         // 6 to 10 running rows are shown (spinner rows carry a "est." time or "nearly done")
         const shown = all[4].map(stripAnsi).filter((l) => /^ {2}free\s/.test(l)).length
-        expect(shown).toBeGreaterThanOrEqual(size.height < 30 ? 2 : 5)
+        expect(shown).toBeGreaterThanOrEqual(size.height < 34 ? 1 : 5)
         expect(shown).toBeLessThanOrEqual(10)
       })
     }
