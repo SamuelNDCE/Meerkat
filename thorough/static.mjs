@@ -144,7 +144,8 @@ const safeLiteralAssign = (t, m, why) => {
   const from = m.index + m[0].length
   const eol = t.indexOf('\n', from)
   const rest = t.slice(from, eol < 0 ? t.length : eol).trim()
-  return /^(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`$\\]*`)\s*;?\s*(?:\/\/.*)?$/.test(rest)
+  // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
+  return /^(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`$\\]*`|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)\s*;?\s*(?:\/\/.*)?$/.test(rest)
 }
 const riskyCode = (root) => {
   const allow = allowList(root, '.meerkat-risky-allow')
@@ -232,9 +233,14 @@ const cssContrast = (root) => {
 
 // ---- meta-seo: what a search result and a link preview are made from
 const metaSeo = (root) => {
+  // The page of a desktop app (Electron or Tauri) is loaded from disk into the app's own window: no search engine or link preview sees it.
+  const pkg = readText(root, 'package.json')
+  // A site kept in docs/, site/ or similar in the same repository is still public and still checked.
+  const desktop = /"electron"\s*:/.test(pkg) || trackedFiles(root).some((x) => /(^|\/)src-tauri\/tauri\.conf\.json$/.test(x))
   const f = []
   for (const x of trackedFiles(root)) {
     if (!/\.html?$/i.test(x) || /(^|\/)(node_modules|dist|build|fixtures?)\//.test(x)) continue
+    if (desktop && !/(^|\/)(docs?|site|website|www|landing|pages|public)\//i.test(x)) continue
     const t = readText(root, x)
     if (!/<html\b/i.test(t)) continue
     const title = /<title>([^<]*)<\/title>/i.exec(t)?.[1]?.trim() ?? ''

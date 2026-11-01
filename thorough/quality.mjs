@@ -90,7 +90,9 @@ const lineLength = (root) => {
 const debugWhy = (x, line, prev, testy, cliish) => {
   if (/\.(m?[jt]sx?|cjs)$/.test(x)) {
     if (/\bdebugger\s*;|(?:^|[;{}])\s*debugger\s*(?:$|\/[/*])/.test(line)) return 'has debugger; left in (it stops the program when a debugger is attached)'
-    if (!testy && !cliish && /\bconsole\.log\s*\(/.test(line)) return 'has console.log() left in'
+    // A console.log behind an environment flag or a DEBUG / VERBOSE switch on the same line is a deliberate, switchable log.
+    const log = /\bconsole\.log\s*\(/.exec(line)
+    if (!testy && !cliish && log && !/process\.env\b|\b(?:DEBUG|VERBOSE)\b/.test(line.slice(0, log.index))) return 'has console.log() left in'
   }
   if (/\.py$/.test(x) && /\bprint\(/.test(line) && (/print\(\s*f?["']\s*DEBUG/i.test(line) || /#\s*debug/i.test(prev))) return 'has a debug print() left in'
   if (/\.rs$/.test(x)) {

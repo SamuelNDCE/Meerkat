@@ -244,6 +244,19 @@ const externalFontsCdn = (root) => {
 // ---- geolocation-and-media-requests: a permission prompt (location, camera, microphone, notifications, clipboard) called with no click or submit handler nearby
 const PERMISSION_CALL = /navigator\.geolocation\b|\bgetUserMedia\s*\(|Notification\.requestPermission\s*\(|navigator\.clipboard\.(readText|read)\s*\(/
 const GESTURE = /\bon(click|submit|change|input|keydown|keyup|pointerdown|pointerup|touchend)\b|@(click|submit|change)\b|on:(click|submit|change)\b|addEventListener\(\s*['"](click|submit|change|pointerdown|pointerup|touchend|keydown|keyup)['"]|\bbutton\b/i
+// The call sits inside a named function (declared up to 40 lines above) and that function is called from a handler elsewhere in the file:
+// it runs on the gesture, not at load time.
+const FN_HEAD = /\bfunction\s+(\w+)\s*\(|\b(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|\w+\s*=>)/
+const calledFromGesture = (ls, i) => {
+  for (let k = i - 1; k >= Math.max(0, i - 40); k--) {
+    const m = FN_HEAD.exec(ls[k])
+    if (!m) continue
+    const name = m[1] ?? m[2]
+    const call = new RegExp(`\\b${name}\\s*\\(|[=:,(]\\s*${name}\\b`)
+    return ls.some((l, j) => j !== k && call.test(l) && GESTURE.test(ls.slice(Math.max(0, j - 8), j + 1).join('\n')))
+  }
+  return false
+}
 const geolocationAndMediaRequests = (root) => {
   const f = []
   for (const x of files(root, FRONT)) {
@@ -253,7 +266,7 @@ const geolocationAndMediaRequests = (root) => {
       const m = PERMISSION_CALL.exec(line)
       if (!m) return
       const before = ls.slice(Math.max(0, i - 8), i + 1).join('\n')
-      if (!GESTURE.test(before)) f.push(`${x}:${i + 1} calls ${m[0].trim()} with no click or submit handler in the 8 lines above (it may run at load time)`)
+      if (!GESTURE.test(before) && !calledFromGesture(ls, i)) f.push(`${x}:${i + 1} calls ${m[0].trim()} with no click or submit handler in the 8 lines above (it may run at load time)`)
     })
   }
   return finish('geolocation-and-media-requests', f, 'every permission prompt is behind a user action')

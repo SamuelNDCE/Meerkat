@@ -13,7 +13,9 @@ const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?|coverage|\.
 const MINIFIED = /\.min\.(m?js|css)$/i
 const GENERATED = /(^|\/)(package-lock\.json|Cargo\.lock|yarn\.lock|pnpm-lock\.yaml)$|\.(lock|snap)$/i
 const SCRIPT = /\.(m?[jt]sx?|cjs)$/i
-const FRONTEND = /\.(m?[jt]sx?|cjs|html?|vue|svelte)$/i
+// Test code and test harnesses run once, so a loop smell there costs nothing that matters.
+const TEST_PATH = /(^|\/)(tests?|__tests__|spec|specs|e2e|cypress)\/|\.(test|spec)\.[cm]?[jt]sx?$/i
+const FRONTEND =/\.(m?[jt]sx?|cjs|html?|vue|svelte)$/i
 const STYLE_OR_MARKUP = /\.(m?[jt]sx?|cjs|css|scss|html?|vue|svelte)$/i
 const SOURCE_TEXT = /\.(m?[jt]sx?|cjs|json|html?|css|scss|rs|toml|ya?ml|py|go|sh|svelte|vue|xml|cfg|ini)$|(^|\/)(Makefile|Dockerfile)$/i
 const SERVER_FILE = /(^|\/)(server|app|api|routes?|handlers?|controllers?|index)\.[cm]?[jt]s$/i
@@ -131,7 +133,7 @@ const regexInLoop = (root) => {
   const allow = allowSet(root)
   const f = []
   for (const x of files(root, SCRIPT)) {
-    if (allowed(allow, id, x)) continue
+    if (allowed(allow, id, x) || TEST_PATH.test(x)) continue
     const cl = codeLines(readText(root, x))
     const inLoop = regions(cl, LOOP)
     cl.forEach((l, i) => {
@@ -147,7 +149,7 @@ const domQueryInLoop = (root) => {
   const allow = allowSet(root)
   const f = []
   for (const x of files(root, FRONTEND)) {
-    if (allowed(allow, id, x)) continue
+    if (allowed(allow, id, x) || TEST_PATH.test(x)) continue
     const cl = codeLines(readText(root, x))
     const inLoop = regions(cl, LOOP)
     cl.forEach((l, i) => {

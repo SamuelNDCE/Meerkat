@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test } from 'vitest'
 import { applicablePacks, GENERIC_PACKS } from '../lib/init.mjs'
+import { idleKillSecondsFor } from '../lib/timeouts.mjs'
 import { tool } from '../lib/tool-check.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -148,6 +149,58 @@ describe('packs and not applicable', () => {
     expect(tool({ id: 'shellcheck', bin: 'shellcheck', onFiles: 'x', fixture: ['x'], install: 'i', title: 't' }).appliesTo).toEqual(['**/*.sh', '**/*.bash'])
     expect(tool({ id: 'hadolint', bin: 'hadolint', onFiles: 'x', fixture: ['x'], install: 'i', title: 't' }).appliesTo).toContain('**/Dockerfile')
     expect(tool({ id: 'other', bin: 'other', fixture: ['x'], install: 'i', title: 't' }).appliesTo).toBeUndefined()
+  })
+})
+
+describe('second Plume run (2026-11-01)', () => {
+  test('risky-code: innerHTML = ICON.close (an ALL_CAPS constant) is not reported, a variable or a computed key is', () => {
+    const ok = folder({ 'a.js': "btn.innerHTML = ICON.close\nbtn.innerHTML = ICONS['x']\n" })
+    expect(run('thorough/static.mjs', 'risky-code', ok).code).toBe(0)
+    const bad = folder({ 'a.js': 'btn.innerHTML = icon.close\nbtn.innerHTML = ICONS[name]\n' })
+    const r = run('thorough/static.mjs', 'risky-code', bad)
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('a.js:1')
+    expect(r.out).toContain('a.js:2')
+  })
+  test('debug-leftovers: a console.log behind process.env or DEBUG is allowed, a bare one is not', () => {
+    const ok = folder({ 'src/a.js': "if (QA && process.env.APP_LOG) console.log('x')\nDEBUG && console.log('y')\n" })
+    expect(run('thorough/quality.mjs', 'debug-leftovers', ok).code).toBe(0)
+    const bad = folder({ 'src/a.js': "console.log('x', process.env.HOME)\n" })
+    expect(run('thorough/quality.mjs', 'debug-leftovers', bad).code).toBe(1)
+  })
+  test('regex-in-loop and dom-query-in-loop ignore test files but still report source files', () => {
+    const body = 'for (const x of xs) {\n  new RegExp(x)\n  document.querySelector(x)\n}\n'
+    const ok = folder({ 'tests/a.cjs': body })
+    expect(run('thorough/health.mjs', 'regex-in-loop', ok).code).toBe(0)
+    expect(run('thorough/health.mjs', 'dom-query-in-loop', ok).code).toBe(0)
+    const bad = folder({ 'src/a.js': body })
+    expect(run('thorough/health.mjs', 'regex-in-loop', bad).code).toBe(1)
+    expect(run('thorough/health.mjs', 'dom-query-in-loop', bad).code).toBe(1)
+  })
+  test('geolocation-and-media-requests: a clipboard read in a function called from a key handler is allowed, a load-time one is not', () => {
+    const lead = Array.from({ length: 12 }, (_, i) => `// filler ${i}`).join('\n')
+    const ok = folder({
+      'src/a.js': `async function pasteIt() {\n  const t = await navigator.clipboard.readText()\n  use(t)\n}\n${lead}\nwindow.addEventListener('keydown', (e) => {\n  if (e.ctrlKey) pasteIt()\n})\n`,
+    })
+    expect(run('thorough/privacy.mjs', 'geolocation-and-media-requests', ok).code).toBe(0)
+    const bad = folder({ 'src/a.js': `async function pasteIt() {\n  const t = await navigator.clipboard.readText()\n}\n${lead}\npasteIt()\n` })
+    expect(run('thorough/privacy.mjs', 'geolocation-and-media-requests', bad).code).toBe(1)
+  })
+  test('meta-seo: the window page of an Electron app is not checked, a site page in docs/ of the same repository still is', () => {
+    const pkg = JSON.stringify({ name: 'x', version: '1.0.0', main: 'electron/main.cjs', devDependencies: { electron: '41.0.0' } })
+    const app = folder({ 'package.json': pkg, 'index.html': '<html><head><title>Plume</title></head><body></body></html>' })
+    expect(run('thorough/static.mjs', 'meta-seo', app).code).toBe(0)
+    const site = folder({ 'package.json': pkg, 'docs/index.html': '<html><head><title>Plume</title></head><body></body></html>' })
+    expect(run('thorough/static.mjs', 'meta-seo', site).code).toBe(1)
+    const web = folder({ 'index.html': '<html><head><title>A page title here</title></head><body></body></html>' })
+    expect(run('thorough/static.mjs', 'meta-seo', web).code).toBe(1)
+  })
+  test('a discovered script that is silent for its whole run gets an idle limit of twice its estimate', () => {
+    const c = { id: 'found-tests-x', lane: 'windows', estSeconds: 150, timeoutSeconds: 900 }
+    expect(idleKillSecondsFor(c)).toBe(300)
+    expect(idleKillSecondsFor({ ...c, estSeconds: 20 })).toBe(180)
+    expect(idleKillSecondsFor({ ...c, timeoutSeconds: 240 })).toBe(240)
+    expect(idleKillSecondsFor({ ...c, estSeconds: 150 }, { idleKill: { 'found-tests-x': 45 } })).toBe(45)
   })
 })
 
