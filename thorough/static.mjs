@@ -177,10 +177,8 @@ const paramOnlyConstants = (t, at, param) => {
   const params = splitArgs(d[2] ?? d[4])
   const idx = params.findIndex((p) => p === param)
   // Exported helpers have callers elsewhere; any write to the parameter (plain, compound, ++/--, destructuring target) ends the argument-only reasoning.
-  if (/\bexport\b[^\n]{0,20}$/.test(t.slice(Math.max(0, d.index - 40), d.index + 12))) return false
-  const w = param.replace(/\$/g, '\\$')
+  if (/(?:^|[\n;}])[ \t]*export\s+(?:default\s+)?(?:async\s+)?$/.test(t.slice(Math.max(0, d.index - 60), d.index))) return false
   if (idx < 0 || params.some((p) => p.startsWith('...'))) return false
-  if (new RegExp(String.raw`(?<![\w$.])${w}\s*(?:\*\*|<<|>>>?|\|\||&&|\?\?|[-+*/%|&^])?=(?![=>])|(?:\+\+|--)\s*${w}\b|\b${w}\s*(?:\+\+|--)|[\[{,][^=;\n]*\b${w}\b[^=;\n]*[\]}]\s*=(?!=)`).test(t.slice(d.index + d[0].length))) return false
   // The sink must sit inside the helper's braced body, and nothing inside that body may declare the same name again (a nested function parameter, let, const, var).
   const open = t.indexOf('{', d.index + d[0].length - 1)
   if (open < 0 || t.slice(d.index + d[0].length, open).trim() !== '') return false
@@ -200,7 +198,9 @@ const paramOnlyConstants = (t, at, param) => {
   // in a comment, or a declaration of the name (const, let, var, destructuring) in the body.
   const rawBody = t.slice(open + 1, close)
   if (/=>|\bfunction\b|\bclass\b|\$\{|`/.test(rawBody.replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, ' '))) return false
-  if (new RegExp(String.raw`\b(?:const|let|var)\s+(?:(?<![\w$])${p}(?![\w$])|[\[{][^=;]*(?<![\w$])${p}(?![\w$]))`).test(blank.slice(open + 1, close))) return false
+  // Strictest form: inside the helper the name appears exactly once, as the sink's value. Any write, shadowing, loop variable or destructuring needs a second mention.
+  const mentions = blank.slice(open + 1, close).match(new RegExp(String.raw`(?<![\w$])${p}(?![\w$])`, 'g')) ?? []
+  if (mentions.length !== 1) return false
   const n = name.replace(/\$/g, '\\$')
   // A name inside a class name or string ('find-btn') is not a use of the helper.
   const uses = [...t.matchAll(new RegExp(String.raw`(?<![\w$.\-'"\x60])${n}(?![\w$\-])`, 'g'))]

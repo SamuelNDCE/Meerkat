@@ -57,6 +57,15 @@ describe('innerHTML set from a helper parameter', () => {
     expect(status({ 'a.js': `export ${helper}btn(ICON.up, 'Up', f)\n` })).toBe(1)
     expect(status({ 'a.js': `export function btn(icon) {\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n` })).toBe(1)
   })
+  test('reported: export default function and export default async function', () => {
+    expect(status({ 'a.js': "export default function btn(icon) {\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n" })).toBe(1)
+    expect(status({ 'a.js': "export default async function btn(icon) {\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n" })).toBe(1)
+  })
+  test('reported: the parameter is used again in the body (loop variable, write, destructuring)', () => {
+    for (const extra of ['for (icon of list) {}', 'icon++', '[icon] = list', '({ icon } = obj)', 'icon ||= x', 'try { f() } catch (icon) { g() }', 'const o = { set(icon) { z = 1 } }']) {
+      expect(status({ 'a.js': `const btn = (icon) => {\n  ${extra}\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n` }), extra).toBe(1)
+    }
+  })
   test('reported: the parameter is changed with a compound assignment', () => {
     expect(status({ 'a.js': "const btn = (icon) => {\n  icon += location.hash\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n" })).toBe(1)
   })
