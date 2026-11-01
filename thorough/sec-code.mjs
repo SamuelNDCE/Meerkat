@@ -3,7 +3,7 @@
 // Run through the security-plus pack, or by hand:
 //   node thorough/sec-code.mjs <check> [--root <dir>]      node thorough/sec-code.mjs <check> --fixtures   (must exit 1)
 // A finding you accept goes in .meerkat-seccode-allow: a path (accepts the whole file) or path:line, one per line, # for comments.
-import { finish, main, readText, rustTestStart, trackedFiles, withFixture } from './kit.mjs'
+import { finish, main, readText, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
 
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|kt|cs|svelte|vue)$/i
 const CONFIG = /\.(ya?ml|toml|json|ini|env|conf|cfg|properties|xml)$|(^|\/)\.env[^/]*$|(^|\/)(Dockerfile[^/]*|docker-compose[^/]*)$/i
@@ -62,11 +62,11 @@ function runRules(root, rules) {
   for (const x of trackedFiles(root)) {
     if (SKIP.test(x) || BINARY.test(x) || allow.has(x)) continue
     const t = readText(root, x)
-    const testFrom = rustTestStart(x, t) // Rust unit tests sit in the same file, after #[cfg(test)]: not shipped code
+    const inTest = rustTestLines(x, t) // Rust unit tests sit in the same file, in a #[cfg(test)] module: not shipped code
     for (const r of rules) {
       if (!r.files(x)) continue
       for (const { line, why } of r.scan(t, x)) {
-        if (line && line >= testFrom) continue
+        if (line && inTest(line)) continue
         const where = line ? `${x}:${line}` : x
         if (!allow.has(where)) f.push(`${where} ${why}`)
       }

@@ -12,6 +12,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - the results screen names every check that did not run (skipped, covered by a wider check, turned off) instead of leaving its description empty
 - ep-ipc-handler-no-sender-check no longer flags handlers whose sender is checked through a helper in the same file, or registered through an ipcMain parameter that every caller fills with a wrapper that checks the sender (found scanning Plume)
 - secret checks leave test code alone: Rust unit tests after #[cfg(test)], *_tests.rs, probe folders, values that say they are fake (FAKE_TOKEN, SUPERSECRET, the AWS documentation keys), and a private key header in a comment with no key under it. On NeuralVault this removed all 25 critical findings, every one of them a test fixture
+- the rule-table checks (Electron, Rust, secrets and the rest) leave test files, tests.rs and probe-* scripts alone; Rust unit tests are found by matching the braces of the #[cfg(test)] module, so code after it is scanned again
 - markdownlint skips the folders named fixtures, where documents are broken on purpose
 
 ## 0.3.13 (2026-11-01)

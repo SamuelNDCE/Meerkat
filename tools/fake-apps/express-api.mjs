@@ -86,7 +86,7 @@ export function findUser(db, id) {
 }
 `,
   'src/server.js': clean['src/server.js'].replace("{ httpOnly: true, secure: true, sameSite: 'strict', maxAge: 3600000 }", "{ sameSite: 'none', maxAge: 3600000 }"),
-  'config/production.json': json({ db: { password: 'hunter2hunter2xyz' }, awsAccessKeyId: 'AKIAIOSFODNN7EXAMPLE' }),
+  'config/production.json': json({ db: { password: 'hunter2hunter2xyz' }, awsAccessKeyId: 'AKIA' + 'QWERTYUIOPASDFGH' }), // not AWS's documented EXAMPLE key: the secret scan deliberately skips that one
 }
 
 export default {

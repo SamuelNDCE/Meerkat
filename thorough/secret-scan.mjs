@@ -14,7 +14,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, wr
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { argVal, fail, hasFlag, notRun, pass, repoRoot, say } from './lib.mjs'
-import { FAKE_VALUE, configPath, isTestFile, rustTestStart } from './kit.mjs'
+import { FAKE_VALUE, configPath, isTestFile, rustTestLines } from './kit.mjs'
 
 const RULES = [
   { name: 'aws-access-key-id', re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
@@ -102,10 +102,10 @@ export function scan(root) {
     scanned++
     const text = buf.toString('utf8')
     const lines = text.split(/\r?\n/)
-    // Rust unit tests sit in the same file as the code, after #[cfg(test)]: fake secrets there are on purpose.
-    const testFrom = hasFlag('--include-tests') ? Infinity : rustTestStart(norm, text)
+    // Rust unit tests sit in the same file as the code, in a #[cfg(test)] module: fake secrets there are on purpose.
+    const inTest = hasFlag('--include-tests') ? () => false : rustTestLines(norm, text)
     lines.forEach((line, i) => {
-      if (line.length > 2000 || i + 1 >= testFrom) return
+      if (line.length > 2000 || inTest(i + 1)) return
       for (const rule of RULES) {
         const m = rule.re.exec(line)
         if (!m) continue
@@ -113,7 +113,13 @@ export function scan(root) {
         if (rule.entropy && entropy(value) < rule.entropy) continue
         // A value that says it is fake (FAKE_TOKEN, SUPERSECRET) is not a secret. A key block mentioned in a comment has no key body under it.
         if (!hasFlag('--include-tests') && (FAKE_VALUE.test(value) || FAKE_VALUE.test(m[0]))) continue
-        if (rule.name === 'private-key-block' && !/^[A-Za-z0-9+/=]{10,}/.test((lines[i + 1] ?? '').trim())) continue
+        // Only a header in a comment, with no key text after it on the same line (also after a literal \n) or on the next, is a mention and not a key.
+        // The same for a constant that is the header alone (`const PEM_BEGIN = "-----BEGIN PRIVATE KEY-----"`): the line ends right after it.
+        if (rule.name === 'private-key-block') {
+          const after = line.slice(m.index + m[0].length).replace(/\\n/g, '\n')
+          const noBody = !/^[\s"'\\]*[A-Za-z0-9+/=]{10,}/.test(after) && !/^[A-Za-z0-9+/=]{10,}/.test((lines[i + 1] ?? '').trim())
+          if (noBody && (/^\s*(?:\/\/|#|\*|\/\*|--\s)/.test(line) || /^["'`]?[\s)\],;}]*$/.test(after.trim()))) continue
+        }
         if (allow.some((a) => a.rule === rule.name && line.includes(a.text))) continue
         findings.push({ file: norm, line: i + 1, rule: rule.name, sample: `${value.slice(0, 4)}...` })
       }

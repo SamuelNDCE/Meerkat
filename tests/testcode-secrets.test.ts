@@ -39,6 +39,21 @@ describe('secret-scan', () => {
     const r = run('secret-scan.mjs', [], project({ 'src/lib.rs': `const K: &str = "${REAL_AWS}";\n\n#[cfg(test)]\nmod tests {}\n` }))
     expect(r.status).toBe(1)
   })
+  test('code AFTER the test module closes is scanned again', () => {
+    const r = run('secret-scan.mjs', [], project({ 'src/lib.rs': `#[cfg(test)]\nmod tests {\n    fn t() { let s = "{"; }\n}\n\nconst K: &str = "${REAL_AWS}";\n` }))
+    expect(r.status).toBe(1)
+  })
+  test('an attribute that is not followed by a module covers nothing', () => {
+    const r = run('secret-scan.mjs', [], project({ 'src/lib.rs': `#[cfg(test)]\nuse std::fmt;\nconst K: &str = "${REAL_AWS}";\n` }))
+    expect(r.status).toBe(1)
+  })
+  test('a key header inside a string value is still reported', () => {
+    const header = '-----BEGIN ' + 'PRIVATE KEY-----'
+    expect(run('secret-scan.mjs', [], project({ 'src/a.ts': `const k = "${header}\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC"\n` })).status).toBe(1)
+    // A constant that is the header alone is a marker for a parser, not a key; with anything after it on the line it is reported.
+    expect(run('secret-scan.mjs', [], project({ 'src/a.ts': `const PEM_BEGIN = "${header}"\n` })).status).toBe(0)
+    expect(run('secret-scan.mjs', [], project({ 'src/a.ts': `const k = "${header} MIIEvQIBADANBgkqhkiG9w0BAQEFAASC"\n` })).status).toBe(1)
+  })
   test('a *_tests.rs file is skipped', () => {
     expect(run('secret-scan.mjs', [], project({ 'src/pair_tests.rs': `const K: &str = "${REAL_AWS}";\n` })).status).toBe(0)
   })

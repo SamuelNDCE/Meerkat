@@ -20,7 +20,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { RULE_SEVERITY } from '../lib/findings.mjs'
-import { configPath, finding, isFixture, isText, readText, trackedFiles } from './kit.mjs'
+import { configPath, finding, isTestFile, isText, readText, trackedFiles } from './kit.mjs'
 
 const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|out|release)\//i
 const MINIFIED = /\.min\.(js|css)$/i
@@ -65,7 +65,8 @@ function matches(rule, text, file, project) {
 
 // Runs every rule over the tracked files. Returns { found: [{rule, text}], na: [ids], files }.
 export function evaluate(root, rules, { files = trackedFiles(root), allow = new Set(), read = (f) => readText(root, f) } = {}) {
-  const usable = files.filter((f) => !isFixture(f) && !VENDORED.test(f) && !MINIFIED.test(f))
+  // Test code and QA probe scripts are not shipped; the rule tables are about what ships.
+  const usable = files.filter((f) => !isTestFile(f) && !VENDORED.test(f) && !MINIFIED.test(f))
   const found = []
   const hits = [] // the same hits with file, line and severity, for the finding lines
   const na = []
