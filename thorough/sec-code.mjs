@@ -7,7 +7,7 @@ import { finish, main, readText, rustTestLines, trackedFiles, withFixture } from
 
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|kt|cs|svelte|vue)$/i
 const CONFIG = /\.(ya?ml|toml|json|ini|env|conf|cfg|properties|xml)$|(^|\/)\.env[^/]*$|(^|\/)(Dockerfile[^/]*|docker-compose[^/]*)$/i
-const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|tests?|__tests__|fixtures?|spec|examples?|docs?)\/|\.(test|spec)\.[a-z]+$|(^|\/)[\w.-]+_tests?\.(rs|go|py)$|(^|\/)test_[\w.-]+\.py$|\.min\.(m?js|css)$|(^|\/)sec-code\.mjs$/i
+const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|tests?|__tests__|probes?|fixtures?|spec|examples?|docs?)\/|(^|\/)probe-[\w.-]+\.(?:[cm]?[jt]s|py)$|\.(test|spec)\.[a-z]+$|(^|\/)[\w.-]+_tests?\.(rs|go|py)$|(^|\/)test_[\w.-]+\.py$|\.min\.(m?js|css)$|(^|\/)sec-code\.mjs$/i
 const BINARY = /\.(png|jpe?g|gif|webp|ico|pdf|zip|gz|tgz|woff2?|ttf|otf|eot|mp[34]|mov|wasm|bin|exe|dll|so|dylib|lock|svg)$/i
 const COMMENT = /^\s*(\/\/|#|\/\*|\*|--\s)/
 

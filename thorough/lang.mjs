@@ -3,7 +3,7 @@
 // Limits are set in .meerkat-budgets.json under "lang": maxAny (default 25) and maxUnwrap (default 40).
 // An accepted finding goes in .meerkat-lang-allow, one "<check-id> <path>" per line. That covers the whole file for that check.
 // Code is read with strings, comments and (in JavaScript) regex literals blanked out first, so a word inside one is never a finding.
-import { finish, isFixture, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isTestFile, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.lang ?? {}
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|out|coverage|fixtures?)\//i
@@ -22,7 +22,7 @@ const RS_OPTS = { quotes: ['"'], rustChar: true }
 
 const allowSet = (root) => new Set(readText(root, '.meerkat-lang-allow').split('\n').map((l) => l.trim().split(/\s+/)).filter((p) => p.length >= 2 && !p[0].startsWith('#')).map((p) => `${p[0]} ${p[1]}`))
 const allowed = (allow, id, x) => allow.has(`${id} ${x}`)
-const files = (root, re, skipTests = false) => trackedFiles(root).filter((x) => re.test(x) && !SKIP.test(x) && !MINIFIED.test(x) && !GENERATED.test(x) && !isFixture(x) && !(skipTests && TEST_FILE.test(x)))
+const files = (root, re, skipTests = false) => trackedFiles(root).filter((x) => re.test(x) && !SKIP.test(x) && !MINIFIED.test(x) && !GENERATED.test(x) && !isFixture(x) && !(skipTests && (TEST_FILE.test(x) || isTestFile(x))))
 // A file averaging more than 400 characters a line is a bundle, not hand-written source, so it is left alone.
 const sourceOf = (root, x) => {
   const t = readText(root, x)
@@ -149,7 +149,7 @@ function codeOnly(src, o = {}) {
 const jsEqeqeq = (root) => {
   const allow = allowSet(root)
   const f = []
-  for (const x of files(root, JS)) {
+  for (const x of files(root, JS, true)) {
     if (allowed(allow, 'js-eqeqeq', x)) continue
     const t = codeOnly(sourceOf(root, x), JS_OPTS)
     for (const m of t.matchAll(/(?<![=!<>])(==|!=)(?!=)/g)) {
@@ -166,7 +166,7 @@ const jsEqeqeq = (root) => {
 const jsVarUsage = (root) => {
   const allow = allowSet(root)
   const f = []
-  for (const x of files(root, JS)) {
+  for (const x of files(root, JS, true)) {
     if (allowed(allow, 'js-var-usage', x) || /\.d\.ts$/i.test(x)) continue
     const t = codeOnly(sourceOf(root, x), JS_OPTS)
     for (const m of t.matchAll(/(?<![\w$.])var\s+[A-Za-z_$[{]/g)) f.push(`${x}:${lineOf(t, m.index)} declares a variable with var (use const or let)`)
@@ -180,7 +180,7 @@ const FN_BODY = /(?:\bfunction\b[^{;]*|=>[ \t\n]*)\{/g
 const jsAwaitInLoop = (root) => {
   const allow = allowSet(root)
   const f = []
-  for (const x of files(root, JS)) {
+  for (const x of files(root, JS, true)) {
     if (allowed(allow, 'js-await-in-loop', x)) continue
     const t = codeOnly(sourceOf(root, x), JS_OPTS)
     for (const m of t.matchAll(/(?<![\w$.])(for|while)\s*\(/g)) {
@@ -249,7 +249,7 @@ function statementText(t, start) {
 const unhandledPromise = (root) => {
   const allow = allowSet(root)
   const f = []
-  for (const x of files(root, JS)) {
+  for (const x of files(root, JS, true)) {
     if (allowed(allow, 'js-unhandled-promise', x)) continue
     const t = codeOnly(sourceOf(root, x), JS_OPTS)
     let at = 0

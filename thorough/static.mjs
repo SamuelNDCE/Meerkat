@@ -4,7 +4,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, posix } from 'node:path'
 import { isConstantMarkup } from './guards.mjs'
-import { finding, finish, isFixture, isText, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finding, finish, isFixture, isTestFile, isText, main, readBudgets, readText, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.static ?? {}
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|cs|svelte|vue)$/i
@@ -257,13 +257,36 @@ const riskyCode = (root) => {
   const fallbackSeverity = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY ?? '') ? process.env.MEERKAT_DEFAULT_SEVERITY : 'high'
   const f = []
   for (const x of trackedFiles(root)) {
-    if (!isText(x) || TESTISH.test(x) || /(^|\/)(node_modules|dist|build|vendor)\//.test(x) || x.endsWith('static.mjs') || allow.has(x)) continue
+    if (!isText(x) || TESTISH.test(x) || isTestFile(x) || /(^|\/)(node_modules|dist|build|vendor)\//.test(x) || x.endsWith('static.mjs') || allow.has(x)) continue
     const t = readText(root, x)
+    const inRustTest = rustTestLines(x, t)
     for (const [re, why, only] of RISKY) {
       if (!only.test(x)) continue
       // Every hit counts, not just the first in a file: a second innerHTML or eval further down is a separate risk.
       for (const m of t.matchAll(new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`))) {
         if (safeLiteralAssign(t, m, why)) continue
+        // Not code that runs: a hit in a Rust unit-test module, in a comment (a note that says the call is banned), or inside a string literal (sample code a detector or a
+        // test feeds to itself). The plain-http rule matches the string itself, so it is judged as before.
+        if (inRustTest(lineOf(t, m.index))) continue
+        const ls = t.lastIndexOf('\n', m.index - 1) + 1
+        const before = t.slice(ls, m.index)
+        if (/^\s*(?:\/\/|\/\*|\*|#)/.test(before) || (!why.startsWith('a plain http') && /\.(rs|py|go)$/.test(x) && (before.match(/(?<!\\)"/g) ?? []).length % 2 === 1)) continue
+        if (/\.[cm]?[jt]sx?$/.test(x) && /\/\/[^\n]*$/.test(before) && !/['"`][^'"`\n]*\/\/[^\n]*$/.test(before)) continue
+        const lineText = t.slice(ls, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index))
+        // A plain http:// name that is only compared, trimmed or declared as a namespace is an identifier, not a request (XML and metadata namespaces, URL prefixes).
+        if (why.startsWith('a plain http') && (/\b(?:trim_start_matches|strip_prefix|starts_with|startsWith|trimStart|replace|removePrefix)\b/.test(lineText) || /(?:apache\.org\/xml|ns\.adobe\.com|purl\.org|xmlns\.com|openxmlformats\.org|schemas\.microsoft\.com|ns\.useplus\.org|iptc\.org)/i.test(m[0] + lineText))) continue
+        // MD5 and SHA-1 are only a risk where a secret or a signature depends on them: a content hash used to find duplicate files is fine.
+        // It is downgraded only on positive evidence of a non-security use (a dedupe key, checksum, ETag, fingerprint, cache key or a hash of a whole file), and only
+        // when no secret or signature word is near. Otherwise it keeps failing; an accepted content hash goes in .meerkat-risky-allow. A downgrade is still reported, as info.
+        if (why.startsWith('MD5')) {
+          const around = t.split('\n').slice(Math.max(0, lineOf(t, m.index) - 4), lineOf(t, m.index) + 3).join('\n')
+          const secretNear = /pass|pwd|secret|token|sign|auth|cert|hmac|credential|api[_-]?key|\bkey\b|session|nonce|salt|\botp\b|\bpin\b/i.test(around)
+          const benign = /dedup|duplicate|checksum|etag|fingerprint|cache[_-]?key|content[_-]?hash|usedforsecurity\s*=\s*False|by_?hash|readFileSync|read_bytes|fs::read/i.test(around)
+          if (benign && !secretNear) {
+            if (!allow.has(`${x}:${lineOf(t, m.index)}`)) structured.push(['info', 'risky-call', x, lineOf(t, m.index), `${why} (used as a content hash or checksum)`])
+            continue
+          }
+        }
         if (!allow.has(`${x}:${lineOf(t, m.index)}`)) {
           f.push(`${x}:${lineOf(t, m.index)} ${why}`)
           // Every hit is reported with its own severity: innerHTML with a value the code does not show to be safe is a medium risk (it depends on where the
