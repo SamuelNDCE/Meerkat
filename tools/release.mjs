@@ -47,6 +47,14 @@ function main(argv) {
   console.log(`${pkg.version} -> ${next}\n\n${entry}`)
   if (dry) return 0
   writeFileSync(pkgPath, pkgText.replace(/("version":\s*")[^"]+(")/, `$1${next}$2`))
+  // package-lock.json repeats the version (top level and the root package); the lockfile-sync check fails when they disagree.
+  const lockPath = join(ROOT, 'package-lock.json')
+  if (existsSync(lockPath)) {
+    const lock = JSON.parse(readFileSync(lockPath, 'utf8'))
+    lock.version = next
+    if (lock.packages?.['']) lock.packages[''].version = next
+    writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n')
+  }
   const clPath = join(ROOT, 'CHANGELOG.md')
   const head = '# Changelog\n\nEvery released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.\n\n'
   const old = existsSync(clPath) ? readFileSync(clPath, 'utf8').replace(/^# Changelog[\s\S]*?\n\n(?=## )/, '') : ''

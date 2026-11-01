@@ -197,7 +197,7 @@ Meerkat's own repository runs its test suite on Windows, macOS and Linux with No
 
 ## Versions and updates
 
-Meerkat uses [semantic versioning](https://semver.org): a patch fixes, a minor adds, a major changes how you use it. The version lives in `package.json`, and everything that shows it (menu, results screen, board, badge) reads it from there. [CHANGELOG.md](CHANGELOG.md) says what changed in each version.
+Meerkat uses [semantic versioning](https://semver.org): the last number is the fix number (0.3.1 is the first fix to 0.3.0), the middle number adds features (0.4.0), and the first changes how you use it (1.0.0). Every fix release bumps the last number, so you can always tell which fixes you have. The version lives in `package.json`, and everything that shows it (menu, results screen, board, badge) reads it from there. [CHANGELOG.md](CHANGELOG.md) says what changed in each version.
 
 When a newer version is published here, the menu and results screen show a yellow line with your version and the new one. `meerkat update` installs it after you say yes. Meerkat looks once a day, read-only, and never installs without your yes (`meerkat update off` turns the look-up off). Maintainers cut a version with `node tools/release.mjs minor "what changed"`.
 

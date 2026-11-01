@@ -2,6 +2,21 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## 0.3.0 (2026-11-01)
+
+- Longest checks start first and timeouts have more leeway
+- the live board never flickers and keeps recent results in view
+- fewer checks end NOT RUN (meerkat tools, built-in fallbacks)
+- projects are checked before a run
+- fake-app end-to-end tests
+- estimate shown against actual time
+- CI green on Windows, macOS and Linux
+- false positives fixed on real projects
+
+# Changelog
+
+Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
+
 ## 0.2.0 (2026-11-01)
 
 - Stuck-test guard: idle kill, skip keys, run deadline
