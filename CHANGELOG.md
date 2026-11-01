@@ -2,6 +2,12 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## 0.3.1 (2026-11-01)
+
+- README pictures: the running GIF is bigger with no empty block below it
+- the results GIF scrolls slower, one row at a time
+- GIF frames are trimmed of empty space
+
 ## 0.3.0 (2026-11-01)
 
 - every update shows the yellow update line, including a fix published without a new version number
