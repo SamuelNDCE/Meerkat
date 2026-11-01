@@ -74,6 +74,8 @@ const clean = {
   'src/styles.css': css,
   'src/main.tsx': `import { createRoot } from 'react-dom/client'\nimport { NotesApp } from './App'\n\ncreateRoot(document.getElementById('root')!).render(<NotesApp />)\n`,
   'src/App.tsx': app,
+  // The generated app has no node_modules, so tsc (when the machine has it) cannot find the react types: that check is turned off here, not part of what the fake app tests.
+  'meerkat.config.json': json({ disable: ['tsc'] }),
   'tsconfig.json': json({ compilerOptions: { target: 'ES2022', module: 'ESNext', jsx: 'react-jsx', strict: true, noUncheckedIndexedAccess: true, skipLibCheck: true }, include: ['src'] }),
   'tests/app.test.js': `import test from 'node:test'\nimport assert from 'node:assert/strict'\n\ntest('notes are plain data', () => {\n  assert.deepEqual([{ id: 1, text: 'a' }].map((n) => n.id), [1])\n})\n`,
 }

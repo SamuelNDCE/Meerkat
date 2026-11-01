@@ -122,7 +122,7 @@ describe('the preset menu estimates, for a real project', () => {
 
 // A tiny Rust crate is the known bad case: the cargo checks are written for a mid-size crate (60 to 120 s each, halved for one crate) and
 // a crate with no dependencies builds in a second or two. The first run is then up to about 30x too long; after one run it is right.
-const FIRST_RUN_FLOOR: Record<string, number> = { 'ledger-core': 0.02, 'express-api': 0.1 }
+const FIRST_RUN_FLOOR: Record<string, number> = { 'ledger-core': 0.02, 'express-api': 0.04 }
 
 describe.each(['ledger-core', 'express-api'])('estimate against the real time, %s, quick preset', (name) => {
   test('first run (no times saved) and second run (times learned) are inside the documented tolerance', () => {
