@@ -22,7 +22,7 @@ export const SLOW_MS = 10_000
 const STACK = /\n\s+at\s+\S+.*\(?(file:\/\/|node:internal|[A-Za-z]:[\\/]|\/).*:\d+:\d+\)?|\bUncaught\b|\bTypeError:|\bReferenceError:|\bSyntaxError:|\bRangeError:|ERR_[A-Z_]+|Unhandled promise rejection/
 
 // A NOT RUN is fine when a tool is missing (the message says which and how to install it).
-export const toolReason = (d) => /missing on PATH|not installed|isn't installed|is not installed|install[: ]|needs .* (installed|on PATH)|no .*(binary|executable) found|not found on PATH|toolchain/i.test(d)
+export const toolReason = (d) => /missing on PATH|^needs [\w.,@/ -]+: |not installed|isn't installed|is not installed|install[: ]|needs .* (installed|on PATH)|no .*(binary|executable) found|not found on PATH|toolchain/i.test(d)
 // A budget check with no budget written down: it says which setting to add (NOT RUN, by design: it cannot know your numbers).
 export const configReason = (d) => /.meerkat-budgets.json|Add, for example/i.test(d)
 // FAILs that are TRUE on a fixture because the fixture is empty on purpose: a repo with no files really has no README or licence.

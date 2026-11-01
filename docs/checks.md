@@ -150,7 +150,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `secrets-plus` | fast | tiny | 1 s | No provider key, token, private key or high-entropy secret is written into the files (never printed in full) | secrets-plus |
 | `security-policy` | fast | tiny | 1 s | SECURITY.md says how to report a security problem | repo |
 | `sensitive-files` | fast | tiny | 1 s | No environment files, private keys or tokens are tracked | hygiene |
-| `shellcheck` | fast | tiny | 5 s | Shell scripts (shellcheck) *(needs: shellcheck)* | infra |
+| `shellcheck` | fast | tiny | 5 s | Shell scripts (shellcheck) *(needs: )* | infra |
 | `shopify-secrets` | fast | tiny | 1 s | Shopify: no Admin, custom app, private app or storefront token in a tracked file | engines |
 | `sql-concat` | fast | tiny | 1 s | SQL is not built by joining text and values together | security-plus |
 | `sri-missing` | fast | tiny | 1 s | Scripts and stylesheets loaded from another site have an integrity hash | a11y |
@@ -255,7 +255,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `line-length` | fast | tiny | 1 s | No source line is over the length limit (default 200 characters) | quality |
 | `links` | fast | tiny | 1 s | Every relative link in the documents resolves | hygiene |
 | `liquid-hygiene` | fast | tiny | 1 s | Liquid: blocks are closed, render not include, images have alt, scripts defer or async | engines |
-| `local-links` | fast | tiny | 1.0 min | Links between documents and files (lychee, offline) *(needs: lychee)* | docs |
+| `local-links` | fast | tiny | 1.0 min | Links between documents and files (lychee, offline) *(needs: )* | docs |
 | `lockfile-in-sync` | fast | tiny | 1 s | package-lock.json and package.json name the same direct dependencies | health |
 | `lockfile-sync` | fast | tiny | 1 s | The lockfiles list every dependency that package.json and Cargo.toml declare | repo |
 | `lockfiles` | fast | tiny | 1 s | Every manifest has its lockfile | hygiene |
@@ -265,7 +265,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `markdown-anchors` | fast | tiny | 1 s | Same-page #anchor links in Markdown match a heading or an anchor | content |
 | `markdown-code-fences` | fast | tiny | 1 s | Markdown code fences are closed and name their language | content |
 | `markdown-headings` | fast | tiny | 1 s | Markdown headings nest one level at a time, with one H1 and no trailing punctuation | content |
-| `markdownlint` | fast | tiny | 5 s | Markdown: well-formed documents *(needs: markdownlint-cli2)* | docs |
+| `markdownlint` | fast | tiny | 5 s | Markdown: well-formed documents *(needs: )* | docs |
 | `markers` | fast | tiny | 1 s | No FIXME or XXX notes left in the code | hygiene |
 | `maven-compile` | fast | heavy | 2.0 min | Maven: the Java code compiles *(needs: mvn)* | java |
 | `maven-test` | fast | heavy | 2.0 min | Maven: the test suite *(needs: mvn)* | java |
@@ -344,7 +344,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `ts-ignore-comments` | fast | tiny | 1 s | Every @ts-ignore and @ts-nocheck says why | lang |
 | `tsc` | fast | medium | 1.0 min | TypeScript: no type errors *(needs: tsc)* | node |
 | `tsconfig-strict` | fast | tiny | 1 s | A TypeScript project has a tsconfig.json with strict turned on | config |
-| `typos` | fast | tiny | 3 s | Typos in code and documents *(needs: typos)* | docs |
+| `typos` | fast | tiny | 3 s | Typos in code and documents *(needs: )* | docs |
 | `unicode-control-chars` | fast | tiny | 1 s | No bidirectional override or invisible zero-width character in tracked text | content |
 | `unity-gitignore` | fast | tiny | 1 s | Unity: Library, Temp, Logs, obj and UserSettings are ignored and not tracked | engines |
 | `unity-large-assets` | fast | tiny | 1 s | Unity: textures, audio and models over the size budget are in Git LFS | engines |
@@ -365,7 +365,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `workspace-version-alignment` | fast | tiny | 1 s | A dependency shared by several workspaces uses one version range (reported unless required) | packaging |
 | `workspaces-resolve` | fast | tiny | 1 s | Every workspace pattern matches a folder with a package.json | packaging |
 | `yaml-valid` | fast | tiny | 1 s | Tracked YAML files read as valid (no tab indentation, repeated top-level keys or unclosed quotes) | config |
-| `yamllint` | fast | tiny | 3 s | YAML files (yamllint) *(needs: yamllint)* | infra |
+| `yamllint` | fast | tiny | 3 s | YAML files (yamllint) *(needs: )* | infra |
 | `clean-copy-builds` | thorough | alone | 3.0 min | A clean copy of the tracked files installs, builds and passes its tests *(opt-in: `--include runtime`)* | functionality-run |
 | `crash-fuzz` | thorough | heavy | 1.5 min | Exported functions survive nasty inputs: no hang, crash, stack overflow or prototype pollution *(opt-in: `--include runtime`)* | robustness |
 | `env-example-boot` | thorough | heavy | 1.0 min | The app starts with the variables .env.example lists (no undocumented variable) *(opt-in: `--include runtime`)* | functionality-run |

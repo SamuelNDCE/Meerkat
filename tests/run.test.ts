@@ -850,7 +850,7 @@ describe('the tool packs wrap well-known tools and prove them', () => {
         expect(c.id.startsWith('bad-check-file')).toBe(false)
         expect(ids.has(c.id)).toBe(false)
         ids.add(c.id)
-        expect(c.needs.length).toBe(1)
+        expect(c.needs.length + (c.optionalNeeds?.length ?? 0)).toBe(1)
         expect(c.install).toBeTruthy()
         expect(c.selfTest.expectFail).toBe(true)
         expect(c.selfTest.expectMatch).toBeTruthy()
