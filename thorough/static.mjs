@@ -177,6 +177,22 @@ const paramOnlyConstants = (t, at, param) => {
   const params = splitArgs(d[2] ?? d[4])
   const idx = params.findIndex((p) => p === param)
   if (idx < 0 || new RegExp(String.raw`(?<![\w$.])${param.replace(/\$/g, '\\$')}\s*[-+*/|&]?=(?!=)`).test(t.slice(d.index + d[0].length))) return false
+  // The sink must sit inside the helper's braced body, and nothing inside that body may declare the same name again (a nested function parameter, let, const, var).
+  const open = t.indexOf('{', d.index + d[0].length - 1)
+  if (open < 0 || t.slice(d.index + d[0].length, open).trim() !== '') return false
+  const blank = t.replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`[^`]*`/g, (s) => ' '.repeat(s.length))
+  let depth = 0
+  let close = -1
+  for (let i = open; i < blank.length; i++) {
+    if (blank[i] === '{') depth++
+    else if (blank[i] === '}' && --depth === 0) {
+      close = i
+      break
+    }
+  }
+  if (close < 0 || at < open || at > close) return false
+  const p = param.replace(/\$/g, '\\$')
+  if (new RegExp(String.raw`\b(?:const|let|var)\s+(?:${p}\b|[\[{][^=;]*\b${p}\b)|[(,]\s*(?:\.\.\.)?${p}\s*(?:[,)=]|=>)|\b${p}\s*=>`).test(blank.slice(open + 1, close))) return false
   const n = name.replace(/\$/g, '\\$')
   // A name inside a class name or string ('find-btn') is not a use of the helper.
   const uses = [...t.matchAll(new RegExp(String.raw`(?<![\w$.\-'"\x60])${n}(?![\w$\-])`, 'g'))]

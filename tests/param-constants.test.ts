@@ -44,6 +44,15 @@ describe('innerHTML set from a helper parameter', () => {
   test('reported: the helper is never called in the file (callers unknown)', () => {
     expect(status({ 'a.js': helper })).toBe(1)
   })
+  test('reported: the sink is in a later function, not in the helper', () => {
+    expect(status({ 'a.js': `${helper}function render(icon) {\n  box.innerHTML = icon\n}\nbtn(ICON.up, 'Up', f)\nrender(userHtml)\n` })).toBe(1)
+  })
+  test('reported: a nested function inside the helper takes the same name as its own parameter', () => {
+    expect(status({ 'a.js': "const btn = (icon) => {\n  const set = (icon) => { b.innerHTML = icon }\n  set(location.hash)\n}\nbtn(ICON.up)\n" })).toBe(1)
+  })
+  test('reported: the name is redeclared inside the helper', () => {
+    expect(status({ 'a.js': "const btn = (icon) => {\n  { const icon = location.hash; b.innerHTML = icon }\n}\nbtn(ICON.up)\n" })).toBe(1)
+  })
   test('reported: the parameter is reassigned before use', () => {
     expect(status({ 'a.js': "const btn = (icon) => {\n  icon = location.hash\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n" })).toBe(1)
   })
