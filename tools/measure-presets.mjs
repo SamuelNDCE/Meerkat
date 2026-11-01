@@ -1,4 +1,4 @@
-// Runs every bundled preset three times on a project and writes a table of what each runs and how long it takes into README.md, between the
+// Runs every bundled preset three times on a project and writes a table of what each runs and how long it takes into docs/reference.md, between the
 // presets markers:   node tools/measure-presets.mjs [folder]      (the folder defaults to Meerkat's own repository)
 // The times are real wall-clock times on this PC for that project. A preset that selects no checks there is shown as "none here".
 import { spawnSync } from 'node:child_process'
@@ -52,11 +52,11 @@ for (const [title, names] of SECTIONS) {
 }
 const block = `<!-- presets:start -->\nMeasured on ${folder.replace(/\\/g, '/') === MEERKAT_DIR ? "Meerkat's own repository" : folder.split(/[\\/]/).pop()}, a small project, on one PC (median of 3 runs). Real projects take as long as their builds and tests; the quick checks that only read files stay at a second or two.\n\n${out.join('\n')}<!-- presets:end -->`
 
-const file = join(MEERKAT_DIR, 'README.md')
+const file = join(MEERKAT_DIR, 'docs', 'reference.md')
 const text = readFileSync(file, 'utf8')
 const nl = text.includes('\r\n') ? '\r\n' : '\n'
 const re = /<!-- presets:start -->[\s\S]*?<!-- presets:end -->/
-if (!re.test(text)) throw new Error('README.md has no presets markers')
+if (!re.test(text)) throw new Error('docs/reference.md has no presets markers')
 writeFileSync(file, text.replace(re, () => block.replace(/\n/g, nl)))
 rmSync(logs, { recursive: true, force: true })
-console.log('README.md updated')
+console.log('docs/reference.md updated')
