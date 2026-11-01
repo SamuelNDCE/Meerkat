@@ -21,7 +21,9 @@ import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
 import { compactSummary } from './lib/tui/results.mjs'
 import { saveFindings } from './lib/findingsdoc.mjs'
-import { createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
+import { createInterface } from 'node:readline/promises'
+import { verifyRunDir } from './lib/aiverify.mjs'
+import { appendRunLog, createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
 import { createControl, runAll, selectChecks, stopOnSignals, summarise, table } from './lib/runner.mjs'
@@ -62,6 +64,17 @@ export function presetLines(project = {}, personal = {}) {
   })
 }
 
+// A yes/no question at the terminal; false when nobody can answer (no terminal), so nothing is ever sent without a yes.
+async function askYes(text) {
+  if (!process.stdin.isTTY) return false
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  try {
+    return /^y(es)?$/i.test((await rl.question('Send this to the model? [y/N] ')).trim())
+  } finally {
+    rl.close()
+  }
+}
+
 export function parseArgs(argv) {
   const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], suites: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, listPresets: false, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
@@ -80,6 +93,9 @@ export function parseArgs(argv) {
     else if (a === '--list-json') o.listJson = true
     else if (a === '--include') o.include.push(...list(next()))
     else if (a === '--ai') o.include.push('ai')
+    else if (a === '--ai-verify') o.aiVerify = true
+    else if (a === '--ai-verify-max') o.aiVerifyMax = Math.max(1, Math.floor(Number(next())) || 25)
+    else if (a === '--yes' || a === '-y') o.yes = true
     else if (a === '--json') o.json = next()
     else if (a === '--profile') o.profile = next()
     else if (a === '--progress') o.progress = true
@@ -417,7 +433,13 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // The detection files (lib/findingsdoc.mjs): findings.json, findings.md, findings.sarif and detections.jsonl, then the cross-run history.
   const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
   if (findingsInfo && !opts.selfTest && !hush && !boardShown) log(findingsInfo.line)
-  const report = writeRunReport({ interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs })
+  const report = writeRunReport({ checks: ranChecks.length ? ranChecks : checks, interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs })
+  // Optional (--ai-verify): a model double-checks the medium, high and critical findings. Off by default; it asks first unless --yes (lib/aiverify.mjs).
+  if (opts.aiVerify && findingsInfo && !opts.selfTest && ctx.logDir) {
+    const v = await verifyRunDir(ctx.logDir, { env, max: opts.aiVerifyMax ?? 25, yes: Boolean(opts.yes), confirm: askYes, out: (m) => log(m) })
+    log(v.text)
+    appendRunLog(ctx.logDir, v.text)
+  }
   if (report && !boardShown) log(`logs: ${ctx.logDir}   (node run.mjs --last shows the report, --why <check> one check's log)`)
   // At a terminal with the board: a short summary stays in the scrollback; the results screen (meerkat) shows everything else.
   if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, estimatedMs, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)

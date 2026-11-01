@@ -360,6 +360,36 @@ In CI, `--fail-on high` makes the job fail when any finding is high or critical.
 
 Schema and the protocol for check authors: [`docs/findings.md`](findings.md).
 
+## AI prompts and verification
+
+Two optional helpers turn a run into work for an AI. Neither is on by default and neither changes a run's result.
+
+### Create an AI prompt
+
+```
+meerkat prompt                 the newest run
+meerkat prompt plume           the newest run of a project (or a run id, or a run folder)
+meerkat prompt --print         print the whole prompt instead of copying a pointer
+```
+
+On the results screen press `p` (shown in the footer as "p  create a prompt for an AI"). Either way Meerkat writes `ai-prompt.md` into the run folder and puts one short line on the clipboard (Windows uses `clip.exe` from System32): *This is a Meerkat report. Read the full prompt in <absolute path to ai-prompt.md> and follow it.* Paste that into any AI that can read files.
+
+`ai-prompt.md` is written for an AI that has never seen Meerkat. In order: what Meerkat is (with the repository link) and what checks, sub-checks, suites, severities and NOT RUN mean; the run facts (project, folder, preset, date, version, duration, counts, estimated against actual time); how to read a finding and what each severity means; every critical, high, medium, low and info finding in full (id, rule, check and suite, file:line, the code line, the whole message, why it matters, the suggested fix, confidence, new or known, the check's log path); a "check these first, they may be false alarms" section (low confidence, or judged a probable false alarm by AI verification; nothing is deleted); failed checks that produced no findings; NOT RUN checks with the reason and the install command; and instructions: verify each finding by reading the code, name false positives with evidence, fix the true ones from the highest severity, leave unrelated code alone, run `meerkat verify` again and report. Nothing is truncated (caps: [findings.md](findings.md)). Info and low items are labelled as such, so the AI is not told they are bugs.
+
+### AI verification (optional, off by default)
+
+```
+meerkat verify --ai-verify              ask first, then verify
+meerkat verify --ai-verify --yes        do not ask
+meerkat verify --ai-verify-max 10       verify at most 10 findings (default 25)
+```
+
+On the results screen press `v`: it shows exactly what will be sent and waits for `y`. The model is the one you chose with `meerkat ai use` (your own Claude login, or an OpenAI or OpenRouter key from the environment); the same transport, key handling and redaction as the AI checks are used. For each medium, high or critical finding (most severe first, up to the cap) it sends only the rule description, the message, the file path and line, and about 30 lines of code around that line, cleaned of secrets. Findings of the secrets suite, files with sensitive-looking names, and excerpts that contain a value in a known secret format are never sent; those findings get no verdict. Before anything is sent, Meerkat says how many findings, how many KB (about how many tokens) and which model, and asks for a yes.
+
+The model answers with a verdict (`real`, `probably false alarm` or `unsure`) and a short reason. They are stored in `findings.json` as `aiVerdict` and `aiReason`, shown on the results screen and in `ai-prompt.md`, and a probable false alarm moves to the "may be false alarms" section. A verdict is an opinion: it never deletes, hides or downgrades a finding.
+
+It fails closed. A model error, a timeout or a reply that is not exactly the two required lines gives no verdict for that finding and the verification is reported as NOT RUN (or PARTIAL when some findings got one); it is never read as a pass and no finding is dropped. The result is also written to `run.log`.
+
 ## For AI agents
 
 Meerkat is built to be called by an AI agent as easily as by a person. Full guide: [`docs/for-ai-agents.md`](for-ai-agents.md); an index for models is in [`llms.txt`](../llms.txt).

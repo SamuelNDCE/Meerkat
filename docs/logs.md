@@ -14,6 +14,8 @@ Every run saves what is needed to understand a failure long after the terminal i
       report.md
       summary.json
       timeline.jsonl
+      run.log                        the true log of the run, one timestamped line per fact
+      ai-prompt.md                   written by `meerkat prompt` (or the `p` key): a prompt for an AI
       findings.json                  what the run detected (see findings.md in docs)
       findings.md
       findings.sarif
@@ -52,6 +54,18 @@ started:   2026-10-31T14:23:05.307Z   took: 4.2 s
 --- output ---
 ...
 ```
+
+## `run.log`
+
+The true, chronological record of how the run went, written for every run next to `report.md`. One line per fact, each with the time and the seconds since the start:
+
+- the start: preset, tier, project and folder, the Meerkat version, the machine (OS, threads, memory, Node), the command line, the config file and the git commit;
+- the plan: the scheduler limits, the checks chosen in the order chosen, what was skipped, covered by a wider check or turned off, and the estimate for the whole run;
+- each check: a `start` line (lane, its estimate, its time limit, its idle-kill limit) and a `finish` line (status, exit code, how long it took against the estimate and the limit, whether it was TIMED OUT, IDLE-KILLED or SKIPPED, its sub-checks, how many findings it produced, its log file); a check that never started gets a `never started` line with the reason;
+- the findings line and the final summary (exit code, duration, the result line);
+- later steps append to it, for example the result of `--ai-verify`.
+
+`report.md` says what to do about a failure, `timeline.jsonl` is for programs, and `run.log` is the plain record.
 
 ## `report.md`
 

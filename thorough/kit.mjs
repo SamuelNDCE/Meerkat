@@ -156,7 +156,7 @@ export function finish(name, findings, okNote = 'nothing found') {
     const sev = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY ?? '') ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'
     for (const f of findings.slice(25)) {
       const m = /^(\S+?):(\d+)\s+(.+)$/s.exec(String(f))
-      if (m) finding(sev, '-', m[1], Number(m[2]), m[3].replace(/\s+/g, ' ').slice(0, 280))
+      if (m) finding(sev, '-', m[1], Number(m[2]), m[3].replace(/\s+/g, ' ').slice(0, 8000))
     }
   }
   return 1

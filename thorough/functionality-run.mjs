@@ -30,7 +30,7 @@ const budgets = (root) => {
   }
 }
 
-const sub = (state, id, why = '') => console.log(`MEERKAT-SUB ${state} ${id}${why ? ` ${safe(why).replace(/\s+/g, ' ').slice(0, 190)}` : ''}`)
+const sub = (state, id, why = '') => console.log(`MEERKAT-SUB ${state} ${id}${why ? ` ${safe(why).replace(/\s+/g, ' ').slice(0, 1900)}` : ''}`)
 const lastLines = (text, n = 3) => String(text).replace(/\u001b\[[0-9;]*m/g, '').split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l.trim()).slice(-n)
 const NETWORK = /ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNREFUSED|ECONNRESET|ENETUNREACH|getaddrinfo|network (error|is unreachable)|fetch failed|Could not resolve host|Temporary failure in name resolution|no such host|dial tcp|Failed to fetch|Connection timed out/i
 

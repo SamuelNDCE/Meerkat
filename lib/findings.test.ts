@@ -62,10 +62,10 @@ describe('the finding protocol', () => {
     ]
     for (const b of bad) expect(parseFindingLine(b), b).toBeNull()
   })
-  test('control characters leave the message and it is cut to 300 characters', () => {
-    const p = parseFindingLine(line('low', 'x', 'a.js', 1, `bad\u001b[31m${'y'.repeat(400)}`))
+  test('control characters leave the message and it is cut to 8000 characters', () => {
+    const p = parseFindingLine(line('low', 'x', 'a.js', 1, `bad\u001b[31m${'y'.repeat(9000)}`))
     expect(p.message).not.toMatch(/[\u0000-\u001f]/)
-    expect(p.message.length).toBe(300)
+    expect(p.message.length).toBe(8000)
   })
   test('the helper writes only valid lines', () => {
     expect(formatFindingLine('high', 'eval-call', 'src\\a.js', 3, 'x')).toBe('MEERKAT-FINDING high eval-call src/a.js:3 x')
@@ -155,11 +155,11 @@ describe('fallback extraction', () => {
     expect(f).toMatchObject({ severity: 'high', rule: 'eval-call', file: 'src/a.js', line: 2, confidence: 'medium', evidence: 'eval(y)', fix: 'npm i risky', status: 'new' })
     expect(f.detectedBy).toMatchObject({ check: 'risky', pack: 'security', origin: 'bundled', tool: null })
     const t = doc.findings.find((x: any) => x.check === 'lint')
-    expect(t.rawOutput).toHaveLength(25)
+    expect(t.rawOutput).toHaveLength(40)
     expect(t.file).toBeNull()
     expect(t.detectedBy.tool.name).toBe('eslint')
     expect(doc.findings.some((x: any) => x.check === 'e2e')).toBe(false)
-    expect(doc.notRun).toEqual([{ check: 'e2e', reason: 'missing on PATH: playwright' }])
+    expect(doc.notRun).toMatchObject([{ check: 'e2e', reason: 'missing on PATH: playwright' }])
     expect(toolOf(scriptCheck)).toBeNull()
   })
   test('findings printed with MEERKAT-FINDING win over parsing and are high confidence; duplicates merge', () => {
@@ -177,7 +177,7 @@ describe('evidence never carries a secret', () => {
     expect(evidenceFor('token: ghp_' + 'a'.repeat(36), 'x')).toBeNull()
     expect(evidenceFor('const x = 1', 'secrets')).toBeNull()
     expect(evidenceFor('  eval(y)  ', 'risky-calls')).toBe('eval(y)')
-    expect((evidenceFor('x'.repeat(500), 'risky-calls') ?? '').length).toBe(200)
+    expect((evidenceFor('x'.repeat(500), 'risky-calls') ?? '').length).toBe(500)
   })
 })
 
