@@ -66,7 +66,7 @@ describe('sections', () => {
     for (const h of ['Run', 'More']) expect(lines.some((l) => l.trim().startsWith(h))).toBe(true)
     expect(lines.some((l) => l.includes('Fast and combined'))).toBe(false)
     const quick = lines.find((l) => /^[> ] quick\b/.test(l.trimEnd()) || /^> quick|^ {2}quick/.test(l))!
-    expect(quick).toMatch(/quick\s{2,}Every quick check/)
+    expect(quick).toMatch(/quick\s{2,}The everyday check/)
     expect(lines[lines.length - 1]).toContain('q quit')
   })
   test('personal presets get their own section', () => {
