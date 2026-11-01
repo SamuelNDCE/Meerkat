@@ -2,7 +2,7 @@
 
 # Meerkat
 
-<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11">
+<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <a href="https://github.com/SamuelNDCE/Meerkat/actions/workflows/ci.yml"><img src="https://github.com/SamuelNDCE/Meerkat/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11"> <a href="https://perpetualtechnologies.co.uk"><img src="docs/images/badges/made-by.svg" alt="made by Perpetual Technologies"></a> <img src="docs/images/badges/works-with.svg" alt="works with NeuralVault and MCP">
 
 **One command that checks your whole project before you ship it.**<br>
 Security, correctness, accessibility, performance and code health, for any kind of app, with every result saved and explained.
@@ -94,34 +94,37 @@ Run `meerkat` on its own for the menu: pick the project (the folder you are in, 
 
 Without `npm link`: `node path/to/Meerkat/run.mjs --app <folder> --preset quick`.
 
+## Connect it to your project
+
+Meerkat reads your project from the outside: it never edits it, and its own files stay in `~/.meerkat` (or the folder in `MEERKAT_LOG_DIR`). To use it on a project:
+
+| Where | How |
+|---|---|
+| One-off, from the project folder | `meerkat verify` |
+| By path or by name, from anywhere | `meerkat verify C:\code\my-app` or `meerkat verify my-app` (tell Meerkat where your projects live once with `meerkat root add <folder>`) |
+| Before every push | add a `.git/hooks/pre-push` file containing `meerkat verify --plain` (a failure or a NOT RUN stops the push) |
+| On every pull request | the [CI job below](#using-it-in-ci) |
+| Settings for this project | `meerkat init` writes a `meerkat.config.json`; limits and accepted findings live in a `.meerkat/` folder |
+
+Meerkat only checks real projects: a git repository, or a folder with a recognised marker such as `package.json`, `Cargo.toml` or `pyproject.toml`. Anything else is refused with a clear message (`--force` overrides it).
+
 ## What it looks like
 
 Every picture here is **sample data**: a made-up project, not a real run.
 
-**While it runs**, the board shows each running check with the file or step it is on, a status line telling you what Meerkat is looking for and how many problems it has found so far, every check with its time, and a timeline.
-
-**When it finds problems**, the results screen lists them worst first, each with its severity, rule, file, line and why it matters. Critical means fix before shipping, high means fix soon, medium means should fix, low and info are worth knowing.
-
-![Results screen, findings tab](docs/images/results-findings.png)
-
-Tab or the arrow keys move between findings, checks and the timeline; Up and Down scroll.
-
-![Using the results screen: scroll the findings, Tab to the checks, Tab to the timeline](docs/images/results-scroll.gif)
-
-<table>
-<tr>
-<td width="50%"><img src="docs/images/results-checks.png" alt="Results screen, checks tab: every check with status, suite, time and reason"></td>
-<td width="50%"><img src="docs/images/results-timeline.png" alt="Results screen, timeline tab: when each check ran"></td>
-</tr>
-</table>
-
-**When nothing is wrong**, Meerkat says so, and looks pleased about it.
-
-![Results screen after a clean run: a happy meerkat and a green ALL CLEAR](docs/images/results-happy.png)
-
-**The menu** shows your version and, in yellow, the newest version when an update is waiting.
+**1. Pick what to run.** The menu lists the presets with an estimate for your project, shows your version, and shows the newest one in yellow when an update is waiting.
 
 ![The menu with the preset list and an update bar](docs/images/menu.png)
+
+**2. Watch it run.** The animation at the top is the live board: what is running now, the status line, every group of checks with its time, and the timeline.
+
+**3. Read the results.** The results screen lists the findings worst first, each with its severity, rule, file, line and why it matters (critical means fix before shipping, high means fix soon, medium means should fix, low and info are worth knowing). Tab switches between the findings, every check with its time, and the timeline; Up and Down scroll.
+
+![Using the results screen: scroll the findings, then the checks, then the timeline](docs/images/results-scroll.gif)
+
+**4. When nothing is wrong,** Meerkat says so, and looks pleased about it.
+
+![Results screen after a clean run: a happy meerkat and a green ALL CLEAR](docs/images/results-happy.png)
 
 ## What it works on
 
@@ -186,6 +189,24 @@ The exit code is 0 when everything passed, 1 when something failed and 75 when s
 
 Meerkat is built to be driven by tools as well as people: plain output, `--json`, SARIF for code-scanning, an MCP server (`bin/meerkat-mcp.mjs`) with `meerkat_run`, `meerkat_last`, `meerkat_why` and more, and a stable findings protocol (`MEERKAT-FINDING` lines). Start at [docs/for-ai-agents.md](docs/for-ai-agents.md).
 
+### Connect Meerkat to NeuralVault, Claude Code or any MCP client
+
+`bin/meerkat-mcp.mjs` is an MCP server (stdio, Node 20+, nothing sent over the network). It gives an AI agent six tools: `meerkat_run`, `meerkat_last`, `meerkat_why`, `meerkat_list`, `meerkat_presets` and `meerkat_self_test`.
+
+**NeuralVault** (from the `nv` command line; the same connector then shows in the app's settings):
+
+```
+nv mcp add meerkat --command node --grant-read-only meerkat_last --grant-read-only meerkat_why --grant-read-only meerkat_list --grant-read-only meerkat_presets --grant meerkat_run -- C:\code\Meerkat\bin\meerkat-mcp.mjs
+```
+
+```
+nv mcp test meerkat
+```
+
+The read-only tools can only read results; `meerkat_run` is the one that starts a run, so grant it only to agents you want to run checks. **Claude Code:** `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs`. Other clients: [docs/for-ai-agents.md](docs/for-ai-agents.md).
+
+**About NeuralVault.** NeuralVault is an agent harness you own, made by [Perpetual Technologies](https://perpetualtechnologies.co.uk): it remembers how your business works, acts only where you allow it, and keeps a record of everything it does. Meerkat started as the verification layer for it, and works on any project on its own. Learn more at [perpetualtechnologies.co.uk](https://perpetualtechnologies.co.uk).
+
 ## Using it in CI
 
 Meerkat exits non-zero on any failure or NOT RUN and writes `summary.json` for every run. A minimal GitHub Actions job:
@@ -212,6 +233,12 @@ Meerkat has no telemetry and never uploads your code or your results. Its one ne
 ## Share what you build
 
 If you wrote a check, a pack or a preset that other people would find useful, please share it: open an issue or a pull request at [github.com/SamuelNDCE/Meerkat](https://github.com/SamuelNDCE/Meerkat) (see [CONTRIBUTING.md](CONTRIBUTING.md)), or publish your pack folder and tell us. Checks that find real problems on real projects without false alarms are the most valuable. To report a security problem, see [SECURITY.md](SECURITY.md).
+
+## Keeping the rules accurate
+
+Rules change as new bugs are found. If Meerkat reports something that is fine, open a [false alarm](https://github.com/SamuelNDCE/Meerkat/issues/new?template=false-positive.yml) issue; if it misses a real problem, open a [missed problem](https://github.com/SamuelNDCE/Meerkat/issues/new?template=missed-bug.yml) issue. Every fix ships with a sample that proves it and is listed in [CHANGELOG.md](CHANGELOG.md). Accuracy is measured against a corpus of planted defects, see [docs/accuracy.md](docs/accuracy.md).
+
+**On the roadmap:** syncing rules and advisories automatically from trusted vulnerability sources, so Meerkat also works as a vulnerability checker ([issue 26](https://github.com/SamuelNDCE/Meerkat/issues/26)).
 
 ## Licence
 

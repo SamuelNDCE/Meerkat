@@ -25,6 +25,8 @@ const BADGES = [
   ['sub-checks', summary[3] ?? '?', '#1f6feb'],
   ['suites', summary[2] ?? '?', '#1f6feb'],
   ['tested on', 'Windows 11', '#555e6b'],
+  ['made by', 'Perpetual Technologies', '#0b6e75'],
+  ['works with', 'NeuralVault, MCP', '#6f42c1'],
 ]
 
 const width = (text) => Math.round(text.length * 6.6 + 14)

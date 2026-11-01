@@ -129,6 +129,8 @@ const frame = (tick) => {
       }
     }
   }
+  // The demo's clock runs fast, so a long check would look stuck: it is shown as alive the whole time.
+  for (const r of rows) if (r.status === 'RUNNING') r.lastOutputAt = t
   const done = new Set(rows.filter((r) => ['PASS', 'FAIL', 'NOT RUN'].includes(r.status)).map((r) => r.id))
   const allDone = done.size === rows.length
   // The same countdown and eased bar as the real run (lib/eta.mjs).

@@ -1,0 +1,31 @@
+name: False alarm (Meerkat reported something that is not a problem)
+description: A rule fired on code that is fine. These are the most useful reports we get.
+labels: ["false-positive"]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule and check
+      description: The rule id and check name from the report, for example js-await-in-loop in the lang suite.
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: The code it flagged
+      description: The smallest piece of code that still triggers it. Remove anything private.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it is not a problem
+      description: What makes this code safe or correct.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Meerkat version
+      description: Shown at the top of the menu and results screen, or run meerkat bug.
