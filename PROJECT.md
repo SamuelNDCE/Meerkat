@@ -16,6 +16,7 @@ A private placeholder created 2026-10-30 under the `perpetual-technologies-offic
 
 > \*Corrected 2026-10-30: superseded. This repository is now the source of truth for the tool; change it here. NeuralVault keeps only a small launcher (and, until its pull request lands, an older copy that is deleted by that pull request, so do not edit that copy).
 - **Name.** The tool was renamed from "validation tool" to Meerkat on 2026-10-29. Check for trademark or name clashes before making the repository or the name public (not checked).
+- **Releases come in batches, at most one a day.** Set 2026-11-01 at Samuel's instruction ("we shouldn't release one at a time... at most one a day"). Fixes merge to `main` as they are ready and collect under `## Unreleased` in `CHANGELOG.md`; a release (`tools/release.mjs`, then a GitHub release, which publishes to npm) happens once a day at most, only when Samuel says so, and moves all the Unreleased notes into that version. Check `gh release list` before cutting one. Anything that pins a version (NeuralVault's launcher) waits for the next batch.
 - **Pushing.** Commit as yourself, no AI co-author line, stage files by name, and open a pull request for anything beyond README and PROJECT.md edits.
 - **Licence.** None chosen yet. Do not add one without Samuel. \* The code carries no copyright or proprietary headers (removed 2026-10-31 at Samuel's instruction, because it will probably be open source); do not add them back.
 
