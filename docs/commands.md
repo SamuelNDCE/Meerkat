@@ -25,6 +25,16 @@ meerkat <command> --help                help for any command (also: meerkat help
 
 Options for every run: `--max-run-minutes <n>` (stop the whole run after n minutes, default 90), `--ai` (include the AI checks), `--json` (print the result as JSON on stdout), `--plain` (no board), `--no-color`, `-q/--quiet` (only the result line), `--fail-fast`, `--keep-going`, `--group <kinds>`, `--include <name>` (`mutation` and `runtime` add the opt-in deeper checks), `--timeout-scale <n>` (1 to 10), `--only <ids>`, `--config <file>`, `--no-config`.
 
+### Only projects are checked
+
+Meerkat runs its checks on projects, not on any folder. A folder is a project when it is inside a git repository, or holds a project marker (`package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `pom.xml`, `build.gradle`, a `.csproj` or `.sln`, `composer.json`, `Gemfile`, `pubspec.yaml`, `Package.swift`, `Dockerfile`, a `.tf` file), or has an `index.html` next to other web files, or holds at least 5 source files (in the folder or one level down). Otherwise `meerkat verify <folder>` (and every other command that runs checks, from the menu too) stops before running anything, prints
+
+```
+C:\x is not a project: no git repository, no package.json, Cargo.toml, ... found, and fewer than 5 source files; pass --force to run anyway
+```
+
+and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or an AI agent gets the same text as one JSON object: `{"ok": false, "error": "not-a-project", "folder": "...", "message": "...", "exitCode": 2}`. Listing and reading commands (`--list`, `--estimate`, `--last`, `--why`, `--logs`, `--init`) need no project. In the folder browser, folders that are not projects are marked `(not a project)`. The project picker only offers git repositories.
+
 ## Look at results
 
 | Command | Does | Also |
