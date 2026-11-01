@@ -61,12 +61,13 @@ export const requireHelperOnlyFixed = (line, ctx) => {
   const m = /(?<![\w$.])require\(\s*([A-Za-z_$][\w$]*)\s*\)/.exec(cut(line))
   if (!m) return false
   const v = m[1].replace(/\$/g, '\\$')
+  const arrowDecl = new RegExp(String.raw`(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(?\s*${v}\s*\)?\s*=>`)
+  const fnDecl = new RegExp(String.raw`function\s+([A-Za-z_$][\w$]*)\s*\(\s*${v}\s*[,)]`)
   let fn = null
   let from = ctx.index
   for (let i = ctx.index; i >= 0 && i >= ctx.index - 8; i--) {
     const l = cut(ctx.lines[i])
-    const d = new RegExp(String.raw`(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(?\s*${v}\s*\)?\s*=>`).exec(l) ??
-      new RegExp(String.raw`function\s+([A-Za-z_$][\w$]*)\s*\(\s*${v}\s*[,)]`).exec(l)
+    const d = arrowDecl.exec(l) ?? fnDecl.exec(l)
     if (d) { fn = d[1]; from = i; break }
   }
   if (!fn) return false
@@ -81,7 +82,7 @@ export const requireHelperOnlyFixed = (line, ctx) => {
   })
 }
 
-// `el.innerHTML = ICONS.save` where ICONS (any name) is a top-level constant whose value holds only string text: a table of plain strings. No ${},
+// Markup set from a name such as ICONS.save, where ICONS (any name) is a top-level constant whose value holds only string text: a table of plain strings. No ${},
 // no calls, no joins, no value that is a name. The name is declared once and never assigned to (not even a property).
 export const isConstantMarkup = (text, name) => {
   const n = name.replace(/\$/g, '\\$')

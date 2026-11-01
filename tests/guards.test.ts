@@ -46,12 +46,12 @@ describe('shellPathIsChecked', () => {
 
 describe('requireHelperOnlyFixed', () => {
   test('a helper called only with literals is fine', () => {
-    const code = ['const optional = (name) => {', '  try { return require(name) } catch {}', '}', "const a = optional('./a.cjs')", "const b = optional('./b.cjs')"].join('\n')
-    expect(requireHelperOnlyFixed('  try { return require(name) } catch {}', ctxAt(code, 'require(name)'))).toBe(true)
+    const code = ['const optional = (name) => {', '  try { return require(name) } catch (e) { throw e }', '}', "const a = optional('./a.cjs')", "const b = optional('./b.cjs')"].join('\n')
+    expect(requireHelperOnlyFixed('  try { return require(name) } catch (e) { throw e }', ctxAt(code, 'require(name)'))).toBe(true)
   })
   test('one call with a variable makes it a real risk', () => {
-    const code = ['const optional = (name) => {', '  try { return require(name) } catch {}', '}', "const a = optional('./a.cjs')", 'const b = optional(req.query.m)'].join('\n')
-    expect(requireHelperOnlyFixed('  try { return require(name) } catch {}', ctxAt(code, 'require(name)'))).toBe(false)
+    const code = ['const optional = (name) => {', '  try { return require(name) } catch (e) { throw e }', '}', "const a = optional('./a.cjs')", 'const b = optional(req.query.m)'].join('\n')
+    expect(requireHelperOnlyFixed('  try { return require(name) } catch (e) { throw e }', ctxAt(code, 'require(name)'))).toBe(false)
   })
   test('a bare require(name) with no helper is still reported', () => {
     const code = ['function f(x) {', '  return require(x)', '}'].join('\n')
