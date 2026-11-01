@@ -3,7 +3,7 @@
 // Run through the desktop pack, or by hand:
 //   node thorough/desktop.mjs <check> [--root <dir>]      node thorough/desktop.mjs <check> --fixtures   (must exit 1)
 // A finding you accept goes in .meerkat-desktop-allow as "<check-id> <path>" (the whole file) or "<check-id> <path>:<line>", one per line, # for comments.
-import { finish, main, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isTestFile, main, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const CODE = /\.(m?[jt]sx?|cjs|cts|mts)$/i
 const PAGE = /\.(m?[jt]sx?|cjs|cts|mts|html?)$/i
@@ -33,7 +33,7 @@ const sinkFor = (p) => new RegExp(`\\b(?:fs|fsp|promises|child_process)\\.\\w+\\
 
 const allowSet = (root) => new Set(readText(root, '.meerkat-desktop-allow').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')))
 const allowed = (allow, id, x, line) => allow.has(`${id} ${x}`) || allow.has(`${id} ${x}:${line}`)
-const tracked = (root, re) => trackedFiles(root).filter((x) => re.test(x) && !SKIP.test(x))
+const tracked = (root, re) => trackedFiles(root).filter((x) => re.test(x) && !SKIP.test(x) && !isTestFile(x))
 const lineOf = (t, i) => t.slice(0, i).split('\n').length
 // True when the file defines name as a plain string constant (no interpolation), so a call that passes it is passing a fixed value.
 const constString = (t, name) => new RegExp(`\\b(?:const|let|var)\\s+${name}\\s*=\\s*(['"\`])[^'"\`$\\\\]*\\1`).test(t)

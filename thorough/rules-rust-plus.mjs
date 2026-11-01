@@ -55,14 +55,16 @@ const before = (ctx, n) => ctx.lines.slice(Math.max(0, ctx.index - n), ctx.index
 const after = (ctx, n) => ctx.lines.slice(ctx.index + 1, ctx.index + 1 + n).join('\n')
 
 // True when the line sits after a #[cfg(test)] line in the same file (test modules sit at the bottom of a file). The index is cached per lines array.
+import { rustTestLines } from './kit.mjs'
 const cfgTestAt = new WeakMap()
 const inTestBlock = (ctx) => {
-  let at = cfgTestAt.get(ctx.lines)
-  if (at === undefined) {
-    at = ctx.lines.findIndex((l) => /#\[cfg\(test\)\]/.test(l))
-    cfgTestAt.set(ctx.lines, at)
+  // The exact #[cfg(test)] module (matched braces), not "everything after the first attribute": code after the module, or after a lone #[cfg(test)] item, is shipped code.
+  let inTest = cfgTestAt.get(ctx.lines)
+  if (inTest === undefined) {
+    inTest = rustTestLines(ctx.file ?? 'a.rs', ctx.text ?? ctx.lines.join('\n'))
+    cfgTestAt.set(ctx.lines, inTest)
   }
-  return at !== -1 && at < ctx.index
+  return inTest(ctx.index + 1)
 }
 
 // The nearest function header above the line (within 300 lines), and whether that function is async.
@@ -185,7 +187,7 @@ export const SAFETY = [
   R('rsafe-alloc-no-null-check', 'alloc or alloc_zeroed result is not checked for null (no handle_alloc_error)', /(?<![\w.:])(?:alloc::)?(?:alloc|alloc_zeroed)\(\s*(?:layout|Layout::)/, 'let p = unsafe { alloc(layout) };', 'let p = unsafe { alloc(layout) };\nif p.is_null() { handle_alloc_error(layout); }', {
     test: (line, ctx) => /(?<![\w.:])(?:alloc::)?(?:alloc|alloc_zeroed)\(\s*(?:layout|Layout::)/.test(line) && !/is_null|handle_alloc_error/.test(after(ctx, 6)),
   }),
-  R('rsafe-env-set-var', 'env::set_var or remove_var is called (unsafe in edition 2024, racy with other threads)', /\benv::(?:set_var|remove_var)\(/, 'std::env::set_var("MODE", "fast");', 'let mode = std::env::var("MODE").unwrap_or_default();'),
+  LIBR('rsafe-env-set-var', 'env::set_var or remove_var is called (unsafe in edition 2024, racy with other threads)', /\benv::(?:set_var|remove_var)\(/, 'std::env::set_var("MODE", "fast");', 'let mode = std::env::var("MODE").unwrap_or_default();'),
   R('rsafe-allow-unsafe-code', 'the unsafe_code lint is allowed for code, or the crate allows it', /#!?\[allow\([^\]\n]{0,120}\bunsafe_code\b/, '#![allow(unsafe_code)]', '#![forbid(unsafe_code)]'),
   R('rsafe-nonnull-unchecked', 'NonNull::new_unchecked is used (undefined behaviour when the pointer is null)', /\bNonNull::new_unchecked\(/, 'let nn = unsafe { NonNull::new_unchecked(p) };', 'let nn = NonNull::new(p).expect("p is never null");'),
   R('rsafe-copy-nonoverlapping-no-note', 'ptr::copy_nonoverlapping has no note that the ranges do not overlap', /\bptr::copy_nonoverlapping\(/, 'ptr::copy_nonoverlapping(src, dst, n);', '// SAFETY: src and dst are disjoint buffers.\nptr::copy_nonoverlapping(src, dst, n);', {
