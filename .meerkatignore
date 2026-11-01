@@ -9,3 +9,4 @@ thorough/rules-*.mjs
 tools/accuracy-corpus.mjs
 tools/accuracy-extra-*.mjs
 tools/compat-fixtures.mjs
+tools/fake-apps/

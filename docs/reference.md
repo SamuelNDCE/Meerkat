@@ -362,7 +362,7 @@ Schema and the protocol for check authors: [`docs/findings.md`](findings.md).
 
 ## For AI agents
 
-Meerkat is built to be called by an AI agent as easily as by a person. Full guide: [`docs/for-ai-agents.md`](for-ai-agents.md); an index for models is in [`llms.txt`](llms.txt).
+Meerkat is built to be called by an AI agent as easily as by a person. Full guide: [`docs/for-ai-agents.md`](for-ai-agents.md); an index for models is in [`llms.txt`](../llms.txt).
 
 - **Plain output when there is no terminal.** An agent's call gets plain lines, no colour and no prompts. The exit code says the result: `0` all passed, `1` a check failed or could not run, `2` a usage or config error.
 - **Everything is saved as data.** After every run, `summary.json` has each check's status, reason, command, exit code, duration and log path, so an agent reads one file instead of scraping output. `meerkat why <check>` prints one check's log.

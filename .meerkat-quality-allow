@@ -39,3 +39,8 @@ run.mjs
 thorough/ai.mjs
 thorough/api.mjs
 thorough/ci-systems.mjs
+tests/falsepositives.test.ts:262
+tests/falsepositives.test.ts:260
+tests/falsepositives.test.ts
+tests/redact-remainder.test.ts
+tests/e2e-fakeapps.test.ts

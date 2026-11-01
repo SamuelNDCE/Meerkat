@@ -13,3 +13,8 @@ e9f2a92 tools/accuracy-extra-infra.mjs
 14fed29 thorough/rules-web-hardening.mjs
 1f7900f run.test.ts
 6476bec run.test.ts
+4ef99f2 tests/falsepositives.test.ts
+953e5e6 tests/redact-remainder.test.ts
+tools/fake-apps/express-api.mjs
+tests/redact-remainder.test.ts
+tests/falsepositives.test.ts

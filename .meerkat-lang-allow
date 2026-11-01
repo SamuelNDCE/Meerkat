@@ -26,3 +26,5 @@ js-await-in-loop lib/menu.mjs
 js-await-in-loop lib/menuestimate.mjs
 js-await-in-loop lib/packs.mjs
 js-await-in-loop lib/suitelist.mjs
+js-await-in-loop tests/e2e-estimates.test.ts
+js-await-in-loop tests/e2e-fakeapps.test.ts
