@@ -7,6 +7,11 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - fewer false alarms: a hit the surrounding code already makes safe is skipped (a QA-only executeJavaScript, a path checked by need() before it reaches the shell, a require helper called only with fixed strings, markup from a constant table)
 - meerkat tools install works on Windows (it found the bare npm script instead of npm.cmd)
 - the CI job is allowed 30 minutes
+- installing the outside tools no longer changes a clean project's result: markdownlint uses lenient style rules when the project has no markdownlint config, and eslint, prettier and stylelint are NOT RUN when the project has not configured them (thorough/config-guard.mjs)
+- a tool that cannot reach its service (cargo audit's advisory database, the npm registry) is NOT RUN instead of a failed check (thorough/offline-guard.mjs)
+- the results screen names every check that did not run (skipped, covered by a wider check, turned off) instead of leaving its description empty
+- ep-ipc-handler-no-sender-check no longer flags handlers whose sender is checked through a helper in the same file, or registered through an ipcMain parameter that every caller fills with a wrapper that checks the sender (found scanning Plume)
+- markdownlint skips the folders named fixtures, where documents are broken on purpose
 
 ## 0.3.13 (2026-11-01)
 

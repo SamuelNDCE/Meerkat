@@ -101,3 +101,45 @@ export const isConstantMarkup = (text, name) => {
   if (/[(+]|=>/.test(stripped)) return false
   return !new RegExp(String.raw`(?<![\w$.])${n}\s*(?:\.[\w$]+|\[[^\]]{0,80}\])*\s*[-+*/|&]?=[^=]`).test(text.replace(m[0], ''))
 }
+
+// `ipcMain.handle(...)` in a file that never imports ipcMain from electron: the name is a parameter, such as `function register({ ipcMain })`. When another
+// file of the project passes in `ipcMain: guarded` and `guarded` is an object defined there whose body checks the sender (sender, senderFrame, isMainFrame, frameId),
+// every handler registered here is checked. Safe only when ALL call sites of this file's register function do that: one that passes the real ipcMain, a
+// variable that is not such a wrapper, or no call site found at all keeps the finding.
+const SENDER_TEST = /\.sender\b|senderFrame|isMainFrame|frameId/
+// The body calls a helper (`if (!fromAppPage(e)) ...`) that is declared in the same file and itself looks at the sender within its first lines.
+const callsSenderHelper = (body, text) => {
+  for (const m of body.matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)\(\s*(?:e|ev|event|_e|evt)\s*[,)]/g)) {
+    const n = m[1].replace(/\$/g, '\\$')
+    const decl = new RegExp(String.raw`^[ \t]*(?:const|let|var|function)\s+${n}\b`, 'm').exec(text)
+    if (decl && SENDER_TEST.test(text.slice(decl.index, decl.index + 400).split('\n').slice(0, 4).join('\n'))) return true
+  }
+  return false
+}
+export const ipcMainIsGuardedParameter = (_line, ctx) => {
+  const text = ctx.text
+  if (/\bipcMain\b[^\n]{0,60}\brequire\(\s*['"]electron['"]\s*\)|\bimport\b[^\n]{0,80}\bipcMain\b[^\n]{0,80}from\s+['"]electron['"]|\bipcMain\b[^\n]{0,40}=\s*require\(/.test(text)) return false
+  if (!/(?:\bfunction\b[^\n{(]{0,60}\(|=>\s*)?\(\s*\{[^}\n]{0,200}\bipcMain\b[^}\n]{0,200}\}\s*\)/.test(text)) return false
+  const project = ctx.project
+  if (!project?.files?.length) return false
+  const base = ctx.file.split('/').pop().replace(/\.[cm]?[jt]s$/, '')
+  const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let sites = 0
+  for (const f of project.files) {
+    if (f === ctx.file || !/\.[cm]?[jt]sx?$/.test(f)) continue
+    const other = project.read(f)
+    if (typeof other !== 'string' || !new RegExp(String.raw`['"]\.{1,2}/[^'"\n]*${escaped}(?:\.[cm]?[jt]s)?['"]`).test(other)) continue
+    for (const m of other.matchAll(/\bipcMain\s*:\s*([A-Za-z_$][\w$]*)\s*[,}]/g)) {
+      sites++
+      const v = m[1].replace(/\$/g, '\\$')
+      const decl = new RegExp(String.raw`^[ \t]*(?:const|let|var)\s+${v}\s*=\s*\{`, 'm').exec(other)
+      if (!decl) return false
+      const body = other.slice(decl.index, decl.index + 800).split('\n').slice(0, 14).join('\n')
+      if (!SENDER_TEST.test(body) && !callsSenderHelper(body, other)) return false
+    }
+  }
+  return sites > 0
+}
+
+// An ipc handler whose first lines call a sender-checking helper declared in the same file: `ipcMain.handle(ch, (e) => { if (!fromAppPage(e)) throw ... })`.
+export const ipcHandlerCallsSenderHelper = (_line, ctx) => callsSenderHelper(ctx.lines.slice(ctx.index, ctx.index + 6).join('\n'), ctx.text)

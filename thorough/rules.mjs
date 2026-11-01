@@ -45,7 +45,7 @@ export function readAllow(root, allowFile) {
   return set
 }
 
-function matches(rule, text, file) {
+function matches(rule, text, file, project) {
   const out = []
   if (rule.whole && rule.re) {
     if (rule.re.test(text)) out.push(1)
@@ -55,7 +55,7 @@ function matches(rule, text, file) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (rule.skipLine && rule.skipLine.test(line)) continue
-    const ctx = { file, lines, index: i, text }
+    const ctx = { file, lines, index: i, text, project }
     const hit = rule.test ? rule.test(line, ctx) : rule.re.test(line)
     // A rule may carry unless(line, ctx): the code around the hit already makes it safe (a QA-only block, a path checked just before).
     if (hit && !(rule.unless && rule.unless(line, ctx))) out.push(i + 1)
@@ -69,6 +69,8 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
   const found = []
   const hits = [] // the same hits with file, line and severity, for the finding lines
   const na = []
+  // Other files of the project, for a guard that must look beyond the file with the hit (read on demand).
+  const project = { files: usable, read }
   for (const rule of rules) {
     const mine = usable.filter((f) => wants(rule, f) && !(rule.notIn && rule.notIn.test(f)))
     if (rule.needs ? !rule.needs(usable) : mine.length === 0) {
@@ -79,7 +81,7 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
       if (allow.has(`${rule.id} ${f}`) || allow.has(`${rule.id} *`)) continue
       const text = read(f)
       if (typeof text !== 'string') continue
-      for (const n of matches(rule, text, f)) {
+      for (const n of matches(rule, text, f, project)) {
         found.push({ rule: rule.id, text: `${f}:${n} ${rule.title}` })
         hits.push({ rule: rule.id, file: f, line: n, title: rule.title, severity: rule.severity })
       }

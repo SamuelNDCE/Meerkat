@@ -17,7 +17,7 @@
 // Regexes are linear: bounded quantifiers ({0,200}) and no nested open spans, so a hostile 100 KB line cannot blow up.
 // Rules that need a sibling line (for example a handler body) look only at a fixed window of lines after the match.
 
-import { inDevOnlyBlock, shellPathIsChecked } from './guards.mjs'
+import { inDevOnlyBlock, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked } from './guards.mjs'
 const JS = ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'jsx', 'tsx']
 const HTML = ['html', 'htm']
 const COMMENT = /^\s*(\/\/|\/\*|\*|<!--)/
@@ -268,7 +268,8 @@ export const EP_IPC_PRELOAD = [
   js('ep-ipc-handler-no-sender-check', 'an ipc handler never checks which frame sent the message (checklist item 17)',
     notNear(/\bipcMain\.(?:handle|on)\(/, /\.sender\b|senderFrame|isMainFrame|frameId/, 10),
     "ipcMain.handle('ping', async () => 'pong')",
-    "ipcMain.handle('ping', async (event) => {\n  if (!isTrusted(event.senderFrame)) return null\n  return 'pong'\n})"),
+    "ipcMain.handle('ping', async (event) => {\n  if (!isTrusted(event.senderFrame)) return null\n  return 'pong'\n})",
+    { unless: (l, ctx) => ipcHandlerCallsSenderHelper(l, ctx) || ipcMainIsGuardedParameter(l, ctx) }),
   js('ep-ipc-error-object-returned', 'an ipc handler returns the raw error object to the page, which can carry paths and stack traces',
     lineIf(/\bcatch\s*\(\s*\w+\s*\)\s*\{\s*return\s+\w+\s*;?\s*\}/, (t) => /ipcMain/.test(t)),
     'ipcMain.handle("read", async () => { try { return read() } catch (err) { return err } })',
