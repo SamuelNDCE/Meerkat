@@ -14,6 +14,18 @@ import sys
 import tempfile
 from PIL import Image
 
+def trim_bottom(im, margin=14):
+    """Cut the empty background below the last drawn row, so a frame with fewer lines does not leave a block of empty space."""
+    bg = im.getpixel((0, 0))
+    px = im.load()
+    last = 0
+    for y in range(im.height - 1, -1, -1):
+        if any(px[x, y] != bg for x in range(0, im.width, 2)):
+            last = y
+            break
+    return im.crop((0, 0, im.width, min(im.height, last + 1 + margin)))
+
+
 src, out = sys.argv[1], sys.argv[2]
 opts = {'--scale': 1.0, '--colors': 128, '--delay': 180, '--hold': 3500, '--every': 1}
 rest = sys.argv[3:]
@@ -32,6 +44,7 @@ with tempfile.TemporaryDirectory() as tmp:
         open(a, 'w', encoding='utf-8').write(text)
         subprocess.run([sys.executable, os.path.join(here, 'screenshot.py'), a, p], check=True)
         im = Image.open(p).convert('RGB')
+        im = trim_bottom(im)
         if opts['--scale'] != 1.0:
             im = im.resize((int(im.width * opts['--scale']), int(im.height * opts['--scale'])), Image.Resampling.LANCZOS)
         images.append(im)
