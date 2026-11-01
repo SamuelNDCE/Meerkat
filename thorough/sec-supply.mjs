@@ -49,7 +49,20 @@ const MAX_FILE_BYTES = 1024 * 1024
 // A soft hit (a value under a secret-looking name) counts only when it is a quoted string, or a bare token with both letters and digits
 // that is at least 12 characters long. Most soft hits in source are code such as "token = getToken()", not secrets.
 // A value that is a placeholder for a runtime value ({pw}, {{name}}, ${NAME}, <token>, %s) is a template, not a secret.
-const PLACEHOLDER = /^["'`]*(?:\$\{[\w .-]*\}|\{\{?[\w .-]*\}\}?|<[\w .-]*>|%[sdv]\b)/
+const PLACEHOLDER = /^["'`]*(?:\$\{[\w .-]*\}|\{\{?[\w .-]*\}\}?|<[\w .-]*>|%[sdv]\b)(?=["'`\s,;)}\]]|$)/
+// Where each redacted value begins in the original line: the redacted text is the original with each value replaced by <hidden>.
+const valueStarts = (text, redacted) => {
+  const parts = redacted.split('<hidden>')
+  const starts = []
+  let pos = 0
+  for (let i = 0; i < parts.length - 1; i++) {
+    const at = text.indexOf(parts[i], pos)
+    if (at < 0) break
+    pos = at + parts[i].length
+    starts.push(pos)
+  }
+  return starts.length ? starts : [0]
+}
 const isLiteralValue = (text, k) => {
   if (PLACEHOLDER.test(text.slice(k, k + 40))) return false
   if (/["'`]/.test(text[k - 1] ?? '')) return true
@@ -108,10 +121,11 @@ const gitHistorySecrets = (root) => {
     scanned++
     const r = redact(text)
     if (r.hard + r.soft === 0) continue
-    // The first place the redacted text differs from the original is where the value starts (a literal "<hidden>" in the source cannot fool this).
-    let k = 0
-    while (k < text.length && k < r.text.length && text[k] === r.text[k]) k++
-    if (!r.hard && !isLiteralValue(text, k)) continue
+    // Every place the redacted text differs is where a value starts (a literal "<hidden>" in the source cannot fool this). The hit stands unless
+    // EVERY one of those values is a placeholder, so a placeholder early in the line cannot hide a real secret further along it.
+    const starts = valueStarts(text, r.text)
+    if (!r.hard && !starts.some((p) => isLiteralValue(text, p))) continue
+    const k = starts[0] ?? 0
     const short = commit.slice(0, 7)
     if (allow.has(`${short} ${file}`) || allow.has(file)) continue
     const prefix = text.slice(k, k + 8).replace(/^["'`]+/, '').slice(0, 4)
