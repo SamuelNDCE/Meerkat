@@ -169,13 +169,23 @@ describe('second Plume run (2026-11-01)', () => {
     expect(run('thorough/quality.mjs', 'debug-leftovers', bad).code).toBe(1)
   })
   test('regex-in-loop and dom-query-in-loop ignore test files but still report source files', () => {
-    const body = 'for (const x of xs) {\n  new RegExp(x)\n  document.querySelector(x)\n}\n'
+    const body = "for (const x of xs) {\n  new RegExp(x)\n  document.querySelector('.row')\n}\n"
     const ok = folder({ 'tests/a.cjs': body })
     expect(run('thorough/health.mjs', 'regex-in-loop', ok).code).toBe(0)
     expect(run('thorough/health.mjs', 'dom-query-in-loop', ok).code).toBe(0)
     const bad = folder({ 'src/a.js': body })
     expect(run('thorough/health.mjs', 'regex-in-loop', bad).code).toBe(1)
     expect(run('thorough/health.mjs', 'dom-query-in-loop', bad).code).toBe(1)
+  })
+  test('dom-query-in-loop: a lookup keyed by the loop variable differs on every pass and is not reported', () => {
+    const dir = folder({ 'src/a.js': 'for (const [k, id] of Object.entries(IDS)) {\n  const n = document.getElementById(id)\n}\n' })
+    expect(run('thorough/health.mjs', 'dom-query-in-loop', dir).code).toBe(0)
+  })
+  test('debug-leftovers: a console.log inside a block guarded by process.env is allowed', () => {
+    const ok = folder({ 'src/a.js': "if (QA && process.env.APP_SMOKE) {\n  run()\n  console.log('RESULTS')\n}\n" })
+    expect(run('thorough/quality.mjs', 'debug-leftovers', ok).code).toBe(0)
+    const bad = folder({ 'src/a.js': "if (ready) {\n  console.log('RESULTS')\n}\n" })
+    expect(run('thorough/quality.mjs', 'debug-leftovers', bad).code).toBe(1)
   })
   test('geolocation-and-media-requests: a clipboard read in a function called from a key handler is allowed, a load-time one is not', () => {
     const lead = Array.from({ length: 12 }, (_, i) => `// filler ${i}`).join('\n')

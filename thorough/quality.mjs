@@ -87,12 +87,24 @@ const lineLength = (root) => {
 }
 
 // ---- debug-leftovers: debugger statements, console.log, Python debug prints, Rust dbg!/todo!, Go debug prints
-const debugWhy = (x, line, prev, testy, cliish) => {
+// True when an enclosing block (a line above with less indentation, up to 6 levels up) opens with an if that tests process.env or DEBUG.
+const indentOf = (l) => l.length - l.trimStart().length
+const guardedBlock = (lines, i) => {
+  let ind = indentOf(lines[i])
+  for (let k = i - 1, levels = 0; k >= 0 && levels < 6 && ind > 0; k--) {
+    if (!lines[k].trim() || indentOf(lines[k]) >= ind) continue
+    if (/\bif\s*\(.*(?:process\.env\b|\b(?:DEBUG|VERBOSE)\b)/.test(lines[k])) return true
+    ind = indentOf(lines[k])
+    levels++
+  }
+  return false
+}
+const debugWhy = (x, line, prev, testy, cliish, guarded = () => false) => {
   if (/\.(m?[jt]sx?|cjs)$/.test(x)) {
     if (/\bdebugger\s*;|(?:^|[;{}])\s*debugger\s*(?:$|\/[/*])/.test(line)) return 'has debugger; left in (it stops the program when a debugger is attached)'
     // A console.log behind an environment flag or a DEBUG / VERBOSE switch on the same line is a deliberate, switchable log.
     const log = /\bconsole\.log\s*\(/.exec(line)
-    if (!testy && !cliish && log && !/process\.env\b|\b(?:DEBUG|VERBOSE)\b/.test(line.slice(0, log.index))) return 'has console.log() left in'
+    if (!testy && !cliish && log && !/process\.env\b|\b(?:DEBUG|VERBOSE)\b/.test(line.slice(0, log.index)) && !guarded()) return 'has console.log() left in'
   }
   if (/\.py$/.test(x) && /\bprint\(/.test(line) && (/print\(\s*f?["']\s*DEBUG/i.test(line) || /#\s*debug/i.test(prev))) return 'has a debug print() left in'
   if (/\.rs$/.test(x)) {
@@ -120,7 +132,7 @@ const debugLeftovers = (root) => {
     const cliish = /(^|\/)(bin|scripts|tools|cli)\//i.test(x) || bins.has(x) || /^#!/.test(readText(root, x))
     const lines = readText(root, x).split('\n')
     lines.forEach((line, i) => {
-      const why = debugWhy(x, line, lines[i - 1] ?? '', testy, cliish)
+      const why = debugWhy(x, line, lines[i - 1] ?? '', testy, cliish, () => guardedBlock(lines, i))
       if (why && !allowed(allow, x, i + 1)) f.push(`${x}:${i + 1} ${why}`)
     })
   }
