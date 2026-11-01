@@ -26,19 +26,31 @@ It runs the checks your project needs, shows what passed, what failed and what c
 
 ## What it looks like
 
-The pictures below are drawn by Meerkat's real screens with made-up sample data.
+Every picture below is **sample data**: a made-up project, not a real run. Each one says so under the screen.
 
-**The menu** shows your version and, in yellow, the newest version when an update is waiting.
+**While it runs**, the board shows what is running now (the check, the file or step, its time), a status line that tells you what Meerkat is looking for and how many problems it has found so far, every check with its time, and a timeline.
 
-![The menu with the preset list and an update bar](docs/images/menu.png)
+![Meerkat running: the status line, what is running now, every check with its time, and a timeline](docs/images/meerkat-run.gif)
 
-**After a run** a results screen opens. Tab or the arrow keys switch between findings (worst first), every check with its time, and a timeline.
+**When it finds problems**, the results screen lists them worst first. Each line says the severity in words and colour, the rule, the file and line, and why it matters. Critical means fix before shipping, high means fix soon, medium means should fix, low and info are worth knowing.
 
-![Results screen, findings tab, with the bug counter by severity](docs/images/results-findings.png)
+![Results screen, findings tab](docs/images/results-findings.png)
+
+Tab or the arrow keys move between the findings, every check with its time, and a timeline of the whole run. Up and Down scroll when there is more than fits.
+
+![Using the results screen: scroll the findings, Tab to the checks, Tab to the timeline](docs/images/results-scroll.gif)
 
 ![Results screen, checks tab](docs/images/results-checks.png)
 
 ![Results screen, timeline tab](docs/images/results-timeline.png)
+
+**When nothing is wrong**, Meerkat says so, and looks pleased about it.
+
+![Results screen after a clean run: a happy meerkat and a green ALL CLEAR](docs/images/results-happy.png)
+
+**The menu** shows your version and, in yellow, the newest version when an update is waiting.
+
+![The menu with the preset list and an update bar](docs/images/menu.png)
 
 ## The systems at a glance
 
