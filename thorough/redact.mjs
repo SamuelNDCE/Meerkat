@@ -39,8 +39,12 @@ export function redact(text) {
   // A secret-named assignment that opens a quote the pattern above could not close (a multi-line value, or one ending in a backslash):
   // the extent of the value is unknown, so it counts as a hard find and nothing is sent.
   out = out.replace(OPEN_QUOTE, (whole, head, quote, rest) => {
-    // A truly empty string ending the statement ('' or "" then at most a closing mark) is fine; checked here in linear time.
-    if (rest[0] === quote && rest[1] !== quote && /^[ \t]*[,;)}\]]?[ \t]*\r?$/.test(rest.slice(1))) return whole
+    // A truly empty string ('' or "") is fine when a separator or the end follows it, as in {"password":"","notes":""}; a doubled quote, or
+    // "" + "a b c" (the value continues), is left to the check below.
+    if (rest[0] === quote && rest[1] !== quote && /^[ \t]*(?:[,;)}\]]|\r?$)/.test(rest.slice(1))) return whole
+    // A value of one or two characters that closes on the same line ("{}", "1") is a placeholder or a flag, not an unclosed secret.
+    const close = rest.indexOf(quote)
+    if (close >= 1 && close <= 2 && rest[close - 1] !== '\\' && rest[close + 1] !== quote) return whole
     hard++
     whole.includes('\n') && multiline++
     return `${head}<hidden>`

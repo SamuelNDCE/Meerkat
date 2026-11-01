@@ -344,13 +344,15 @@ export const PERF_STYLE = [
 
 // ---------------------------------------------------------------- Cargo and build configuration (rp-cargo)
 // Each rule reads one manifest or config file. The package rules look at the [package] table (tomlBody), not the whole file.
+// A crate with publish = false never goes to crates.io, so it needs no description or license of its own; fields inherited with key.workspace = true count as set.
+const NOT_PUBLISHED = /^\s*publish\s*=\s*false/m
 const PKG = (test) => (line, ctx) => PKG_HEADER.test(line) && test(ctx)
 export const CARGO_RULES = [
-  CARGO_R('rcargo-missing-description', 'the package has no description (crates.io and search show nothing)', PKG((c) => !/^\s*description\s*=/m.test(tomlBody(c.text, 'package'))),
+  CARGO_R('rcargo-missing-description', 'the package has no description (crates.io and search show nothing)', PKG((c) => !/^\s*description(?:\.workspace)?\s*=/m.test(tomlBody(c.text, 'package')) && !NOT_PUBLISHED.test(tomlBody(c.text, 'package'))),
     '[package]\nname = "parser"\nversion = "0.1.0"\nedition = "2021"\nlicense = "MIT"', '[package]\nname = "parser"\nversion = "0.1.0"\nedition = "2021"\nlicense = "MIT"\ndescription = "Parses config files."'),
-  CARGO_R('rcargo-missing-license', 'the package has no license or license-file', PKG((c) => !/^\s*(?:license|license-file)\s*=/m.test(tomlBody(c.text, 'package'))),
+  CARGO_R('rcargo-missing-license', 'the package has no license or license-file', PKG((c) => !/^\s*(?:license|license-file)(?:\.workspace)?\s*=/m.test(tomlBody(c.text, 'package')) && !NOT_PUBLISHED.test(tomlBody(c.text, 'package'))),
     '[package]\nname = "parser"\nversion = "0.1.0"\nedition = "2021"', '[package]\nname = "parser"\nversion = "0.1.0"\nedition = "2021"\nlicense = "MIT"'),
-  CARGO_R('rcargo-missing-edition', 'the package sets no edition, so it builds with the oldest edition', PKG((c) => !/^\s*edition\s*=/m.test(tomlBody(c.text, 'package'))),
+  CARGO_R('rcargo-missing-edition', 'the package sets no edition, so it builds with the oldest edition', PKG((c) => !/^\s*edition(?:\.workspace)?\s*=/m.test(tomlBody(c.text, 'package'))),
     '[package]\nname = "parser"\nversion = "0.1.0"', '[package]\nname = "parser"\nversion = "0.1.0"\nedition = "2021"'),
   CARGO_R('rcargo-edition-old', 'the crate uses edition 2015 or 2018 (2021 or later has better defaults)', reT(/^\s*edition\s*=\s*"(?:2015|2018)"/), 'edition = "2018"', 'edition = "2021"'),
   CARGO_R('rcargo-wildcard-version', 'a dependency has version "*", so any release can be pulled in', reT(/^\s*[\w-]+\s*=\s*"\*"|\bversion\s*=\s*"\*"/), 'serde = "*"', 'serde = "1.0"'),

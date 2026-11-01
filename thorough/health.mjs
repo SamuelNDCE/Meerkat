@@ -32,6 +32,8 @@ const SECTIONS = ['dependencies', 'devDependencies', 'optionalDependencies', 'pe
 const SECTION_RE = Object.fromEntries(SECTIONS.map((s) => [s, new RegExp(`"${s}"\\s*:\\s*\\{([^{}]*)\\}`, 'g')]))
 const ENTRY_RE = /"([^"\\]+)"\s*:\s*"([^"\\]*)"/g
 const DEV_ONLY = /^(eslint|jest|vitest|mocha|typescript|webpack|prettier|nodemon|@types\/.+|eslint-.+|@typescript-eslint\/.+)$/
+// Packages a framework loads for you, so no source file has to import them: name -> frameworks that need it.
+const PEER_OF = { 'react-dom': ['next', 'gatsby', 'react-scripts', '@remix-run/react', '@puckeditor/core', '@storybook/react'], react: ['next', 'gatsby', 'react-scripts'] }
 const TOOLING = /^(typescript|eslint|prettier|vitest|jest|mocha|nodemon|webpack|vite|tsx|ts-node|rimraf|husky|lint-staged|esbuild|rollup|concurrently|cross-env|npm-run-all|electron|electron-builder|@types\/.+|@typescript-eslint\/.+|eslint-.+|@babel\/.+|babel-.+|postcss|autoprefixer|tailwindcss)$/
 const REQ_UNPINNED = /^[A-Za-z0-9][A-Za-z0-9._-]*(\[[^\]]*\])?$/
 const CARGO_STAR = /\bversion\s*=\s*"\*"|^\s*[\w-]+\s*=\s*"\*"\s*$/
@@ -375,9 +377,12 @@ const unusedDependenciesQuick = (root) => {
   const blob = parts.join('\n')
   for (const p of pkgs) {
     if (allowed(allow, id, p.x)) continue
-    for (const e of depEntries(p.text)) {
+    const entries = depEntries(p.text)
+    for (const e of entries) {
       if (e.section !== 'dependencies' && e.section !== 'devDependencies') continue
       if (TOOLING.test(e.name) || allow.has(`${id} ${e.name}`) || blob.includes(e.name)) continue
+      // A framework needs these at run time without any source file naming them (Next.js renders with react and react-dom).
+      if (PEER_OF[e.name]?.some((host) => entries.some((d) => d.name === host))) continue
       f.push(`${p.x} lists ${e.name}, which no tracked source or script mentions (remove it, or allow it as "${id} ${e.name}" in .meerkat-health-allow)`)
     }
   }

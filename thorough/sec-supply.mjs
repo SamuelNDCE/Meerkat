@@ -48,7 +48,10 @@ const MAX_FILE_BYTES = 1024 * 1024
 
 // A soft hit (a value under a secret-looking name) counts only when it is a quoted string, or a bare token with both letters and digits
 // that is at least 12 characters long. Most soft hits in source are code such as "token = getToken()", not secrets.
+// A value that is a placeholder for a runtime value ({pw}, {{name}}, ${NAME}, <token>, %s) is a template, not a secret.
+const PLACEHOLDER = /^["'`]*(?:\$\{[\w .-]*\}|\{\{?[\w .-]*\}\}?|<[\w .-]*>|%[sdv]\b)/
 const isLiteralValue = (text, k) => {
+  if (PLACEHOLDER.test(text.slice(k, k + 40))) return false
   if (/["'`]/.test(text[k - 1] ?? '')) return true
   const token = /^[^\s"'`,;()[\]{}]*/.exec(text.slice(k))[0]
   return token.length >= 12 && /[A-Za-z]/.test(token) && /[0-9]/.test(token) && /^[A-Za-z0-9_\-/=]+$/.test(token)

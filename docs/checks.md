@@ -170,7 +170,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `xxe-and-deserialize` | fast | tiny | 1 s | XML parsers are locked down and untrusted data is not deserialized | security-plus |
 | `ai-diff-review` | thorough | light | 1.0 min | AI security review of the changes against the base branch *(opt-in: `--include ai`)* | ai |
 | `ai-route-audit` | thorough | light | 5.0 min | AI audit of every route, handler and IPC channel *(opt-in: `--include ai`)* | ai |
-| `npm-audit-all` | thorough | tiny | 15 s | npm audit, high severity, every dependency including dev ones | security |
+| `npm-audit-all` | thorough | tiny | 30 s | npm audit, high severity, every dependency including dev ones | security |
 
 ## Functionality checks
 
@@ -442,15 +442,15 @@ Is the code itself in good shape: duplicated code, dead code, files too long, ci
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
-| `commented-out-code` | fast | tiny | 5 s | Commented-out code left in the files | refactor |
-| `cyclomatic-complexity` | fast | tiny | 5 s | Functions with too many branches to test | refactor |
-| `dead-code` | fast | light | 10 s | Dead code: exported names nothing else uses (JS and TS) | refactor |
-| `deep-nesting` | fast | tiny | 5 s | Code nested too many levels deep | refactor |
-| `duplicate-code` | fast | light | 15 s | Duplicated code: blocks copied between files | refactor |
-| `file-length` | fast | light | 3 s | Files too long to read in one sitting | refactor |
-| `long-functions` | fast | light | 10 s | Functions too long to read in one sitting | refactor |
-| `many-parameters` | fast | tiny | 5 s | Functions with too many parameters | refactor |
-| `unused-files` | fast | light | 10 s | JavaScript and TypeScript files nothing imports | refactor |
+| `commented-out-code` | fast | tiny | 1 s | Commented-out code left in the files | refactor |
+| `cyclomatic-complexity` | fast | tiny | 1 s | Functions with too many branches to test | refactor |
+| `dead-code` | fast | light | 2 s | Dead code: exported names nothing else uses (JS and TS) | refactor |
+| `deep-nesting` | fast | tiny | 1 s | Code nested too many levels deep | refactor |
+| `duplicate-code` | fast | light | 3 s | Duplicated code: blocks copied between files | refactor |
+| `file-length` | fast | light | 1 s | Files too long to read in one sitting | refactor |
+| `long-functions` | fast | light | 2 s | Functions too long to read in one sitting | refactor |
+| `many-parameters` | fast | tiny | 1 s | Functions with too many parameters | refactor |
+| `unused-files` | fast | light | 2 s | JavaScript and TypeScript files nothing imports | refactor |
 | `circular-imports` | thorough | light | 20 s | No circular imports (madge) *(needs: madge)* | node |
 | `dead-python` | thorough | light | 10 s | Dead Python code (vulture) *(needs: vulture)* | python |
 <!-- checks:end -->
