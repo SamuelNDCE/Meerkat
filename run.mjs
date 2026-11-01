@@ -15,6 +15,7 @@ import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from '
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
 import { discoverChecks } from './lib/discover.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
+import { estimateRunMs, estimateVsActualText } from './lib/runestimate.mjs'
 import { clampScale } from './lib/timeouts.mjs'
 import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
@@ -292,7 +293,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // Use the times measured on this machine for the order, the bar and the time left; keep the written ones for any check not yet measured.
   const timingsFile = timingsPath(env)
   const timings = loadTimings(timingsFile, appDir)
-  applyLearned(checks, timings, tier)
+  applyLearned(checks, timings, tier, { env })
 
   if (opts.listJson) settleSplash()
   if (opts.listJson) return (baseLog(listJsonText(checks)), 0)
@@ -325,6 +326,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let skippedCount = 0
   let subOnly = new Map() // check id -> the sub-checks asked for with suite/check/sub
   let ranChecks = []
+  let estimatedMs = null // how long the checks chosen were expected to take (null in a self-test)
   let status = null
   let boardShown = false // the live board ran in this terminal: its end-of-run output is the results screen, not a dump of lines
   if (!opts.list) {
@@ -358,6 +360,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       log(`  work by lane: cargo ${lane('cargo')} s (one at a time), windows ${lane('electron')} s (one at a time), found window tests ${lane('windows')} s (up to ${found?.result.maxWindows ?? 3} at once), everything else ${lane('free')} s (side by side)`)
       return 0
     }
+    // The run's own estimate, set beside the real time in the summary line (the same sum as --estimate and the preset menu).
+    estimatedMs = sel.run.length ? estimateRunMs(sel.run, timings, tier, { slots: Math.max(1, cpus().length - 1) }) : null
     // Nothing to run is not a pass: say why, and what to change.
     if (!sel.run.length) {
       fail(`no checks to run: ${checks.length} loaded from the packs ${JSON.stringify(read.config.packs ?? [])}, but ${opts.preset ? `the preset ${opts.preset}` : `the ${tier} tier`}${groups.length ? ` (kinds: ${groups.join(', ')})` : ''} selects none of them. Add a pack that has such checks to "packs" in ${configFile ?? 'meerkat.config.json'}.`)
@@ -394,7 +398,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let full = enrichResults(results, ranChecks.length ? ranChecks : checks) // suite and sub-check counts for the saved files and --json
   // A check that could not run gets a short log too (why, and what to do), so `meerkat why <check>` always has something to show.
   if (!opts.selfTest) full = saveNotRunLogs(ctx.logDir, full, ranChecks.length ? ranChecks : checks)
-  const { line, exitCode: summaryCode } = summarise(opts.selfTest ? `${tier} self-test` : tier, results, skippedCount, Date.now() - started)
+  const { line, exitCode: summaryCode } = summarise(opts.selfTest ? `${tier} self-test` : tier, results, skippedCount, Date.now() - started, estimatedMs ? estimateVsActualText(estimatedMs, Date.now() - started) : '')
   const exitCode = interrupted ? 130 : summaryCode
   status?.stop(line)
   // A finished real run adds one entry to the run log the terminal UI's history view reads (home folder, never the repo).
@@ -413,10 +417,10 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // The detection files (lib/findingsdoc.mjs): findings.json, findings.md, findings.sarif and detections.jsonl, then the cross-run history.
   const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
   if (findingsInfo && !opts.selfTest && !hush && !boardShown) log(findingsInfo.line)
-  const report = writeRunReport({ interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })
+  const report = writeRunReport({ interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs })
   if (report && !boardShown) log(`logs: ${ctx.logDir}   (node run.mjs --last shows the report, --why <check> one check's log)`)
   // At a terminal with the board: a short summary stays in the scrollback; the results screen (meerkat) shows everything else.
-  if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)
+  if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, estimatedMs, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)
   if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
   if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog)
   if (interrupted) log(`Stopped by you: results so far saved to ${ctx.logDir}`)
