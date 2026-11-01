@@ -768,7 +768,7 @@ describe('the shipped packs are well-formed and self-testable', () => {
     expect(fixture.out).toContain('found 3')
     writeFileSync(join(dir, 'clean.js'), 'const a = 1')
     expect(run(['--root', dir]).code).toBe(0)
-    const key = 'AKIA' + 'IOSFODNN7EXAMPLE'
+    const key = 'AKIA' + 'QWERTYUIOPASDFGH' // not AWS's documented EXAMPLE key: the scan skips that one on purpose
     writeFileSync(join(dir, 'real.js'), `const k = '${key}'`)
     const found = run(['--root', dir])
     expect(found.code).toBe(1)

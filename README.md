@@ -117,6 +117,18 @@ Meerkat reads your project from the outside: it never edits it, and its own file
 
 Meerkat only checks real projects: a git repository, or a folder with a recognised marker such as `package.json`, `Cargo.toml` or `pyproject.toml`. Anything else is refused with a clear message (`--force` overrides it).
 
+## What a first scan reports
+
+A project that has never been scanned should not be judged by Meerkat's opinions. On a first scan:
+
+- **Size and shape limits are advice.** Checks that only compare your code with Meerkat's default limits (line length, function length, nesting, parameters, complexity, file length, duplication, dead code, commented-out code, `any` counts, untimed HTTP calls) pass with a note, and what they found is shown as `info`. They start to fail the run when you write your own limits in `.meerkat-budgets.json` (root or `.meerkat/`).
+- **Outside style tools only run on rules you chose.** eslint, prettier and stylelint are reported as NOT RUN when the project has no configuration for them, and markdownlint uses lenient style rules unless you have a markdownlint config. A tool never judges a project by its own defaults.
+- **No network, no verdict.** A check that needs a service (`cargo audit`'s advisory database, the npm registry) is NOT RUN when it cannot reach it, not a failure.
+- **Test code is not scanned for secrets.** Test folders and files, Rust unit-test modules (`#[cfg(test)]`), `probe-*` scripts, `test_support` helpers and values that say they are fake (`FAKE_TOKEN`, the AWS documentation keys) are left alone by the secret checks and the rule tables. A real-looking key in shipped code is still found, in the same files.
+- **Dependency folders are never read.** `node_modules`, `.claude` (agent worktrees), `vendor`, `dist`, `build` and `target` are skipped by the document checks at any depth.
+
+Every skipped, covered or turned-off check is listed in the results with what it is, so nothing is hidden. Security findings, secrets and real defects are never made advisory.
+
 ## What it looks like
 
 Every picture here is **sample data**: a made-up project, not a real run.

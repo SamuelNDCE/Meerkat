@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test } from 'vitest'
 // @ts-ignore plain .mjs modules have no type declarations
 import { extraToolDirs, findBinary } from '../lib/which.mjs'
-// @ts-ignore
+// @ts-ignore plain .mjs module has no type declarations
 import checks from '../packs/docs/docs.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
