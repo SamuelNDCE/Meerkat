@@ -26,7 +26,7 @@ const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|ou
 const BINARY_EXT = /\.(png|jpe?g|gif|webp|ico|bmp|tiff?|pdf|zip|gz|tgz|bz2|xz|7z|rar|woff2?|ttf|otf|eot|exe|dll|pdb|rlib|so|dylib|wasm|mp[34]|mov|avi|webm|wav|ogg|class|jar|pyc|bin|dat|db|sqlite3?|psd|ai)$/i
 const LOCK_FILES = /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|poetry\.lock|Pipfile\.lock|Gemfile\.lock|composer\.lock|go\.sum|bun\.lockb?|flake\.lock|packages\.lock\.json)$|\.lock$|\.min\.(js|css)$|\.map$|\.meerkat-[a-z-]*allow$/i
 // Tests, docs, fixtures and examples hold fake secrets on purpose.
-const SAMPLE_PATHS = /(^|\/)(tests?|__tests__|spec|specs|__fixtures__|fixtures?|testdata|test-fixtures|docs?|examples?|samples?|locales?|i18n|l10n|translations?)\/|\.(test|spec)\.[a-z]+$|(^|\/)test[-_][^/]*$|[-_]tests?\.[a-z]+$|(^|\/)tests\.rs$/i
+const SAMPLE_PATHS = /(^|\/)(tests?|__tests__|spec|specs|__fixtures__|fixtures?|testdata|test-fixtures|docs?|examples?|samples?|locales?|i18n|l10n|translations?)\/|\.(test|spec)\.[a-z]+$|(^|\/)test[-_][^/]*$|(^|\/)probe-[\w.-]+\.(?:[cm]?[jt]s|py)$|[-_]tests?\.[a-z]+$|(^|\/)tests\.rs$/i
 
 const globRe = (g) => new RegExp(`^${g.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '.*').replace(/\?/g, '[^/]')}$`)
 

@@ -135,7 +135,7 @@ function main() {
     const dir = mkdtempSync(path.join(tmpdir(), 'meerkat-secrets-'))
     try {
       mkdirSync(path.join(dir, 'src'))
-      writeFileSync(path.join(dir, 'src', 'config.js'), `const aws = '${'AKIA' + 'IOSFODNN7EXAMPLE'}'\nconst gh = '${'ghp_' + '0123456789abcdefghijklmnopqrstuvwxyz'}'\n`)
+      writeFileSync(path.join(dir, 'src', 'config.js'), `const aws = '${'AKIA' + 'QWERTYUIOPASDFGH'}'\nconst gh = '${'ghp_' + '0123456789abcdefghijklmnopqrstuvwxyz'}'\n`)
       writeFileSync(path.join(dir, 'key.pem'), `${'-----BEGIN ' + 'RSA PRIVATE KEY-----'}\nMIIBOgIBAAJBAK\n`)
       const { findings } = scan(dir)
       say(`planted 3 fake secrets, found ${findings.length}`)

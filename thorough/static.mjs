@@ -139,6 +139,91 @@ const RISKY = [
   [/chmod\s+(?:-R\s+)?0?777|0o777|StrictHostKeyChecking\s*=\s*no/, 'world-writable permissions or SSH host checks off', /\.(sh|bash|py|m?[jt]s|cjs|ya?ml|rs|go)$/],
   [/['"]http:\/\/(?!localhost|127\.|0\.0\.0\.0|\[::1\]|example\.|www\.w3\.org|schemas\.|json-schema\.org)[a-z0-9.-]+\.[a-z]{2,}/i, 'a plain http:// address (not encrypted)', SOURCE],
 ]
+// `const btn = (icon, label) => { ...innerHTML = icon }` where every call of btn in the file passes a string literal or an ALL_CAPS constant (ICON.up) for that
+// parameter, and btn is not exported or passed around as a value: the markup is always author-written. Not safe when unsure, and nothing is safe with no call.
+const CONST_ARG = /^(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)$/
+const splitArgs = (s) => {
+  const out = []
+  let depth = 0
+  let cur = ''
+  let q = ''
+  for (const c of s) {
+    if (q) {
+      cur += c
+      if (c === q) q = ''
+    } else if (c === '"' || c === "'" || c === '`') {
+      q = c
+      cur += c
+    } else if ('([{'.includes(c)) {
+      depth++
+      cur += c
+    } else if (')]}'.includes(c)) {
+      depth--
+      cur += c
+    } else if (c === ',' && depth === 0) {
+      out.push(cur.trim())
+      cur = ''
+    } else cur += c
+  }
+  if (cur.trim()) out.push(cur.trim())
+  return out
+}
+const paramOnlyConstants = (t, at, param) => {
+  const before = t.slice(0, at)
+  const defs = [...before.matchAll(/(?:\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(([^()]*)\)\s*=>|\bfunction\s+([A-Za-z_$][\w$]*)\s*\(([^()]*)\))/g)]
+  const d = defs.at(-1)
+  if (!d) return false
+  const name = d[1] ?? d[3]
+  const params = splitArgs(d[2] ?? d[4])
+  const idx = params.findIndex((p) => p === param)
+  // Exported helpers have callers elsewhere; any write to the parameter (plain, compound, ++/--, destructuring target) ends the argument-only reasoning.
+  if (/(?:^|[\n;}])[ \t]*export\s+(?:default\s+)?(?:async\s+)?$/.test(t.slice(Math.max(0, d.index - 60), d.index))) return false
+  if (idx < 0 || params.some((p) => p.startsWith('...'))) return false
+  // The sink must sit inside the helper's braced body, and nothing inside that body may declare the same name again (a nested function parameter, let, const, var).
+  const open = t.indexOf('{', d.index + d[0].length - 1)
+  if (open < 0 || t.slice(d.index + d[0].length, open).trim() !== '') return false
+  const blank = t.replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`[^`]*`/g, (s) => ' '.repeat(s.length))
+  let depth = 0
+  let close = -1
+  for (let i = open; i < blank.length; i++) {
+    if (blank[i] === '{') depth++
+    else if (blank[i] === '}' && --depth === 0) {
+      close = i
+      break
+    }
+  }
+  if (close < 0 || at < open || at > close) return false
+  const p = param.replace(/\$/g, '\\$')
+  // Fail closed on anything that could rebind the name or hide code from the blanking above: a nested function or class, a template with ${} or a backtick left
+  // in a comment, or a declaration of the name (const, let, var, destructuring) in the body.
+  const rawBody = t.slice(open + 1, close)
+  if (/=>|\bfunction\b|\bclass\b|\$\{|`/.test(rawBody.replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, ' '))) return false
+  // Strictest form: inside the helper the name appears exactly once, as the sink's value. Any write, shadowing, loop variable or destructuring needs a second mention.
+  const mentions = blank.slice(open + 1, close).match(new RegExp(String.raw`(?<![\w$])${p}(?![\w$])`, 'g')) ?? []
+  if (mentions.length !== 1) return false
+  const n = name.replace(/\$/g, '\\$')
+  // A name inside a class name or string ('find-btn') is not a use of the helper.
+  const uses = [...t.matchAll(new RegExp(String.raw`(?<![\w$.\-'"\x60])${n}(?![\w$\-])`, 'g'))]
+  const calls = [...t.matchAll(new RegExp(String.raw`(?<![\w$.\-'"\x60])${n}\(`, 'g'))].filter((c) => c.index !== d.index + d[0].indexOf(name))
+  if (!calls.length || uses.length !== calls.length + 1) return false
+  for (const c of calls) {
+    let depth = 0
+    let end = -1
+    for (let i = c.index + c[0].length - 1; i < t.length && i < c.index + 400; i++) {
+      if (t[i] === '(') depth++
+      else if (t[i] === ')' && --depth === 0) {
+        end = i
+        break
+      }
+    }
+    if (end < 0) return false
+    const args = splitArgs(t.slice(c.index + c[0].length, end))
+    if (args.slice(0, idx + 1).some((a) => a.startsWith('...'))) return false
+    const arg = args[idx]
+    if (arg === undefined || !CONST_ARG.test(arg)) return false
+  }
+  return true
+}
 // innerHTML = '' or = '<svg ...>' (a plain string with no ${} and no + joining other text) injects nothing a visitor controls, so it is not a risk.
 const safeLiteralAssign = (t, m, why) => {
   if (!why.startsWith('innerHTML')) return false
@@ -148,6 +233,7 @@ const safeLiteralAssign = (t, m, why) => {
   // A plain name or dotted path that is a top-level constant holding only text (const ICONS = { save: '<svg ...>' }) is author-written markup too.
   const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*(?:\/\/.*)?$/.exec(rest)
   if (root && isConstantMarkup(t, root[1])) return true
+  if (root && !root[0].includes('.') && paramOnlyConstants(t, m.index, root[1])) return true
   // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
   const atom = String.raw`(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\x60[^\x60$\\]*\x60|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)`
   if (new RegExp(String.raw`^${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)) return true

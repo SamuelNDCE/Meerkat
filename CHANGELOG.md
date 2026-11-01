@@ -13,6 +13,10 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - ep-ipc-handler-no-sender-check no longer flags handlers whose sender is checked through a helper in the same file, or registered through an ipcMain parameter that every caller fills with a wrapper that checks the sender (found scanning Plume)
 - secret checks leave test code alone: Rust unit tests after #[cfg(test)], *_tests.rs, probe folders, values that say they are fake (FAKE_TOKEN, SUPERSECRET, the AWS documentation keys), and a private key header in a comment with no key under it. On NeuralVault this removed all 25 critical findings, every one of them a test fixture
 - the rule-table checks (Electron, Rust, secrets and the rest) leave test files, tests.rs and probe-* scripts alone; Rust unit tests are found by matching the braces of the #[cfg(test)] module, so code after it is scanned again
+- innerHTML set from a local helper's parameter is not reported when every call of the helper passes a literal or an ALL_CAPS constant (found on Plume's find bar)
+- Rust test code is found by the exact #[cfg(test)] module in the Rust rule tables too, and env::set_var in tests is no longer reported; test_support and probe-* scripts are left alone by the Electron context-isolation and secrets-plus checks
+- markdownlint no longer reads node_modules, .claude (agent worktrees), vendor, dist, build or target folders at any depth (on Plume this removed 498 findings from dependency documents)
+- a first scan does not fail on Meerkat's own default limits: line-length, long-functions, deep-nesting, many-parameters, cyclomatic-complexity, file-length, duplicate-code, dead-code, commented-out-code, ts-any-overuse and http-timeouts pass as advisory notes (findings become info) until the project has a .meerkat-budgets.json
 - a guide for adding a click-through test for your own app: docs/click-through.md
 - markdownlint skips the folders named fixtures, where documents are broken on purpose
 
