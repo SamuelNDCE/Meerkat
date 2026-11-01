@@ -2,3 +2,5 @@
 # Both are fixture text inside Meerkat's own check scripts, not live code. Reviewed 2026-10-31.
 stack-trace-to-client-js thorough/api.mjs
 cors-reflects-request-origin thorough/sec-code.mjs
+# Accepted: the package has no build artifact beyond the source; npm trusted publishing attaches a signed provenance statement instead.
+release-workflow-no-sbom .github/workflows/publish.yml
