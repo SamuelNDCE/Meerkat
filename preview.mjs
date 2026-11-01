@@ -5,6 +5,7 @@
 //   node preview.mjs               play the run in this terminal (Ctrl+C to stop)
 //   node preview.mjs --fail        one check fails, so you can see the alarm
 //   node preview.mjs --speed 20    faster (default 10: 10 seconds of run per second watched)
+//   node preview.mjs --height 40   draw for a terminal 40 rows tall (the lists share the rows like the real board)
 //   node preview.mjs --once        print one still frame mid-run and exit
 //   node preview.mjs --final --speed 3000   run to the end at once and print the finished board (--fail for the alarm)
 //   node preview.mjs --plain       no colour
@@ -24,6 +25,9 @@ const argv = process.argv.slice(2)
 const has = (f) => argv.includes(f)
 const SPEED = has('--speed') ? Number(argv[argv.indexOf('--speed') + 1]) || 10 : 10
 const FAIL = has('--fail')
+// --height N: draw for a terminal N rows tall (default: this terminal, or 40 when the output is not a terminal, so pictures are the same everywhere).
+const HEIGHT = has('--height') ? Number(argv[argv.indexOf('--height') + 1]) || 40 : process.stdout.rows || 40
+const statusState = {}
 // --flat: one line per check; --grouped: always fold into groups; neither: fold when there are more than 24 checks.
 const GROUPED = has('--flat') ? false : has('--grouped') ? true : undefined
 const theme = loadTheme({})
@@ -130,7 +134,7 @@ const frame = (tick) => {
   const remaining = estimateRemaining(rows, t, { freeSlots: 11 })
   const target = allDone ? 1 : (t - base) / Math.max(1, t - base + remaining)
   shown = allDone ? 1 : Math.max(shown, shown + (target - shown) * 0.3)
-  return withNote(renderLive({ title: 'MEERKAT fast  C:/Users/SamuelNDCE/code/plume', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: process.stdout.rows, color, theme, grouped: GROUPED }))
+  return withNote(renderLive({ title: 'MEERKAT fast  C:/Users/SamuelNDCE/code/plume', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: HEIGHT, color, theme, grouped: GROUPED, statusState }))
 }
 
 if (has('--once')) {
@@ -157,7 +161,7 @@ if (has('--once')) {
   note.set('build-tauri', 'Compiling plume-sync v1.4.2')
   note.set('unit-tests', 'vitest: 210 / 530 files')
   const rows = model.snapshot(fakeNow).map((r) => (r.id === 'unit-tests' ? { ...r, note: note.get(r.id), lastOutputAt: fakeNow - 1500, currentFile: fakeFile('unit-tests', 210), filesDone: 210, filesTotal: 530 } : { ...r, note: note.get(r.id), lastOutputAt: r.status === 'RUNNING' ? fakeNow - 2500 : r.lastOutputAt }))
-  console.log(withNote(renderLive({ title: 'MEERKAT fast  C:/Users/SamuelNDCE/code/plume', rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, color, theme })).join('\n'))
+  console.log(withNote(renderLive({ title: 'MEERKAT fast  C:/Users/SamuelNDCE/code/plume', rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, height: HEIGHT, color, theme, statusState })).join('\n'))
   process.exit(0)
 }
 
@@ -166,7 +170,7 @@ if (has('--once')) {
 // board, the last sections (events, then the check list) are cut off rather than scrolled.
 let last = []
 const draw = (tick) => {
-  const rows = (process.stdout.rows || 60) - 1
+  const rows = HEIGHT - 1
   last = frame(tick)
   if (DUMP && tick % 10 === 0) dumped.push(last.join('\n'))
   process.stdout.write(`${ESC}H${last.slice(0, rows).map((l) => `${l}${ESC}K`).join('\n')}\n${ESC}J`)

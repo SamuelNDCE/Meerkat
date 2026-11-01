@@ -126,29 +126,29 @@ describe('the live bug counter', () => {
     const bugs = { critical: 2, high: 5, medium: 7, low: 3, info: 0, total: 17 }
     const c = bugCounter(bugs, { width: 110, color: true, height: 40 })
     expect(c.mode).toBe('stack')
-    expect(c.lines.map((l) => l.plain)).toEqual(['bugs found: 17', '2 critical', '5 high', '7 medium'])
-    expect(new Set(c.lines.map((l) => l.width))).toEqual(new Set([14]))
-    expect(c.lines[0].text).toContain('\x1b[1;97mbugs found: 17')
-    expect(c.lines[1].text).toContain('\x1b[1;31m2 critical')
-    expect(c.lines[2].text).toContain('\x1b[1;38;5;208m5 high')
-    expect(c.lines[3].text).toContain('\x1b[1;33m7 medium')
-    expect(c.lines[1].text.endsWith('2 critical\x1b[0m')).toBe(true)
-    expect(bugCounter({ ...bugs, high: 0 }, { width: 110, color: false, height: 40 }).lines.map((l) => l.plain)).toEqual(['bugs found: 17', '2 critical', '7 medium'])
-    expect(bugCounter(bugs, { width: 110, color: false, height: 40 }).lines[2].text.trimStart()).toBe('5 high')
+    expect(c.lines.map((l) => l.plain)).toEqual(['bugs found:   17', '  critical:    2', '      high:    5', '    medium:    7', '       low:    3'])
+    expect(new Set(c.lines.map((l) => l.width))).toEqual(new Set([16]))
+    expect(c.lines[0].text).toContain('\x1b[1;97mbugs found:')
+    expect(c.lines[1].text).toContain('\x1b[1;31m  critical:')
+    expect(c.lines[2].text).toContain('\x1b[1;38;5;208m      high:')
+    expect(c.lines[3].text).toContain('\x1b[1;33m    medium:')
+    expect(c.lines[1].text.endsWith('   2\x1b[0m')).toBe(true)
+    expect(bugCounter({ ...bugs, high: 0 }, { width: 110, color: false, height: 40 }).lines.map((l) => l.plain)).toEqual(['bugs found:   17', '  critical:    2', '    medium:    7', '       low:    3'])
+    expect(bugCounter(bugs, { width: 110, color: false, height: 40 }).lines[2].plain).toBe('      high:    5')
     expect(bugCounter({ critical: 0, high: 0, medium: 0, low: 0, info: 0, total: 0 }, { width: 110, color: true }).text).toBe('\x1b[32mbugs found: 0\x1b[0m')
   })
   test('a short terminal (under 24 rows) gets the one-line form instead of the stack', () => {
     const bugs = { critical: 2, high: 5, medium: 7, low: 3, info: 0, total: 17 }
     expect(bugCounter(bugs, { width: 120, color: false, height: 20 }).mode).toBe('line')
-    expect(bugCounter(bugs, { width: 120, color: false, height: 20 }).plain).toBe('bugs found: 17  (2 critical, 5 high, 7 medium)')
+    expect(bugCounter(bugs, { width: 120, color: false, height: 20 }).plain).toBe('bugs found: 17  (2 critical, 5 high, 7 medium, 3 low)')
   })
-  test('width rules: 70 to 99 columns the one-line form, under 70 the total only, only low and info is the total', () => {
+  test('width rules: 70 to 99 columns the one-line form, under 70 the total only, low-only counts show too', () => {
     const bugs = { critical: 1, high: 0, medium: 1, low: 0, info: 0, total: 2 }
     expect(bugCounter(bugs, { width: 99, color: false }).plain).toBe('bugs found: 2  (1 critical, 1 medium)')
     expect(bugCounter(bugs, { width: 70, color: false }).mode).toBe('line')
     expect(bugCounter(bugs, { width: 69, color: false }).plain).toBe('bugs found: 2')
     expect(bugCounter(bugs, { width: 69, color: false }).mode).toBe('total')
-    expect(bugCounter({ critical: 0, high: 0, medium: 0, low: 3, info: 0, total: 3 }, { width: 120, color: false, height: 40 }).mode).toBe('total')
+    expect(bugCounter({ critical: 0, high: 0, medium: 0, low: 3, info: 0, total: 3 }, { width: 120, color: false, height: 40 }).mode).toBe('stack')
   })
   test('on the board the stack sits at the right edge below the title and bar: no overlap at 70, 100 and 120 columns', () => {
     const rows = [{ id: 'a', title: 'a', status: 'FAIL', ms: 1, lane: 'cpu', group: null, pack: 'x', suite: 'x', origin: 'bundled', declaredSubs: [], after: [], elapsedMs: 1, typicalHere: true, reason: '', detail: '', subTotal: null }]
@@ -161,9 +161,9 @@ describe('the live bug counter', () => {
         // the counter is on rows 3 to 5 (below the title, the bar and the status line), each ending one cell short of the edge
         expect(lines[0]).not.toContain('bugs found')
         expect(lines[1]).not.toContain('bugs found')
-        expect(lines[3].endsWith('bugs found: 3')).toBe(true)
-        expect(lines[4].endsWith('1 critical')).toBe(true)
-        expect(lines[5].endsWith('2 medium')).toBe(true)
+        expect(lines[3].endsWith('bugs found:    3')).toBe(true)
+        expect(lines[4].endsWith('critical:    1')).toBe(true)
+        expect(lines[5].endsWith('medium:    2')).toBe(true)
         for (const i of [3, 4, 5]) expect(textWidth(lines[i])).toBe(width - 1)
       } else {
         // one line: on the title row when it fits, otherwise a line of its own above the board; never more than one copy
