@@ -6,3 +6,5 @@ tools/accuracy-corpus.mjs
 examples/
 .vitest/
 docs/images/
+tools/accuracy-extra-*.mjs
+tests/fixtures/
