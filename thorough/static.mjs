@@ -276,10 +276,16 @@ const riskyCode = (root) => {
         // A plain http:// name that is only compared, trimmed or declared as a namespace is an identifier, not a request (XML and metadata namespaces, URL prefixes).
         if (why.startsWith('a plain http') && (/\b(?:trim_start_matches|strip_prefix|starts_with|startsWith|trimStart|replace|removePrefix)\b/.test(lineText) || /(?:apache\.org\/xml|ns\.adobe\.com|purl\.org|xmlns\.com|openxmlformats\.org|schemas\.microsoft\.com|ns\.useplus\.org|iptc\.org)/i.test(m[0] + lineText))) continue
         // MD5 and SHA-1 are only a risk where a secret or a signature depends on them: a content hash used to find duplicate files is fine.
-        // Without such a word nearby it is still reported, as info, and does not fail the check.
-        if (why.startsWith('MD5') && !/pass|secret|token|sign|auth|cert|hmac|credential|api[_-]?key|session|nonce|salt/i.test(t.split('\n').slice(Math.max(0, lineOf(t, m.index) - 4), lineOf(t, m.index) + 3).join('\n'))) {
-          if (!allow.has(`${x}:${lineOf(t, m.index)}`)) structured.push(['info', 'risky-call', x, lineOf(t, m.index), `${why} (no secret or signature nearby, so likely a content hash)`])
-          continue
+        // It is downgraded only on positive evidence of a non-security use (a dedupe key, checksum, ETag, fingerprint, cache key or a hash of a whole file), and only
+        // when no secret or signature word is near. Otherwise it keeps failing; an accepted content hash goes in .meerkat-risky-allow. A downgrade is still reported, as info.
+        if (why.startsWith('MD5')) {
+          const around = t.split('\n').slice(Math.max(0, lineOf(t, m.index) - 4), lineOf(t, m.index) + 3).join('\n')
+          const secretNear = /pass|pwd|secret|token|sign|auth|cert|hmac|credential|api[_-]?key|\bkey\b|session|nonce|salt|\botp\b|\bpin\b/i.test(around)
+          const benign = /dedup|duplicate|checksum|etag|fingerprint|cache[_-]?key|content[_-]?hash|usedforsecurity\s*=\s*False|by_?hash|readFileSync|read_bytes|fs::read/i.test(around)
+          if (benign && !secretNear) {
+            if (!allow.has(`${x}:${lineOf(t, m.index)}`)) structured.push(['info', 'risky-call', x, lineOf(t, m.index), `${why} (used as a content hash or checksum)`])
+            continue
+          }
         }
         if (!allow.has(`${x}:${lineOf(t, m.index)}`)) {
           f.push(`${x}:${lineOf(t, m.index)} ${why}`)
