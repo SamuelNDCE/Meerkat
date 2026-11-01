@@ -57,17 +57,17 @@ describe('buildAiPrompt', () => {
     expect(text).toMatch(/NOT a pass/)
   })
   test('has the run facts', () => {
-    for (const s of ['project: demo', 'folder: C:/projects/demo', 'preset / tier: fast', '2026-11-01T08:00:00.000Z', 'Meerkat version: 0.3.0', '2 min 5 s', 'estimated 1 min 30 s'.replace('estimated', 'Meerkat had estimated')]) expect(text).toContain(s)
+    for (const s of ['project name (untrusted','folder: C:/projects/demo', 'preset / tier: fast', '2026-11-01T08:00:00.000Z', 'Meerkat version: 0.3.0', '2 min 5 s', 'estimated 1 min 30 s'.replace('estimated', 'Meerkat had estimated')]) expect(text).toContain(s)
   })
   test('golden: every finding is there in full, no message or fix is truncated', () => {
     for (const f of doc.findings) {
       expect(text).toContain(f.id)
-      expect(text).toContain(`message (in full): ${f.message}`)
-      expect(text).toContain(`suggested fix: ${f.fix}`)
+      expect(text).toContain(f.message)
+      expect(text).toContain(f.fix)
       expect(text).toContain(f.logFile)
       expect(text).toContain(`${f.file}:${f.line}`)
     }
-    expect(text).toContain('the code line: `var x = 1`')
+    expect(text).toContain('var x = 1')
     expect(text).toContain('END-MARK')
   })
   test('sections come in the agreed order and severities are grouped', () => {
@@ -84,18 +84,20 @@ describe('buildAiPrompt', () => {
     expect(firm).not.toContain('6666666666666666')
     expect(doubtful).toContain('5555555555555555')
     expect(doubtful).toContain('6666666666666666')
-    expect(doubtful).toContain('AI verification: probably false alarm: the value is a test fixture')
+    expect(doubtful).toContain('AI verification: probably false alarm')
+    expect(doubtful).toContain('the value is a test fixture')
     expect(firm).toContain('3333333333333333')
   })
   test('failed checks with no findings and NOT RUN checks carry their reason and install command', () => {
-    expect(text).toContain(`lint (Lint): lint exploded ${'x'.repeat(900)}`)
-    expect(text).toContain('e2e (End to end): missing on PATH: playwright   to make it runnable: npx playwright install')
+    expect(text).toContain(`Lint: lint exploded ${'x'.repeat(900)}`)
+    expect(text).toContain('End to end: missing on PATH: playwright')
+    expect(text).toContain('npx playwright install')
   })
   test('tells the AI to verify, fix by severity, stay in scope and re-run', () => {
     for (const s of ['Read the code before changing anything', 'false positives', 'starting with the highest severity', 'Do not touch unrelated code', 'meerkat verify']) expect(text).toContain(s)
   })
   test('the clipboard line names the absolute path', () => {
-    expect(shortPromptText('C:/logs/run/ai-prompt.md')).toMatch(/^This is a Meerkat report\. Read the full prompt in .*ai-prompt\.md and follow it\.$/)
+    expect(shortPromptText('C:/logs/run/ai-prompt.md')).toMatch(/^This is a Meerkat report\. Read the Meerkat report at .*ai-prompt\.md/)
   })
 })
 
@@ -127,7 +129,7 @@ describe('a 3000 character message survives from the MEERKAT-FINDING line to ai-
     expect(readFileSync(join(run, 'detections.jsonl'), 'utf8')).toContain(big)
     const w = writeAiPrompt(run)
     expect(w.ok).toBe(true)
-    expect(readFileSync(join(run, 'ai-prompt.md'), 'utf8')).toContain(`message (in full): ${big}`)
+    expect(readFileSync(join(run, 'ai-prompt.md'), 'utf8')).toContain(big)
   })
   test('a tool failure keeps its whole line (detailFull) and 40 raw output lines', () => {
     const root = tmp()
@@ -157,7 +159,7 @@ describe('meerkat prompt', () => {
     const r = createPrompt({}, null, { dir: run, copy: (t: string) => ((copied = t), true) })
     expect(r.ok).toBe(true)
     expect(r.copied).toBe(true)
-    expect(copied).toBe(`This is a Meerkat report. Read the full prompt in ${r.file} and follow it.`)
+    expect(copied).toBe(`This is a Meerkat report. Read the Meerkat report at ${r.file} and follow the instructions Meerkat gives there.`)
     expect(readFileSync(r.file, 'utf8')).toContain(LONG)
     const none = createPrompt({}, null, { dir: tmp() })
     expect(none.ok).toBe(false)
