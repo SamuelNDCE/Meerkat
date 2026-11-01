@@ -16,6 +16,18 @@ const press = (key, times = 1) => {
   snap()
 }
 snap()
-for (const [key, n] of [['down', 3], ['down', 4], ['pgdn', 1], ['pgdn', 1], ['tab', 1], ['down', 4], ['pgdn', 1], ['pgdn', 1], ['pgdn', 1], ['tab', 1], ['down', 4], ['pgdn', 1], ['pgdn', 1], ['pgdn', 1], ['pgup', 1], ['pgup', 1]]) press(key, n)
+// One frame per key press, a row at a time, so the scrolling reads as scrolling and not as a jump: the findings, then the checks, then the timeline.
+const hold = (n) => { for (let i = 0; i < n; i++) snap() }
+hold(6)
+for (let i = 0; i < 20; i++) press('down')
+hold(4)
+press('tab')
+hold(6)
+for (let i = 0; i < 18; i++) press('down')
+hold(4)
+press('tab')
+hold(6)
+for (let i = 0; i < 14; i++) press('down')
+hold(8)
 writeFileSync(process.argv[2] ?? 'frames.txt', frames.join('\n\f\n'))
 console.log(`${frames.length} frames`)

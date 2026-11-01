@@ -64,7 +64,7 @@ const P = (n) => `[A-Za-z0-9]{${n}}`
 // ---------------------------------------------------------------------------------------------------------------------------
 const KEYWORDS = String.raw`password|passwd|secret|api[_-]?key|apikey|token|auth(?=[_.\-]|token|key|secret|["':=\s])|credential|private[_-]?key`
 const NOT_SECRET_NAME = /(?:sha\d*|md5|hash|checksum|digest|commit|etag|integrity|uuid|guid|csrf|nonce)/i
-const keywordRe = () => new RegExp(String.raw`(?:${KEYWORDS})[\w.-]{0,24}["']?\s{0,5}(?::=|=>|[:=])\s{0,5}["']([^"'\s]{8,200})["']`, 'gi')
+const keywordRe = () => new RegExp(String.raw`(?:${KEYWORDS})[\w.-]{0,24}["']?\]?\s{0,5}(?::=|=>|[:=])\s{0,5}["']([^"'\s]{8,200})["']`, 'gi')
 const entropyRe = () => new RegExp(String.raw`(?:${KEYWORDS}|access[_-]?key|signing[_-]?key)[\w.-]{0,24}["']?\s{0,5}(?::=|=>|[:=])\s{0,5}["']([A-Za-z0-9+/=_-]{20,200})["']`, 'gi')
 
 const PLACEHOLDER =
@@ -102,7 +102,7 @@ const REF_NAME = /(?:name|arn|label|path|file|url|uri|type|length|field|header|p
 export function findKeyword(line) {
   const re = keywordRe()
   for (let m = re.exec(line); m; m = re.exec(line)) {
-    const nameOnly = m[0].slice(0, m[0].length - m[1].length).replace(/["']?\s{0,5}(?::=|=>|[:=])\s{0,5}["']$/, '')
+    const nameOnly = m[0].slice(0, m[0].length - m[1].length).replace(/["']?\]?\s{0,5}(?::=|=>|[:=])\s{0,5}["']$/, '')
     if (!isPlaceholder(m[1]) && !REF_NAME.test(nameOnly) && !/tokeni[sz]|tokens?.*(?:min|max)/i.test(nameOnly)) return m[0]
   }
   return null

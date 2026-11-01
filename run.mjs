@@ -15,17 +15,21 @@ import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from '
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
 import { discoverChecks } from './lib/discover.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
+import { estimateRunMs, estimateVsActualText } from './lib/runestimate.mjs'
 import { clampScale } from './lib/timeouts.mjs'
 import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
 import { compactSummary } from './lib/tui/results.mjs'
 import { saveFindings } from './lib/findingsdoc.mjs'
-import { createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
+import { createInterface } from 'node:readline/promises'
+import { verifyRunDir } from './lib/aiverify.mjs'
+import { appendRunLog, createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
 import { createControl, runAll, selectChecks, stopOnSignals, summarise, table } from './lib/runner.mjs'
 import { sweepSpawned } from './lib/exec.mjs'
 import { DEFAULT_RUN_MINUTES, loadBudgets } from './lib/timeouts.mjs'
+import { notProjectJson, notProjectMessage, projectCheck } from './lib/projectgate.mjs'
 import { enrichResults, narrowSubs, rollup } from './lib/subchecks.mjs'
 import { packOfCheck, resolveOnly, suiteIdOf, suiteInfo } from './lib/suites.mjs'
 import { tipLine } from './lib/recommend.mjs'
@@ -60,6 +64,17 @@ export function presetLines(project = {}, personal = {}) {
   })
 }
 
+// A yes/no question at the terminal; false when nobody can answer (no terminal), so nothing is ever sent without a yes.
+async function askYes(text) {
+  if (!process.stdin.isTTY) return false
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  try {
+    return /^y(es)?$/i.test((await rl.question('Send this to the model? [y/N] ')).trim())
+  } finally {
+    rl.close()
+  }
+}
+
 export function parseArgs(argv) {
   const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], suites: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, listPresets: false, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
@@ -78,6 +93,9 @@ export function parseArgs(argv) {
     else if (a === '--list-json') o.listJson = true
     else if (a === '--include') o.include.push(...list(next()))
     else if (a === '--ai') o.include.push('ai')
+    else if (a === '--ai-verify') o.aiVerify = true
+    else if (a === '--ai-verify-max') o.aiVerifyMax = Math.max(1, Math.floor(Number(next())) || 25)
+    else if (a === '--yes' || a === '-y') o.yes = true
     else if (a === '--json') o.json = next()
     else if (a === '--profile') o.profile = next()
     else if (a === '--progress') o.progress = true
@@ -102,6 +120,7 @@ export function parseArgs(argv) {
     else if (a === '--app') o.app = next()
     else if (a === '--timeout-scale') o.timeoutScale = clampScale(next())
     else if (a === '--no-idle-kill') o.noIdleKill = true
+    else if (a === '--force') o.force = true
     else if (a === '--max-run-minutes') o.maxRunMinutes = Number(next())
     else o.errors.push(`unknown argument: ${a}`)
   }
@@ -192,6 +211,16 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const repoRoot = repoRootOf(appDir)
   process.env.MEERKAT_APP_DIR = process.env.NV_APP_DIR = appDir
   env.MEERKAT_APP_DIR = env.NV_APP_DIR = appDir
+  // Meerkat checks projects, not any folder (lib/projectgate.mjs). Reading back results, listing and --init need no project; --force runs anyway.
+  const readOnly = opts.init || opts.logs || opts.last || opts.why || opts.list || opts.listJson || opts.listPresets || opts.estimate
+  if (!readOnly && !opts.force && env.MEERKAT_NO_PROJECT_GATE !== '1') {
+    const gate = projectCheck(appDir)
+    if (!gate.ok && !gate.unreadable) {
+      fail(notProjectMessage(appDir))
+      if (opts.jsonStdout) (givenLog ?? ((l) => process.stdout.write(`${l}\n`)))(JSON.stringify(notProjectJson(appDir), null, 2))
+      return 2
+    }
+  }
   if (opts.init) {
     const made = initConfig(appDir)
     log(made.message)
@@ -280,7 +309,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // Use the times measured on this machine for the order, the bar and the time left; keep the written ones for any check not yet measured.
   const timingsFile = timingsPath(env)
   const timings = loadTimings(timingsFile, appDir)
-  applyLearned(checks, timings, tier)
+  applyLearned(checks, timings, tier, { env })
 
   if (opts.listJson) settleSplash()
   if (opts.listJson) return (baseLog(listJsonText(checks)), 0)
@@ -313,6 +342,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let skippedCount = 0
   let subOnly = new Map() // check id -> the sub-checks asked for with suite/check/sub
   let ranChecks = []
+  let estimatedMs = null // how long the checks chosen were expected to take (null in a self-test)
   let status = null
   let boardShown = false // the live board ran in this terminal: its end-of-run output is the results screen, not a dump of lines
   if (!opts.list) {
@@ -346,6 +376,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       log(`  work by lane: cargo ${lane('cargo')} s (one at a time), windows ${lane('electron')} s (one at a time), found window tests ${lane('windows')} s (up to ${found?.result.maxWindows ?? 3} at once), everything else ${lane('free')} s (side by side)`)
       return 0
     }
+    // The run's own estimate, set beside the real time in the summary line (the same sum as --estimate and the preset menu).
+    estimatedMs = sel.run.length ? estimateRunMs(sel.run, timings, tier, { slots: Math.max(1, cpus().length - 1) }) : null
     // Nothing to run is not a pass: say why, and what to change.
     if (!sel.run.length) {
       fail(`no checks to run: ${checks.length} loaded from the packs ${JSON.stringify(read.config.packs ?? [])}, but ${opts.preset ? `the preset ${opts.preset}` : `the ${tier} tier`}${groups.length ? ` (kinds: ${groups.join(', ')})` : ''} selects none of them. Add a pack that has such checks to "packs" in ${configFile ?? 'meerkat.config.json'}.`)
@@ -362,7 +394,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     boardShown = useUi
     if (opts.ui && !useUi) log('note: --ui needs an interactive terminal (not a pipe, CI or MEERKAT_PLAIN=1); using the plain lines')
     const bar = useUi
-      ? createTui({ control: ctx.control, theme, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '', grouped: opts.grouped, typicalHere: timings.project === appDir, showFinal: false, sink: ctx.findingsSink })
+      ? createTui({ control: ctx.control, theme, folder: appDir.split(String.fromCharCode(92)).join('/'), preset: label, title: `MEERKAT · ${label}`, checks: sel.run, timings, tier, history: loadHistory(historyPath(env)), meta: `${cpus().length} threads`, profile: opts.profile ?? env.MEERKAT_PROFILE ?? '', grouped: opts.grouped, typicalHere: timings.project === appDir, showFinal: false, sink: ctx.findingsSink })
       : createProgress({ title: `MEERKAT · ${label}`, checks: sel.run, enabled: liveBar })
     const quiet = liveBar || useUi
     status = createStatus({ title: `MEERKAT · ${label}`, tier, checks: sel.run, file: statusPath(env), say: quiet ? null : log })
@@ -382,7 +414,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let full = enrichResults(results, ranChecks.length ? ranChecks : checks) // suite and sub-check counts for the saved files and --json
   // A check that could not run gets a short log too (why, and what to do), so `meerkat why <check>` always has something to show.
   if (!opts.selfTest) full = saveNotRunLogs(ctx.logDir, full, ranChecks.length ? ranChecks : checks)
-  const { line, exitCode: summaryCode } = summarise(opts.selfTest ? `${tier} self-test` : tier, results, skippedCount, Date.now() - started)
+  const { line, exitCode: summaryCode } = summarise(opts.selfTest ? `${tier} self-test` : tier, results, skippedCount, Date.now() - started, estimatedMs ? estimateVsActualText(estimatedMs, Date.now() - started) : '')
   const exitCode = interrupted ? 130 : summaryCode
   status?.stop(line)
   // A finished real run adds one entry to the run log the terminal UI's history view reads (home folder, never the repo).
@@ -401,10 +433,16 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // The detection files (lib/findingsdoc.mjs): findings.json, findings.md, findings.sarif and detections.jsonl, then the cross-run history.
   const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
   if (findingsInfo && !opts.selfTest && !hush && !boardShown) log(findingsInfo.line)
-  const report = writeRunReport({ interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart })
+  const report = writeRunReport({ checks: ranChecks.length ? ranChecks : checks, interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs })
+  // Optional (--ai-verify): a model double-checks the medium, high and critical findings. Off by default; it asks first unless --yes (lib/aiverify.mjs).
+  if (opts.aiVerify && findingsInfo && !opts.selfTest && ctx.logDir) {
+    const v = await verifyRunDir(ctx.logDir, { env, max: opts.aiVerifyMax ?? 25, yes: Boolean(opts.yes), confirm: askYes, out: (m) => log(m) })
+    log(v.text)
+    appendRunLog(ctx.logDir, v.text)
+  }
   if (report && !boardShown) log(`logs: ${ctx.logDir}   (node run.mjs --last shows the report, --why <check> one check's log)`)
   // At a terminal with the board: a short summary stays in the scrollback; the results screen (meerkat) shows everything else.
-  if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)
+  if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, estimatedMs, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)
   if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
   if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog)
   if (interrupted) log(`Stopped by you: results so far saved to ${ctx.logDir}`)

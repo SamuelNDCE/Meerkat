@@ -100,9 +100,9 @@ describe('the MEERKAT-SUB line parser', () => {
     expect(parseSubLine(`MEERKAT-SUB PASS ${'a'.repeat(61)} x`)).not.toBeNull()
   })
 
-  test('removes control characters and caps the reason at 200 characters', () => {
+  test('removes control characters and caps the reason at 2000 characters', () => {
     expect(parseSubLine('MEERKAT-SUB FAIL r \u001b[31mred\u0007 text\tand tab')?.reason).toBe('[31mred text and tab')
-    expect(parseSubLine(`MEERKAT-SUB FAIL r ${'y'.repeat(500)}`)?.reason).toHaveLength(MAX_REASON)
+    expect(parseSubLine(`MEERKAT-SUB FAIL r ${'y'.repeat(2500)}`)?.reason).toHaveLength(MAX_REASON)
   })
 
   test('the collector keeps the first line of each rule and stops at the cap', () => {

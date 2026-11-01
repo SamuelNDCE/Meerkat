@@ -1,0 +1,23 @@
+name: Missed problem (Meerkat passed code that has a real problem)
+description: A real bug, vulnerability or bad practice that no check caught.
+labels: ["missed-detection"]
+body:
+  - type: textarea
+    id: code
+    attributes:
+      label: The code with the problem
+      description: The smallest example. Remove anything private.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it is a problem
+      description: What goes wrong, and how it could be exploited or break. A link to a reference (CVE, CWE, advisory) helps.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Meerkat version

@@ -64,7 +64,7 @@ describe('the status line and the time left', () => {
   test('a named running check with no timing: time left is unknown, and the label says still running when past its estimate', () => {
     const m = createModel({ checks: checks as never })
     m.start(checks[1] as never, 0)
-    const text = board(m.snapshot(200_000), 200_000)
+    const text = board(m.snapshot(200_000), 200_000, { width: 220 })
     expect(text).toContain('time left: unknown (no timing recorded for found-tests-no-data-loss yet)')
     expect(text).toContain('still running, longer than estimated')
   })

@@ -25,6 +25,16 @@ meerkat <command> --help                help for any command (also: meerkat help
 
 Options for every run: `--max-run-minutes <n>` (stop the whole run after n minutes, default 90), `--ai` (include the AI checks), `--json` (print the result as JSON on stdout), `--plain` (no board), `--no-color`, `-q/--quiet` (only the result line), `--fail-fast`, `--keep-going`, `--group <kinds>`, `--include <name>` (`mutation` and `runtime` add the opt-in deeper checks), `--timeout-scale <n>` (1 to 10), `--only <ids>`, `--config <file>`, `--no-config`.
 
+### Only projects are checked
+
+Meerkat runs its checks on projects, not on any folder. A folder is a project when it is inside a git repository, or holds a project marker (`package.json`, `Cargo.toml`, `pyproject.toml`, `requirements.txt`, `go.mod`, `pom.xml`, `build.gradle`, a `.csproj` or `.sln`, `composer.json`, `Gemfile`, `pubspec.yaml`, `Package.swift`, `Dockerfile`, a `.tf` file), or has an `index.html` next to other web files, or holds at least 5 source files (in the folder or one level down). Otherwise `meerkat verify <folder>` (and every other command that runs checks, from the menu too) stops before running anything, prints
+
+```
+C:\x is not a project: no git repository, no package.json, Cargo.toml, ... found, and fewer than 5 source files; pass --force to run anyway
+```
+
+and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or an AI agent gets the same text as one JSON object: `{"ok": false, "error": "not-a-project", "folder": "...", "message": "...", "exitCode": 2}`. Listing and reading commands (`--list`, `--estimate`, `--last`, `--why`, `--logs`, `--init`) need no project. In the folder browser, folders that are not projects are marked `(not a project)`. The project picker only offers git repositories.
+
 ## Look at results
 
 | Command | Does | Also |
@@ -36,6 +46,8 @@ Options for every run: `--max-run-minutes <n>` (stop the whole run after n minut
 | `meerkat findings [folder\|run-id] [--severity high] [--suite s] [--check id] [--new] [--fixed] [--limit n]` | what the run detected: severity, rule, file:line, message, new or known (`--json` for scripts) | |
 | `meerkat findings --fail-on <severity>` | exit 1 when any finding at or above that severity exists (for CI) | |
 | `meerkat findings --export sarif\|md\|json [file]` | copy the run's `findings.sarif`, `findings.md` or `findings.json` to a file, or print it | |
+| `meerkat prompt [folder\|run-id] [--last] [--no-copy] [--print]` | write `ai-prompt.md` into the run folder (every finding in full, plus what to do) and copy a short line to the clipboard that tells an AI to read it. The results screen does the same with `p` | `meerkat prompt --help` |
+| `meerkat verify --ai-verify [--ai-verify-max N] [--yes]` | after the run, ask your configured model to double-check each medium, high and critical finding (off by default; asks first unless `--yes`; see `meerkat ai use`) | `v` on the results screen |
 | `meerkat finding <id> [run-id]` | one finding in full: what, evidence, who detected it (check, rule, pack, script, tool), the log, how to fix it, first seen | |
 
 ## Checks, presets, packs
@@ -69,6 +81,8 @@ Options for every run: `--max-run-minutes <n>` (stop the whole run after n minut
 |---|---|
 | `meerkat init [folder]` | write a starting `meerkat.config.json` |
 | `meerkat doctor [folder]` | for this project: which checks would run, which would be NOT RUN and what to install; `--json` |
+| `meerkat tools [folder]` | every optional outside tool, whether it is found, and one install command per ecosystem (npm, pip, cargo, system); `--json` |
+| `meerkat tools install [folder]` | put the missing npm-based tools in `~/.meerkat/tools` (never in the project, never global, `--ignore-scripts`); shows the list first and asks, or use `--yes`; `--dry-run` only shows the list |
 | `meerkat self-test [folder]` | prove every check fails on its broken case |
 | `meerkat ai status` / `use <provider> [model]` / `test` | choose the model for the AI checks; `use claude haiku`, `use openrouter deepseek/deepseek-chat` |
 | `meerkat update [check\|apply\|auto\|notify\|off\|status]` | updating Meerkat; looks up the latest version once a day (turn off with `meerkat update off`), never installs without you |

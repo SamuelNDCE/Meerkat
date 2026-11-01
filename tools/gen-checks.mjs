@@ -49,4 +49,14 @@ const patch = (file) => {
   writeFileSync(join(MEERKAT_DIR, file), text.replace(re, () => block.replace(/\n/g, nl)))
 }
 patch('docs/checks.md')
+
+// The totals shown at the top of the README, from the checks themselves. They count what Meerkat ships, not checks you add.
+const countsBlock = `<!-- counts:start -->\n**${rows.length} checks · ${subCount} sub-checks · ${suiteCount} suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.\n<!-- counts:end -->`
+{
+  const readme = readFileSync(join(MEERKAT_DIR, 'README.md'), 'utf8')
+  const nl = readme.includes('\r\n') ? '\r\n' : '\n'
+  const re = /<!-- counts:start -->[\s\S]*?<!-- counts:end -->/
+  if (!re.test(readme)) throw new Error('README.md has no counts markers')
+  writeFileSync(join(MEERKAT_DIR, 'README.md'), readme.replace(re, () => countsBlock.replace(/\n/g, nl)))
+}
 console.log(summary.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'))

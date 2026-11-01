@@ -2,8 +2,8 @@
 // from the notes you give it, and redraws the version badge. It changes files only; you commit, push and merge as usual, and every Meerkat
 // that looks for updates (lib/update.mjs reads package.json on main) then shows the new number.
 //   node tools/release.mjs patch "Fixed the stuck-test guard"        0.9.0 -> 0.9.1
-//   node tools/release.mjs minor "Added the happy results screen"    0.2.1 -> 0.3.0
-//   node tools/release.mjs major "..."                               0.3.0 -> 1.0.0
+//   node tools/release.mjs minor "Added the happy results screen"    1.2.3 -> 1.3.0
+//   node tools/release.mjs major "..."                               1.3.0 -> 2.0.0
 //   node tools/release.mjs 1.4.0 "..."                               set an exact version (must be newer)
 //   add --dry-run to print what would change
 import { execFileSync } from 'node:child_process'
@@ -47,9 +47,17 @@ function main(argv) {
   console.log(`${pkg.version} -> ${next}\n\n${entry}`)
   if (dry) return 0
   writeFileSync(pkgPath, pkgText.replace(/("version":\s*")[^"]+(")/, `$1${next}$2`))
+  // package-lock.json repeats the version (top level and the root package); the lockfile-sync check fails when they disagree.
+  const lockPath = join(ROOT, 'package-lock.json')
+  if (existsSync(lockPath)) {
+    const lock = JSON.parse(readFileSync(lockPath, 'utf8'))
+    lock.version = next
+    if (lock.packages?.['']) lock.packages[''].version = next
+    writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n')
+  }
   const clPath = join(ROOT, 'CHANGELOG.md')
   const head = '# Changelog\n\nEvery released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.\n\n'
-  const old = existsSync(clPath) ? readFileSync(clPath, 'utf8').replace(/^# Changelog[\s\S]*?\n\n(?=## )/, '') : ''
+  const old = existsSync(clPath) ? readFileSync(clPath, 'utf8').replace(/^# Changelog[\s\S]*?\r?\n\r?\n(?=## )/, '') : ''
   writeFileSync(clPath, head + entry + '\n' + old)
   execFileSync(process.execPath, [join(ROOT, 'tools', 'make-badges.mjs')], { stdio: 'inherit' })
   console.log(`Done. Now commit package.json, CHANGELOG.md and docs/images/badges, push, and merge. Tag it: git tag v${next}`)

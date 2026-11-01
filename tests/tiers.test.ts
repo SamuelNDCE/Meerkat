@@ -11,7 +11,7 @@ import { applyLearned, loadTimings, projectKey, recordRun, saveTimings } from '.
 // @ts-expect-error plain JS modules
 import { scaleFactor, scaledSeconds } from '../lib/eta.mjs'
 // @ts-expect-error plain JS modules
-import { effectiveTimeoutSeconds, isCompileCheck, loadBudgets, timeoutText } from '../lib/timeouts.mjs'
+import { effectiveTimeoutSeconds, isCompileCheck, loadBudgets, loadFactorFrom, timeoutText } from '../lib/timeouts.mjs'
 // @ts-expect-error plain JS modules
 import { runCommand } from '../lib/exec.mjs'
 // @ts-expect-error plain JS modules
@@ -155,23 +155,40 @@ describe('timings are kept per project', () => {
 describe('time limits', () => {
   const normal = { id: 'n', estSeconds: 10, run: { cmd: 'node', args: [] } }
   const compile = { id: 'c', estSeconds: 180, scale: 'crates', run: { cmd: 'cargo', args: ['clippy'] } }
-  test('a normal check gets max(est x 4, 60); a compile check est x 6', () => {
-    expect(effectiveTimeoutSeconds(normal)).toBe(60)
-    expect(effectiveTimeoutSeconds({ ...normal, estSeconds: 30 })).toBe(120)
-    expect(effectiveTimeoutSeconds({ ...compile, scale: undefined })).toBe(1080)
+  test('a tiny check gets max(est x 4, 60), a normal one max(est x 5, 120), a compile check max(est x 8, 300)', () => {
+    expect(effectiveTimeoutSeconds({ ...normal, estSeconds: 3 })).toBe(60)
+    expect(effectiveTimeoutSeconds(normal)).toBe(120) // never under 120 s for a non-trivial check
+    expect(effectiveTimeoutSeconds({ ...normal, estSeconds: 30 })).toBe(150) // 5 x the estimate
+    expect(effectiveTimeoutSeconds({ ...normal, estSeconds: 30 })).toBeGreaterThanOrEqual(3 * 30)
+    expect(effectiveTimeoutSeconds({ ...compile, scale: undefined })).toBe(1440)
+    expect(effectiveTimeoutSeconds({ ...compile, scale: undefined, estSeconds: 10 })).toBe(300)
+    expect(effectiveTimeoutSeconds({ id: 'found-x', lane: 'windows', estSeconds: 100, run: { cmd: 'node', args: [] } })).toBe(420)
     expect(isCompileCheck(compile)).toBe(true)
     expect(isCompileCheck(normal)).toBe(false)
   })
+  test('a busy machine grants up to twice the time; a quiet one changes nothing', () => {
+    expect(loadFactorFrom({ load1: 0, cpuCount: 8, busy: 0.2, freeRatio: 0.6 })).toBe(1)
+    expect(loadFactorFrom({ load1: 8, cpuCount: 8 })).toBe(2)
+    expect(loadFactorFrom({ load1: 6, cpuCount: 8 })).toBe(1.5)
+    expect(loadFactorFrom({ busy: 1 })).toBe(2) // Windows has no load average: the busy share is used
+    expect(loadFactorFrom({ freeRatio: 0.04 })).toBe(2) // memory nearly gone
+    expect(loadFactorFrom({ load1: 80, cpuCount: 8 })).toBe(2) // capped
+    expect(effectiveTimeoutSeconds(normal, { load: 2 })).toBe(240)
+    expect(effectiveTimeoutSeconds(normal, { load: () => 1.5 })).toBe(180)
+    expect(effectiveTimeoutSeconds(normal, { load: 9 })).toBe(240) // the factor itself is capped
+    expect(effectiveTimeoutSeconds({ ...normal, timeoutSeconds: 7 }, { load: 2 })).toBe(14)
+    expect(effectiveTimeoutSeconds(normal, { load: 2, budgets: { timeouts: { n: 900 } } })).toBe(900) // an exact limit stays exact
+  })
   test('it grows with the project size, and an explicit larger pack timeout is kept', () => {
-    expect(effectiveTimeoutSeconds(compile, { facts: { crates: 40 } })).toBe(1080 * 2.5)
-    expect(effectiveTimeoutSeconds(compile, { facts: { crates: 1 } })).toBe(1080) // never shrinks below 1
+    expect(effectiveTimeoutSeconds(compile, { facts: { crates: 40 } })).toBe(1440 * 2.5)
+    expect(effectiveTimeoutSeconds(compile, { facts: { crates: 1 } })).toBe(1440) // never shrinks below 1
     expect(effectiveTimeoutSeconds({ ...normal, timeoutSeconds: 900 })).toBe(900)
     expect(effectiveTimeoutSeconds({ ...normal, timeoutSeconds: 1 })).toBe(1) // a short limit written on purpose is kept
   })
   test('--timeout-scale and the budgets file change it, and the scale is capped at 10', () => {
-    expect(effectiveTimeoutSeconds(normal, { scale: 2 })).toBe(120)
-    expect(effectiveTimeoutSeconds(normal, { scale: 50 })).toBe(600)
-    expect(effectiveTimeoutSeconds(normal, { budgets: { timeoutScale: 3 } })).toBe(180)
+    expect(effectiveTimeoutSeconds(normal, { scale: 2 })).toBe(240)
+    expect(effectiveTimeoutSeconds(normal, { scale: 50 })).toBe(1200)
+    expect(effectiveTimeoutSeconds(normal, { budgets: { timeoutScale: 3 } })).toBe(360)
     expect(effectiveTimeoutSeconds(normal, { scale: 2, budgets: { timeouts: { n: 1800 } } })).toBe(1800)
     const d = mkdtempSync(join(dir, 'b-'))
     writeFileSync(join(d, '.meerkat-budgets.json'), JSON.stringify({ timeoutScale: 2, timeouts: { n: 900, bad: -1 } }))

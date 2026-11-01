@@ -479,7 +479,7 @@ describe('start order for speed', () => {
     expect(order[0]).toBe('fmt')
     expect(order[1]).toBe('build')
     expect(order.indexOf('build')).toBeLessThan(order.indexOf('clippy'))
-    expect(order.indexOf('clippy')).toBeLessThan(order.indexOf('parser'))
+    expect(order.indexOf('parser')).toBeLessThan(order.indexOf('clippy')) // longest processing time first
     expect(order).toHaveLength(list.length)
   })
   test('a dependency cycle does not loop forever', () => {
@@ -724,7 +724,7 @@ describe('the shipped packs are well-formed and self-testable', () => {
       }
     }
     for (const d of ['lib']) walk(join(process.cwd(), d))
-    for (const f of ['run.mjs', 'watch.mjs', 'preview.mjs']) files.push(join(process.cwd(), f))
+    for (const f of ['run.mjs', 'tools/watch.mjs', 'tools/preview.mjs']) files.push(join(process.cwd(), f))
     const bad = files.filter((f) => /(fetch\(|https?\.request|http\.get|https\.get|net\.connect|new WebSocket|XMLHttpRequest)/.test(readFileSync(f, 'utf8')))
     expect(bad).toEqual([])
   })
@@ -850,7 +850,7 @@ describe('the tool packs wrap well-known tools and prove them', () => {
         expect(c.id.startsWith('bad-check-file')).toBe(false)
         expect(ids.has(c.id)).toBe(false)
         ids.add(c.id)
-        expect(c.needs.length).toBe(1)
+        expect(c.needs.length + (c.optionalNeeds?.length ?? 0)).toBe(1)
         expect(c.install).toBeTruthy()
         expect(c.selfTest.expectFail).toBe(true)
         expect(c.selfTest.expectMatch).toBeTruthy()

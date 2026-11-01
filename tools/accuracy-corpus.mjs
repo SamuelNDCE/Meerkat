@@ -459,7 +459,7 @@ PROJECTS['node-api'] = {
 PROJECTS['py-service'] = {
   files: {
     ...tidy('py-service', '__pycache__/\n*.pyc\n.venv/\n.env\n'),
-    'pyproject.toml': ['[project]\nname = "py-service"\nversion = "0.3.0"\nrequires-python = ">=3.10"\nlicense = { text = "MIT" }\ndependencies = ["flask==3.0.3", "requests==2.32.3", "pyyaml==6.0.2"]\n'],
+    'pyproject.toml': ['[project]\nname = "py-service"\nversion = "0.8.0"\nrequires-python = ">=3.10"\nlicense = { text = "MIT" }\ndependencies = ["flask==3.0.3", "requests==2.32.3", "pyyaml==6.0.2"]\n'],
     'app.py': [
       'import hashlib',
       'import os',
@@ -1302,7 +1302,7 @@ export function runProject({ name, dir, work, timeoutSeconds = 60, overallSecond
   })
 }
 
-export async function runCorpus({ projects, work, concurrency = 4, say = () => {} }) {
+export async function runCorpus({ projects, work, concurrency = 4, overallSeconds, say = () => {} }) {
   mkdirSync(work, { recursive: true })
   const packs = await allPacks()
   const names = Object.keys(projects)
@@ -1312,7 +1312,7 @@ export async function runCorpus({ projects, work, concurrency = 4, say = () => {
     while (next < names.length) {
       const name = names[next++]
       say(`running ${name}`)
-      results[name] = await runProject({ name, dir: projects[name], work, packs })
+      results[name] = await runProject({ name, dir: projects[name], work, packs, ...(overallSeconds ? { overallSeconds } : {}) })
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, names.length) }, worker))

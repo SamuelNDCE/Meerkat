@@ -14,7 +14,7 @@
 //   - `.meerkat-secrets-plus-allow` at the root, one per line: a path glob (`config/dev/*`), or `rule-id path-glob` (`*` as the rule id means any rule). # starts a comment.
 import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { isFixture, main, trackedFiles, withFixture, progress } from './kit.mjs'
+import { configPath, isFixture, main, trackedFiles, withFixture, progress } from './kit.mjs'
 import { RULES } from './rules-secrets-plus.mjs'
 
 export const MAX_LINE = 4000
@@ -33,7 +33,7 @@ const globRe = (g) => new RegExp(`^${g.replace(/[.+^${}()|[\]\\]/g, '\\$&').repl
 export function readAllow(root) {
   const out = []
   try {
-    for (const raw of readFileSync(join(root, ALLOW_FILE), 'utf8').split(/\r?\n/)) {
+    for (const raw of readFileSync(configPath(root, ALLOW_FILE), 'utf8').split(/\r?\n/)) {
       const t = raw.trim()
       if (!t || t.startsWith('#')) continue
       const m = /^([a-z0-9][a-z0-9*-]*)\s+(\S+)$/.exec(t)

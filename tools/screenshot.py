@@ -1,7 +1,7 @@
 """Turn Meerkat's terminal output (with its colour codes) into a PNG, the way a true-colour terminal would draw it.
 Used to make the pictures in docs/images. Needs Python 3 and Pillow.
 
-    node preview.mjs --final --speed 4000 > board.ansi
+    node tools/preview.mjs --final --speed 4000 > board.ansi
     python tools/screenshot.py board.ansi docs/images/board-done.png
 
 Half blocks are painted exactly (so the pixel-art meerkat is exact); other characters come from a monospace font. Set

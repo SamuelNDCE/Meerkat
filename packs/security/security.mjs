@@ -42,7 +42,10 @@ export default [
     lane: 'free',
     weight: 'tiny',
     title: 'npm audit, high severity, every dependency including dev ones',
-    estSeconds: 15,
+    // A network call to the registry: measured 0.3 s with no lockfile and over 60 s on a Next.js app's lockfile, so the 15 s guess and the
+    // default 60 s limit were both too tight (it timed out on a real project, 2026-11-01).
+    estSeconds: 30,
+    timeoutSeconds: 180,
     needs: ['npm'],
     paths: ['package.json', 'package-lock.json', '**/package.json', '**/package-lock.json'],
     run: { cmd: 'node', args: [`${MK}/thorough/npm-audit.mjs`], cwd: 'app' },

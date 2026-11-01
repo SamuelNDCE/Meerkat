@@ -380,6 +380,8 @@ const manyParameters = (root) => {
 }
 
 // Entry points: nothing imports these, they are run directly (index, main, bin, tests, configs, packs loaded by folder, scripts named in package.json).
+// Files a framework loads by folder and file name (Next.js app router and pages, SvelteKit, Nuxt, Remix routes): nothing imports them.
+const FRAMEWORK_ENTRY = /(^|\/)(?:src\/)?app\/(?:.*\/)?(?:layout|page|loading|error|global-error|not-found|template|default|route|forbidden|unauthorized|opengraph-image|twitter-image|icon|apple-icon|sitemap|robots|manifest)\.[jt]sx?$|(^|\/)(?:src\/)?(?:pages|routes)\/|(^|\/)\+(?:page|layout|server|error)[\w.-]*\.[jt]s$|(^|\/)(?:src\/)?(?:middleware|instrumentation|proxy)\.[jt]s$/
 const JS_FILE = /\.[cm]?[jt]sx?$/
 const ENTRY = /(^|\/)(index|main)\.[cm]?[jt]sx?$|(^|\/)bin\/|^packs\/|\.(test|spec)\.[cm]?[jt]sx?$|\.config\.[cm]?[jt]sx?$|(^|\/)(tests?|examples?|docs?|scripts|fixtures?)\//
 const IMPORT = /(?:from\s+|import\s+|import\(\s*|require\(\s*)['"](\.{1,2}\/[^'"?#]*)['"]/g
@@ -425,13 +427,15 @@ const unusedFiles = (root) => {
   const named = new Set(packageEntries(root))
   // Documentation and manifests that name a file (a README line telling people to run it) count as use.
   let docTexts = null
-  const docs = () => (docTexts ??= trackedFiles(root).filter((y) => DOC_FILE.test(y) && !/package-lock\.json$/.test(y)).map((y) => readText(root, y)))
+  const docs = () => (docTexts ??= trackedFiles(root).filter((y) => DOC_FILE.test(y) && !/package-lock\.json$/.test(y)).map((y) => ({ dir: posix.dirname(y), text: readText(root, y) })))
+  // A page names its script relative to itself (<script src="shell.js"> beside index.html), so the path is also tried from the page's folder.
+  const namedBy = (d, x) => d.text.includes(x) || (d.dir !== '.' && x.startsWith(`${d.dir}/`) && d.text.includes(x.slice(d.dir.length + 1)))
   const f = []
   for (const x of files) {
-    if (used.has(x) || named.has(x) || ENTRY.test(x) || allow.has(x)) continue
+    if (used.has(x) || named.has(x) || ENTRY.test(x) || FRAMEWORK_ENTRY.test(x) || allow.has(x)) continue
     // A path written into another file counts as a reference: runners and packs name their scripts by path.
     if ([...texts].some(([y, t]) => y !== x && t.includes(x))) continue
-    if (docs().some((t) => t.includes(x))) continue
+    if (docs().some((d) => namedBy(d, x))) continue
     f.push(`${x} is not imported by any file and is not an entry point (delete it, or list it in .meerkat-unused-allow)`)
   }
   return finish('unused-files', f, 'every JavaScript and TypeScript file is imported or is an entry point')

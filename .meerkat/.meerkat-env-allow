@@ -1,0 +1,9 @@
+# Variables the code reads that are set by the system or used only in tests
+WINDIR
+MY_SECRET_THING
+SERVICE_API_KEY
+SNMP
+GH_TOKEN
+CSC_KEY_PASSWORD
+TITLE
+MEERKAT_FONT

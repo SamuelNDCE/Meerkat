@@ -19,7 +19,7 @@
 //   needs     optional (files: string[]) => boolean: the rule is NA (not applicable) when it returns false (default: NA when no file matched the rule's ext/files)
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { finding, isFixture, isText, readText, trackedFiles } from './kit.mjs'
+import { configPath, finding, isFixture, isText, readText, trackedFiles } from './kit.mjs'
 
 const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|out|release)\//i
 const MINIFIED = /\.min\.(js|css)$/i
@@ -34,7 +34,7 @@ export function readAllow(root, allowFile) {
   const set = new Set()
   if (!allowFile) return set
   try {
-    for (const l of readFileSync(join(root, allowFile), 'utf8').split(/\r?\n/)) {
+    for (const l of readFileSync(configPath(root, allowFile), 'utf8').split(/\r?\n/)) {
       const t = l.trim()
       if (t && !t.startsWith('#')) set.add(t)
     }

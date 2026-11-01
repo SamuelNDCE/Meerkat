@@ -1,6 +1,6 @@
-"""Turn a recorded run (preview.mjs --dump) into an animated GIF.
+"""Turn a recorded run (tools/preview.mjs --dump) into an animated GIF.
 
-    node preview.mjs --speed 40 --dump frames.txt > /dev/null
+    node tools/preview.mjs --speed 40 --dump frames.txt > /dev/null
     python tools/make_gif.py frames.txt docs/images/meerkat-run.gif [--scale 0.75] [--colors 64] [--delay 180] [--hold 3500] [--every 1]
 
 --scale shrinks every frame (the file gets smaller), --colors is the palette size per frame, --delay is the time one frame shows in

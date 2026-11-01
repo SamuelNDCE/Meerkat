@@ -35,6 +35,22 @@ meerkat finding <id>                      one finding in full: what, evidence, w
 
 `meerkat findings` takes a run id or a project folder as its first word (`meerkat findings 20261031-142305-fast`, `meerkat findings ../my-app` = the newest run of that project). `--json` prints `{ run, runFolder, counts, total, findings[] }`. In the menu: **Show findings** and **Copy findings path** after a run, and **Findings from the last run** on the home screen. Through MCP, `meerkat_last` returns the counts and the 20 most severe findings in `structuredContent.findings`.
 
+## Nothing is shortened in the files
+
+Short forms exist only on the terminal screens, where the width forces them. The files keep the full text. The caps are generous and fixed:
+
+| What | Cap |
+|---|---|
+| a finding's `message` (findings.json, findings.md, findings.sarif, detections.jsonl, ai-prompt.md) | 8000 characters |
+| the reason of a sub-check (`MEERKAT-SUB`) | 2000 characters |
+| a NOT RUN reason | 8000 characters |
+| a suggested fix | 2000 characters |
+| the source line shown as evidence | 1000 characters |
+| the raw output kept for a tool failure | 200 lines of up to 2000 characters |
+| the output of a check kept in its `<check>.log` | the last 1,000,000 characters (Meerkat keeps up to 4,000,000 in memory while the check runs) |
+
+A message that would be cut is cut at the cap, never earlier. A line in a saved file that redaction cannot clean (a single line over 4000 characters) is blanked rather than kept, because a secret could hide in it. A finding also carries `explanation` (why the rule matters, from the suite it belongs to) and, only when AI verification ran, `aiVerdict` and `aiReason`.
+
 ## `findings.json`
 
 `schemaVersion` is 1. Fields are only ever added.
@@ -58,11 +74,11 @@ One entry of `findings[]`:
 | `suite`, `check`, `rule` | the suite, the check id, the rule id (the sub-check id) or null |
 | `file`, `line`, `column` | the project-relative path (null when the finding is about the whole check), the line (null without a file, 0 for a whole file), `column` is always null for now |
 | `lines`, `occurrences` | the same finding on several lines is one finding: its first lines (at most 20) and how many places |
-| `evidence` | the source line, at most 200 characters. Left out for the `secrets` suite and for any line that redaction would change |
+| `evidence` | the source line, at most 1000 characters. Left out for the `secrets` suite and for any line that redaction would change |
 | `detectedBy` | `check`, `checkTitle`, `pack`, `origin` (`bundled`, `personal`, `project`), `script` (path relative to Meerkat, for a script check), `tool` (`{ name, version }` for a check that runs a tool such as eslint, version null when not known), `rule`, `command` (`{ cmd, args }`, Meerkat's own folder shown as `<meerkat>`) |
 | `fix` | the check's `fix` (else its `install`) hint, or null |
 | `confidence` | `high` when the check printed a `MEERKAT-FINDING` line, `medium` when Meerkat read it from the output |
-| `rawOutput` | for a tool-backed check (and a check whose output could not be read): the first 25 lines of its output, instead of a guess |
+| `rawOutput` | for a tool-backed check (and a check whose output could not be read): the first 200 lines of its output (each line up to 2000 characters), instead of a guess |
 | `status` | `new` or `known` (see below) |
 | `firstSeen` | ISO time of the earliest run, among the last 20, that had this id; now if none |
 | `logFile` | the check's log in the run folder |
@@ -87,7 +103,7 @@ A finding printed with `MEERKAT-FINDING` states its own. Otherwise: the check's 
 
 1. **It prints them** (best): lines on stdout, see the protocol below. Confidence `high`.
 2. **It does not, and it failed**: Meerkat reads `path:line message` and `path: message` lines from the saved output (the path must be a real file in the project, so a heading such as `my-check: found 3` is never taken for one). The rule id comes from a failing sub-check whose title the message starts with, else it is null. A check with no such lines gives one finding per failed sub-check, or one for the whole check. Confidence `medium`.
-3. **It runs a tool** (eslint, tsc, cargo, npm, ...): one finding for the check with the tool's first 25 lines in `rawOutput`. Meerkat does not guess at a tool's output.
+3. **It runs a tool** (eslint, tsc, cargo, npm, ...): one finding for the check with the tool's first 200 lines in `rawOutput`. Meerkat does not guess at a tool's output.
 
 ## Protocol for check authors: `MEERKAT-FINDING`
 
@@ -103,7 +119,7 @@ MEERKAT-FINDING <severity> <rule-id> <path>:<line> <message>
 | `rule-id` | `/^[a-z0-9][a-z0-9-]{0,60}$/`, or `-` when there is none (use the same id as the `MEERKAT-SUB` line of the rule) |
 | `path` | relative to the project, no control characters, at most 300 characters, no `..`, not absolute. Backslashes become `/` |
 | `line` | digits; `0` for the whole file |
-| `message` | one line, at most 300 characters (longer is cut, control characters are removed) |
+| `message` | one line, at most 8000 characters (longer is cut, control characters are removed) |
 
 Anything else that starts with `MEERKAT-FINDING` is dropped. Meerkat takes the lines out of the output (also when a chunk ends in the middle of one), like `MEERKAT-SUB` lines, so they never reach the shown last line or the saved log. At most 5000 are kept per check. The exit code still decides whether the check passes: findings alone do not fail a check (use that for `info` notes). A function check may return `findings: [{ severity, rule, file, line, message }]` instead.
 
@@ -116,7 +132,7 @@ finding('high', 'eval-call', 'src/app.js', 12, 'eval() runs text as code') // pr
 
 `scanRules` (`thorough/rules.mjs`) already prints one finding per hit next to its usual output. A rule may set `severity`; otherwise the default above is used.
 
-Two optional check fields feed the file: `severity` (the default severity of its findings) and `fix` (a short hint shown with each finding, at most 300 characters). Both are validated when the check loads.
+Two optional check fields feed the file: `severity` (the default severity of its findings) and `fix` (a hint shown with each finding, at most 2000 characters). Both are validated when the check loads.
 
 ## `detections.jsonl`
 

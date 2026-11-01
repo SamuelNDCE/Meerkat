@@ -103,7 +103,8 @@ function listTrackedFiles(root) {
     const files = []
     const walk = (dir) => {
       for (const e of readdirSync(dir, { withFileTypes: true })) {
-        if (e.name === 'node_modules' || e.name === '.git' || e.name === 'target') continue
+        // With no git to say what is tracked, leave out what no project commits: dependency folders, virtual environments and tool caches.
+        if (e.name === 'node_modules' || e.name === '.git' || e.name === 'target' || /^(__pycache__|\.venv|venv|\.pytest_cache|\.mypy_cache|\.ruff_cache|\.tox)$/.test(e.name)) continue
         const p = join(dir, e.name)
         if (e.isDirectory()) walk(p)
         else files.push(relative(root, p).split('\\').join('/'))
@@ -117,10 +118,15 @@ function listTrackedFiles(root) {
 // Folders that hold deliberately broken files for tests: the hygiene checks leave them alone.
 export const isFixture = (f) => /(^|\/)(fixtures?|testdata|__fixtures__|test-fixtures)\//i.test(f)
 
+// Settings files (.meerkat-budgets.json and every .meerkat-<area>-allow) may sit in the project root or, to keep the root tidy, in a .meerkat/ folder;
+// the folder wins when the file is in both.
+const CONFIG_NAME = /^\.meerkat-(?:budgets\.json|[a-z-]+-allow)$/
+export const configPath = (root, f) => (CONFIG_NAME.test(f) && existsSync(join(root, '.meerkat', f)) ? join(root, '.meerkat', f) : join(root, f))
+
 export const readText = (root, f) => {
   progress.file(f)
   try {
-    return readFileSync(join(root, f), 'utf8')
+    return readFileSync(configPath(root, f), 'utf8')
   } catch {
     return ''
   }
@@ -128,7 +134,7 @@ export const readText = (root, f) => {
 
 export const readBudgets = (root) => {
   try {
-    return JSON.parse(readFileSync(join(root, BUDGET_FILE), 'utf8'))
+    return JSON.parse(readFileSync(configPath(root, BUDGET_FILE), 'utf8'))
   } catch {
     return null
   }
@@ -150,7 +156,7 @@ export function finish(name, findings, okNote = 'nothing found') {
     const sev = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY ?? '') ? process.env.MEERKAT_DEFAULT_SEVERITY : 'medium'
     for (const f of findings.slice(25)) {
       const m = /^(\S+?):(\d+)\s+(.+)$/s.exec(String(f))
-      if (m) finding(sev, '-', m[1], Number(m[2]), m[3].replace(/\s+/g, ' ').slice(0, 280))
+      if (m) finding(sev, '-', m[1], Number(m[2]), m[3].replace(/\s+/g, ' ').slice(0, 8000))
     }
   }
   return 1

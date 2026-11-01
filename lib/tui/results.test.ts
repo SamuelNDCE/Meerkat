@@ -59,7 +59,7 @@ describe('drawing', () => {
     }
   }
   test('the footer is the agreed one-line text', () => {
-    expect(FOOTER.startsWith('Tab sections  Up/Down  Enter details  c copy findings folder  l log  r run again  m menu  q done')).toBe(true)
+    expect(FOOTER.startsWith('Tab sections  Up/Down  Enter details  c copy findings folder  p  create a prompt for an AI  l log  r run again  m menu  q done')).toBe(true)
   })
   test('CHECKS shows every check exactly once, nothing hidden (154 ran, plus the skipped ones)', () => {
     const t = text(draw({ tab: 'checks' }, { rows: 400, width: 140 }))

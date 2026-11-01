@@ -37,6 +37,14 @@ const hasCommits = (root) => {
 }
 // The history checks cannot run on a plain folder: say so, never pass quietly.
 const needsRepo = (root, name) => (isRepo(root) ? null : notRun(`${name} reads git history, and ${root} is not a git repository`))
+// A shallow clone (CI checkouts use depth 1) has one commit that appears to add every file, so a history check would report false findings.
+const isShallow = (root) => {
+  try {
+    return git(root, ['rev-parse', '--is-shallow-repository']).trim() === 'true'
+  } catch {
+    return false
+  }
+}
 const noCommits = (name) => finish(name, [], 'the repository has no commits yet, so there is no history to check')
 const errLine = (e) => String(e?.message ?? e).split('\n')[0]
 
@@ -48,7 +56,23 @@ const MAX_FILE_BYTES = 1024 * 1024
 
 // A soft hit (a value under a secret-looking name) counts only when it is a quoted string, or a bare token with both letters and digits
 // that is at least 12 characters long. Most soft hits in source are code such as "token = getToken()", not secrets.
+// A value that is a placeholder for a runtime value ({pw}, {{name}}, ${NAME}, <token>, %s) is a template, not a secret.
+const PLACEHOLDER = /^["'`]*(?:\$\{[\w .-]*\}|\{\{?[\w .-]*\}\}?|<[\w .-]*>|%[sdv]\b)(?=["'`\s,;)}\]]|$)/
+// Where each redacted value begins in the original line: the redacted text is the original with each value replaced by <hidden>.
+const valueStarts = (text, redacted) => {
+  const parts = redacted.split('<hidden>')
+  const starts = []
+  let pos = 0
+  for (let i = 0; i < parts.length - 1; i++) {
+    const at = text.indexOf(parts[i], pos)
+    if (at < 0) break
+    pos = at + parts[i].length
+    starts.push(pos)
+  }
+  return starts.length ? starts : [0]
+}
 const isLiteralValue = (text, k) => {
+  if (PLACEHOLDER.test(text.slice(k, k + 40))) return false
   if (/["'`]/.test(text[k - 1] ?? '')) return true
   const token = /^[^\s"'`,;()[\]{}]*/.exec(text.slice(k))[0]
   return token.length >= 12 && /[A-Za-z]/.test(token) && /[0-9]/.test(token) && /^[A-Za-z0-9_\-/=]+$/.test(token)
@@ -60,6 +84,7 @@ const gitHistorySecrets = (root) => {
   const gate = needsRepo(root, name)
   if (gate !== null) return gate
   if (!hasCommits(root)) return noCommits(name)
+  if (isShallow(root)) return notRun('this is a shallow clone, so the history is cut off and every file looks newly added. Fetch the full history (git fetch --unshallow)')
   const n = cfg(root).historyCommits ?? 200
   const allow = allowList(root)
   console.log(`scanning the added lines of the last ${n} commits (security.historyCommits)...`)
@@ -105,10 +130,11 @@ const gitHistorySecrets = (root) => {
     scanned++
     const r = redact(text)
     if (r.hard + r.soft === 0) continue
-    // The first place the redacted text differs from the original is where the value starts (a literal "<hidden>" in the source cannot fool this).
-    let k = 0
-    while (k < text.length && k < r.text.length && text[k] === r.text[k]) k++
-    if (!r.hard && !isLiteralValue(text, k)) continue
+    // Every place the redacted text differs is where a value starts (a literal "<hidden>" in the source cannot fool this). The hit stands unless
+    // EVERY one of those values is a placeholder, so a placeholder early in the line cannot hide a real secret further along it.
+    const starts = valueStarts(text, r.text)
+    if (!r.hard && !starts.some((p) => isLiteralValue(text, p))) continue
+    const k = starts[0] ?? 0
     const short = commit.slice(0, 7)
     if (allow.has(`${short} ${file}`) || allow.has(file)) continue
     const prefix = text.slice(k, k + 8).replace(/^["'`]+/, '').slice(0, 4)

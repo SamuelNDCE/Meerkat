@@ -38,13 +38,20 @@ export function redact(text) {
   out = out.replace(QUOTED, (whole, head) => (soft++, whole.includes('\n') && multiline++, `${head}"<hidden>"`))
   // A secret-named assignment that opens a quote the pattern above could not close (a multi-line value, or one ending in a backslash):
   // the extent of the value is unknown, so it counts as a hard find and nothing is sent.
-  out = out.replace(OPEN_QUOTE, (whole, head, quote, rest) => {
-    // A truly empty string ending the statement ('' or "" then at most a closing mark) is fine; checked here in linear time.
-    if (rest[0] === quote && rest[1] !== quote && /^[ \t]*[,;)}\]]?[ \t]*\r?$/.test(rest.slice(1))) return whole
+  // The harmless forms below keep their own text, but the rest of the line is still scanned, so a second assignment after them cannot slip through.
+  const openQuote = (whole, head, quote, rest) => {
+    const used = whole.length - rest.length
+    // A truly empty string ('' or "") is fine when a separator or the end follows it, as in {"password":"","notes":""}; a doubled quote, or
+    // "" + "a b c" (the value continues), is left to the check below.
+    if (rest[0] === quote && rest[1] !== quote && /^[ \t]*(?:[,;)}\]]|\r?$)/.test(rest.slice(1))) return whole.slice(0, used + 1) + rest.slice(1).replace(OPEN_QUOTE, openQuote)
+    // A value of one or two characters that closes on the same line ("{}", "1") is a placeholder or a flag, not an unclosed secret.
+    const close = rest.indexOf(quote)
+    if (close >= 1 && close <= 2 && rest[close - 1] !== '\\' && rest[close + 1] !== quote) return whole.slice(0, used + close + 1) + rest.slice(close + 1).replace(OPEN_QUOTE, openQuote)
     hard++
     whole.includes('\n') && multiline++
     return `${head}<hidden>`
-  })
+  }
+  out = out.replace(OPEN_QUOTE, openQuote)
   out = out.replace(SOFT, (whole, head) => (soft++, whole.includes('\n') && multiline++, `${head}<hidden>`))
   return { text: out, hard, soft, multiline }
 }

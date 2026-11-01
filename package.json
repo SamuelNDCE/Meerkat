@@ -1,6 +1,6 @@
 {
   "name": "meerkat",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "description": "Meerkat: one command that checks an app before a push, a promotion or a build.",
@@ -9,8 +9,8 @@
   "scripts": {
     "meerkat": "node run.mjs",
     "meerkat:thorough": "node run.mjs --thorough",
-    "meerkat:watch": "node watch.mjs",
-    "preview": "node preview.mjs --speed 6",
+    "meerkat:watch": "node tools/watch.mjs",
+    "preview": "node tools/preview.mjs --speed 6",
     "test": "vitest run"
   },
   "devDependencies": {
