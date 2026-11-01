@@ -19,6 +19,7 @@
 //   needs     optional (files: string[]) => boolean: the rule is NA (not applicable) when it returns false (default: NA when no file matched the rule's ext/files)
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { RULE_SEVERITY } from '../lib/findings.mjs'
 import { configPath, finding, isFixture, isText, readText, trackedFiles } from './kit.mjs'
 
 const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|out|release)\//i
@@ -28,20 +29,6 @@ const wants = (rule, file) => {
   if (rule.ext) return rule.ext.includes((file.split('.').pop() ?? '').toLowerCase())
   if (rule.files) return rule.files.test(file)
   return isText(file)
-}
-
-// Rules that report the absence or presence of a practice, or a pattern whose danger depends on where the value comes from, are not high: the check's
-// own group would rate them high. A rule not listed keeps the severity of its check.
-const RULE_SEVERITY = {
-  'gha-deploy-no-concurrency': 'low',
-  'gha-contents-write': 'low',
-  'release-workflow-no-sbom': 'low',
-  'lockfile-duplicate-versions-over-budget': 'low',
-  'lockfile-deprecated-entry': 'low',
-  'ep-pkg-electron-caret': 'low',
-  'ep-execute-js-variable': 'medium',
-  'ep-shell-path-variable': 'medium',
-  'js-require-variable': 'medium',
 }
 
 export function readAllow(root, allowFile) {

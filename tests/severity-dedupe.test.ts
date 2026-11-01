@@ -14,7 +14,7 @@ describe('severity of checks that report a practice or a notice', () => {
   test('deprecated dependencies, artifact retention, install scripts and the DevTools gate are not high', () => {
     expect(defaultSeverity({ id: 'deprecated-deps', group: 'security' })).toBe('low')
     expect(defaultSeverity({ id: 'github-actions-artifacts', group: 'security' })).toBe('low')
-    expect(defaultSeverity({ id: 'install-scripts', group: 'security' })).toBe('medium')
+    expect(defaultSeverity({ id: 'install-scripts', group: 'security' })).toBe('low')
     expect(defaultSeverity({ id: 'electron-devtools-prod', group: 'security' })).toBe('medium')
   })
   test('a check that is not listed keeps the severity of its group, and an explicit severity still wins', () => {
@@ -70,9 +70,13 @@ describe('innerHTML with a sanitised value is not flagged', () => {
     expect(run('el.innerHTML = DOMPurify.sanitize(html)')).not.toContain('innerHTML')
     expect(run('el.innerHTML = escapeHtml(name)')).not.toContain('innerHTML')
   })
-  test('a raw value is still reported, as medium', () => {
+  test('a plain variable is still reported, as low (check where it comes from)', () => {
     const out = run('el.innerHTML = userText')
     expect(out).toContain('innerHTML assignment')
+    expect(out).toMatch(/MEERKAT-FINDING low innerhtml-assignment src\/a\.js:1/)
+  })
+  test('built text with a value in it is reported as medium', () => {
+    const out = run("el.innerHTML = '<b>' + userText + '</b>'")
     expect(out).toMatch(/MEERKAT-FINDING medium innerhtml-assignment src\/a\.js:1/)
   })
 })

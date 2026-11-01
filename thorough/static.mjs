@@ -152,6 +152,12 @@ const safeLiteralAssign = (t, m, why) => {
   // cond ? CONST : '' picks between constants, so the condition decides which author-written markup is shown, never what it contains.
   return new RegExp(String.raw`^[^?]+\?\s*${atom}\s*:\s*${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)
 }
+const bareValue = (t, m) => {
+  const from = m.index + m[0].length
+  const eol = t.indexOf('\n', from)
+  const rest = t.slice(from, eol < 0 ? t.length : eol).trim()
+  return /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[[^\]]*\])*\s*;?\s*(?:\/\/.*)?$/.test(rest)
+}
 const riskyCode = (root) => {
   const allow = allowList(root, '.meerkat-risky-allow')
   const structured = []
@@ -169,7 +175,10 @@ const riskyCode = (root) => {
           f.push(`${x}:${lineOf(t, m.index)} ${why}`)
           // Every hit is reported with its own severity: innerHTML with a value the code does not show to be safe is a medium risk (it depends on where the
           // value comes from), the other calls keep the check's own severity (high).
-          structured.push([why.startsWith('innerHTML') ? 'medium' : fallbackSeverity, why.startsWith('innerHTML') ? 'innerhtml-assignment' : 'risky-call', x, lineOf(t, m.index), why])
+          // A plain variable on the right (el.innerHTML = icon) only says "check where it comes from": low. Built text (concatenation, a template with a
+          // value in it, a call) is medium.
+          const htmlSeverity = bareValue(t, m) ? 'low' : 'medium'
+          structured.push([why.startsWith('innerHTML') ? htmlSeverity : fallbackSeverity, why.startsWith('innerHTML') ? 'innerhtml-assignment' : 'risky-call', x, lineOf(t, m.index), why])
         }
       }
     }
