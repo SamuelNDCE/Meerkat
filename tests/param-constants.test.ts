@@ -53,6 +53,16 @@ describe('innerHTML set from a helper parameter', () => {
   test('reported: the name is redeclared inside the helper', () => {
     expect(status({ 'a.js': "const btn = (icon) => {\n  { const icon = location.hash; b.innerHTML = icon }\n}\nbtn(ICON.up)\n" })).toBe(1)
   })
+  test('reported: the helper is exported, so other files call it', () => {
+    expect(status({ 'a.js': `export ${helper}btn(ICON.up, 'Up', f)\n` })).toBe(1)
+    expect(status({ 'a.js': `export function btn(icon) {\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n` })).toBe(1)
+  })
+  test('reported: the parameter is changed with a compound assignment', () => {
+    expect(status({ 'a.js': "const btn = (icon) => {\n  icon += location.hash\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n" })).toBe(1)
+  })
+  test('reported: a call spreads its arguments', () => {
+    expect(status({ 'a.js': `${helper}btn(...args)\nbtn(ICON.up, 'Up', f)\n` })).toBe(1)
+  })
   test('reported: the parameter is reassigned before use', () => {
     expect(status({ 'a.js': "const btn = (icon) => {\n  icon = location.hash\n  b.innerHTML = icon\n}\nbtn(ICON.up)\n" })).toBe(1)
   })

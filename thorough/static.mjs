@@ -176,7 +176,11 @@ const paramOnlyConstants = (t, at, param) => {
   const name = d[1] ?? d[3]
   const params = splitArgs(d[2] ?? d[4])
   const idx = params.findIndex((p) => p === param)
-  if (idx < 0 || new RegExp(String.raw`(?<![\w$.])${param.replace(/\$/g, '\\$')}\s*[-+*/|&]?=(?!=)`).test(t.slice(d.index + d[0].length))) return false
+  // Exported helpers have callers elsewhere; any write to the parameter (plain, compound, ++/--, destructuring target) ends the argument-only reasoning.
+  if (/\bexport\b[^\n]{0,20}$/.test(t.slice(Math.max(0, d.index - 40), d.index + 12))) return false
+  const w = param.replace(/\$/g, '\\$')
+  if (idx < 0 || params.some((p) => p.startsWith('...'))) return false
+  if (new RegExp(String.raw`(?<![\w$.])${w}\s*(?:\*\*|<<|>>>?|\|\||&&|\?\?|[-+*/%|&^])?=(?![=>])|(?:\+\+|--)\s*${w}\b|\b${w}\s*(?:\+\+|--)|[\[{,][^=;\n]*\b${w}\b[^=;\n]*[\]}]\s*=(?!=)`).test(t.slice(d.index + d[0].length))) return false
   // The sink must sit inside the helper's braced body, and nothing inside that body may declare the same name again (a nested function parameter, let, const, var).
   const open = t.indexOf('{', d.index + d[0].length - 1)
   if (open < 0 || t.slice(d.index + d[0].length, open).trim() !== '') return false
@@ -209,7 +213,9 @@ const paramOnlyConstants = (t, at, param) => {
       }
     }
     if (end < 0) return false
-    const arg = splitArgs(t.slice(c.index + c[0].length, end))[idx]
+    const args = splitArgs(t.slice(c.index + c[0].length, end))
+    if (args.slice(0, idx + 1).some((a) => a.startsWith('...'))) return false
+    const arg = args[idx]
     if (arg === undefined || !CONST_ARG.test(arg)) return false
   }
   return true
