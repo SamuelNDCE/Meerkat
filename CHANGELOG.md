@@ -4,6 +4,8 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- scheduling: while the longest waiting check is held for room, short checks that fit now run beside the running one (backfilling) instead of all waiting behind it. On the first full NeuralVault run 97 percent of the 26 minutes had exactly one check running while 300 or more checks waited
+
 - meerkat doctor and the NeuralVault click-shards script start again: lib/paths.mjs now exports importFromApp (0.3.13 and 0.3.14 died with "does not provide an export named importFromApp")
 
 ## 0.3.14 (2026-11-01)
