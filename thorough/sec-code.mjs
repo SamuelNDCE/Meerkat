@@ -62,7 +62,7 @@ function runRules(root, rules, { skipSamples = true } = {}) {
   for (const x of trackedFiles(root)) {
     if (SKIP.test(x) || BINARY.test(x) || allow.has(x)) continue
     const raw = readText(root, x)
-    const t = isInsecureSampleFile(x) ? blankRustStrings(raw) : raw // sample snippets held as strings in a rule-fixture file are data, not code
+    const t = skipSamples && isInsecureSampleFile(x) ? blankRustStrings(raw) : raw // sample snippets held as strings in a rule-fixture file are data, not code
     const inTest = rustTestLines(x, t) // Rust unit tests sit in the same file, in a #[cfg(test)] module: not shipped code
     // A line that is only string literals (a table of sample code a detector feeds to itself) is data, not a call: the pattern checks leave it alone.
     const isSample = skipSamples ? stringOnlyLines(x, t) : () => false

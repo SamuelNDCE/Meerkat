@@ -153,3 +153,10 @@ describe('review fixes: the narrowing must not hide real defects', () => {
     expect(new Set(evaluate(folderWith(vite), EP_FUSES_BUILD).found.map((f: { rule: string }) => f.rule)).has('ep-fuses-not-configured')).toBe(true)
   })
 })
+
+describe('rules whose finding is the literal value', () => {
+  test('a hardcoded IP or URL credential in an insecure_code*.rs string table is still read raw', () => {
+    const body = 'pub const S: &[&str] = &["connect to 45.33.12.9 now"];\n'
+    expect(run('thorough/sec-code.mjs', 'hardcoded-ip', folderWith({ 'src/guard/insecure_code.rs': body })).code).toBe(1)
+  })
+})
