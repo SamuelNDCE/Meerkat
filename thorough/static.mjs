@@ -274,7 +274,10 @@ const riskyCode = (root) => {
         if (/\.[cm]?[jt]sx?$/.test(x) && /\/\/[^\n]*$/.test(before) && !/['"`][^'"`\n]*\/\/[^\n]*$/.test(before)) continue
         const lineText = t.slice(ls, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index))
         // A plain http:// name that is only compared, trimmed or declared as a namespace is an identifier, not a request (XML and metadata namespaces, URL prefixes).
-        if (why.startsWith('a plain http') && (/\b(?:trim_start_matches|strip_prefix|starts_with|startsWith|trimStart|replace|removePrefix)\b/.test(lineText) || /(?:apache\.org\/xml|ns\.adobe\.com|purl\.org|xmlns\.com|openxmlformats\.org|schemas\.microsoft\.com|ns\.useplus\.org|iptc\.org)/i.test(m[0] + lineText))) continue
+        // Only when the URL itself is the helper's direct argument, or the URL's own host is a known namespace host (not anything else on the line).
+        const host = /^['"]http:\/\/([^/'"\s:]+)/i.exec(m[0])?.[1] ?? ''
+        const directArg = new RegExp(String.raw`\b(?:trim_start_matches|strip_prefix|starts_with|startsWith|trimStart|removePrefix)\s*\(\s*&?['"]http://`).test(lineText)
+        if (why.startsWith('a plain http') && (directArg || /^(?:(?:www\.)?apache\.org|ns\.adobe\.com|purl\.org|(?:www\.)?xmlns\.com|schemas\.openxmlformats\.org|schemas\.microsoft\.com|ns\.useplus\.org|(?:www\.)?iptc\.org)$/i.test(host))) continue
         // MD5 and SHA-1 are only a risk where a secret or a signature depends on them: a content hash used to find duplicate files is fine.
         // It is downgraded only on positive evidence of a non-security use (a dedupe key, checksum, ETag, fingerprint, cache key or a hash of a whole file), and only
         // when no secret or signature word is near. Otherwise it keeps failing; an accepted content hash goes in .meerkat-risky-allow. A downgrade is still reported, as info.
