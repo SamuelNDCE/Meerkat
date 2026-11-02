@@ -53,3 +53,13 @@ describe('rollup', () => {
     expect(isHiddenByDefault({ rule: 'rsafe-vec-set-len-no-capacity', severity: 'low' })).toBe(false)
   })
 })
+
+describe('pedantic rules are not even evaluated by default', () => {
+  test('isPedanticRule matches the hidden-by-default set, and a security rule never', async () => {
+    // @ts-ignore plain .mjs module
+    const { isPedanticRule } = await import('../lib/rollup.mjs')
+    expect(isPedanticRule('rapi-pub-fn-undocumented', 'low')).toBe(true)
+    expect(isPedanticRule('rerr-lock-unwrap-poison', 'medium')).toBe(false)
+    expect(isPedanticRule('jwt-weak', 'high')).toBe(false)
+  })
+})
