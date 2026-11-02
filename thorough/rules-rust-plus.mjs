@@ -55,16 +55,16 @@ const before = (ctx, n) => ctx.lines.slice(Math.max(0, ctx.index - n), ctx.index
 const after = (ctx, n) => ctx.lines.slice(ctx.index + 1, ctx.index + 1 + n).join('\n')
 
 // True when the line sits after a #[cfg(test)] line in the same file (test modules sit at the bottom of a file). The index is cached per lines array.
-import { rustTestLines } from './kit.mjs'
-const cfgTestAt = new WeakMap()
-const inTestBlock = (ctx) => {
-  // The exact #[cfg(test)] module (matched braces), not "everything after the first attribute": code after the module, or after a lone #[cfg(test)] item, is shipped code.
-  let inTest = cfgTestAt.get(ctx.lines)
-  if (inTest === undefined) {
-    inTest = rustTestLines(ctx.file ?? 'a.rs', ctx.text ?? ctx.lines.join('\n'))
-    cfgTestAt.set(ctx.lines, inTest)
-  }
-  return inTest(ctx.index + 1)
+import { rustInTest } from './kit.mjs'
+const inTestBlock = (ctx) => rustInTest(ctx)
+
+// `.set_len(` on a std::fs::File (or OpenOptions result): the receiver is named like a file, was opened with File:: / OpenOptions just above, or the chain says so.
+const fileSetLen = (line, ctx) => {
+  const recv = /(\w+)\s*\.set_len\(/.exec(line)?.[1]
+  if (/File::|OpenOptions/.test(`${ctx.lines[ctx.index - 2] ?? ''}\n${ctx.lines[ctx.index - 1] ?? ''}\n${line}`)) return true
+  if (!recv) return false
+  if (/file|^f$|^fh$|^handle$/i.test(recv)) return true
+  return new RegExp(`\\blet\\s+(?:mut\\s+)?${recv}\\b[^\\n;]*(?:File::|OpenOptions|\\.open\\(|\\.create\\()`).test(before(ctx, 30))
 }
 
 // The nearest function header above the line (within 300 lines), and whether that function is async.
@@ -182,7 +182,8 @@ export const SAFETY = [
   R('rsafe-asm-macro', 'an inline asm! or global_asm! block is used (review the register and memory contract)', /\b(?:core::arch::|std::arch::)?(?:asm|global_asm)!\s*[([{]/, 'unsafe { asm!("nop") };', 'let n = count_nops();'),
   R('rsafe-repr-packed', 'a packed repr is used (references to its fields are undefined behaviour)', /#\[repr\([^)\n]{0,60}\bpacked\b/, '#[repr(C, packed)]\nstruct Header {\n    kind: u8,\n    len: u32,\n}', '#[repr(C)]\nstruct Header {\n    kind: u8,\n    len: u32,\n}'),
   R('rsafe-vec-set-len-no-capacity', 'Vec::set_len is called with no with_capacity or reserve above it', /\.set_len\(/, 'unsafe { v.set_len(n) };', 'let mut v = Vec::with_capacity(n);\nunsafe { v.set_len(n) };', {
-    test: (line, ctx) => /\.set_len\(/.test(line) && !/with_capacity|reserve|capacity/.test(before(ctx, 10)),
+    // Not std::fs::File::set_len (it resizes a file, it is safe), and not test code (a #[cfg(test)] module, a #[test] fn, a test-only file).
+    test: (line, ctx) => /\.set_len\(/.test(line) && !/with_capacity|reserve|capacity/.test(before(ctx, 10)) && !fileSetLen(line, ctx) && !inTestBlock(ctx),
   }),
   R('rsafe-alloc-no-null-check', 'alloc or alloc_zeroed result is not checked for null (no handle_alloc_error)', /(?<![\w.:])(?:alloc::)?(?:alloc|alloc_zeroed)\(\s*(?:layout|Layout::)/, 'let p = unsafe { alloc(layout) };', 'let p = unsafe { alloc(layout) };\nif p.is_null() { handle_alloc_error(layout); }', {
     test: (line, ctx) => /(?<![\w.:])(?:alloc::)?(?:alloc|alloc_zeroed)\(\s*(?:layout|Layout::)/.test(line) && !/is_null|handle_alloc_error/.test(after(ctx, 6)),

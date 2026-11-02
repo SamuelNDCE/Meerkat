@@ -319,7 +319,8 @@ const workflowSecurity = (root) => {
   const f = []
   for (const x of trackedFiles(root)) {
     if (!/^\.github\/workflows\/[^/]+\.ya?ml$/.test(x)) continue
-    const t = readText(root, x)
+    // Whole-line YAML comments are blanked (same length, so line numbers hold): a trigger or an expression named in a comment is not one that runs.
+    const t = readText(root, x).replace(/^[ \t]*#.*$/gm, (c) => ' '.repeat(c.length))
     for (const m of t.matchAll(/uses:\s*([A-Za-z0-9_.-]+)\/([A-Za-z0-9_./-]+)@([^\s#]+)/g)) {
       if (!/^[0-9a-f]{40}$/.test(m[3]) && !['actions', 'github'].includes(m[1])) f.push(`${x}:${lineOf(t, m.index)} ${m[1]}/${m[2]}@${m[3]} is not pinned to a commit (a tag can be moved)`)
     }
