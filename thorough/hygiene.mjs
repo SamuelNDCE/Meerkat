@@ -3,7 +3,7 @@
 // Limits can be changed in .meerkat-budgets.json under "hygiene" (see docs/customizing.md).
 import { existsSync, statSync, readdirSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
-import { finish, isFixture, isText, main, readBudgets, readText, trackedFiles as allTracked, withFixture } from './kit.mjs'
+import { finish, isFixture, isTestFile, isText, main, readBudgets, readText, trackedFiles as allTracked, withFixture } from './kit.mjs'
 
 // The hygiene checks leave folders of deliberately broken test files (fixtures/) alone.
 const trackedFiles = (root) => allTracked(root).filter((f) => !isFixture(f))
@@ -126,6 +126,8 @@ const uiStatic = (root) => {
   const f = []
   for (const x of trackedFiles(root)) {
     if (!/\.(html?|tsx|jsx|vue|svelte)$/i.test(x) || /(^|\/)(node_modules|dist|build)\//.test(x)) continue
+    // Tests and design mockups/prototypes are not shipped pages: their markup is sample input or a sketch.
+    if (isTestFile(x) || /(^|\/)(mockups?|prototypes?|wireframes?)\//i.test(x)) continue
     const t = readText(root, x)
     for (const m of t.matchAll(/<img\b[^>]*>/gi)) if (!/\balt\s*=/.test(m[0])) f.push(`${x}: an <img> with no alt text`)
     for (const m of t.matchAll(/<a\b[^>]*target\s*=\s*["']_blank["'][^>]*>/gi)) if (!/rel\s*=\s*["'][^"']*noopener/.test(m[0])) f.push(`${x}: a link that opens a new tab without rel="noopener"`)

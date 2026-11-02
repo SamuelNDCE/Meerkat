@@ -123,10 +123,13 @@ export const isFixture = (f) => /(^|\/)(fixtures?|testdata|__fixtures__|test-fix
 export const isTestFile = (f) => isFixture(f) || /(^|\/)(tests?|__tests__|e2e|spec)\//i.test(f) || /(^|\/)(?:scripts|tools|supabase|qa|e2e)\/probes?\//i.test(f) || /\.(test|spec)\.[a-z]+$/i.test(f) || /(^|\/)[\w.-]+_tests?\.(rs|go|py)$/i.test(f) || /(^|\/)test_[\w.-]+\.py$/i.test(f) || /(^|\/)tests\.rs$/i.test(f) || /[-_.]fixtures?\.[a-z]+$/i.test(f) || /(^|\/)test[_-]?(?:support|utils?|helpers?)\.[a-z]+$/i.test(f) || /(^|\/)probe-[\w.-]+\.(?:[cm]?[jt]s|py)$/i.test(f)
 // Returns a function: is this 1-based line inside a `#[cfg(test)] mod name { ... }` block? Only that block counts (found by matching braces, with string and char
 // literals blanked first); an attribute that is not followed by a module, or a block that never closes, covers nothing.
-export const rustTestLines = (file, text) => {
+// Rust source with raw strings, strings, char literals and comments blanked (same length, newlines kept). The char literal comes before the string
+// alternative so a '"' cannot open a string that swallows the code after it.
+export const rustBlank = (text) => text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|'(?:[^'\\\n]|\\.)'|"(?:[^"\\]|\\[\s\S])*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (s) => s.replace(/[^\n]/g, ' '))
+export const rustTestLines =(file, text) => {
   if (!/\.rs$/i.test(file) || !text.includes('#[cfg(test)]')) return () => false
   // Raw strings (r#"..."#), strings, char literals and comments are blanked (same length, newlines kept) so a brace inside one is not counted.
-  const blanked = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\\n]|\\.)'|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (s) => s.replace(/[^\n]/g, ' '))
+  const blanked = rustBlank(text)
   const ranges = []
   for (const m of blanked.matchAll(/^[ \t]*#\[cfg\(test\)\][ \t]*\r?\n(?:[ \t]*#\[[^\]\n]*\][ \t]*\r?\n)*[ \t]*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{/gm)) {
     let depth = 0

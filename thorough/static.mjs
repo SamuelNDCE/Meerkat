@@ -49,12 +49,19 @@ const envExample = (root) => {
 
 // ---- broken-imports: a relative import that points at nothing
 const EXTS = ['', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.json', '.svelte', '.vue', '.d.ts']
+// Blanks (same length, newlines kept) what is not an import: comments, and a string that merely QUOTES import text (a test's expect(src).toContain("from './x.cjs'")).
+const blankSpan = (s) => s.replace(/[^\n]/g, ' ')
+const withoutNonImports = (text) =>
+  text
+    .replace(/\/\*[\s\S]*?\*\//g, blankSpan)
+    .replace(/(^|[\s;{}(,])\/\/[^\n]*/g, (s, lead) => lead + blankSpan(s.slice(lead.length)))
+    .replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g, (s) => (/\b(?:from|import|require)\b/.test(s) && /['"`]/.test(s.slice(1, -1)) ? blankSpan(s) : s))
 const brokenImports = (root) => {
   const allow = allowList(root, '.meerkat-imports-allow')
   const f = []
   for (const x of trackedFiles(root)) {
     if (!/\.(m?[jt]sx?|cjs|svelte|vue)$/i.test(x) || /(^|\/)(node_modules|dist|build)\//.test(x) || isFixture(x)) continue
-    const t = readText(root, x)
+    const t = withoutNonImports(readText(root, x))
     const re = /(?:from\s+|import\s+|import\(\s*|require\(\s*)['"](\.{1,2}\/[^'"?#]*)['"]/g
     for (const m of t.matchAll(re)) {
       const target = posix.normalize(posix.join(posix.dirname(x), m[1]))

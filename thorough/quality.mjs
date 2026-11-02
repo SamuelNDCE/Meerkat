@@ -252,13 +252,30 @@ const duplicateTestNames = (root) => {
   for (const x of files(root, SOURCE)) {
     if (!TEST_FILE.test(x) || allow.has(x)) continue
     const t = readText(root, x)
+    // The same title under two different describe blocks is two different tests, so a title is only a repeat inside one describe scope.
+    // Braces are read from a copy with strings, templates and comments blanked, so a brace in a title or a comment cannot shift the scope.
+    const blanked = t.replace(/\/\*[\s\S]*?\*\/|(^|[\s;{}(,])\/\/[^\n]*|(?<=[(,=:[!&|?;{}]\s*)\/(?![/*])(?:[^/\\\n[]|\\.|\[(?:[^\]\\\n]|\\.)*\])+\/[a-z]*|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g, (s) => s.replace(/[^\n]/g, ' '))
+    const events = []
+    for (const m of blanked.matchAll(/[{}]/g)) events.push({ at: m.index, kind: m[0] })
+    for (const m of t.matchAll(/\b(?:describe|suite)(?:\.\w+)*\s*\(\s*(['"`])(.+?)\1/g)) events.push({ at: m.index, kind: 'describe', name: m[2], end: m.index + m[0].length })
+    for (const re of TEST_TITLES) for (const m of t.matchAll(re)) events.push({ at: m.index, kind: 'test', name: m[2] ?? m[1], line: lineOf(t, m.index) })
+    events.sort((a, b) => a.at - b.at)
+    const scopes = [] // open describe blocks: { name, depth }
+    let pending = null
+    let depth = 0
     const seen = new Map()
-    for (const re of TEST_TITLES) {
-      for (const m of t.matchAll(re)) {
-        const name = m[2] ?? m[1]
-        const line = lineOf(t, m.index)
-        if (seen.has(name)) f.push(`${x}:${line} repeats the test name "${name}" (first at line ${seen.get(name)})`)
-        else seen.set(name, line)
+    for (const e of events) {
+      if (e.kind === 'describe') pending = e.name
+      else if (e.kind === '{') {
+        depth++
+        if (pending !== null) scopes.push({ name: pending, depth }), (pending = null)
+      } else if (e.kind === '}') {
+        if (scopes.length && scopes[scopes.length - 1].depth === depth) scopes.pop()
+        depth--
+      } else {
+        const key = `${scopes.map((s) => s.name).join('\u0000')}\u0001${e.name}`
+        if (seen.has(key)) f.push(`${x}:${e.line} repeats the test name "${e.name}" (first at line ${seen.get(key)})`)
+        else seen.set(key, e.line)
       }
     }
   }
