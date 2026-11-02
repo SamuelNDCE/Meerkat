@@ -73,7 +73,7 @@ describe('buildAiPrompt', () => {
   })
   test('sections come in the agreed order and severities are grouped', () => {
     const at = (s: string) => text.indexOf(s)
-    const order = ['## 1. What Meerkat is', '## 2. This run', '## 3. How to read a finding', '## 4. The findings', '### CRITICAL', '### HIGH', '### MEDIUM', '### LOW', '### INFO', '## 5. Check these first', '## 6. Checks that failed but produced no findings', '## 7. NOT RUN', '## 8. What to do']
+    const order = ['## 1. What Meerkat is', '## 2. This run', '## 3. How to read a finding', '## 4. The findings', '### CRITICAL', '### HIGH', '### MEDIUM', '### LOW', '### INFO', '## 5. Check these first', '## 6. Checks that failed but produced no findings', '## 7. NOT RUN', '## 8. Every check', '## 9. What to do']
     const idx = order.map(at)
     expect(idx.every((i) => i >= 0)).toBe(true)
     expect([...idx].sort((a, b) => a - b)).toEqual(idx)
