@@ -147,7 +147,8 @@ export const stringOnlyLines = (file, text) => {
   if (!/\.(?:rs|py|go|[cm]?[jt]sx?)$/i.test(file)) return () => false
   const lines = text.split('\n')
   // A template literal with ${} is code (its holes are expressions), so it is not blanked and leaves identifiers behind.
-  const blank = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`$\\]|\\[\s\S]|\$(?!\{))*`/g, (s) => s.replace(/[^\n]/g, ' ')).split('\n')
+  // The whole literal is always matched, so the opening and closing backticks stay paired; one with a ${} hole is then left as it is.
+  const blank = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\[\s\S])*`/g, (s) => (s[0] === '`' && s.includes('${') ? s : s.replace(/[^\n]/g, ' '))).split('\n')
   const rust = /\.rs$/i.test(file)
   return (line) => {
     const o = (lines[line - 1] ?? '').trim()

@@ -67,6 +67,13 @@ describe('sec-code pattern checks and sample tables', () => {
     expect(is(1)).toBe(false)
     expect(status('hardcoded-ip', { 'src/hosts.js': "module.exports = [\n  '45.33.12.9',\n]\n" })).toBe(1)
   })
+  test('a template literal with a hole does not turn the code after it into data', () => {
+    const t = ['const a = `x ${y} z`', 'crypto.createCipher("aes192", pw)', 'const b = `plain`', 'res.cookie("s", t, { httpOnly: false })'].join('\n')
+    const is = stringOnlyLines('a.js', t)
+    expect(is(2)).toBe(false)
+    expect(is(4)).toBe(false)
+    expect(status('weak-crypto-modes', { 'src/a.js': `${t}\n` })).toBe(1)
+  })
   test('a user name and password in a URL string is still reported in a table', () => {
     expect(status('credentials-in-urls', { 'src/samples.rs': 'pub const S: &[(&str, &str)] = &[\n    ("a.js", "const u = \'postgres://admin:Sup3rS3cretPw@db.acme.io/app\';"),\n];\n' })).toBe(1)
   })
