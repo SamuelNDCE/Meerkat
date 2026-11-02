@@ -133,6 +133,7 @@ const SECRET = [
   [/\bgh[pousr]_[A-Za-z0-9]{30,}\b/, 'GitHub token'],
   [/\bsk-(?:proj-|ant-)?[A-Za-z0-9_-]{20,}/, 'model API key'],
   [/\bhf_[A-Za-z0-9]{30,}\b/, 'Hugging Face token'],
+  [/\bnpm_[A-Za-z0-9]{36}\b/, 'npm access token'],
   [/-----BEGIN (?:[A-Z]+ )?PRIVATE KEY-----/, 'private key'],
 ]
 const ASSIGNED = /\b(?:api[_-]?key|secret(?:[_-]?key)?|access[_-]?token|auth[_-]?token|token|passwd|password|pwd)["']?\s*[:=]\s*(["'])([^"'\s]{8,})\1/i
@@ -176,7 +177,7 @@ const notebookSize = (root) => {
 }
 
 // ---- notebook-absolute-paths: a path that only exists on one machine, in a cell's code or text
-const ABS_PATH = /\b[A-Za-z]:\\(?:Users|Documents and Settings)\\|(?:^|[\s'"(=,])\/(?:home|Users)\/[\w.-]+\//
+const ABS_PATH = /\b[A-Za-z]:\\{1,2}(?:Users|Documents and Settings)\\{1,2}|(?:^|[\s'"(=,])\/(?:home|Users)\/[\w.-]+\//
 const notebookAbsolutePaths = (root) => {
   const ID = 'notebook-absolute-paths'
   if (!nbFiles(root).length) return na(ID, 'no notebooks')

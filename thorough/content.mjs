@@ -352,9 +352,15 @@ const jsonDuplicateKeys = (root) => {
 }
 
 // ---- csv-consistent: every row of a CSV has as many columns as its header
+// A header with semicolons and no comma outside quotes is a semicolon-separated file (the usual export of a spreadsheet set to a comma-decimal locale).
+const csvDelimiter = (t) => {
+  const header = (t.split('\n')[0] ?? '').replace(/"(?:[^"]|"")*"/g, '')
+  return header.includes(';') && !header.includes(',') ? ';' : ','
+}
 // Rows of a CSV as arrays of fields, each with the line it starts on. Handles quoted fields with commas, quotes and line breaks.
-function csvRows(text) {
+function csvRows(text, delim) {
   const t = text.replace(/^\uFEFF/, '')
+  const sep = delim ?? csvDelimiter(t)
   const rows = []
   let row = []
   let field = ''
@@ -373,7 +379,7 @@ function csvRows(text) {
         field += c
       }
     } else if (c === '"' && field === '') quoted = true
-    else if (c === ',') {
+    else if (c === sep) {
       row.push(field)
       field = ''
     } else if (c === '\n') {
@@ -442,8 +448,9 @@ const spellCommonTypos = (root) => {
   for (const x of files(root, TEXT)) {
     if (allowed(allow, id, x) || !small(root, x)) continue
     const md = MD.test(x)
+    const prose = /\.txt$/i.test(x) && !/(^|\/)(requirements[^/]*|constraints[^/]*|robots|CMakeLists|.*(?:list|words|dict|ignore)[^/]*)\.txt$/i.test(x)
     readText(root, x).split('\n').forEach((line, i) => {
-      if (!md && !COMMENT.test(line)) return
+      if (!md && !prose && !COMMENT.test(line)) return
       for (const m of line.matchAll(TYPO_RE)) f.push(`${x}:${i + 1} "${m[1]}" should be "${TYPO_FIX.get(m[1].toLowerCase())}"`)
     })
   }
