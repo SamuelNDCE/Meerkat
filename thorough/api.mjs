@@ -281,10 +281,17 @@ const sqlDestructive = (root) => {
     if (allowed(allow, 'sql-destructive-migrations', x)) continue
     const t = readText(root, x)
     if (/--\s*meerkat-allow\b/.test(t)) continue
-    // An undo/down script that refuses to run unless a confirm setting is present (current_setting('...confirm...') plus a RAISE EXCEPTION) is a guarded rollback, not a migration that runs by itself.
-    if (/(^|\/)(?:undo|down)[_-][^/]*\.sql$|\.down\.sql$/i.test(x) && /current_setting\s*\(\s*'[^']*confirm[^']*'/i.test(t) && /\braise\s+exception\b/i.test(t)) continue
     // Comments are not executed: line comments and block comments (a ROLLBACK note often lists the DROP statements) are blanked, line numbers kept.
-    const code = t.replace(/\/\*[\s\S]*?\*\/|--[^\n]*/g, blank)
+    // A comment opener inside a quoted string or a $$ body is not a comment.
+    const code = t.replace(/'(?:[^']|'')*'|\$([A-Za-z_]*)\$[\s\S]*?\$\1\$|\/\*[\s\S]*?\*\/|--[^\n]*/g, (s) => (s[0] === '/' || s.startsWith('--') ? blank(s) : s))
+    // An undo/down script that refuses to run unless a confirm setting is present is a guarded rollback. The guard (current_setting('...confirm...') and a
+    // RAISE EXCEPTION) must be real code, not a comment, and must come BEFORE the first destructive statement.
+    if (/(^|\/)(?:undo|down)[_-][^/]*\.sql$|\.down\.sql$/i.test(x)) {
+      const confirmAt = code.search(/current_setting\s*\(\s*'[^']*confirm[^']*'/i)
+      const raiseAt = code.search(/\braise\s+exception\b/i)
+      const firstBad = Math.min(...[...SQL_DESTRUCTIVE.map(([re]) => code.search(new RegExp(re.source, 'i'))), code.search(/\bDELETE\s+FROM\b/i)].filter((i) => i >= 0), Infinity)
+      if (confirmAt >= 0 && raiseAt >= 0 && Math.max(confirmAt, raiseAt) < firstBad) continue
+    }
     for (const [re, why] of SQL_DESTRUCTIVE) for (const m of code.matchAll(re)) f.push(`${x}:${lineOf(code, m.index)} ${why} (add "-- meerkat-allow" if this is intended)`)
     for (const m of code.matchAll(/\bDELETE\s+FROM\b[^;]*;/gi)) {
       if (!/\bWHERE\b/i.test(m[0])) f.push(`${x}:${lineOf(code, m.index)} DELETE FROM with no WHERE clause deletes every row`)

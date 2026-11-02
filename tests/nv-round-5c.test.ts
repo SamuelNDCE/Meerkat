@@ -116,3 +116,40 @@ describe('Electron build rules apply only to a real Electron app', () => {
     for (const r of NOT_ELECTRON) expect(got.has(r), r).toBe(true)
   })
 })
+
+describe('review fixes: the narrowing must not hide real defects', () => {
+  test('insecure_code.rs: real code with insecure strings in a normal function still reports', () => {
+    const cors = 'fn h(resp: &mut Resp) {\n    resp.header("Access-Control-Allow-Origin", "*");\n    resp.header("Access-Control-Allow-Credentials", "true");\n}\n'
+    expect(run('thorough/sec-code.mjs', 'cors-wildcard', folderWith({ 'src/guard/insecure_code.rs': cors })).code).toBe(1)
+    const sql = 'fn q(id: &str) -> String {\n    format!("SELECT * FROM u WHERE id={}", id)\n}\n'
+    expect(run('thorough/sec-code.mjs', 'sql-concat', folderWith({ 'src/guard/insecure_code.rs': sql })).code).toBe(1)
+  })
+  test('insecure_code.rs: a data table is still blanked, and a quote char literal does not shift the pairing', () => {
+    const body = "fn f() -> char { '\"' }\nconst BAD: &[(&str, &str)] = &[(\"js\", \"res.cookie('s', t, { secure: false });\")];\n"
+    expect(run('thorough/sec-code.mjs', 'cookie-flags', folderWith({ 'src/guard/insecure_code.rs': body })).code).toBe(0)
+    const real = "fn f() -> char { '\"' }\nfn g() { let c = Cookie::new(\"s\", t); }\n"
+    expect(run('thorough/sec-code.mjs', 'cookie-flags', folderWith({ 'src/guard/insecure_code.rs': real })).code).toBe(1)
+  })
+  test('undo script: a guard that only appears in a comment does not excuse the DROP', () => {
+    const sql = "-- current_setting('x.confirm') raise exception\ndrop table users;\n"
+    expect(run('thorough/api.mjs', 'sql-destructive-migrations', folderWith({ 'migrations/undo_1_x.sql': sql })).code).toBe(1)
+  })
+  test('undo script: a guard placed AFTER the DROP does not excuse it', () => {
+    const sql = "drop table users;\nselect current_setting('x.confirm', true);\ndo $$ begin raise exception 'no'; end $$;\n"
+    expect(run('thorough/api.mjs', 'sql-destructive-migrations', folderWith({ 'migrations/undo_1_x.sql': sql })).code).toBe(1)
+  })
+  test("a '/*' inside a string does not hide a DROP between two strings", () => {
+    const sql = "select '/*'; drop table users; select '*/';\n"
+    expect(run('thorough/api.mjs', 'sql-destructive-migrations', folderWith({ 'migrations/20261007_a.sql': sql })).code).toBe(1)
+  })
+  test('monorepo: electron declared in the workspace root makes the app package an Electron app', () => {
+    const files = {
+      'package.json': JSON.stringify({ name: 'root', private: true, workspaces: ['apps/*'], devDependencies: { electron: '41.0.0' } }, null, 2),
+      'apps/desk/package.json': JSON.stringify({ name: 'desk', build: { appId: 'com.acme.desk' } }, null, 2),
+    }
+    const got = new Set(evaluate(folderWith(files), EP_FUSES_BUILD).found.map((f: { rule: string }) => f.rule))
+    expect(got.has('ep-builder-product-name-missing')).toBe(true)
+    const vite = { 'package.json': JSON.stringify({ name: 'v', devDependencies: { 'electron-vite': '2.0.0' }, build: { appId: 'a.b.c' } }, null, 2) }
+    expect(new Set(evaluate(folderWith(vite), EP_FUSES_BUILD).found.map((f: { rule: string }) => f.rule)).has('ep-fuses-not-configured')).toBe(true)
+  })
+})
