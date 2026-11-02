@@ -306,3 +306,5 @@ The numbered terms in [`LICENSE`](LICENSE) are what counts; this summary is a gu
 | [docs/accuracy.md](docs/accuracy.md) | how accuracy is measured |
 | [docs/mutation.md](docs/mutation.md), [docs/functionality-run.md](docs/functionality-run.md), [docs/robustness.md](docs/robustness.md) | the deeper checks |
 | [PROJECT.md](PROJECT.md) | rules for working in this repository |
+
+Credits: the external tools Meerkat can run, their licences, and what each sends over the network are listed in [docs/credits.md](docs/credits.md). Meerkat runs them but does not bundle them.

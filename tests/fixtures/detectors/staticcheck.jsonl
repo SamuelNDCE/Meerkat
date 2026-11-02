@@ -1,0 +1,3 @@
+{"code":"SA4018","severity":"error","location":{"file":"main.go","line":13,"column":2},"end":{"file":"main.go","line":13,"column":7},"message":"self-assignment of x to x"}
+{"code":"SA4000","severity":"error","location":{"file":"main.go","line":15,"column":5},"end":{"file":"main.go","line":15,"column":11},"message":"identical expressions on the left and right side of the '==' operator"}
+{"code":"SA4017","severity":"error","location":{"file":"main.go","line":19,"column":2},"end":{"file":"main.go","line":19,"column":34},"message":"Replace doesn't have side effects and its return value is ignored"}

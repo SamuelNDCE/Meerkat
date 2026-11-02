@@ -1,0 +1,6 @@
+rules:
+  - id: meerkat-sample-child-process-exec
+    languages: [javascript]
+    severity: ERROR
+    message: "Meerkat sample rule, written for this repository. child_process.exec is called with a string built at run time."
+    pattern: $CP.exec(...)
