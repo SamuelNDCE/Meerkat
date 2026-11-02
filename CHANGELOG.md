@@ -2,8 +2,9 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
-## Unreleased
+## 0.3.15 (2026-11-02)
 
+- Fewer false alarms and a much faster scan: noisy rule families rolled up or off by default, a detectors preset with cross-tool confirmation, a ground-truth benchmark, window checks left out of full
 - cross-tool confirmation fixes: findings join a group only when they match every member, never chain through a third finding, two different secrets on neighbouring lines and file-level findings with no line are no longer merged; the accuracy corpus counts every reporter of a merged finding
 - the whole Rust style family (documentation, error style, performance and async hints) is off by default, whatever its severity: an audit of 36 sampled medium findings judged 1 useful, 16 false and 18 noise; MEERKAT_FINDINGS=all turns it back on
 - the pedantic Rust style rules (undocumented items, string errors, println in libraries, ...) are no longer evaluated by default, so they cost no time and add no raw detections; MEERKAT_FINDINGS=all turns them back on
@@ -16,7 +17,6 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - documentation and markup hygiene findings (links, final newline, code fence language, headings, whitespace, HTML structure, SEO tags) and two Rust style rules are low, not medium
 - fewer false alarms: "no .dockerignore beside the Dockerfile" now also accepts the .dockerignore of the real build context (a compose `context:` such as `../..`, or a Dockerfile that says it is built from the workspace/project root)
 - js-timing-unsafe-compare no longer flags a confirm field next to a password (password !== confirm) or a bare "signature" kept as UI state (seenSignature !== signature); real secret, token, HMAC and webhook compares are still reported (found on NeuralVault)
-
 - AI prompt: a new section lists every check with its time, status, findings and sub-check counts, slowest first
 - fewer false alarms: a Tauri path check only fires on a command's own parameter outside tests, contextIsolation left out is fine (Electron 12+ default), user:password@host is not an email, and generated notice files and git@ links are not broken links
 - a first scan lists far less: size and complexity measures (line length, long functions, complexity, nesting, parameters) roll up to one finding per rule and file, and pedantic Rust style and markup nitpicks are counted in the run (hidden) instead of listed. MEERKAT_FINDINGS=all lists everything again; security rules are never hidden
@@ -33,6 +33,8 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - the JavaScript await-in-loop, var, == and unhandled-promise checks, the PII check and the size and complexity checks leave test and probe files alone; the SQL-concat check leaves probe scripts alone
 - Rust documentation and error-style rules (undocumented pub items, String errors, discarded results, spawn handles) are low, not medium
 - meerkat doctor and the NeuralVault click-shards script start again: lib/paths.mjs now exports importFromApp (0.3.13 and 0.3.14 died with "does not provide an export named importFromApp")
+
+## Unreleased
 
 ## 0.3.14 (2026-11-01)
 

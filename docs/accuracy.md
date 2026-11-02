@@ -165,7 +165,7 @@ node tools/benchmark.mjs nodegoat --dir <checkout>     scan a checkout you alrea
 
 It runs `node run.mjs --preset quick --plain` with `MEERKAT_FINDINGS=all`, then prints recall (expected found / expected), the missed vulnerabilities, and the findings that match no expected vulnerability, counted by rule. A finding matches an entry when it is in the same file, has the same vulnerability class (a table in the tool maps rules to classes) and a line within 5 lines of the entry's range; a finding that names no line matches by file and class. Unmatched findings are candidate false alarms only: nobody has judged them, and most are style or hygiene findings that a vulnerability list does not cover. The downloaded code is only read, never installed or run.
 
-First measurement (2026-11-02, Meerkat 0.3.14, OWASP NodeGoat at `c5cb68a7084e`, 17 expected vulnerabilities):
+First measurement (2026-11-02, OWASP NodeGoat at `c5cb68a7084e`, 17 expected vulnerabilities):
 
 | Result | Count |
 |---|---|
