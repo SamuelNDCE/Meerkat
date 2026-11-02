@@ -129,6 +129,10 @@ A project that has never been scanned should not be judged by Meerkat's opinions
 
 Every skipped, covered or turned-off check is listed in the results with what it is, so nothing is hidden. Security findings, secrets and real defects are never made advisory.
 
+## Gentle on your PC
+
+Meerkat is a background job and runs like one. At start it lowers its own priority to below normal, and every check it starts inherits that, so the programs you are working in keep getting the processor first. By default it runs about half as many checks at once as your PC has cores (at least 2, at most 8), and it never starts a heavy build or window check without room for it. Antivirus (Windows Defender, for example) scans the files and programs a scan touches; in a 22-minute full scan of a large project (about 2,500 files, with builds and window checks), Windows Defender averaged 1.7 percent of the whole CPU. To change it: `--priority normal` (or `MEERKAT_PRIORITY=normal`) runs at normal priority, `--priority idle` goes lower still, and `MEERKAT_PARALLEL=<n>` sets how many checks run at once. On a CI runner (`CI` set) Meerkat uses all but one core as before.
+
 ## What it looks like
 
 Every picture here is **sample data**: a made-up project, not a real run.
