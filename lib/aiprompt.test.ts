@@ -73,7 +73,7 @@ describe('buildAiPrompt', () => {
   })
   test('sections come in the agreed order and severities are grouped', () => {
     const at = (s: string) => text.indexOf(s)
-    const order = ['## 1. What Meerkat is', '## 2. This run', '## 3. How to read a finding', '## 4. The findings', '### CRITICAL', '### HIGH', '### MEDIUM', '### LOW', '### INFO', '## 5. Check these first', '## 6. Checks that failed but produced no findings', '## 7. NOT RUN', '## 8. What to do']
+    const order = ['## 1. What Meerkat is', '## 2. This run', '## 3. How to read a finding', '## 4. The findings', '### CRITICAL', '### HIGH', '### MEDIUM', '### LOW', '### INFO', '## 5. Check these first', '## 6. Checks that failed but produced no findings', '## 7. NOT RUN', '## 8. Every check', '## 9. What to do']
     const idx = order.map(at)
     expect(idx.every((i) => i >= 0)).toBe(true)
     expect([...idx].sort((a, b) => a - b)).toEqual(idx)
@@ -295,5 +295,24 @@ describe('the prompt file name', () => {
   test('a preset with odd characters is made safe, and an unknown run id falls back to the old name', () => {
     expect(promptFileName({ run: { id: '20261101-103802-x', preset: '../../evil name' } })).toBe('meerkat-prompt-20261101-103802-------evil-name.md')
     expect(promptFileName({ run: { id: 'not-a-run' } })).toBe('ai-prompt.md')
+  })
+})
+
+describe('secrets in per-check output', () => {
+  test('a key in a check command or result is blanked in the prompt', () => {
+    const key = 'AKIA' + 'QWERTYUIOPASDFGH'
+    const doc = { run: { id: '20261102-010101', preset: 'quick', project: { name: 'p', path: '/p' } }, counts: { total: 0, bySeverity: {}, new: 0, known: 0, fixed: 0 }, findings: [], notRun: [] }
+    const summary = { ms: 10, results: [{ id: 'x', status: 'PASS', ms: 5, suite: 's', origin: 'custom', command: `tool --token ${key}`, detail: `found ${key} in a file` }] }
+    const text = buildAiPrompt({ doc, summary, runDir: '/r' } as never)
+    expect(text).not.toContain(key)
+    expect(text).toContain('## 8. Every check')
+  })
+  test('a multi-line private key or quoted password is withheld', () => {
+    const pem = ['-----BEGIN ' + 'RSA PRIVATE KEY-----', 'MIIEowIBAAKCAQEAxyzxyzxyzxyzxyzxyz', 'abcdefabcdefabcdefabcdefabcdef', '-----END ' + 'RSA PRIVATE KEY-----'].join('\n')
+    const doc = { run: { id: '20261102-010101', preset: 'quick', project: { name: 'p', path: '/p' } }, counts: { total: 0, bySeverity: {}, new: 0, known: 0, fixed: 0 }, findings: [], notRun: [] }
+    const summary = { ms: 10, results: [{ id: 'x', status: 'PASS', ms: 5, suite: 's', origin: 'custom', detail: pem }] }
+    const text = buildAiPrompt({ doc, summary, runDir: '/r' } as never)
+    expect(text).not.toContain('MIIEowIBAAKCAQEAxyz')
+    expect(text).not.toContain('abcdefabcdefabcdef')
   })
 })

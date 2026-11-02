@@ -20,3 +20,5 @@ tests/redact-remainder.test.ts
 tests/falsepositives.test.ts
 # Accepted: ccdec21 held a key-header sentence in a code comment (no key). History is not rewritten; the comment is reworded in the next commit.
 ccdec21 thorough/secret-scan.mjs
+# 888a523: a test planted a fake private key header in one line to prove the AI prompt withholds it; the next commit splits the string and history is not rewritten.
+888a523 lib/aiprompt.test.ts
