@@ -233,7 +233,8 @@ export const stringOnlyLines = (file, text) => {
     // In a Rust table of (language, sample) pairs, field names (`bad:`), `&`, `vec!` and `Some(` around the strings are part of the table; on a line with no tuple
     // (`origin: "*",`) a label is a configuration field and the line is code. In other languages `key: "value"` is always configuration.
     // The descriptive fields of a rules table (a pattern, the reason, the advice) hold regexes and prose, never configuration values, so they count as table fields too.
-    const descriptive = lang === 'rs' && /^(?:pat|pattern|why|instead|bad|good|title|msg|message|hint|note|reason|help|desc|description|example)\s*:\s*&?(?:\[|r#*"|")/.test(o)
+    // Exactly one field on the line, holding one string: the array forms (`bad: &[(...)]`) are judged as tuples below.
+    const descriptive = lang === 'rs' && (b.match(/\b\w+\s*:(?!:)/g) ?? []).length === 1 && /^(?:pat|pattern|why|instead|title|msg|message|hint|note|reason|help|desc|description|example)\s*:\s*(?:r#*"|")/.test(o)
     const rest = lang === 'rs' && (b.includes('(') || descriptive) ? b.replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ') : b
     if (!/^[,;()[\]{}\s]*$/.test(rest)) return false
     // The strings must be sample CODE: the text that was blanked contains a call (this also covers the first line of a multi-line string), or nothing was blanked.
