@@ -16,6 +16,21 @@ describe('js-timing-unsafe-compare', () => {
   test('a signature kept as UI state is not a secret compare', () => {
     expect(hit('} else if (seenSignature !== signature) {')).toBe(false)
   })
+  test('each comparison is judged on its own: a confirm check beside a real compare still reports', () => {
+    expect(hit('if (password !== confirm || apiKey === provided) return')).toBe(true)
+    expect(hit('if (seenSignature !== signature && secret === given) return')).toBe(true)
+  })
+  test('a stored value is never a confirm pair, and "verify" counts only as verifyPassword or passwordVerify', () => {
+    expect(hit('if (password === storedPassword) login()')).toBe(true)
+    expect(hit('if (password !== passwordHash) fail()')).toBe(true)
+    expect(hit('if (password === verifiedToken) go()')).toBe(true)
+    expect(hit('if (password !== verifyPassword) return')).toBe(false)
+  })
+  test('only a state-prefixed signature is UI state; other signature compares report', () => {
+    expect(hit('if (signature !== calculatedSignature) reject()')).toBe(true)
+    expect(hit('if (signature === receivedSignature) ok()')).toBe(true)
+    expect(hit('if (lastSignature !== signature) update()')).toBe(false)
+  })
   test('real secret compares are still reported', () => {
     for (const l of ['if (req.authToken === expected) ok()', 'if (signature !== expectedSignature) reject()', 'if (webhookSignature === header) ok()', 'if (apiKey === req.headers.key) ok()', 'if (hmac !== digest) fail()', 'if (password === stored) login()'])
       expect(hit(l), l).toBe(true)

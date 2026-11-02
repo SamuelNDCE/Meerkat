@@ -41,16 +41,41 @@ const outsideStrings = (re) => {
 }
 
 // A confirm field next to a password (`password !== confirm`, `newPassword === repeatPassword`) compares two things the same person typed: there is no secret to leak by timing.
-const CONFIRM_PAIR = /\b\w*password\w*\s*[!=]==\s*\w*(?:confirm|repeat|retype|again|verify)\w*|\b\w*(?:confirm|repeat|retype|again|verify)\w*\s*[!=]==\s*\w*password\w*/i
-// A bare "signature" is a secret to compare only with cryptographic context on the line; `seenSignature !== signature` (a list fingerprint kept in UI state) is not one.
-const CRYPTO_CONTEXT = /hmac|webhook|jwt|digest|header|expected|computed|stripe|github|signing|signed|secret|token|payload|req\b|request/i
-const UI_SIGNATURE = (line) => {
-  const m = TIMING_RE.exec(line)
-  if (!m || !/signature/i.test(m[0])) return false
-  const withoutSignature = m[0].replace(/signature/gi, '')
-  return !/(?:secret|hmac|token|password|apiKey)/i.test(withoutSignature) && !CRYPTO_CONTEXT.test(line)
+// Each comparison is judged on its own (a line can hold a confirm check and a real secret compare). A side that holds a stored value (hash, stored, saved, db, expected,
+// current, old) is a real compare, never a confirm pair; "verify" counts only as verifyPassword or passwordVerify.
+const STORED_WORD = /hash|stored|saved|db\b|expected|current|old|actual|digest/i
+const CONFIRM_WORD = /confirm|repeat|retype|again|verify_?password|password_?verify/i
+const isConfirmPair = (m0) => {
+  const sides = m0.split(/[!=]==/).map((s) => s.trim())
+  if (sides.length !== 2 || sides.some((s) => STORED_WORD.test(s))) return false
+  const [a, b] = sides
+  return (/password/i.test(a) && CONFIRM_WORD.test(b)) || (CONFIRM_WORD.test(a) && /password/i.test(b))
 }
-const TIMING_RE =/\b\w*(?:(?:auth|api|access|session|csrf|bearer|refresh)_?token|secret|signature|hmac|apiKey|password)\w*\s*(?:===|!==)\s*(?!(?:undefined|null|true|false|NaN)\b)[A-Za-z_$][\w.$[\]]{0,79}/i
+// A bare "signature" is a secret to compare only when the compare is not plainly UI state: `seenSignature !== signature` (a list fingerprint kept in React state) has a
+// state-word prefix on one side, no secret word, and no cryptographic context anywhere on the line.
+const CRYPTO_CONTEXT = /hmac|webhook|jwt|digest|header|expected|computed|calculated|generated|hash|sha\d*|\bmac\b|verify|received|provided|sig\b|stripe|github|signing|signed|secret|token|payload|req\b|request/i
+const STATE_SIGNATURE = /\b(?:seen|last|prev|previous|current|cached|old|next|memo|rendered)\w*Signature\b/
+const isUiSignature = (m0, line) => /signature/i.test(m0) && STATE_SIGNATURE.test(m0) && !/(?:secret|hmac|token|password|apiKey)/i.test(m0.replace(/signature/gi, '')) && !CRYPTO_CONTEXT.test(line)
+// True when at least one comparison outside a string is NOT excluded.
+const anyUnexcluded = (re, line, excluded) => {
+  const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`)
+  let state = null
+  let pos = 0
+  let esc = false
+  for (const m of line.matchAll(g)) {
+    while (pos < m.index) {
+      const c = line[pos++]
+      if (state) {
+        if (esc) esc = false
+        else if (c === '\\') esc = true
+        else if (c === state) state = null
+      } else if (c === '"' || c === "'" || c === '`') state = c
+    }
+    if (!state && !excluded(m[0], line)) return true
+  }
+  return false
+}
+const TIMING_RE = /\b\w*(?:(?:auth|api|access|session|csrf|bearer|refresh)_?token|secret|signature|hmac|apiKey|password)\w*\s*(?:===|!==)\s*(?!(?:undefined|null|true|false|NaN)\b)[A-Za-z_$][\w.$[\]]{0,79}/i
 
 // A regex literal whose character class lists the characters (a scanner that looks for them): not a hidden character.
 const REGEX_CLASS_LINE = /[=(,:]\s*\/\[[^\]\n]{1,80}\]\/[gimsuy]*\s*[;,).]?\s*$/
@@ -186,7 +211,7 @@ export const JS = [
   JSF('js-pseudorandom-bytes', 'crypto.pseudoRandomBytes is used, which is not cryptographic random', /\bpseudoRandomBytes\s*\(/, 'crypto.pseudoRandomBytes(16)', 'crypto.randomBytes(16)'),
   JSF('js-timing-unsafe-compare', 'a secret or token is compared with === to another variable (timing leaks the value; use a constant-time compare)', TIMING_RE, 'if (req.authToken === expected) ok()', 'if (safeEqual(a, b)) ok()', {
     // typeof checks and comparisons with a literal (a string, a number, null) are not a secret-versus-secret compare.
-    test: (line) => !/\btypeof\b/.test(line) && outsideStrings(TIMING_RE)(line) && !CONFIRM_PAIR.test(line) && !UI_SIGNATURE(line),
+    test: (line) => !/\btypeof\b/.test(line) && anyUnexcluded(TIMING_RE, line, (m0, ln) => isConfirmPair(m0) || isUiSignature(m0, ln)),
   }),
   JSF('js-nested-quantifier-regex', 'a regular expression has a nested quantifier that can take exponential time', /\((?!(?:\?:)?(?:\\\.|-|\/))(?:\?:)?[^()[\]\n]{1,40}[+*]\)[+*{]/, 'const re = /(a+)+$/', 'const re = /a+$/'),
   JSF('js-template-no-escape', 'a template turns off HTML escaping (noEscape or a triple-stash tag)', /\bnoEscape\s*:\s*true\b|\{\{\{\s*[\w.]+\s*\}\}\}/, 'Handlebars.compile(t, { noEscape: true })', 'Handlebars.compile(t)'),
