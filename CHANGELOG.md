@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- CI and infrastructure gaps closed: SSH open to ::/0 (IPv6) in Terraform, quoted `permissions: "write-all"`, a pull_request_target checkout of refs/pull/N/merge, GitLab files named `*.gitlab-ci.yml` (docker-in-docker with TLS off), CircleCI executor images on the latest tag, and a Jenkinsfile sh step piping curl into a shell
 - the code-pattern checks of the security-plus pack (cookie flags, JWT, SQL, CORS, XML, weak crypto, regex, redirects, paths) skip lines that are only string literals and punctuation, such as a detector table of sample vulnerable code; the credentials-in-URL check does not, because there the string is the problem
 - PII in a Rust test module is not reported; meta-seo leaves mockups, prototypes and generated code maps alone
 - documentation and markup hygiene findings (links, final newline, code fence language, headings, whitespace, HTML structure, SEO tags) and two Rust style rules are low, not medium
