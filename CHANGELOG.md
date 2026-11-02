@@ -4,7 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
-- gentle by default: Meerkat lowers its own priority to below normal (checks inherit it), runs about half as many checks at once as there are cores (2 to 8; all but one on CI), and accepts --priority normal|idle and MEERKAT_PARALLEL. Meerkat's own tests do the same and put every temp project under one folder, meerkat-tests, in the temp folder, so one antivirus exclusion covers them
+- gentle by default: Meerkat lowers its own priority to below normal (checks inherit it), runs about half as many checks at once as there are cores (2 to 8; all but one on CI), and accepts --priority normal|idle and MEERKAT_PARALLEL. Meerkat's own tests do the same and put every temp project under one folder, meerkat-tests-<your user name>, in the temp folder (private to you), so one antivirus exclusion covers them
 
 - review fixes: the plain-http exemption looks at the URL itself (its host, or being the direct argument of a prefix helper), not the whole line; probe folders are test code only under scripts, tools, supabase, qa or e2e; serde_json unwrap and spawn_blocking findings keep their medium severity
 
