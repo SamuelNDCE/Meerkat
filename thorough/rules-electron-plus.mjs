@@ -29,7 +29,9 @@ const BUILD = /(^|\/)(electron-builder\.[A-Za-z0-9]+|forge\.config\.[cm]?[jt]s)$
 const ENT = /(^|\/)[^/]*entitlements[^/]*\.plist$/i
 const PLIST = /(^|\/)Info\.plist$/
 const FUSES_SET = /FuseV1Options|flipFuses|electronFuses|@electron\/fuses/
-const isBuildConfig = (file, text) => BUILD.test(file) || (PKG.test(file) && /"build"\s*:|"electron-builder"|"@electron-forge\//.test(text))
+// A package.json counts as an Electron build config only when it names Electron itself (an "electron" or "electron-builder" entry, or Electron Forge); a bare "build"
+// script or key is in every Tauri, VS Code extension and web package.
+const isBuildConfig = (file, text) => BUILD.test(file) || (PKG.test(file) && /"electron-builder"|"@electron-forge\/|"electron"\s*:/.test(text) && /"build"\s*:|"electron-builder"|"@electron-forge\//.test(text))
 
 // Caches the answer for one file text: a whole-file predicate runs once even when a line test calls it for every matching line.
 const memo = (fn) => {

@@ -140,6 +140,12 @@ export const rustTestLines = (file, text) => {
   }
   return (line) => ranges.some(([a, b]) => line >= a && line <= b)
 }
+// Rust files that hold deliberately insecure sample code as string data (a scanner's own rule tables). The NAME is the convention: insecure_code*.rs,
+// vulnerable_samples*.rs, bad_examples*.rs. Only the strings in such a file are sample text; code written outside a string there is still scanned.
+export const isInsecureSampleFile = (f) => /(^|\/)(?:insecure_code|vulnerable_samples?|bad_examples?)[\w.-]*\.rs$/i.test(f)
+// The text with every Rust string literal (plain, byte and raw r#"..."#) blanked: same length, newlines kept, so line numbers stay true. Comments are left as they are.
+export const blankRustStrings = (text) =>
+  text.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\/|(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|(?<![A-Za-z0-9_])b?"(?:[^"\\]|\\[\s\S])*"/g, (s) => (/^\/[/*]/.test(s) ? s : s.replace(/[^\n]/g, ' ')))
 // A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.
 export const FAKE_VALUE = /fake|dummy|placeholder|supersecret|not[-_]?(?:a[-_])?real|redacted|changeme|example|sample|[_-]test[_-]|your[-_]?(?:key|token|secret)/i
 

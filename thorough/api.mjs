@@ -281,7 +281,10 @@ const sqlDestructive = (root) => {
     if (allowed(allow, 'sql-destructive-migrations', x)) continue
     const t = readText(root, x)
     if (/--\s*meerkat-allow\b/.test(t)) continue
-    const code = t.replace(/--[^\n]*/g, blank)
+    // An undo/down script that refuses to run unless a confirm setting is present (current_setting('...confirm...') plus a RAISE EXCEPTION) is a guarded rollback, not a migration that runs by itself.
+    if (/(^|\/)(?:undo|down)[_-][^/]*\.sql$|\.down\.sql$/i.test(x) && /current_setting\s*\(\s*'[^']*confirm[^']*'/i.test(t) && /\braise\s+exception\b/i.test(t)) continue
+    // Comments are not executed: line comments and block comments (a ROLLBACK note often lists the DROP statements) are blanked, line numbers kept.
+    const code = t.replace(/\/\*[\s\S]*?\*\/|--[^\n]*/g, blank)
     for (const [re, why] of SQL_DESTRUCTIVE) for (const m of code.matchAll(re)) f.push(`${x}:${lineOf(code, m.index)} ${why} (add "-- meerkat-allow" if this is intended)`)
     for (const m of code.matchAll(/\bDELETE\s+FROM\b[^;]*;/gi)) {
       if (!/\bWHERE\b/i.test(m[0])) f.push(`${x}:${lineOf(code, m.index)} DELETE FROM with no WHERE clause deletes every row`)
