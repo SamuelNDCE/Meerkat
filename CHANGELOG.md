@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- a ground-truth benchmark on real code: `node tools/benchmark.mjs nodegoat` scans OWASP NodeGoat (pinned commit, expected vulnerabilities stored in benchmarks/nodegoat.json) and prints recall, the missed vulnerabilities and the findings that match none; first numbers in docs/accuracy.md
 - the code-pattern checks of the security-plus pack (cookie flags, JWT, SQL, CORS, XML, weak crypto, regex, redirects, paths) skip lines that are only string literals and punctuation, such as a detector table of sample vulnerable code; the credentials-in-URL check does not, because there the string is the problem
 - PII in a Rust test module is not reported; meta-seo leaves mockups, prototypes and generated code maps alone
 - documentation and markup hygiene findings (links, final newline, code fence language, headings, whitespace, HTML structure, SEO tags) and two Rust style rules are low, not medium
