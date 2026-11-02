@@ -17,7 +17,7 @@ const run = (list: any[]) => {
 describe('what merges', () => {
   test('the same secret from gitleaks-secrets and secret-scan is one high-confidence finding', () => {
     const a = f({ check: 'gitleaks-secrets', suite: 'secrets', rule: 'aws-access-token', file: 'cfg.py', line: 1, severity: 'critical', message: 'Identified AWS credentials (value not shown)' })
-    const b = f({ check: 'secret-scan', suite: 'secrets', rule: 'aws-access-key', file: 'cfg.py', line: 2, severity: 'high', message: 'AWS key' })
+    const b = f({ check: 'secret-scan', suite: 'secrets', rule: 'aws-access-key', file: 'cfg.py', line: 1, severity: 'high', message: 'AWS key' })
     const { out, merged } = run([a, b])
     expect(out).toHaveLength(1)
     expect(merged).toBe(1)
@@ -39,9 +39,9 @@ describe('what merges', () => {
     expect(run([a, b]).out).toHaveLength(2)
   })
 
-  test('the same code issue class within 3 lines merges across tools', () => {
+  test('the same code issue class on the same or the next line merges across tools', () => {
     const a = f({ check: 'semgrep-security', rule: 'lang-security-detect-child-process', line: 20, severity: 'high' })
-    const b = f({ check: 'code-patterns', rule: 'command-injection', line: 22, severity: 'medium' })
+    const b = f({ check: 'code-patterns', rule: 'command-injection', line: 21, severity: 'medium' })
     const { out } = run([a, b])
     expect(out).toHaveLength(1)
     expect(out[0].confirmations).toBe(2)
@@ -92,5 +92,21 @@ describe('what never merges', () => {
     const { out } = run([a, f({ check: 'x', rule: 'sql-concat', file: 'other.js' })])
     expect(JSON.stringify(out[0])).toBe(copy)
     expect(out[0].confirmations).toBeUndefined()
+  })
+})
+
+describe('different problems on neighbouring lines are not merged', () => {
+  test('two different secrets on adjacent lines stay two findings', () => {
+    const a = f({ check: 'secret-scan', suite: 'secrets', rule: 'aws-access-key', file: 'cfg.py', line: 1, severity: 'high', message: 'AWS key' })
+    const b = f({ check: 'secrets-plus', suite: 'secrets', rule: 'password-in-code', file: 'cfg.py', line: 2, severity: 'high', message: 'password' })
+    expect(run([a, b]).out).toHaveLength(2)
+  })
+})
+
+describe('findings with no line number', () => {
+  test('two file-level findings of the same file are not taken as the same place', () => {
+    const a = f({ check: 'notebook-secrets', suite: 'secrets', rule: 'notebook-secret', file: 'n.ipynb', line: 0, severity: 'high', message: 'token printed in output' })
+    const b = f({ check: 'secrets-plus', suite: 'secrets', rule: 'npm-access-token', file: 'n.ipynb', line: 0, severity: 'high', message: 'npm token' })
+    expect(run([a, b]).out).toHaveLength(2)
   })
 })

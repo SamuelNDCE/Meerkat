@@ -1339,14 +1339,17 @@ export function placeOf(f) {
 export function isDetected(p, findings) {
   const checks = new Set([p.check, ...p.alt].filter(Boolean))
   return findings.some((f) => {
-    // A finding two checks reported is kept once (lib/findingsdoc.mjs); the other check is named in alsoDetectedBy and counts as having seen it too.
-    if (![f.check, ...(f.alsoDetectedBy ?? [])].some((c) => checks.has(c))) return false
-    if (p.rule && f.rule && f.rule !== p.rule) return false
+    // A finding several checks reported is kept once (lib/findingsdoc.mjs, lib/confirm.mjs). Every reporter counts as having seen it, each with its own rule:
+    // alsoDetectedBy names the other checks, alsoReportedBy names them with their rule ids.
+    const reporters = [{ check: f.check, rule: f.rule }, ...(f.alsoReportedBy ?? []).map((o) => ({ check: o.check, rule: o.rule })), ...(f.alsoDetectedBy ?? []).map((c) => ({ check: c, rule: null }))]
+    const seen = reporters.filter((r) => checks.has(r.check) && !(p.rule && r.rule && r.rule !== p.rule))
+    if (!seen.length) return false
+    const ruleOk = seen.some((r) => r.rule === p.rule)
     const { files, lines } = placeOf(f)
     if (p.file) {
       if (files.length) {
         if (!files.some((x) => x === p.file || p.file.endsWith('/' + x) || x.endsWith('/' + p.file))) return false
-      } else if (!(p.rule && f.rule === p.rule)) return false
+      } else if (!(p.rule && ruleOk)) return false
     }
     if (p.line > 0 && lines.length) return lines.some((n) => Math.abs(n - p.line) <= 3)
     return true
