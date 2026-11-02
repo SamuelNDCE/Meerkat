@@ -197,7 +197,9 @@ export function blankStrings(text, lang = 'js') {
     if (python && c === '#') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
     if (lang === 'js' && c === '/') {
       // A regex literal can hold a quote or a backtick (/`/g), which must not open a string or a template. It starts where a value is expected: after ( , = : [ ! & | ? { } ; or at the start.
-      const prev = out.replace(/\s+$/, '').slice(-1)
+      let p = out.length - 1
+      while (p >= 0 && /\s/.test(out[p])) p-- // walk back over trailing whitespace; never copy the whole buffer
+      const prev = p < 0 ? '' : out[p]
       if (prev === '' || '(,=:[!&|?{};'.includes(prev)) {
         let k = i + 1
         let cls = false
