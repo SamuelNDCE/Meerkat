@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { changedFiles as gitChangedFiles } from './lib/changed.mjs'
 import { appDirOf, appProblem, repoRootOf } from './lib/paths.mjs'
 import { applyProfile } from './lib/profiles.mjs'
-import { defaultParallel, lowerPriority } from './lib/priority.mjs'
+import { defaultParallel, lowerPriority, priorityProblem } from './lib/priority.mjs'
 import { createProgress } from './lib/progress.mjs'
 import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
@@ -200,6 +200,11 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   }
   // A background job: lower the priority first so every check started after this inherits it (see lib/priority.mjs).
   if (opts.priority) env.MEERKAT_PRIORITY = opts.priority
+  const priorityError = priorityProblem(env.MEERKAT_PRIORITY)
+  if (priorityError) {
+    fail(priorityError)
+    return 2
+  }
   const priorityNote = lowerPriority(env)
   if (priorityNote) log(priorityNote)
   try {
