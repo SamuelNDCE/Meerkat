@@ -34,3 +34,5 @@ binary-in-history docs/images/results-scroll.gif
 binary-in-history docs/images/meerkat-run.gif
 commit-message-format aff354ef67
 commit-message-format 8ef08e2
+# 5d2ec54: the subject is 75 characters; history is not rewritten, the pull request is squashed under a short title.
+commit-message-format 5d2ec54

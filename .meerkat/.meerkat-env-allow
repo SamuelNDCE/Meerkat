@@ -7,3 +7,5 @@ GH_TOKEN
 CSC_KEY_PASSWORD
 TITLE
 MEERKAT_FONT
+# Set by vitest.setup.mjs for its own workers so the private test temp folder is made once (an internal marker, not a setting).
+MEERKAT_TEST_TMP_SET
