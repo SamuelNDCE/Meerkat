@@ -39,3 +39,7 @@ commit-message-format 5d2ec54
 # 5c72e95 and ba34149: subjects of 77 and 80 characters; history is not rewritten, the pull request is squashed under a short title.
 commit-message-format 5c72e95
 commit-message-format ba34149
+# 4c6251e, 510bf2a, bd2fce3: integration merge commits of 74 to 75 characters; the pull request is squashed under a short title.
+commit-message-format 4c6251e
+commit-message-format 510bf2a
+commit-message-format bd2fce3
