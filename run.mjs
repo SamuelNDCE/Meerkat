@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { changedFiles as gitChangedFiles } from './lib/changed.mjs'
 import { appDirOf, appProblem, repoRootOf } from './lib/paths.mjs'
 import { applyProfile } from './lib/profiles.mjs'
+import { defaultParallel, lowerPriority } from './lib/priority.mjs'
 import { createProgress } from './lib/progress.mjs'
 import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
@@ -98,6 +99,7 @@ export function parseArgs(argv) {
     else if (a === '--yes' || a === '-y') o.yes = true
     else if (a === '--json') o.json = next()
     else if (a === '--profile') o.profile = next()
+    else if (a === '--priority') o.priority = next()
     else if (a === '--progress') o.progress = true
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
@@ -196,6 +198,10 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     fail(opts.errors.join('\n'))
     return 2
   }
+  // A background job: lower the priority first so every check started after this inherits it (see lib/priority.mjs).
+  if (opts.priority) env.MEERKAT_PRIORITY = opts.priority
+  const priorityNote = lowerPriority(env)
+  if (priorityNote) log(priorityNote)
   try {
     const set = applyProfile(opts.profile ?? env.MEERKAT_PROFILE, env)
     if (set.length) log(`profile ${opts.profile ?? env.MEERKAT_PROFILE}: ${set.join(' ')}`)
@@ -358,7 +364,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     log(`self-test: ${withTest.length} checks`)
     const bar = createProgress({ title: `MEERKAT · ${label} self-test`, checks: withTest, enabled: liveBar })
     status = createStatus({ title: `MEERKAT · ${label} self-test`, tier, checks: withTest, file: statusPath(env), say: liveBar ? null : log })
-    results = await stoppable(ctx, log, () => runAll(withTest, ctx, { selfTest: true, parallel: Math.max(1, cpus().length - 1), log: liveBar ? () => {} : log, hooks: fanOut(liveBar ? bar : null, status, recorder), deadlineMs: runDeadlineMs(ctx, opts) }))
+    results = await stoppable(ctx, log, () => runAll(withTest, ctx, { selfTest: true, parallel: defaultParallel(cpus().length, env), log: liveBar ? () => {} : log, hooks: fanOut(liveBar ? bar : null, status, recorder), deadlineMs: runDeadlineMs(ctx, opts) }))
     bar.stop()
     status.stop()
   } else {
@@ -368,7 +374,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (opts.estimate) {
       // How long this run should take on this PC: the learned times, run through the same scheduling rules (lib/eta.mjs).
       const rows = createModel({ checks: sel.run, timings, tier }).snapshot(0)
-      const slots = Math.max(1, cpus().length - 1)
+      const slots = defaultParallel(cpus().length, env)
       const ms = estimateRemaining(rows, 0, { freeSlots: slots })
       const measured = sel.run.filter((c) => c.writtenEstSeconds !== undefined).length
       log(`ESTIMATE ${opts.preset ?? tier}: about ${durationText(ms)} for ${sel.run.length} checks (${measured} with times measured on this PC, ${sel.run.length - measured} using the written guess)`)
@@ -377,7 +383,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       return 0
     }
     // The run's own estimate, set beside the real time in the summary line (the same sum as --estimate and the preset menu).
-    estimatedMs = sel.run.length ? estimateRunMs(sel.run, timings, tier, { slots: Math.max(1, cpus().length - 1) }) : null
+    estimatedMs = sel.run.length ? estimateRunMs(sel.run, timings, tier, { slots: defaultParallel(cpus().length, env) }) : null
     // Nothing to run is not a pass: say why, and what to change.
     if (!sel.run.length) {
       fail(`no checks to run: ${checks.length} loaded from the packs ${JSON.stringify(read.config.packs ?? [])}, but ${opts.preset ? `the preset ${opts.preset}` : `the ${tier} tier`}${groups.length ? ` (kinds: ${groups.join(', ')})` : ''} selects none of them. Add a pack that has such checks to "packs" in ${configFile ?? 'meerkat.config.json'}.`)
@@ -402,7 +408,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     // How much a run may use at once: every thread by default, and 3 GB of memory left free; the config can change both.
     const budget = { cpu: read.config.budget?.cpu ?? Math.min(10, cpus().length), reserveGB: read.config.budget?.reserveGB ?? 3, maxParallel: read.config.budget?.maxParallel ?? 10, maxWindows: found?.result.maxWindows ?? 3 }
     schedulerUsed = { slots: budget.cpu, maxParallel: budget.maxParallel, reserveGB: budget.reserveGB }
-    results = await stoppable(ctx, log, () => runAll(sel.run, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: Math.max(1, cpus().length - 1), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder), deadlineMs: runDeadlineMs(ctx, opts) }))
+    results = await stoppable(ctx, log, () => runAll(sel.run, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: defaultParallel(cpus().length, env), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder), deadlineMs: runDeadlineMs(ctx, opts) }))
     bar.stop()
     status.stop()
     // Keep what this run measured, so the next run's order, bar and time left are closer to the truth.
