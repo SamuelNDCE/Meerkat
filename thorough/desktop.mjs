@@ -69,6 +69,25 @@ const electronApp = (root) => {
   return tracked(root, CODE).some((x) => !sample.test(x) && mentionsElectronImport(readText(root, x)))
 }
 
+// The lowest Electron major version named by a package.json in the project, or null when none can be read (a range such as ^41.0.0 counts as 41).
+const electronMajor = (root) => {
+  const majors = []
+  for (const x of tracked(root, /(^|\/)package\.json$/)) {
+    try {
+      const j = JSON.parse(readText(root, x))
+      const v = j.dependencies?.electron ?? j.devDependencies?.electron ?? j.peerDependencies?.electron ?? j.optionalDependencies?.electron
+      if (v === undefined) continue
+      // Every alternative in a range counts (^41.0.0 || ^9.0.0 is 9); a value with no number in it (latest, a workspace link) makes the version unknown.
+      const nums = String(v).split('||').map((alt) => /(\d+)/.exec(alt)).map((m) => (m ? Number(m[1]) : null))
+      if (nums.some((n) => n === null)) return null
+      majors.push(...nums)
+    } catch {
+      // not a readable manifest: skip it
+    }
+  }
+  return majors.length ? Math.min(...majors) : null
+}
+
 const APPS = {
   electron: { note: 'an Electron app', has: electronApp },
   tauri: { note: 'a Tauri app', has: (root) => tracked(root, /(^|\/)tauri\.conf\.json$/i).length > 0 },
@@ -82,7 +101,7 @@ function rule(id, { app, pick = CODE, ok, scan, fixture }) {
     const allow = allowSet(root)
     const texts = tracked(root, pick).map((x) => ({ x, t: readText(root, x) }))
     const f = []
-    for (const { x, line = 0, why } of scan(texts)) {
+    for (const { x, line = 0, why } of scan(texts, root)) {
       if (!allowed(allow, id, x, line)) f.push(`${line ? `${x}:${line}` : x} ${why}`)
     }
     return finish(id, f, ok)
@@ -102,13 +121,18 @@ main({
   'electron-context-isolation': rule('electron-context-isolation', {
     app: 'electron',
     ok: 'every window that sets webPreferences keeps contextIsolation on',
-    scan: perFile((t) => [...t.matchAll(/\bwebPreferences\s*:\s*\{/g)].flatMap((m) => {
-      if (COMMENT.test(lineText(t, m.index))) return []
-      const line = lineOf(t, m.index)
-      const iso = /\bcontextIsolation\s*:\s*(\w+)/.exec(block(t, m.index + m[0].length - 1))
-      if (!iso) return [{ line, why: 'webPreferences does not set contextIsolation (set it to true, so page code cannot reach the preload scope)' }]
-      return iso[1] === 'true' ? [] : [{ line, why: `sets contextIsolation to ${iso[1]} (it must be true)` }]
-    })),
+    // Electron 12 and later turn contextIsolation on by default, so leaving it out is safe there. With an older or unknown Electron version it is reported.
+    scan: (texts, root) => {
+      const major = electronMajor(root)
+      const safeDefault = major !== null && major >= 12
+      return perFile((t) => [...t.matchAll(/\bwebPreferences\s*:\s*\{/g)].flatMap((m) => {
+        if (COMMENT.test(lineText(t, m.index))) return []
+        const line = lineOf(t, m.index)
+        const iso = /\bcontextIsolation\s*:\s*(\w+)/.exec(block(t, m.index + m[0].length - 1))
+        if (!iso) return safeDefault ? [] : [{ line, why: 'webPreferences does not set contextIsolation and the Electron version is below 12 or unknown (set it to true, so page code cannot reach the preload scope)' }]
+        return iso[1] === 'true' ? [] : [{ line, why: `sets contextIsolation to ${iso[1]} (it must be true)` }]
+      }))(texts)
+    },
     fixture: { ...E, 'main.js': "new BrowserWindow({ webPreferences: { contextIsolation: false } })\n" },
   }),
   'electron-web-security': rule('electron-web-security', {
