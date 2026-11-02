@@ -20,6 +20,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { RULE_SEVERITY } from '../lib/findings.mjs'
+import { isPedanticRule, showAll } from '../lib/rollup.mjs'
 import { configPath, finding, isFixture, isTestFile, isText, readText, trackedFiles } from './kit.mjs'
 
 const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|out|release)\//i
@@ -72,7 +73,13 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
   const na = []
   // Other files of the project, for a guard that must look beyond the file with the hit (read on demand).
   const project = { files: usable, read }
+  const everything = showAll() || process.argv.includes('--fixtures') // a check proves itself on its own fixture with every rule on
   for (const rule of rules) {
+    // Pedantic style rules (undocumented Rust items, string errors, ...) are only evaluated when asked for with MEERKAT_FINDINGS=all.
+    if (!everything && isPedanticRule(rule.id, rule.severity ?? RULE_SEVERITY[rule.id])) {
+      na.push(rule.id)
+      continue
+    }
     const mine = usable.filter((f) => wants(rule, f) && !(rule.notIn && rule.notIn.test(f)))
     if (rule.needs ? !rule.needs(usable) : mine.length === 0) {
       na.push(rule.id)

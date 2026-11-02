@@ -22,3 +22,7 @@ tests/falsepositives.test.ts
 ccdec21 thorough/secret-scan.mjs
 # 888a523: a test planted a fake private key header in one line to prove the AI prompt withholds it; the next commit splits the string and history is not rewritten.
 888a523 lib/aiprompt.test.ts
+# eb805f1: the fp-security test holds a sample AWS-style key to prove the rule still reports; history is not rewritten.
+eb805f1 tests/fp-security.test.ts
+# 37a19d9: the recorded gitleaks fixture holds the tool's own REDACTED placeholder, not a secret.
+37a19d9 tests/fixtures/detectors/gitleaks.json

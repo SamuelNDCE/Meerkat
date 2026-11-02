@@ -1,0 +1,27 @@
+{
+  "name": "nodegoat",
+  "description": "OWASP NodeGoat, an intentionally vulnerable Node.js/Express app. Expected entries come from its own documented vulnerabilities (the 'Fix for A1-1 ... A9' comments in the code and the OWASP NodeGoat tutorial). Each line range was checked by reading the file at the pinned commit.",
+  "repo": "https://github.com/OWASP/NodeGoat",
+  "commit": "c5cb68a7084e4ae7dcc60e6a98768720a81841e8",
+  "tutorial": "https://ckarande.gitbooks.io/owasp-nodegoat-tutorial/content/",
+  "lineWindow": 5,
+  "expected": [
+    { "id": "ng-01", "file": "app/data/allocations-dao.js", "lines": [77, 79], "class": "nosql-injection", "note": "A1-2: threshold concatenated into a Mongo $where string", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/data/allocations-dao.js#L63-L79" },
+    { "id": "ng-02", "file": "app/routes/contributions.js", "lines": [31, 34], "class": "code-injection", "note": "A1-1: eval() on request body fields", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/contributions.js#L30-L41" },
+    { "id": "ng-03", "file": "app/routes/index.js", "lines": [70, 72], "class": "open-redirect", "note": "unvalidated redirect to req.query.url", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/index.js#L69-L73" },
+    { "id": "ng-04", "file": "app/routes/profile.js", "lines": [52, 59], "class": "redos", "note": "catastrophic backtracking regex /([0-9]+)+\\#/ on bankRouting", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/profile.js#L52-L61" },
+    { "id": "ng-05", "file": "app/routes/research.js", "lines": [14, 16], "class": "ssrf", "note": "server fetches a URL built from req.query.url", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/research.js#L12-L29" },
+    { "id": "ng-06", "file": "app/routes/index.js", "lines": [55, 56], "class": "missing-access-control", "note": "A7: /benefits routes lack the isAdmin middleware (the fix is in the comment on lines 57-60)", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/index.js#L54-L60" },
+    { "id": "ng-07", "file": "app/routes/allocations.js", "lines": [12, 18], "class": "idor", "note": "A4: userId taken from the URL, not from the session", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/allocations.js#L11-L21" },
+    { "id": "ng-08", "file": "server.js", "lines": [135, 137], "class": "xss", "note": "A3: swig autoescape disabled", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/server.js#L134-L142" },
+    { "id": "ng-09", "file": "app/routes/profile.js", "lines": [24, 31], "class": "xss", "note": "website encoded for HTML but used in a URL context (NodeGoat documents this as a known gap)", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/profile.js#L24-L31" },
+    { "id": "ng-10", "file": "server.js", "lines": [78, 102], "class": "session-cookie", "note": "A3/A5: session cookie without httpOnly/secure/maxAge (fix commented out on lines 92-100)", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/server.js#L77-L102" },
+    { "id": "ng-11", "file": "server.js", "lines": [104, 113], "class": "csrf", "note": "A8: csurf middleware commented out", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/server.js#L104-L113" },
+    { "id": "ng-12", "file": "server.js", "lines": [144, 147], "class": "insecure-transport", "note": "A6: plain http.createServer (the HTTPS fix is commented out on lines 149-155)", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/server.js#L144-L155" },
+    { "id": "ng-13", "file": "config/env/all.js", "lines": [8, 8], "class": "hardcoded-secret", "note": "cookieSecret is a literal in source", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/config/env/all.js#L8" },
+    { "id": "ng-14", "file": "app/routes/session.js", "lines": [104, 117], "class": "session-fixation", "note": "A2: session id not regenerated on login", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/session.js#L104-L117" },
+    { "id": "ng-15", "file": "app/routes/session.js", "lines": [82, 98], "class": "user-enumeration", "note": "A2-2: different login errors for unknown user and wrong password", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/session.js#L82-L98" },
+    { "id": "ng-16", "file": "app/routes/session.js", "lines": [63, 65], "class": "log-injection", "note": "A1-3: user input logged without CRLF encoding", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/app/routes/session.js#L63-L80" },
+    { "id": "ng-17", "file": "server.js", "lines": [38, 65], "class": "security-headers", "note": "A5: helmet, x-powered-by, CSP, HSTS and nosniff all commented out", "source": "https://github.com/OWASP/NodeGoat/blob/c5cb68a7084e4ae7dcc60e6a98768720a81841e8/server.js#L38-L65" }
+  ]
+}

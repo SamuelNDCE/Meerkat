@@ -50,6 +50,7 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 | Feature | In one line |
 |---|---|
 | **Presets** | `quick` before every push, `full` before a release, plus security, ui, performance, refactor, ci and more |
+| **Mature detectors (opt-in)** | `--preset detectors` runs osv-scanner, Semgrep, clippy and `tsc --strict` if installed, keeping their rule ids; a missing tool is NOT RUN with an install hint |
 | **Suites and sub-checks** | Checks grouped by topic; each reports every rule it tested, so a failure names the exact rule |
 | **Live board** | Progress, what is running now, a status line, a bug counter by severity, a timeline; skip a stuck check with a key |
 | **Results screen** | Findings worst-first with severity in words and colour and a reason, every check with its time, a scrolling timeline |
@@ -305,3 +306,5 @@ The numbered terms in [`LICENSE`](LICENSE) are what counts; this summary is a gu
 | [docs/accuracy.md](docs/accuracy.md) | how accuracy is measured |
 | [docs/mutation.md](docs/mutation.md), [docs/functionality-run.md](docs/functionality-run.md), [docs/robustness.md](docs/robustness.md) | the deeper checks |
 | [PROJECT.md](PROJECT.md) | rules for working in this repository |
+
+Credits: the external tools Meerkat can run, their licences, and what each sends over the network are listed in [docs/credits.md](docs/credits.md). Meerkat runs them but does not bundle them.

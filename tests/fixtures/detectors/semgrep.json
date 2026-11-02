@@ -1,0 +1,35 @@
+{
+ "version": "1.183.0",
+ "results": [
+  {
+   "check_id": "tests.fixtures.detectors.meerkat-sample-child-process-exec",
+   "path": "app.js",
+   "start": {
+    "line": 5,
+    "col": 3,
+    "offset": 127
+   },
+   "end": {
+    "line": 5,
+    "col": 60,
+    "offset": 184
+   },
+   "extra": {
+    "message": "Meerkat sample rule, written for this repository. child_process.exec is called with a string built at run time.",
+    "severity": "ERROR",
+    "fingerprint": "requires login",
+    "lines": "requires login",
+    "validation_state": "NO_VALIDATOR",
+    "engine_kind": "OSS"
+   }
+  }
+ ],
+ "errors": [],
+ "paths": {
+  "scanned": [
+   "app.js"
+  ]
+ },
+ "engine_requested": "OSS",
+ "skipped_rules": []
+}

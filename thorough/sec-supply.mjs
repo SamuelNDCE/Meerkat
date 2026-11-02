@@ -53,6 +53,7 @@ const LOCK = /(^|\/)([^/]*\.lock|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|n
 // Every pattern redact() knows needs one of these words, so a line without any of them cannot hold a secret: a cheap skip before redact().
 const PREFILTER = /akia|asia|begin|gh[pousr]_|pat_|xox|live_|aiza|npm_|sk-|eyj|key|secret|token|pass|credential|bearer|authorization|private/i
 const MAX_FILE_BYTES = 1024 * 1024
+const PROSE_LOG = /(^|\/)(CHANGELOG|CHANGES|HISTORY|RELEASES?|NEWS)[^/]*\.(md|mdx|txt|rst)$/i
 
 // A soft hit (a value under a secret-looking name) counts only when it is a quoted string, or a bare token with both letters and digits
 // that is at least 12 characters long. Most soft hits in source are code such as "token = getToken()", not secrets.
@@ -134,6 +135,8 @@ const gitHistorySecrets = (root) => {
     // EVERY one of those values is a placeholder, so a placeholder early in the line cannot hide a real secret further along it.
     const starts = valueStarts(text, r.text)
     if (!r.hard && !starts.some((p) => isLiteralValue(text, p))) continue
+    // A soft hit in a changelog is release-note prose ("rotated the API key format"); a value in a known secret format (a hard hit) still counts there.
+    if (!r.hard && PROSE_LOG.test(file)) continue
     const k = starts[0] ?? 0
     const short = commit.slice(0, 7)
     if (allow.has(`${short} ${file}`) || allow.has(file)) continue

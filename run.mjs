@@ -27,7 +27,7 @@ import { verifyRunDir } from './lib/aiverify.mjs'
 import { appendRunLog, createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
-import { createControl, runAll, selectChecks, stopOnSignals, summarise, table } from './lib/runner.mjs'
+import { WINDOW_SKIP_REASON, createControl, runAll, selectChecks, stopOnSignals, summarise, table } from './lib/runner.mjs'
 import { sweepSpawned } from './lib/exec.mjs'
 import { DEFAULT_RUN_MINUTES, loadBudgets } from './lib/timeouts.mjs'
 import { notProjectJson, notProjectMessage, projectCheck } from './lib/projectgate.mjs'
@@ -374,7 +374,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     status.stop()
   } else {
     splash.step('Choosing the checks to run')
-    const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites })
+    const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, windows: chosen.preset?.windows !== false || env.MEERKAT_WINDOWS === '1' })
     settleSplash()
     if (opts.estimate) {
       // How long this run should take on this PC: the learned times, run through the same scheduling rules (lib/eta.mjs).
@@ -394,11 +394,12 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       fail(`no checks to run: ${checks.length} loaded from the packs ${JSON.stringify(read.config.packs ?? [])}, but ${opts.preset ? `the preset ${opts.preset}` : `the ${tier} tier`}${groups.length ? ` (kinds: ${groups.join(', ')})` : ''} selects none of them. Add a pack that has such checks to "packs" in ${configFile ?? 'meerkat.config.json'}.`)
       return 3
     }
-    skippedCount = sel.skipped.length + applied.disabled.length
+    skippedCount = sel.skipped.length + (sel.windowSkipped?.length ?? 0) + applied.disabled.length
     ranChecks = sel.run
-    selection = { ran: sel.run.map((c) => c.id), skipped: sel.skipped.map((c) => `${c.id} (no files changed in its paths)`), covered: (sel.superseded ?? []).map((c) => `${c.id} (by ${c.supersededBy})`), disabled: applied.disabled.map((d) => d.id), disabledSubs: applied.disabledSubs ?? [], titles: Object.fromEntries([...sel.skipped, ...(sel.superseded ?? []), ...applied.disabled].map((c) => [c.id, (checks.find((k) => k.id === c.id) ?? c).title]).filter(([, t]) => t)) }
+    selection = { ran: sel.run.map((c) => c.id), skipped: [...sel.skipped.map((c) => `${c.id} (no files changed in its paths)`), ...(sel.windowSkipped ?? []).map((c) => `${c.id} (skipped: ${WINDOW_SKIP_REASON})`)], covered: (sel.superseded ?? []).map((c) => `${c.id} (by ${c.supersededBy})`), disabled: applied.disabled.map((d) => d.id), disabledSubs: applied.disabledSubs ?? [], titles: Object.fromEntries([...sel.skipped, ...(sel.windowSkipped ?? []), ...(sel.superseded ?? []), ...applied.disabled].map((c) => [c.id, (checks.find((k) => k.id === c.id) ?? c).title]).filter(([, t]) => t)) }
     for (const s of sel.superseded ?? []) log(`[COVERED ] ${s.id}: not run on its own, ${s.supersededBy} covers it`)
     for (const s of sel.skipped) log(`[SKIPPED] ${s.id}: no files changed in its paths`)
+    for (const s of sel.windowSkipped ?? []) log(`[SKIPPED] ${s.id}: skipped: ${WINDOW_SKIP_REASON} (--include windows or MEERKAT_WINDOWS=1 runs them)`)
     subOnly = (warnUnmatched(log, sel.unmatched), sel.subOnly)
     // --ui: the richer terminal view (lib/tui). Real terminal only; anywhere else the plain lines stay, and say so.
     const useUi = uiOk

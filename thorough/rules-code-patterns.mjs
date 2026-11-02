@@ -5,6 +5,7 @@
 // Known limits: a rule that matches one line cannot see a call that is split over several lines (noted per rule where it matters).
 
 import { requireHelperOnlyFixed } from './guards.mjs'
+import { rustInTest as rustTestAt } from './kit.mjs'
 const PY_SKIP = /^\s*#/
 const SLASH_SKIP = /^\s*(\/\/|\/\*|\*)/
 const PHP_SKIP = /^\s*(\/\/|#|\/\*|\*)/
@@ -273,7 +274,20 @@ export const RS = [
   RSF('rs-accept-invalid-certs', 'TLS accepts invalid certificates or hostnames', /\bdanger_accept_invalid_(?:certs|hostnames)\s*\(\s*true\s*\)/, 'builder.danger_accept_invalid_certs(true)', 'builder.danger_accept_invalid_certs(false)'),
   RSF('rs-weak-hash-crate', 'MD5 or SHA-1 is computed with a crate (broken for security)', /\bmd5::(?:compute|Md5)\b|\bSha1::new\(\)|\bsha1::Sha1\b/, 'let d = md5::compute(pw);', 'let d = Sha256::digest(pw);'),
   RSF('rs-thread-rng-secret', 'a key, token or nonce is made with thread_rng (use OsRng)', /\b(?:key|secret|token|nonce|password|salt)\w*\s*=\s*[^;\n]{0,80}\brand::thread_rng\(\)/i, 'let key = rand::thread_rng();', 'let key = OsRng;'),
-  RSF('rs-secret-logged', 'a password, secret or token is printed or logged', /\b(?:println|eprintln|print|eprint|info|debug|warn|error|trace)!\([^\n]{0,120}\b(?:password|secret|token|api_key)\b/i, 'println!("token {}", token);', 'println!("ok")'),
+  // The word must be a VALUE in the call (an argument, or a {token} captured in the format string), not only a word of the message text ("redacted {} secrets", "first token in {} ms").
+  // Test code (a #[cfg(test)] module, a #[test] or #[ignore] fn) is not shipped.
+  RSF('rs-secret-logged', 'a password, secret or token is printed or logged', /\b(?:println|eprintln|print|eprint|info|debug|warn|error|trace)!\([^\n]{0,120}\b(?:password|secret|token|api_key)\b/i, 'println!("token {}", token);', 'println!("ok")', {
+    test: (line, ctx) => {
+      const m = /\b(?:println|eprintln|print|eprint|info|debug|warn|error|trace)!\(/.exec(line)
+      if (!m || !outsideStrings(/\b(?:println|eprintln|print|eprint|info|debug|warn|error|trace)!\(/)(line)) return false
+      const args = line.slice(m.index + m[0].length, m.index + m[0].length + 120)
+      const word = /\b(?:password|secret|token|api_key)\b/i
+      const captured = /\{(?:password|secret|token|api_key)\}|\{(?:password|secret|token|api_key):[^}]*\}/i.test(args)
+      const bare = word.test(args.replace(/"(?:[^"\\]|\\.)*"/g, '""'))
+      if (!captured && !bare) return false
+      return !rustTestAt(ctx)
+    },
+  }),
   RSF('rs-sql-formatted', 'SQL is built with format! instead of bound parameters', /\b(?:execute|query|query_as|query_scalar)\(\s*&?format!\(/, 'conn.execute(&format!("DELETE FROM t WHERE id={}", id), [])', 'conn.execute("DELETE FROM t WHERE id = ?1", [id])'),
 ]
 

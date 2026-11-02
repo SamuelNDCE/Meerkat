@@ -194,6 +194,7 @@ Measured on Meerkat's own repository, a small project, on one PC (median of 3 ru
 | `meerkat fast` | every quick check (same as quick) | 292 | 10.4 s |
 | `meerkat full` | every check, the slow ones too: before a release | 294 | 10.5 s |
 | `meerkat thorough` | every check, the slow ones too (same as full) | 294 | 11.0 s |
+| `meerkat run --preset detectors` | full plus opt-in tools: osv-scanner, Semgrep, clippy, tsc --strict | n/a | n/a |
 
 ### By kind
 
@@ -246,7 +247,7 @@ Your own presets can carry the same two texts. `about` is one line (up to 200 ch
 
 `meerkat discover` lists the tests your project already has: scripts in `package.json`, Makefile targets, and Playwright or Cypress setups. It runs nothing by itself.
 
-`full`, `thorough` and `release` also run them, labelled `found` in the results. Scripts that take a shard option run as several parts side by side, on a capped number of windows at once. `quick` and `ci` never run them. To turn this off, add `"discover": false` to `meerkat.config.json`. Details: [docs/discover.md](discover.md).
+`full`, `thorough` and `release` also run them, labelled `found` in the results, except the ones that open windows (Electron, Playwright, a click-through): `full` and `thorough` skip those (listed as skipped, not failed), and `release`, `--include windows` or `MEERKAT_WINDOWS=1` run them. Scripts that take a shard option run as several parts side by side, on a capped number of windows at once. `quick` and `ci` never run them. To turn this off, add `"discover": false` to `meerkat.config.json`. Details: [docs/discover.md](discover.md).
 
 ## Opt-in deeper checks
 
@@ -656,3 +657,6 @@ The reason is one line, for example `needs prettier: meerkat tools install`. Che
 The package is `@samuelndce/meerkat` (the plain name `meerkat` belongs to another project on npm). `package.json` has a `files` list so only the program is published (bin, lib, packs, thorough, fixtures for `meerkat self-test`, examples, `run.mjs`), `publishConfig.access` is public, and the licence field points at `LICENSE`. Installed from npm, the commands are the same (`meerkat`, `meerkat-mcp`); `meerkat update` tells an npm install to update with `npm install -g @samuelndce/meerkat@latest`.
 
 To publish a version: run the tests and the self-run, cut the version with `node tools/release.mjs patch "what changed"`, check the contents with `npm pack --dry-run`, then log in with `npm login` and run `npm publish`. Publishing needs the owner's npm account, so it is never done by a script or an agent.
+
+The `detectors` preset (pack `detectors`) runs osv-scanner, Semgrep (`p/security-audit`, needs the network), `cargo clippy` correctness and suspicious lints, and `tsc --strict` when typescript is already in the project's node_modules.
+A missing tool is NOT RUN with an install hint; Meerkat never installs anything. Findings keep the tool's own rule ids.

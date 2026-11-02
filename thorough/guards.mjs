@@ -184,3 +184,53 @@ export const ipcHandlerCallsSenderHelper = (_line, ctx) => {
   const next = rest.findIndex((l) => /\bipcMain\./.test(l))
   return callsSenderHelper([ctx.lines[ctx.index], ...(next < 0 ? rest : rest.slice(0, next))].join('\n'), ctx.text)
 }
+
+// ---- Electron false-alarm guards (round 5, from the NeuralVault audit of 2026-11-02) ----
+
+// The argument of a call on this line is a bare identifier that is a module-level constant holding a fixed string (or a template with no ${} hole):
+// `const DEV_SERVER = 'http://localhost:5273'` then `win.loadURL(DEV_SERVER)`. The address or script is fixed in the source, nothing from outside can reach it.
+// A parameter, a `let`, an indented const inside a function, or a template with a hole is NOT fixed.
+export const argIsModuleConstString = (callName) => (line, ctx) => {
+  const id = new RegExp(`\\b${callName}\\(\\s*([A-Za-z_$][\\w$]*)\\s*[,)]`).exec(line)?.[1]
+  if (!id) return false
+  const decl = new RegExp(`^(?:export\\s+)?const\\s+${id.replace(/\$/g, '\\$')}\\s*(?::[^=\\n]{1,60})?=\\s*(['"\`])`, 'm').exec(ctx.text)
+  if (!decl) return false
+  if (decl[1] !== '`') return true
+  const rest = ctx.text.slice(decl.index + decl[0].length, decl.index + decl[0].length + 40000)
+  const end = rest.indexOf('`')
+  return end >= 0 && !rest.slice(0, end).includes('${')
+}
+
+// A template literal on this line whose every ${...} hole is wrapped in `wrap(` (JSON.stringify for a script, encodeURIComponent for a data: address).
+// A hole that holds anything else, or one this simple scan cannot read (a nested brace), counts as unwrapped.
+export const holesAllWrapped = (callName, wrap, needPrefix) => (line) => {
+  const m = new RegExp(`\\b${callName}\\(\\s*\`([^\`]*)\``).exec(line)
+  if (!m) return false
+  if (needPrefix && !needPrefix.test(m[1])) return false
+  const holes = [...m[1].matchAll(/\$\{([^}]*)\}/g)]
+  if (!holes.length || m[1].replace(/\$\{[^}]*\}/g, '').includes('${')) return false
+  return holes.every((h) => new RegExp(`^\\s*${wrap}\\(`).test(h[1]) && (h[1].match(/\(/g) ?? []).length === (h[1].match(/\)/g) ?? []).length)
+}
+
+// Some file of the app registers a window-open handler that denies every window (action: 'deny') and never allows one:
+// window.open(url) from the page is then routed by the main process (for example to a consent dialog), not opened by the page.
+const JS_FILE = /\.(?:[cm]?[jt]sx?)$/i
+export const appDeniesWindowOpen = (_line, ctx) => {
+  const texts = [ctx.text, ...(ctx.project?.files ?? []).filter((f) => JS_FILE.test(f) && f !== ctx.file).map((f) => ctx.project.read(f) ?? '')]
+  const handlers = texts.filter((t) => typeof t === 'string' && /setWindowOpenHandler/.test(t))
+  if (!handlers.length) return false
+  const all = handlers.join('\n')
+  return /action\s*:\s*['"]deny['"]/.test(all) && !/action\s*:\s*['"]allow['"]/.test(all)
+}
+
+// The line sits within `n` lines below a call of `name(` (the handler body of that call).
+export const withinCallBody = (name, n) => (_line, ctx) => ctx.lines.slice(Math.max(0, ctx.index - n), ctx.index + 1).some((l) => new RegExp(`\\b${name}\\s*\\(`).test(l))
+
+// The line sits inside an ipcMain.handle / ipcMain.on handler (one is opened within the 25 lines above).
+export const inIpcHandler = (_line, ctx) => ctx.lines.slice(Math.max(0, ctx.index - 25), ctx.index + 1).some((l) => /\bipcMain\.(?:handle|on|once)\s*\(/.test(l))
+
+// The channel name used on this line was checked against a list just above (`ALLOWED.includes(channel)`, `.has(channel)`, `isAllowedChannel(channel)`).
+export const channelChecked = (_line, ctx) => {
+  const above = ctx.lines.slice(Math.max(0, ctx.index - 12), ctx.index).join('\n')
+  return /\b(?:includes|has)\(\s*(?:channel|ch|chan|topic)\s*\)|\b(?:is|assert|check|validate)\w*(?:Channel|Event)\w*\(\s*(?:channel|ch|chan|topic)\s*\)/i.test(above)
+}

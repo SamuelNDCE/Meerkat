@@ -1,0 +1,1900 @@
+{"config":{"protocol_version":"v1.0.0","scanner_name":"govulncheck"}}
+{
+ "osv": {
+  "id": "GO-2020-0015",
+  "summary": "Infinite loop when decoding some inputs in golang.org/x/text",
+  "aliases": [
+   "CVE-2020-14040",
+   "GHSA-5rcv-m4m3-hfh7"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0113",
+  "summary": "Out-of-bounds read in golang.org/x/text/language",
+  "aliases": [
+   "CVE-2021-38561",
+   "GHSA-ppp9-7jff-5vj2"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-1059",
+  "summary": "Denial of service via crafted Accept-Language header in golang.org/x/text/language",
+  "aliases": [
+   "CVE-2022-32149",
+   "GHSA-69ch-w2m2-3vjp"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-5970",
+  "summary": "Infinite loop on invalid input in golang.org/x/text",
+  "aliases": [
+   "CVE-2026-56852"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6629",
+  "summary": "Panic parsing crafted input in x/text/secure/precis in golang.org/x/text",
+  "aliases": [
+   "CVE-2026-56851"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0067",
+  "summary": "Panic when opening archives in archive/zip",
+  "aliases": [
+   "CVE-2021-27919"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0069",
+  "summary": "Panic during division of very large numbers in math/big",
+  "aliases": [
+   "CVE-2020-28362"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0142",
+  "summary": "Unbounded read from invalid inputs in encoding/binary",
+  "aliases": [
+   "CVE-2020-16845",
+   "GHSA-q6gq-997w-f55g"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0154",
+  "summary": "Man-in-the-middle attack with SessionTicketsDisabled in crypto/tls",
+  "aliases": [
+   "CVE-2014-7189"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0159",
+  "summary": "Request smuggling due to improper header parsing in net/http",
+  "aliases": [
+   "CVE-2015-5739",
+   "CVE-2015-5740",
+   "CVE-2015-5741"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0160",
+  "summary": "Incorrect calculation affecting RSA computations in math/big",
+  "aliases": [
+   "CVE-2015-8618"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0163",
+  "summary": "Privilege escalation on Windows via malicious DLL in syscall",
+  "aliases": [
+   "CVE-2016-3958"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0172",
+  "summary": "Denial of service when parsing large forms in mime/multipart",
+  "aliases": [
+   "CVE-2017-1000098"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0178",
+  "summary": "Cleartext transmission of credentials in net/smtp",
+  "aliases": [
+   "CVE-2017-15042"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0223",
+  "summary": "Certificate verification error on Windows in crypto/x509",
+  "aliases": [
+   "CVE-2020-14039"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0224",
+  "summary": "Data race and crash in net/http",
+  "aliases": [
+   "CVE-2020-15586"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0226",
+  "summary": "Cross-site scripting in net/http/cgi and net/http/fcgi",
+  "aliases": [
+   "CVE-2020-24553"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0234",
+  "summary": "Infinite loop when decoding inputs in encoding/xml",
+  "aliases": [
+   "CVE-2021-27918"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0235",
+  "summary": "Incorrect operations on the P-224 curve in crypto/elliptic",
+  "aliases": [
+   "CVE-2021-3114"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0239",
+  "summary": "Improper sanitization when resolving values from DNS in net",
+  "aliases": [
+   "CVE-2021-33195"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0240",
+  "summary": "Panic when reading certain archives in archive/zip",
+  "aliases": [
+   "CVE-2021-33196"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0241",
+  "summary": "Attacker can drop certain headers in net/http/httputil",
+  "aliases": [
+   "CVE-2021-33197"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0242",
+  "summary": "Panic on inputs with large exponents in math/big",
+  "aliases": [
+   "CVE-2021-33198"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0243",
+  "summary": "Panic on certain certificates in crypto/tls",
+  "aliases": [
+   "CVE-2021-34558"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0245",
+  "summary": "Panic in ReverseProxy in net/http/httputil",
+  "aliases": [
+   "CVE-2021-36221"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0263",
+  "summary": "Panic on invalid symbol tables in debug/macho",
+  "aliases": [
+   "CVE-2021-41771"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0264",
+  "summary": "Panic when opening certain archives in archive/zip",
+  "aliases": [
+   "CVE-2021-41772"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0317",
+  "summary": "Uncontrolled memory consumption in math/big",
+  "aliases": [
+   "CVE-2022-23772"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0319",
+  "summary": "Incorrect computation for some invalid field elements in crypto/elliptic",
+  "aliases": [
+   "CVE-2022-23806"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2021-0347",
+  "summary": "Stack exhaustion when compiling deeply nested expressions in regexp",
+  "aliases": [
+   "CVE-2022-24921"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0166",
+  "summary": "Denial of service due to unchecked parameters in crypto/dsa",
+  "aliases": [
+   "CVE-2016-3959"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0171",
+  "summary": "Mishandled trust preferences for root certificates on Darwin in crypto/x509",
+  "aliases": [
+   "CVE-2017-1000097"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0187",
+  "summary": "Incorrect computation for P-256 curves in crypto/elliptic",
+  "aliases": [
+   "CVE-2017-8932"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0191",
+  "summary": "Denial of service in chain verification in crypto/x509",
+  "aliases": [
+   "CVE-2018-16875"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0211",
+  "summary": "Incorrect parsing validation in net/url",
+  "aliases": [
+   "CVE-2019-14809"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0212",
+  "summary": "Request smuggling due to accepting invalid headers in net/http via net/textproto",
+  "aliases": [
+   "CVE-2019-16276"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0213",
+  "summary": "Panic on invalid DSA public keys in crypto/dsa",
+  "aliases": [
+   "CVE-2019-17596"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0217",
+  "summary": "Denial of service affecting P-521 and P-384 curves in crypto/elliptic",
+  "aliases": [
+   "CVE-2019-6486"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0220",
+  "summary": "DLL injection on Windows in runtime and syscall",
+  "aliases": [
+   "CVE-2019-9634"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0229",
+  "summary": "Panic in certificate parsing in crypto/x509 and golang.org/x/crypto/cryptobyte",
+  "aliases": [
+   "CVE-2020-7919",
+   "GHSA-cjjc-xp8v-855w"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0236",
+  "summary": "Panic due to large headers in net/http and golang.org/x/net/http/httpguts",
+  "aliases": [
+   "CVE-2021-31525",
+   "GHSA-h86h-8ppg-mxmh"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0273",
+  "summary": "Panic due to crafted inputs in archive/zip",
+  "aliases": [
+   "CVE-2021-39293"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0288",
+  "summary": "Unbounded memory growth in net/http and golang.org/x/net/http2",
+  "aliases": [
+   "CVE-2021-44716",
+   "GHSA-vc3p-29h2-gpcp"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0289",
+  "summary": "Misdirected I/O in syscall",
+  "aliases": [
+   "CVE-2021-44717"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0433",
+  "summary": "Stack overflow from a large amount of PEM data in encoding/pem",
+  "aliases": [
+   "CVE-2022-24675"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0434",
+  "summary": "Panic during certificate parsing on Darwin in crypto/x509",
+  "aliases": [
+   "CVE-2022-27536"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0435",
+  "summary": "Panic due to large inputs affecting P-256 curves in crypto/elliptic",
+  "aliases": [
+   "CVE-2022-28327"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0477",
+  "summary": "Indefinite hang with large buffers on Windows in crypto/rand",
+  "aliases": [
+   "CVE-2022-30634"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0493",
+  "summary": "Incorrect privilege reporting in syscall and golang.org/x/sys/unix",
+  "aliases": [
+   "CVE-2022-29526",
+   "GHSA-p782-xgp4-8hr8"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0515",
+  "summary": "Stack exhaustion due to deeply nested types in go/parser",
+  "aliases": [
+   "CVE-2022-1962"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0520",
+  "summary": "Exposure of client IP addresses in net/http",
+  "aliases": [
+   "CVE-2022-32148"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0521",
+  "summary": "Stack exhaustion from deeply nested XML documents in encoding/xml",
+  "aliases": [
+   "CVE-2022-28131"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0522",
+  "summary": "Stack exhaustion on crafted paths in path/filepath",
+  "aliases": [
+   "CVE-2022-30632"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0523",
+  "summary": "Stack exhaustion when unmarshaling certain documents in encoding/xml",
+  "aliases": [
+   "CVE-2022-30633"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0524",
+  "summary": "Stack exhaustion when reading certain archives in compress/gzip",
+  "aliases": [
+   "CVE-2022-30631"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0525",
+  "summary": "Improper sanitization of Transfer-Encoding headers in net/http",
+  "aliases": [
+   "CVE-2022-1705"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0526",
+  "summary": "Stack exhaustion when decoding certain messages in encoding/gob",
+  "aliases": [
+   "CVE-2022-30635"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0527",
+  "summary": "Stack exhaustion in Glob on certain paths in io/fs",
+  "aliases": [
+   "CVE-2022-30630"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0531",
+  "summary": "Session tickets lack random ticket_age_add in crypto/tls",
+  "aliases": [
+   "CVE-2022-30629"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0532",
+  "summary": "Empty Cmd.Path can trigger unintended binary in os/exec on Windows",
+  "aliases": [
+   "CVE-2022-30580"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0533",
+  "summary": "Path traversal via Clean on Windows in path/filepath",
+  "aliases": [
+   "CVE-2022-29804"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0535",
+  "summary": "Certificate validation bypass on Windows in crypto/x509",
+  "aliases": [
+   "CVE-2020-0601"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0536",
+  "summary": "Reset flood in net/http and golang.org/x/net/http",
+  "aliases": [
+   "CVE-2019-9512",
+   "CVE-2019-9514",
+   "GHSA-39qc-96h7-956f",
+   "GHSA-hgr8-6h9x-f7q9"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0537",
+  "summary": "Panic when decoding Float and Rat types in math/big",
+  "aliases": [
+   "CVE-2022-32189"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0761",
+  "summary": "Improper input validation in net/http and net/http/cgi",
+  "aliases": [
+   "CVE-2016-5386"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0969",
+  "summary": "Denial of service in net/http and golang.org/x/net/http2",
+  "aliases": [
+   "CVE-2022-27664",
+   "GHSA-69cg-p879-7622"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-0988",
+  "summary": "Failure to strip relative path components in net/url",
+  "aliases": [
+   "CVE-2022-32190"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-1037",
+  "summary": "Unbounded memory consumption when reading headers in archive/tar",
+  "aliases": [
+   "CVE-2022-2879"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-1038",
+  "summary": "Incorrect sanitization of forwarded query parameters in net/http/httputil",
+  "aliases": [
+   "CVE-2022-2880"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-1039",
+  "summary": "Memory exhaustion when compiling regular expressions in regexp/syntax",
+  "aliases": [
+   "CVE-2022-41715"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-1095",
+  "summary": "Unsanitized NUL in environment variables on Windows in syscall and os/exec",
+  "aliases": [
+   "CVE-2022-41716"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-1143",
+  "summary": "Restricted file access on Windows in os and net/http",
+  "aliases": [
+   "CVE-2022-41720"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2022-1144",
+  "summary": "Excessive memory growth in net/http and golang.org/x/net/http2",
+  "aliases": [
+   "CVE-2022-41717",
+   "GHSA-xrjj-mj9h-534m"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1568",
+  "summary": "Path traversal on Windows in path/filepath",
+  "aliases": [
+   "CVE-2022-41722"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1569",
+  "summary": "Excessive resource consumption in mime/multipart",
+  "aliases": [
+   "CVE-2022-41725"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1570",
+  "summary": "Panic on large handshake records in crypto/tls",
+  "aliases": [
+   "CVE-2022-41724"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1571",
+  "summary": "Denial of service via crafted HTTP/2 stream in net/http and golang.org/x/net",
+  "aliases": [
+   "CVE-2022-41723",
+   "GHSA-vvpx-j8f3-3w6h"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1621",
+  "summary": "Incorrect calculation on P256 curves in crypto/internal/nistec",
+  "aliases": [
+   "CVE-2023-24532"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1702",
+  "summary": "Infinite loop in parsing in go/scanner",
+  "aliases": [
+   "CVE-2023-24537"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1703",
+  "summary": "Backticks not treated as string delimiters in html/template",
+  "aliases": [
+   "CVE-2023-24538"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1704",
+  "summary": "Excessive memory allocation in net/http and net/textproto",
+  "aliases": [
+   "CVE-2023-24534"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1705",
+  "summary": "Excessive resource consumption in net/http, net/textproto and mime/multipart",
+  "aliases": [
+   "CVE-2023-24536"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1751",
+  "summary": "Improper sanitization of CSS values in html/template",
+  "aliases": [
+   "CVE-2023-24539"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1752",
+  "summary": "Improper handling of JavaScript whitespace in html/template",
+  "aliases": [
+   "CVE-2023-24540"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1753",
+  "summary": "Improper handling of empty HTML attributes in html/template",
+  "aliases": [
+   "CVE-2023-29400"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1840",
+  "summary": "Unsafe behavior in setuid/setgid binaries in runtime",
+  "aliases": [
+   "CVE-2023-29403"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1878",
+  "summary": "Insufficient sanitization of Host header in net/http",
+  "aliases": [
+   "CVE-2023-29406"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-1987",
+  "summary": "Large RSA keys can cause high CPU usage in crypto/tls",
+  "aliases": [
+   "CVE-2023-29409"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2041",
+  "summary": "Improper handling of HTML-like comments in script contexts in html/template",
+  "aliases": [
+   "CVE-2023-39318"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2043",
+  "summary": "Improper handling of special tags within script contexts in html/template",
+  "aliases": [
+   "CVE-2023-39319"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2044",
+  "summary": "Panic when processing post-handshake message on QUIC connections in crypto/tls",
+  "aliases": [
+   "CVE-2023-39321"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2045",
+  "summary": "Memory exhaustion in QUIC connection handling in crypto/tls",
+  "aliases": [
+   "CVE-2023-39322"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2102",
+  "summary": "HTTP/2 rapid reset can cause excessive work in net/http",
+  "aliases": [
+   "CVE-2023-39325",
+   "GHSA-4374-p667-p6c8"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2185",
+  "summary": "Insecure parsing of Windows paths with a \\??\\ prefix in path/filepath",
+  "aliases": [
+   "CVE-2023-45283"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2185",
+  "summary": "Insecure parsing of Windows paths with a \\??\\ prefix in path/filepath",
+  "aliases": [
+   "CVE-2023-45283"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2186",
+  "summary": "Incorrect detection of reserved device names on Windows in path/filepath",
+  "aliases": [
+   "CVE-2023-45284"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2375",
+  "summary": "Before Go 1.20, the RSA based key exchange methods in crypto/tls may exhibit a timing side channel",
+  "aliases": [
+   "CVE-2023-45287"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2023-2382",
+  "summary": "Denial of service via chunk extensions in net/http",
+  "aliases": [
+   "CVE-2023-39326"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2598",
+  "summary": "Verify panics on certificates with an unknown public key algorithm in crypto/x509",
+  "aliases": [
+   "CVE-2024-24783"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2599",
+  "summary": "Memory exhaustion in multipart form parsing in net/textproto and net/http",
+  "aliases": [
+   "CVE-2023-45290"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2600",
+  "summary": "Incorrect forwarding of sensitive headers and cookies on HTTP redirect in net/http",
+  "aliases": [
+   "CVE-2023-45289"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2609",
+  "summary": "Comments in display names are incorrectly handled in net/mail",
+  "aliases": [
+   "CVE-2024-24784"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2610",
+  "summary": "Errors returned from JSON marshaling may break template escaping in html/template",
+  "aliases": [
+   "CVE-2024-24785"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2687",
+  "summary": "HTTP/2 CONTINUATION flood in net/http",
+  "aliases": [
+   "CVE-2023-45288",
+   "GHSA-4v7x-pqxf-cx7m"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2824",
+  "summary": "Malformed DNS message can cause infinite loop in net",
+  "aliases": [
+   "CVE-2024-24788"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2887",
+  "summary": "Unexpected behavior from Is methods for IPv4-mapped IPv6 addresses in net/netip",
+  "aliases": [
+   "CVE-2024-24790"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2888",
+  "summary": "Mishandling of corrupt central directory record in archive/zip",
+  "aliases": [
+   "CVE-2024-24789"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-2963",
+  "summary": "Denial of service due to improper 100-continue handling in net/http",
+  "aliases": [
+   "CVE-2024-24791"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-3105",
+  "summary": "Stack exhaustion in all Parse functions in go/parser",
+  "aliases": [
+   "CVE-2024-34155"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-3106",
+  "summary": "Stack exhaustion in Decoder.Decode in encoding/gob",
+  "aliases": [
+   "CVE-2024-34156"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2024-3107",
+  "summary": "Stack exhaustion in Parse in go/build/constraint",
+  "aliases": [
+   "CVE-2024-34158"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3373",
+  "summary": "Usage of IPv6 zone IDs can bypass URI name constraints in crypto/x509",
+  "aliases": [
+   "CVE-2024-45341"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3420",
+  "summary": "Sensitive headers incorrectly sent after cross-domain redirect in net/http",
+  "aliases": [
+   "CVE-2024-45336"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3421",
+  "summary": "ParsePKCS1PrivateKey panic with partial keys in crypto/x509",
+  "aliases": [
+   "CVE-2025-22865"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3447",
+  "summary": "Timing sidechannel for P-256 on ppc64le in crypto/internal/nistec",
+  "aliases": [
+   "CVE-2025-22866"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3503",
+  "summary": "HTTP Proxy bypass using IPv6 Zone IDs in golang.org/x/net",
+  "aliases": [
+   "CVE-2025-22870",
+   "GHSA-qxp5-gwg8-xv66"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3563",
+  "summary": "Request smuggling due to acceptance of invalid chunked data in net/http",
+  "aliases": [
+   "CVE-2025-22871"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3749",
+  "summary": "Usage of ExtKeyUsageAny disables policy validation in crypto/x509",
+  "aliases": [
+   "CVE-2025-22874"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3750",
+  "summary": "Inconsistent handling of O_CREATE|O_EXCL on Unix and Windows in os in syscall",
+  "aliases": [
+   "CVE-2025-0913"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3751",
+  "summary": "Sensitive headers not cleared on cross-origin redirect in net/http",
+  "aliases": [
+   "CVE-2025-4673"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3849",
+  "summary": "Incorrect results returned from Rows.Scan in database/sql",
+  "aliases": [
+   "CVE-2025-47907"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3955",
+  "summary": "CrossOriginProtection insecure bypass patterns not limited to exact matches in net/http",
+  "aliases": [
+   "CVE-2025-47910",
+   "CVE-2025-47910"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-3956",
+  "summary": "Unexpected paths returned from LookPath in os/exec",
+  "aliases": [
+   "CVE-2025-47906",
+   "CVE-2025-47906"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4006",
+  "summary": "Excessive CPU consumption in ParseAddress in net/mail",
+  "aliases": [
+   "CVE-2025-61725",
+   "CVE-2025-61725"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4007",
+  "summary": "Quadratic complexity when checking name constraints in crypto/x509",
+  "aliases": [
+   "CVE-2025-58187",
+   "CVE-2025-58187"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4008",
+  "summary": "ALPN negotiation error contains attacker controlled information in crypto/tls",
+  "aliases": [
+   "CVE-2025-58189",
+   "CVE-2025-58189"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4009",
+  "summary": "Quadratic complexity when parsing some invalid inputs in encoding/pem",
+  "aliases": [
+   "CVE-2025-61723",
+   "CVE-2025-61723"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4010",
+  "summary": "Insufficient validation of bracketed IPv6 hostnames in net/url",
+  "aliases": [
+   "CVE-2025-47912",
+   "CVE-2025-47912"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4011",
+  "summary": "Parsing DER payload can cause memory exhaustion in encoding/asn1",
+  "aliases": [
+   "CVE-2025-58185",
+   "CVE-2025-58185"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4012",
+  "summary": "Lack of limit when parsing cookies can cause memory exhaustion in net/http",
+  "aliases": [
+   "CVE-2025-58186",
+   "CVE-2025-58186"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4013",
+  "summary": "Panic when validating certificates with DSA public keys in crypto/x509",
+  "aliases": [
+   "CVE-2025-58188",
+   "CVE-2025-58188"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4014",
+  "summary": "Unbounded allocation when parsing GNU sparse map in archive/tar",
+  "aliases": [
+   "CVE-2025-58183",
+   "CVE-2025-58183"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4015",
+  "summary": "Excessive CPU consumption in Reader.ReadResponse in net/textproto",
+  "aliases": [
+   "CVE-2025-61724",
+   "CVE-2025-61724"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4155",
+  "summary": "Excessive resource consumption when printing error string for host certificate validation in crypto/x509",
+  "aliases": [
+   "CVE-2025-61729",
+   "CVE-2025-61729"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2025-4175",
+  "summary": "Improper application of excluded DNS name constraints when verifying wildcard names in crypto/x509",
+  "aliases": [
+   "CVE-2025-61727"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4337",
+  "summary": "Unexpected session resumption in crypto/tls",
+  "aliases": [
+   "CVE-2025-68121"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4340",
+  "summary": "Handshake messages may be processed at the incorrect encryption level in crypto/tls",
+  "aliases": [
+   "CVE-2025-61730",
+   "CVE-2025-61730"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4341",
+  "summary": "Memory exhaustion in query parameter parsing in net/url",
+  "aliases": [
+   "CVE-2025-61726",
+   "CVE-2025-61726"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4342",
+  "summary": "Excessive CPU consumption when building archive index in archive/zip",
+  "aliases": [
+   "CVE-2025-61728",
+   "CVE-2025-61728"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4403",
+  "summary": "Improper access to parent directory of root in os",
+  "aliases": [
+   "CVE-2025-22873"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4599",
+  "summary": "Incorrect enforcement of email constraints in crypto/x509",
+  "aliases": [
+   "CVE-2026-27137"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4600",
+  "summary": "Panic in name constraint checking for malformed certificates in crypto/x509",
+  "aliases": [
+   "CVE-2026-27138"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4601",
+  "summary": "Incorrect parsing of IPv6 host literals in net/url",
+  "aliases": [
+   "CVE-2026-25679"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4602",
+  "summary": "FileInfo can escape from a Root in os",
+  "aliases": [
+   "CVE-2026-27139"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4603",
+  "summary": "URLs in meta content attribute actions are not escaped in html/template",
+  "aliases": [
+   "CVE-2026-27142"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4864",
+  "summary": "TOCTOU permits root escape on Linux via Root.Chmod in os in internal/syscall/unix",
+  "aliases": [
+   "CVE-2026-32282"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4865",
+  "summary": "JsBraceDepth Context Tracking Bugs (XSS) in html/template",
+  "aliases": [
+   "CVE-2026-32289"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4866",
+  "summary": "Case-sensitive excludedSubtrees name constraints cause Auth Bypass in crypto/x509",
+  "aliases": [
+   "CVE-2026-33810"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4869",
+  "summary": "Unbounded allocation for old GNU sparse in archive/tar",
+  "aliases": [
+   "CVE-2026-32288"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4870",
+  "summary": "Unauthenticated TLS 1.3 KeyUpdate record can cause persistent connection retention and DoS in crypto/tls",
+  "aliases": [
+   "CVE-2026-32283"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4918",
+  "summary": "Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in net/http/internal/http2 in golang.org/x/net",
+  "aliases": [
+   "CVE-2026-33814"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4946",
+  "summary": "Inefficient policy validation in crypto/x509",
+  "aliases": [
+   "CVE-2026-32281"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4947",
+  "summary": "Unexpected work during chain building in crypto/x509",
+  "aliases": [
+   "CVE-2026-32280"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4970",
+  "summary": "Root escape via symlink plus trailing slash in os",
+  "aliases": [
+   "CVE-2026-39822"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4971",
+  "summary": "Panic in Dial and LookupPort when handling NUL byte on Windows in net",
+  "aliases": [
+   "CVE-2026-39836"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4976",
+  "summary": "ReverseProxy forwards queries with more than urlmaxqueryparams parameters in net/http/httputil",
+  "aliases": [
+   "CVE-2026-39825"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4977",
+  "summary": "Quadratic string concatenation in consumePhrase in net/mail",
+  "aliases": [
+   "CVE-2026-42499"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4980",
+  "summary": "Escaper bypass leads to XSS in html/template",
+  "aliases": [
+   "CVE-2026-39826"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4981",
+  "summary": "Crash when handling long CNAME response in net",
+  "aliases": [
+   "CVE-2026-33811"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4982",
+  "summary": "Bypass of meta content URL escaping causes XSS in html/template",
+  "aliases": [
+   "CVE-2026-39823"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-4986",
+  "summary": "Quadratic string concatentation in consumeComment in net/mail",
+  "aliases": [
+   "CVE-2026-39820"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-5026",
+  "summary": "Invoking failure to reject ASCII-only Punycode-encoded labels in golang.org/x/net/idna",
+  "aliases": [
+   "CVE-2026-39821"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-5037",
+  "summary": "Inefficient candidate hostname parsing in crypto/x509",
+  "aliases": [
+   "CVE-2026-27145"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-5038",
+  "summary": "Quadratic complexity in WordDecoder.DecodeHeader in mime",
+  "aliases": [
+   "CVE-2026-42504"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-5039",
+  "summary": "Arbitrary inputs are included in errors without any escaping in net/textproto",
+  "aliases": [
+   "CVE-2026-42507"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-5856",
+  "summary": "Invoking Encrypted Client Hello privacy leak in crypto/tls",
+  "aliases": [
+   "CVE-2026-42505"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-5942",
+  "summary": "Parsing an invalid SVCB or HTTPS RR can panic in golang.org/x/net/dns/dnsmessage",
+  "aliases": [
+   "CVE-2026-46600"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-5972",
+  "summary": "Enforce maximum recursion depth in encoding/asn1",
+  "aliases": [
+   "CVE-2026-33818"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6088",
+  "summary": "Add recursion depth guard during decode in encoding/xml",
+  "aliases": [
+   "CVE-2026-56859"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6089",
+  "summary": "Apply ReadHeaderTimeout when doing unencrypted HTTP/2 check in net/http",
+  "aliases": [
+   "CVE-2026-56853"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6090",
+  "summary": "Limit handshake messages we are willing to accept post-handshake in crypto/tls",
+  "aliases": [
+   "CVE-2026-56862"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6091",
+  "summary": "Fix Javascript regexp context tracking in html/template",
+  "aliases": [
+   "CVE-2026-56858"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6218",
+  "summary": "Avoid quadratic complexity in resolvePath in net/url",
+  "aliases": [
+   "CVE-2026-56860"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6599",
+  "summary": "Reset context tracking on consecutive template expressions in html/template",
+  "aliases": [
+   "CVE-2026-94448"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6600",
+  "summary": "Recognize yield as regexp preceder keyword in html/template",
+  "aliases": [
+   "CVE-2026-97030"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6603",
+  "summary": "HTTP/2 server memory exhaustion due to Trailer headers in net/http",
+  "aliases": [
+   "CVE-2026-78659"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6603",
+  "summary": "HTTP/2 server memory exhaustion due to Trailer headers in net/http",
+  "aliases": [
+   "CVE-2026-78659"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6604",
+  "summary": "Root.Mkdir(All) can follow junctions out of the root on Windows in os",
+  "aliases": [
+   "CVE-2026-56857"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6605",
+  "summary": "HTTP/1 client connection desynchronization after CONNECT rejection in net/http",
+  "aliases": [
+   "CVE-2026-56866"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6607",
+  "summary": "Reject malformed ECH outer extension references in crypto/tls",
+  "aliases": [
+   "CVE-2026-97031"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6608",
+  "summary": "Memory limit bypass when parsing MIME headers in net/textproto, mime/multipart",
+  "aliases": [
+   "CVE-2026-94440"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6609",
+  "summary": "Lack of limit on size of parsed Range headers in net/http",
+  "aliases": [
+   "CVE-2026-78667"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6610",
+  "summary": "HTTP/2 transport accepts malformed framing-related headers in net/http",
+  "aliases": [
+   "CVE-2026-78660"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6610",
+  "summary": "HTTP/2 transport accepts malformed framing-related headers in net/http",
+  "aliases": [
+   "CVE-2026-78660"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6611",
+  "summary": "Excessive CPU consumption from repeated initial window changes in net/http",
+  "aliases": [
+   "CVE-2026-78669"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6611",
+  "summary": "Excessive CPU consumption from repeated initial window changes in net/http",
+  "aliases": [
+   "CVE-2026-78669"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6612",
+  "summary": "Double flow control refund on HTTP/2 server streams in net/http",
+  "aliases": [
+   "CVE-2026-78663"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6612",
+  "summary": "Double flow control refund on HTTP/2 server streams in net/http",
+  "aliases": [
+   "CVE-2026-78663"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6613",
+  "summary": "HTTP/1 server connection desynchronization after 2xx CONNECT response in net/http",
+  "aliases": [
+   "CVE-2026-94439"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6617",
+  "summary": "HTTP/2 server crash due to HPACK encoder race in net/http",
+  "aliases": [
+   "CVE-2026-97032"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6617",
+  "summary": "HTTP/2 server crash due to HPACK encoder race in net/http",
+  "aliases": [
+   "CVE-2026-97032"
+  ]
+ }
+}
+{
+ "osv": {
+  "id": "GO-2026-6809",
+  "summary": "Distrust compromised intermediate certificates in crypto/x509",
+  "aliases": [
+   "CVE-2026-111943"
+  ]
+ }
+}
+{
+ "finding": {
+  "osv": "GO-2021-0113",
+  "fixed_version": "v0.3.7",
+  "trace": [
+   {
+    "module": "golang.org/x/text",
+    "version": "v0.3.5"
+   }
+  ]
+ }
+}
+{
+ "finding": {
+  "osv": "GO-2022-1059",
+  "fixed_version": "v0.3.8",
+  "trace": [
+   {
+    "module": "golang.org/x/text",
+    "version": "v0.3.5"
+   }
+  ]
+ }
+}
+{
+ "finding": {
+  "osv": "GO-2026-5970",
+  "fixed_version": "v0.39.0",
+  "trace": [
+   {
+    "module": "golang.org/x/text",
+    "version": "v0.3.5"
+   }
+  ]
+ }
+}
+{
+ "finding": {
+  "osv": "GO-2026-6629",
+  "fixed_version": "v0.41.0",
+  "trace": [
+   {
+    "module": "golang.org/x/text",
+    "version": "v0.3.5"
+   }
+  ]
+ }
+}
+{
+ "finding": {
+  "osv": "GO-2021-0113",
+  "fixed_version": "v0.3.7",
+  "trace": [
+   {
+    "module": "golang.org/x/text",
+    "version": "v0.3.5",
+    "package": "golang.org/x/text/language"
+   }
+  ]
+ }
+}
+{
+ "finding": {
+  "osv": "GO-2022-1059",
+  "fixed_version": "v0.3.8",
+  "trace": [
+   {
+    "module": "golang.org/x/text",
+    "version": "v0.3.5",
+    "package": "golang.org/x/text/language"
+   }
+  ]
+ }
+}
+{
+ "finding": {
+  "osv": "GO-2022-1059",
+  "fixed_version": "v0.3.8",
+  "trace": [
+   {
+    "module": "golang.org/x/text",
+    "version": "v0.3.5",
+    "package": "golang.org/x/text/language",
+    "function": "ParseAcceptLanguage",
+    "position": {
+     "filename": "language/parse.go",
+     "offset": 5313,
+     "line": 144,
+     "column": 6
+    }
+   },
+   {
+    "module": "example.com/demo",
+    "package": "example.com/demo",
+    "function": "main",
+    "position": {
+     "filename": "main.go",
+     "offset": 231,
+     "line": 18,
+     "column": 40
+    }
+   }
+  ]
+ }
+}
+{
+ "finding": {
+  "osv": "GO-2021-0113",
+  "fixed_version": "v0.3.7",
+  "trace": [
+   {
+    "module": "golang.org/x/text",
+    "version": "v0.3.5",
+    "package": "golang.org/x/text/language",
+    "function": "ParseAcceptLanguage",
+    "position": {
+     "filename": "language/parse.go",
+     "offset": 5313,
+     "line": 144,
+     "column": 6
+    }
+   },
+   {
+    "module": "example.com/demo",
+    "package": "example.com/demo",
+    "function": "main",
+    "position": {
+     "filename": "main.go",
+     "offset": 231,
+     "line": 18,
+     "column": 40
+    }
+   }
+  ]
+ }
+}

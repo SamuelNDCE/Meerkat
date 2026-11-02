@@ -182,6 +182,20 @@ const isDesktopApp = (root) => {
     return false
   }
 }
+const inDesktopAppFolder = (root, x) => {
+  const parts = x.split('/').slice(0, -1)
+  while (parts.length) {
+    try {
+      const p = JSON.parse(readText(root, `${parts.join('/')}/package.json`))
+      const deps = { ...p.dependencies, ...p.devDependencies }
+      return Boolean(deps.electron || deps['@tauri-apps/api'] || deps['@tauri-apps/cli']) // the nearest manifest decides
+    } catch {
+      /* no package.json here, or not JSON */
+    }
+    parts.pop()
+  }
+  return false
+}
 const robotsSitemap = (root) => {
   if (isDesktopApp(root)) return finish('robots-sitemap', [], 'not applicable: this is a desktop app (its pages are not crawled)')
   const allow = allowSet(root)
@@ -189,6 +203,8 @@ const robotsSitemap = (root) => {
   const f = []
   for (const x of files(root, /(^|\/)index\.html?$/i)) {
     if (!/<html[\s>]/i.test(readText(root, x)) || allow.has(`robots-sitemap ${x}`)) continue
+    // The page sits in (or under) a folder whose own package.json is an Electron or Tauri app: the shell is loaded from disk, never crawled.
+    if (inDesktopAppFolder(root, x)) continue
     const dir = posix.dirname(x)
     const has = (name) => [posix.join(dir, name), posix.join(dir, 'public', name)].some((p) => tracked.has(p))
     if (!has('robots.txt') && !has('sitemap.xml')) f.push(`${x}: a site with pages but no robots.txt or sitemap.xml beside it (add one, or accept it with "robots-sitemap ${x}")`)

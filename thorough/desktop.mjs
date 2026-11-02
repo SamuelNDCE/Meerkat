@@ -219,7 +219,10 @@ main({
     ok: 'app updates are fetched over https',
     scan: perFile((t) => (
       /autoUpdater|electron-updater|setFeedURL|feedURL|updateURL|\bpublish\b/.test(t)
-        ? lineHits(t, /['"`]http:\/\/(?!localhost|127\.0\.0\.1|\[::1\])/).map((h) => ({ line: h.line, why: 'fetches app updates over plain http://, so the update can be swapped on the network (use https://)' }))
+        // An Authenticode / RFC 3161 timestamp server (timestamp.acs.microsoft.com ...) is conventionally plain http and its answer is signed: it is not an update feed.
+        ? lineHits(t, /['"`]http:\/\/(?!localhost|127\.0\.0\.1|\[::1\])(?!timestamp\.)/)
+          .filter((h) => !/timestamp/i.test(t.split('\n')[h.line - 1] ?? ''))
+          .map((h) => ({ line: h.line, why: 'fetches app updates over plain http://, so the update can be swapped on the network (use https://)' }))
         : []
     )),
     fixture: { ...E, 'main.js': "const { autoUpdater } = require('electron-updater')\nautoUpdater.setFeedURL({ provider: 'generic', url: 'http://updates.example.com' })\n" },

@@ -57,7 +57,8 @@ function meerkat(dir: string, args: string[], root: string): Run {
     cwd: ROOT,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
-    env: { ...cleanPath(process.env), MEERKAT_LOG_DIR: logRoot, MEERKAT_TIMINGS: join(root, 'timings.json'), MEERKAT_PLAIN: '1', NO_COLOR: '1' },
+    // MEERKAT_FINDINGS=all: this test proves every planted defect is DETECTED; the default view hides noisy rule families (lib/quarantine.mjs, lib/rollup.mjs).
+    env: { ...cleanPath(process.env), MEERKAT_FINDINGS: 'all', MEERKAT_LOG_DIR: logRoot, MEERKAT_TIMINGS: join(root, 'timings.json'), MEERKAT_PLAIN: '1', NO_COLOR: '1' },
   })
   const ms = Date.now() - t0
   const runs = join(logRoot, 'runs')
@@ -69,7 +70,8 @@ function meerkat(dir: string, args: string[], root: string): Run {
 
 const found = (findings: any, d: Defect) =>
   (findings?.findings ?? []).find(
-    (f: any) => f.check === d.check && (d.rule === undefined || f.rule === d.rule) && f.file === d.file && SEVERITY.indexOf(f.severity) >= SEVERITY.indexOf(d.severity) && (d.match === undefined || `${f.title} ${f.message}`.includes(d.match)),
+    // a finding two checks reported is kept once: every reporter (lib/confirm.mjs alsoReportedBy) counts as having seen it
+    (f: any) => [{ check: f.check, rule: f.rule }, ...(f.alsoReportedBy ?? [])].some((r: any) => r.check === d.check && (d.rule === undefined || r.rule === d.rule || r.rule === null)) && f.file === d.file && SEVERITY.indexOf(f.severity) >= SEVERITY.indexOf(d.severity) && (d.match === undefined || `${f.title} ${f.message}`.includes(d.match)),
   )
 
 function project(name: string, variant: 'clean' | 'defective'): { dir: string; root: string } {

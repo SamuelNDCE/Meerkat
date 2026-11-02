@@ -3,7 +3,7 @@
 // Limits are set in .meerkat-budgets.json under "lang": maxAny (default 25) and maxUnwrap (default 40).
 // An accepted finding goes in .meerkat-lang-allow, one "<check-id> <path>" per line. That covers the whole file for that check.
 // Code is read with strings, comments and (in JavaScript) regex literals blanked out first, so a word inside one is never a finding.
-import { finish, isFixture, isTestFile, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isTestFile, main, readBudgets, readText, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.lang ?? {}
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|out|coverage|fixtures?)\//i
@@ -302,7 +302,7 @@ const POLLUTION = [
 const KEY_LOOP = /\bfor\s*\(\s*(?:const|let|var)?\s*(\w+)\s+in\s+[^)\n]{1,80}\)|\bfor\s*\(\s*(?:const|let|var)\s*\[\s*(\w+)\s*(?:,\s*\w+\s*)?\]\s+of\s+Object\.(?:keys|entries)\([^)\n]{1,80}\)|\bObject\.(?:keys|entries)\([^)\n]{1,80}\)\.forEach\(\s*\(?\s*(?:\[\s*)?(\w+)/g
 const MERGEISH = /\b(?:merge|extend|assign|deep\w*|clone|mixin|defaults|set\w*|copy\w*|combine|patch|update\w*)\b/i
 const POLLUTION_GUARD = /__proto__|\bconstructor\b|\bprototype\b|hasOwn(?:Property)?\b|\bsafeKey|\bisSafe|\bforbidden|\bblocklist|\bdenylist/i
-function* recursiveMergeHits(t) {
+function* recursiveMergeHits(t, raw = t) {
   for (const m of t.matchAll(KEY_LOOP)) {
     const key = m[1] || m[2] || m[3]
     if (!key) continue
@@ -310,17 +310,22 @@ function* recursiveMergeHits(t) {
     const win = t.slice(m.index, m.index + 700).split('\n').slice(0, 9).join('\n')
     if (!MERGEISH.test(before.split('\n').slice(-6).join('\n')) && !MERGEISH.test(win)) continue
     if (POLLUTION_GUARD.test(win)) continue
-    const hit = new RegExp(`[\\w$.]{1,60}\\[\\s*${key}\\s*\\]\\s*=(?!=)`).exec(win)
+    const hit = new RegExp(`[\\w$.]{1,60}\\[\\s*${key}\\s*\\]\\s*=(?!=)\\s*([\\w$.]+)?`).exec(win)
+    // Only a primitive can reach the target (the value is checked with typeof): assigning a boolean, number or string to __proto__ changes nothing.
+    // (The scanned text has its string contents blanked, so the check reads the same span of the original source.)
+    const rawWin = raw.length === t.length ? raw.slice(m.index, m.index + 700).split('\n').slice(0, 9).join('\n') : win
+    if (hit && hit[1] && new RegExp(`typeof\\s+${hit[1].replace(/[$.]/g, '\\$&')}\\s*===?\\s*['"](?:boolean|number|string|bigint)['"]`).test(rawWin)) continue
     if (hit) yield m.index + hit.index
   }
 }
 const jsPrototypePollution = (root) => {
   const allow = allowSet(root)
   const f = []
-  for (const x of files(root, JS)) {
+  for (const x of files(root, JS, true)) {
     if (allowed(allow, 'js-prototype-pollution', x)) continue
-    const t = codeOnly(sourceOf(root, x), JS_OPTS)
-    for (const at of recursiveMergeHits(t)) f.push(`${x}:${lineOf(t, at)} copies keys into a target in a loop with no check for __proto__ or constructor, so a crafted key can change every object (skip those keys, or use Object.create(null))`)
+    const rawSrc = sourceOf(root, x)
+    const t = codeOnly(rawSrc, JS_OPTS)
+    for (const at of recursiveMergeHits(t, rawSrc)) f.push(`${x}:${lineOf(t, at)} copies keys into a target in a loop with no check for __proto__ or constructor, so a crafted key can change every object (skip those keys, or use Object.create(null))`)
     for (const re of POLLUTION) {
       for (const m of t.matchAll(re)) f.push(`${x}:${lineOf(t, m.index)} assigns through __proto__, constructor.prototype or a request-supplied key, which can change every object (use a Map, or Object.create(null) with a checked key)`)
     }
@@ -449,16 +454,32 @@ const goDeferInLoop = (root) => {
 }
 
 // ---- rust-unwrap-overuse: unwrap() and expect( outside tests, counted against lang.maxUnwrap (default 40)
-const TEST_BLOCKS = [/#\[cfg\(test\)\]\s*(?:pub\s+)?mod\s+\w+\s*\{/g, /#\[test\]\s*(?:#\[[^\]\n]*\]\s*)*(?:pub\s+)?(?:async\s+)?fn\s+\w+[^{;]*\{/g]
+const TEST_BLOCKS = [/#\[cfg\(test\)\]\s*(?:#\[[^\]\n]*\]\s*)*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{/g, /#\[test\]\s*(?:#\[[^\]\n]*\]\s*)*(?:pub\s+)?(?:async\s+)?fn\s+\w+[^{;]*\{/g]
 const rustNonTest = (t) => TEST_BLOCKS.reduce((s, re) => blankBodies(s, re), t)
+// A Rust file that its parent module declares as `#[cfg(test)] mod name;` is test-only (a fake, a mock, a shared test helper): none of it ships.
+const declaredTestOnly = (root, x) => {
+  const m = /^(.*?)\/?([^/]+)\.rs$/.exec(x)
+  if (!m || /^(?:mod|lib|main)$/.test(m[2])) return false
+  const dir = m[1]
+  const parents = [`${dir ? `${dir}/` : ''}mod.rs`, `${dir ? `${dir}/` : ''}lib.rs`, `${dir ? `${dir}/` : ''}main.rs`]
+  if (dir) parents.push(`${dir}.rs`)
+  const decl = new RegExp(`#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]\\n]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+${m[2]}\\s*;`)
+  return parents.some((p) => decl.test(readText(root, p)))
+}
+// The source with every line of a #[cfg(test)] module blanked, found by matched braces over the raw text (raw strings and char literals understood).
+const blankTestLines = (code, raw, x) => {
+  const inTest = rustTestLines(x, raw)
+  return code.split('\n').map((l, i) => (inTest(i + 1) ? '' : l)).join('\n')
+}
 const rustUnwrapOveruse = (root) => {
   const max = cfg(root).maxUnwrap ?? 40
   const allow = allowSet(root)
   const hits = []
   let total = 0
   for (const x of files(root, RS, true)) {
-    if (allowed(allow, 'rust-unwrap-overuse', x)) continue
-    const t = rustNonTest(codeOnly(sourceOf(root, x), RS_OPTS))
+    if (allowed(allow, 'rust-unwrap-overuse', x) || declaredTestOnly(root, x)) continue
+    const raw = sourceOf(root, x)
+    const t = blankTestLines(rustNonTest(codeOnly(raw, RS_OPTS)), raw, x)
     const n = [...t.matchAll(/\.unwrap\s*\(\s*\)|\.expect\s*\(/g)].length
     if (n) {
       total += n
