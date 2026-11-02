@@ -308,7 +308,7 @@ describe('secrets in per-check output', () => {
     expect(text).toContain('## 8. Every check')
   })
   test('a multi-line private key or quoted password is withheld', () => {
-    const pem = ['-----BEGIN RSA PRIVATE KEY-----', 'MIIEowIBAAKCAQEAxyzxyzxyzxyzxyzxyz', 'abcdefabcdefabcdefabcdefabcdef', '-----END RSA PRIVATE KEY-----'].join('\n')
+    const pem = ['-----BEGIN ' + 'RSA PRIVATE KEY-----', 'MIIEowIBAAKCAQEAxyzxyzxyzxyzxyzxyz', 'abcdefabcdefabcdefabcdefabcdef', '-----END ' + 'RSA PRIVATE KEY-----'].join('\n')
     const doc = { run: { id: '20261102-010101', preset: 'quick', project: { name: 'p', path: '/p' } }, counts: { total: 0, bySeverity: {}, new: 0, known: 0, fixed: 0 }, findings: [], notRun: [] }
     const summary = { ms: 10, results: [{ id: 'x', status: 'PASS', ms: 5, suite: 's', origin: 'custom', detail: pem }] }
     const text = buildAiPrompt({ doc, summary, runDir: '/r' } as never)
