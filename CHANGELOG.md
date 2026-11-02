@@ -5,6 +5,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 ## Unreleased
 
 - the pedantic Rust style rules (undocumented items, string errors, println in libraries, ...) are no longer evaluated by default, so they cost no time and add no raw detections; MEERKAT_FINDINGS=all turns them back on
+- faster full scans: the window checks found in a project (Electron, Playwright, click-through) no longer run in full and thorough and are listed as skipped, not failed; release, `--include windows` or MEERKAT_WINDOWS=1 run them. Eighteen quality, performance and hygiene rules that audits judged mostly false (empty-catch, line-length, regex-in-loop and others) are hidden by default and shown again with MEERKAT_FINDINGS=all
 - the code-pattern checks of the security-plus pack (cookie flags, JWT, SQL, CORS, XML, weak crypto, regex, redirects, paths) skip lines that are only string literals and punctuation, such as a detector table of sample vulnerable code; the credentials-in-URL check does not, because there the string is the problem
 - PII in a Rust test module is not reported; meta-seo leaves mockups, prototypes and generated code maps alone
 - documentation and markup hygiene findings (links, final newline, code fence language, headings, whitespace, HTML structure, SEO tags) and two Rust style rules are low, not medium

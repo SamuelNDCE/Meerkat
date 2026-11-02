@@ -12,7 +12,7 @@ const map = (list: any[]) => new Map(list.map((x) => [x.id, x]))
 describe('rollup', () => {
   test('forty long lines in one file become one finding that counts them', () => {
     const m = map(Array.from({ length: 40 }, (_, i) => f('line-length', 'a.ts', i + 1)))
-    const r = applyRollup(m, { all: false, fingerprint })
+    const r = applyRollup(m, { all: true, fingerprint })
     expect(m.size).toBe(1)
     const one = [...m.values()][0] as any
     expect(one.occurrences).toBe(40)
@@ -22,13 +22,13 @@ describe('rollup', () => {
   test('findings whose rule is null are rolled up by their check id', () => {
     const list = Array.from({ length: 12 }, (_, i) => ({ ...f('line-length', 'a.ts', i + 1), rule: null }))
     const m = map(list)
-    applyRollup(m, { all: false, fingerprint })
+    applyRollup(m, { all: true, fingerprint })
     expect(m.size).toBe(1)
     expect(([...m.values()][0] as any).occurrences).toBe(12)
   })
   test('different files and different rules stay separate', () => {
     const m = map([f('line-length', 'a.ts', 1), f('line-length', 'a.ts', 2), f('line-length', 'b.ts', 1), f('long-functions', 'a.ts', 5), f('long-functions', 'a.ts', 9)])
-    applyRollup(m, { all: false, fingerprint })
+    applyRollup(m, { all: true, fingerprint })
     expect(m.size).toBe(3)
   })
   test('pedantic Rust style and markup nitpicks are counted and hidden; the same rule at medium or a security rule is not', () => {
