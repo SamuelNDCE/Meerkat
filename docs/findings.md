@@ -176,3 +176,7 @@ steps:
 ## Reading them on the results screen
 
 After a run in a terminal the results screen shows the findings (see [commands.md](commands.md)). Keys: Tab or 1 2 3 switch sections, Up/Down move, Enter opens a finding in full, Esc closes it, `f` cycles the severity filter, `l` shows the log of the check that found it, `c` copies the findings folder path (`Findings folder created: <path>`), `?` lists every key. In a terminal `meerkat findings` colours the severity word the same way (critical red, high orange, medium yellow, low and info white).
+
+## Cross-tool confirmation
+
+When two checks report the same problem, `findings.json` holds one finding, not two (`lib/confirm.mjs`, classes in `lib/confirm-classes.mjs`). Dependency advisories match on the package and a shared advisory id (GHSA, CVE, RUSTSEC, GO, PYSEC); secrets on the same file within 2 lines; code issues on the same file within 3 lines and the same class (injection, xss, path-traversal, weak-crypto, config). A rule id with no class never merges with another tool. The kept finding has the highest severity and the evidence of the most specific tool, plus `confirmedBy` (sorted check ids), `confirmations`, `alsoReportedBy` (check and rule of the others) and `confidence: "high"` when two or more checks agree; those sort first within a severity and the AI prompt says "confirmed by N independent checks". One check repeating itself folds into one finding with an `occurrences` count. `counts.merged` is how many duplicates were folded. A finding seen by one check is left as it is.

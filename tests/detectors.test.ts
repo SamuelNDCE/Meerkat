@@ -1,15 +1,15 @@
 // The detectors pack (thorough/detectors.mjs): each tool's recorded output (tests/fixtures/detectors/) becomes Meerkat findings with the
 // tool's own rule ids, clean output passes, and a missing tool is NOT RUN with an install hint. No tool has to be installed.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test } from 'vitest'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { parseFindingLine } from '../lib/findings.mjs'
 // @ts-expect-error plain JS module
-import { osvPlan, parseActionlint, parseClippy, parseGitleaks, parseGovulncheck, parseOsv, parseSemgrep, parseStaticcheck, parseTsc, ruleId, semgrepPlan } from '../thorough/detectors.mjs'
+import { clippyPlan, osvPlan, resolveTsc, parseActionlint, pathOutside, staticcheckProblem, parseClippy, parseGitleaks, parseGovulncheck, parseOsv, parseSemgrep, parseStaticcheck, parseTsc, ruleId, semgrepPlan } from '../thorough/detectors.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const FX = 'tests/fixtures/detectors'
@@ -121,7 +121,7 @@ describe('the script: findings, clean, NOT RUN', () => {
 
   test('a missing tool is NOT RUN (75) with an install hint, never a pass', () => {
     const dir = emptyDir()
-    const env = { PATH: '', Path: '', MEERKAT_TOOLS_HOME: join(dir, 'no-tools') }
+    const env = { PATH: '', Path: '', MEERKAT_TOOLS_HOME: join(dir, 'no-tools'), MEERKAT_TSC_OWN: 'off' }
     writeFileSync(join(dir, 'Cargo.toml'), '[package]\nname="x"\nversion="0.1.0"\n')
     writeFileSync(join(dir, 'tsconfig.json'), '{}')
     writeFileSync(join(dir, 'go.mod'), 'module x\n')
@@ -172,9 +172,76 @@ describe('the script: findings, clean, NOT RUN', () => {
     expect(semgrepPlan({ MEERKAT_SEMGREP_CONFIG: 'rules.yml' }).args).toContain('rules.yml')
     expect(semgrepPlan({ MEERKAT_DETECTORS_OFFLINE: '1' }).error).toMatch(/rules file/)
     expect(semgrepPlan({ MEERKAT_DETECTORS_OFFLINE: '1', MEERKAT_SEMGREP_CONFIG: join(ROOT, FX, 'semgrep-rule.yml') }).error).toBeUndefined()
-    expect(osvPlan({}).args).toEqual(['scan', '--format', 'json', '-r', '.'])
-    expect(osvPlan({ MEERKAT_DETECTORS_OFFLINE: '1', MEERKAT_OSV_CACHE: join(ROOT, 'no-such-cache') }).error).toMatch(/download-offline-databases/)
-    expect(osvPlan({ MEERKAT_DETECTORS_OFFLINE: '1', MEERKAT_OSV_CACHE: ROOT }).args).toContain('--offline-vulnerabilities')
+    expect(osvPlan({}, ['package-lock.json', 'api/yarn.lock']).args).toEqual(['scan', '--format', 'json', '-L', 'package-lock.json', '-L', 'api/yarn.lock'])
+    expect(osvPlan({ MEERKAT_DETECTORS_OFFLINE: '1', OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY: join(ROOT, 'no-such-cache') }).error).toMatch(/download-offline-databases/)
+    // an existing folder is not enough: it must hold osv-scanner/<ecosystem>/all.zip
+    const empty = emptyDir()
+    expect(osvPlan({ MEERKAT_DETECTORS_OFFLINE: '1', OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY: empty }).error).toBeDefined()
+    mkdirSync(join(empty, 'osv-scanner', 'npm'), { recursive: true })
+    writeFileSync(join(empty, 'osv-scanner', 'npm', 'all.zip'), 'x')
+    const on = osvPlan({ MEERKAT_DETECTORS_OFFLINE: '1', OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY: empty }, ['package-lock.json'])
+    expect(on.args).toContain('--offline-vulnerabilities')
+    expect(on.env?.OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY).toBe(empty)
+  })
+
+  test('osv: one advisory in several versions and lockfiles is one finding listing every version', () => {
+    const pkg = (version: string) => ({ package: { name: 'minimatch', version, ecosystem: 'npm' }, vulnerabilities: [{ id: 'GHSA-g3hv-75wg-m249', summary: 's', affected: [{ package: { name: 'minimatch' }, ranges: [{ events: [{ fixed: '3.1.3' }] }] }] }] })
+    const json = { results: [{ source: { path: 'package-lock.json' }, packages: [pkg('3.0.4'), pkg('3.1.1'), pkg('9.0.3')] }, { source: { path: 'web/package-lock.json' }, packages: [pkg('3.0.4')] }] }
+    const f = parseOsv(json)
+    expect(f).toHaveLength(1)
+    expect(f[0].message).toContain('minimatch@3.0.4, 3.1.1, 9.0.3')
+    expect(f[0].message).toContain('also in web/package-lock.json')
+  })
+
+  test('a scanner on a PATH folder inside the scanned project is never used', () => {
+    const root = emptyDir()
+    const inside = join(root, 'bin')
+    const outside = emptyDir()
+    expect(pathOutside([inside, outside, '.'].join(delimiter), root)).toBe(outside)
+  })
+
+  test('staticcheck: a compile diagnostic means NOT RUN; govulncheck without a config message is NOT RUN', () => {
+    expect(staticcheckProblem(readFileSync(join(ROOT, FX, 'staticcheck.jsonl'), 'utf8'))).toBeNull()
+    expect(staticcheckProblem('{"code":"compile","severity":"error","location":{"file":"","line":0},"message":"boom"}')).toBe('boom')
+    const dir = emptyDir()
+    const c = join(dir, 'compile.jsonl')
+    writeFileSync(c, '{"code":"compile","severity":"error","location":{"file":"","line":0},"message":"undefined: x"}\n')
+    expect(run(['staticcheck-go', '--sample', c]).code).toBe(75)
+    const g = join(dir, 'noconfig.json')
+    writeFileSync(g, JSON.stringify({ osv: { id: 'GO-1' } }))
+    expect(run(['govulncheck-go', '--sample', g]).code).toBe(75)
+  })
+
+  test('gitleaks: a report that is not a list is NOT RUN', () => {
+    const dir = emptyDir()
+    const f = join(dir, 'r.json')
+    writeFileSync(f, '{"oops":1}')
+    expect(run(['gitleaks-secrets', '--sample', f]).code).toBe(75)
+  })
+
+  test('tsc: the project TypeScript is refused when it resolves outside the project (symlink escape), used when it is inside', () => {
+    const outside = emptyDir()
+    mkdirSync(join(outside, 'bin'), { recursive: true })
+    writeFileSync(join(outside, 'bin', 'tsc'), 'console.log("evil")')
+    const evil = emptyDir()
+    mkdirSync(join(evil, 'node_modules'), { recursive: true })
+    symlinkSync(outside, join(evil, 'node_modules', 'typescript'), 'junction')
+    const refused = resolveTsc(evil, { MEERKAT_TSC_OWN: 'off' }, () => null)
+    expect(refused.error).toMatch(/outside the project/)
+    const ok = emptyDir()
+    mkdirSync(join(ok, 'node_modules', 'typescript', 'bin'), { recursive: true })
+    writeFileSync(join(ok, 'node_modules', 'typescript', 'bin', 'tsc'), '')
+    const used = resolveTsc(ok, { MEERKAT_TSC_OWN: 'off' }, () => null)
+    expect(used.error).toBeUndefined()
+    expect(used.own).toBe(true)
+    // a TypeScript on the sanitised PATH wins over the project's
+    expect(resolveTsc(ok, { MEERKAT_TSC_OWN: 'off' }, () => '/usr/bin/tsc')).toMatchObject({ cmd: '/usr/bin/tsc', own: false })
+  })
+
+  test('clippy is started with the compiler wrapper variables emptied', () => {
+    const p = clippyPlan()
+    expect(p.env).toEqual({ RUSTC_WRAPPER: '', RUSTC_WORKSPACE_WRAPPER: '', CARGO_BUILD_RUSTC_WRAPPER: '' })
+    expect(p.args.slice(0, 3)).toEqual(['clippy', '--message-format', 'json'])
   })
 
   test('tsc is capped at 200 findings with a rollup', () => {

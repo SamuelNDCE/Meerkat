@@ -5,11 +5,12 @@
 // has to be installed). Nothing is ever installed here, and no project code runs beyond the tool itself.
 // Exit: 0 clean (or not applicable), 1 findings, 75 NOT RUN (tool missing, hint printed).
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { homedir, tmpdir } from 'node:os'
-import { delimiter, isAbsolute, join, relative } from 'node:path'
+import { delimiter, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { finding, NOT_RUN, notRun } from './kit.mjs'
+import { finding, NOT_RUN, notRun, trackedFiles } from './kit.mjs'
 import { findBinary } from '../lib/which.mjs'
 import { cleanMessage } from '../lib/findings.mjs'
 
@@ -46,26 +47,35 @@ export function fixedVersions(vuln, pkgName) {
 }
 
 export function parseOsv(json, root = '') {
-  const out = []
+  // One finding per (ecosystem, package, advisory id): the same advisory in several versions or several lockfiles is one problem.
+  const groups = new Map()
   for (const res of json?.results ?? []) {
     const file = relTo(res?.source?.path, root) || 'lockfile'
     for (const p of res?.packages ?? []) {
       const name = p?.package?.name ?? '?'
       const version = p?.package?.version ?? '?'
+      const eco = p?.package?.ecosystem ?? '?'
       for (const v of p?.vulnerabilities ?? []) {
-        const fixed = fixedVersions(v, name)
-        const summary = String(v?.summary ?? v?.details ?? '').split('\n')[0].slice(0, 200)
-        out.push({
-          severity: fixed.length ? 'high' : 'medium',
-          rule: ruleId(v?.id ?? 'osv'),
-          file,
-          line: 0,
-          message: `${name}@${version} (${p?.package?.ecosystem ?? '?'}) is vulnerable: ${v?.id}${summary ? ` ${summary}` : ''}; ${fixed.length ? `fixed in ${fixed.join(', ')}` : 'no fixed version yet'}`,
-        })
+        const key = `${eco}|${name}|${v?.id}`
+        const g = groups.get(key) ?? { eco, name, id: v?.id, versions: new Set(), fixed: new Set(), files: [], summary: '' }
+        g.versions.add(version)
+        for (const f of fixedVersions(v, name)) g.fixed.add(f)
+        if (!g.files.includes(file)) g.files.push(file)
+        g.summary ||= String(v?.summary ?? v?.details ?? '').split('\n')[0].slice(0, 200)
+        groups.set(key, g)
       }
     }
   }
-  return out
+  return [...groups.values()].map((g) => {
+    const fixed = [...g.fixed]
+    return {
+      severity: fixed.length ? 'high' : 'medium',
+      rule: ruleId(g.id ?? 'osv'),
+      file: g.files[0],
+      line: 0,
+      message: `${g.name}@${[...g.versions].join(', ')} (${g.eco}) is vulnerable: ${g.id}${g.summary ? ` ${g.summary}` : ''}; ${fixed.length ? `fixed in ${fixed.join(', ')}` : 'no fixed version yet'}${g.files.length > 1 ? `; also in ${g.files.slice(1).join(', ')}` : ''}`,
+    }
+  })
 }
 
 // ---- semgrep ---------------------------------------------------------------------------------------------------------------------
@@ -151,6 +161,20 @@ export function parseStaticcheck(text, root = '') {
   return out
 }
 
+// A diagnostic that is not a check result (code "compile", or anything not shaped like SA1000/ST1000/S1000/U1000) means the code was not analysed.
+export function staticcheckProblem(text) {
+  for (const line of String(text).split(/\r?\n/)) {
+    if (!line.startsWith('{')) continue
+    try {
+      const o = JSON.parse(line)
+      if (!/^(SA|ST|S|U)\d+$/.test(String(o?.code))) return String(o?.message ?? o?.code ?? 'error').split('\n')[0].slice(0, 160)
+    } catch {
+      // not a result line
+    }
+  }
+  return null
+}
+
 // ---- govulncheck -----------------------------------------------------------------------------------------------------------------
 // `govulncheck -format json` prints a stream of (pretty-printed) JSON objects: { osv }, { finding }, ... Only a finding whose trace reaches a
 // function (the vulnerable code is CALLED) is reported; imported-only vulnerabilities are not.
@@ -217,6 +241,16 @@ export function parseActionlint(json, root = '') {
   }))
 }
 
+// PATH entries that are not inside `root` (a relative entry such as . counts as inside).
+export function pathOutside(pathVar, root) {
+  const base = resolve(root)
+  const inside = (d) => {
+    const r = relative(base, resolve(base, d))
+    return r === '' || (!r.startsWith('..') && !isAbsolute(r))
+  }
+  return String(pathVar).split(delimiter).filter(Boolean).filter((d) => !inside(d)).join(delimiter)
+}
+
 // ---- how the networked tools are started -----------------------------------------------------------------------------------------
 // Semgrep: metrics are always off (the command line and the environment both say so), so nothing about the machine or project is sent. The
 // registry rules (p/security-audit) belong to Semgrep and are licensed for the user's own internal use; the user's own semgrep fetches them from
@@ -231,16 +265,74 @@ export function semgrepPlan(env = process.env) {
 }
 
 // osv-scanner sends package names and versions to the OSV API unless it runs against its cached offline databases.
-export function osvCacheDir(env = process.env, platform = process.platform) {
-  if (env.MEERKAT_OSV_CACHE) return env.MEERKAT_OSV_CACHE
-  if (platform === 'win32') return join(env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local'), 'osv-scanner')
-  if (platform === 'darwin') return join(homedir(), 'Library', 'Caches', 'osv-scanner')
-  return join(env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'osv-scanner')
+// Verified with `osv-scanner scan --help` (2.7.0) and the offline-mode docs: --offline-vulnerabilities uses the local databases; they are
+// {dir}/osv-scanner/{ecosystem}/all.zip, where {dir} is OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY, else the user cache dir, else the temp dir.
+const LOCKFILE_RE = /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lock|Cargo\.lock|go\.mod|poetry\.lock|Pipfile\.lock|uv\.lock|requirements[^/]*\.txt|Gemfile\.lock|composer\.lock|gradle\.lockfile|pubspec\.lock|packages\.lock\.json)$/
+export const lockfilesOf = (files) => files.filter((f) => LOCKFILE_RE.test(f)).slice(0, 200)
+
+export function osvCacheBases(env = process.env, platform = process.platform) {
+  const fromEnv = env.OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY || env.MEERKAT_OSV_CACHE
+  if (fromEnv) return [fromEnv]
+  const user = platform === 'win32' ? env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local') : platform === 'darwin' ? join(homedir(), 'Library', 'Caches') : env.XDG_CACHE_HOME || join(homedir(), '.cache')
+  return [user, env.TMPDIR || tmpdir()]
 }
-export function osvPlan(env = process.env) {
-  if (env.MEERKAT_DETECTORS_OFFLINE !== '1') return { args: ['scan', '--format', 'json', '-r', '.'] }
-  if (!existsSync(osvCacheDir(env))) return { error: 'offline mode (MEERKAT_DETECTORS_OFFLINE=1) needs a cached OSV database; fetch it once with: osv-scanner scan --download-offline-databases (this contacts osv.dev)' }
-  return { args: ['scan', '--offline-vulnerabilities', '--format', 'json', '-r', '.'] }
+// The base directory that really holds a database (an all.zip under osv-scanner/<ecosystem>/), or null.
+export function osvDatabaseBase(env = process.env, platform = process.platform) {
+  for (const base of osvCacheBases(env, platform)) {
+    try {
+      const dir = join(base, 'osv-scanner')
+      if (readdirSync(dir).some((eco) => existsSync(join(dir, eco, 'all.zip')))) return base
+    } catch {
+      // no such folder
+    }
+  }
+  return null
+}
+export function osvPlan(env = process.env, lockfiles = []) {
+  const files = lockfiles.flatMap((f) => ['-L', f])
+  const tail = ['--format', 'json', ...files]
+  if (env.MEERKAT_DETECTORS_OFFLINE !== '1') return { args: ['scan', ...tail] }
+  const base = osvDatabaseBase(env)
+  if (!base) return { error: 'offline mode (MEERKAT_DETECTORS_OFFLINE=1) needs a cached OSV database (osv-scanner/<ecosystem>/all.zip); fetch it once with: osv-scanner scan --download-offline-databases (this contacts osv.dev)' }
+  return { args: ['scan', '--offline-vulnerabilities', ...tail], env: { OSV_SCANNER_LOCAL_DB_CACHE_DIRECTORY: base } }
+}
+
+// ---- which TypeScript, which cargo -----------------------------------------------------------------------------------------------
+// tsc: a TypeScript from Meerkat's own dependencies, then one on the sanitised PATH (see pathOutside); the project's own node_modules/typescript
+// is the last resort, and only when its real path (symlinks followed) is inside the project. `own: true` means the project's TypeScript ran.
+// MEERKAT_TSC_OWN=off skips Meerkat's own copy (tests and people who want the project's version).
+export function resolveTsc(root, env, lookup) {
+  if (env.MEERKAT_TSC_OWN !== 'off') {
+    try {
+      return { cmd: process.execPath, pre: [createRequire(import.meta.url).resolve('typescript/bin/tsc')], own: false }
+    } catch {
+      // Meerkat has no TypeScript of its own here
+    }
+  }
+  const onPath = lookup('tsc')
+  if (onPath) return { cmd: onPath, pre: [], own: false }
+  const tscJs = join(root, 'node_modules', 'typescript', 'bin', 'tsc')
+  if (!existsSync(tscJs)) return { error: "typescript was found neither with Meerkat, on PATH nor in this project's node_modules (Meerkat never installs it); add it with: npm i -D typescript" }
+  let real
+  let realRoot
+  try {
+    real = realpathSync(tscJs)
+    realRoot = realpathSync(root)
+  } catch {
+    return { error: 'the project TypeScript could not be resolved' }
+  }
+  const r = relative(realRoot, real)
+  if (r.startsWith('..') || isAbsolute(r)) return { error: "refusing to run node_modules/typescript: it resolves outside the project (a symlink?). Install TypeScript properly with: npm i -D typescript" }
+  return { cmd: process.execPath, pre: [real], own: true }
+}
+
+// cargo clippy runs the project's build scripts (build.rs) and proc macros, like any cargo build. An environment compiler wrapper cannot inject a
+// program: the three wrapper variables are emptied. A wrapper set in the project's .cargo/config.toml still applies; Meerkat does not rewrite it.
+export function clippyPlan() {
+  return {
+    args: ['clippy', '--message-format', 'json', '--', '-A', 'clippy::all', '-W', 'clippy::correctness', '-W', 'clippy::suspicious'],
+    env: { RUSTC_WRAPPER: '', RUSTC_WORKSPACE_WRAPPER: '', CARGO_BUILD_RUSTC_WRAPPER: '' },
+  }
 }
 
 // ---- running ---------------------------------------------------------------------------------------------------------------------
@@ -277,7 +369,13 @@ export function main(argv, env = process.env) {
   // PATH first, then the private tool folders (~/.meerkat-tools/bin and the Semgrep virtualenv). Nothing is ever installed.
   const home = env.MEERKAT_TOOLS_HOME || join(homedir(), '.meerkat-tools')
   const extra = [join(home, 'bin'), join(home, 'semgrep-venv', 'Scripts'), join(home, 'semgrep-venv', 'bin')].join(delimiter)
-  const lookup = (bin) => findBinary(bin, env) ?? findBinary(bin, { ...env, PATH: extra, Path: extra })
+  // The private tool folders come first; the original PATH follows with every entry inside the scanned project removed, so a scanner binary
+  // planted in the repository (or in a PATH folder under it) can never be the one that runs.
+  const lookup = (bin) => {
+    const clean = pathOutside(env.PATH ?? env.Path ?? '', root)
+    const path = [extra, clean].filter(Boolean).join(delimiter)
+    return findBinary(bin, { ...env, PATH: path, Path: path })
+  }
 
   if (name === 'osv-scan') {
     let text
@@ -285,11 +383,17 @@ export function main(argv, env = process.env) {
     else {
       const bin = lookup('osv-scanner')
       if (!bin) return missing('osv-scanner', 'install it from https://google.github.io/osv-scanner/installation/ (go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest)')
-      const plan = osvPlan(env)
+      // Only git-tracked lockfiles are scanned (-L each), never a leftover worktree or an ignored folder.
+      const locks = lockfilesOf(trackedFiles(root))
+      if (!locks.length) {
+        console.log('osv-scan: not applicable, no tracked lockfiles')
+        return 0
+      }
+      const plan = osvPlan(env, locks)
       if (plan.error) return nr(plan.error)
-      const r = spawn(bin, plan.args, root, 600_000)
+      const r = spawn(bin, plan.args, root, 600_000, plan.env ?? {})
       if (r.status === 128) {
-        console.log('osv-scan: not applicable, osv-scanner found no lockfiles or manifests to scan')
+        console.log('osv-scan: not applicable, osv-scanner found no packages in the tracked lockfiles')
         return 0
       }
       if (r.error || (r.status !== 0 && r.status !== 1)) return nr(`osv-scanner failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr ?? '').trim().split('\n').pop()?.slice(0, 200)}`)
@@ -341,7 +445,8 @@ export function main(argv, env = process.env) {
       const bin = lookup('cargo')
       if (!bin) return missing('cargo', 'install Rust from https://rustup.rs and run: rustup component add clippy')
       // -A clippy::all first so only the two groups asked for are reported; the later -W flags switch those back on.
-      const r = spawn(bin, ['clippy', '--message-format', 'json', '--', '-A', 'clippy::all', '-W', 'clippy::correctness', '-W', 'clippy::suspicious'], root, 1_800_000)
+      const plan = clippyPlan()
+      const r = spawn(bin, plan.args, root, 1_800_000, plan.env)
       text = r.stdout ?? ''
       if (r.error || (!text.includes('"reason"') && r.status !== 0)) return nr(`cargo clippy could not run (is the clippy component installed? rustup component add clippy): ${String(r.stderr ?? '').trim().split('\n').pop()?.slice(0, 200)}`)
     }
@@ -350,6 +455,7 @@ export function main(argv, env = process.env) {
 
   if (name === 'tsc-strict') {
     let text
+    let tscOwn = false
     if (sample) text = sampleOf(sample)
     else {
       const tsconfig = ['tsconfig.json'].find((f) => existsSync(join(root, f)))
@@ -357,13 +463,14 @@ export function main(argv, env = process.env) {
         console.log('tsc-strict: not applicable, no tsconfig.json')
         return 0
       }
-      const tscJs = join(root, 'node_modules', 'typescript', 'bin', 'tsc')
-      if (!existsSync(tscJs)) return nr('typescript is not in this project\'s node_modules (Meerkat never installs it); add it with: npm i -D typescript')
-      const r = spawn(process.execPath, [tscJs, '--noEmit', '--strict', '--pretty', 'false', '-p', tsconfig], root, 600_000)
+      const ts = resolveTsc(root, env, lookup)
+      if (ts.error) return nr(ts.error)
+      tscOwn = ts.own
+      const r = spawn(ts.cmd, [...ts.pre, '--noEmit', '--strict', '--pretty', 'false', '-p', tsconfig], root, 600_000)
       if (r.error) return nr(`tsc could not run: ${r.error.message}`)
       text = `${r.stdout ?? ''}\n${r.stderr ?? ''}`
     }
-    return report('tsc-strict', parseTsc(text), TSC_CAP)
+    return report(tscOwn ? "tsc-strict (runs the project's own TypeScript)" : 'tsc-strict', parseTsc(text), TSC_CAP)
   }
 
   if (name === 'gitleaks-secrets') {
@@ -375,19 +482,21 @@ export function main(argv, env = process.env) {
       const dir = mkdtempSync(join(tmpdir(), 'meerkat-gitleaks-'))
       const reportPath = join(dir, 'report.json')
       try {
-        const r = spawn(bin, ['detect', ...(existsSync(join(root, '.git')) ? [] : ['--no-git']), '--source', '.', '--report-format', 'json', '--report-path', reportPath, '--redact', '--no-banner'], root, 600_000)
-        if (r.error || (r.status !== 0 && r.status !== 1)) return nr(`gitleaks failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr ?? '').trim().split('\n').pop()?.slice(0, 200)}`)
-        text = existsSync(reportPath) ? readFileSync(reportPath, 'utf8') : '[]'
+        const r = spawn(bin, ['detect', ...(existsSync(join(root, '.git')) ? [] : ['--no-git']), '--source', '.', '--report-format', 'json', '--report-path', reportPath, '--redact', '--no-banner', '--exit-code', '42'], root, 600_000)
+        if (r.error || (r.status !== 0 && r.status !== 42)) return nr(`gitleaks failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr ?? '').trim().split('\n').pop()?.slice(0, 200)}`)
+        if (!existsSync(reportPath)) return nr('gitleaks did not write its report file')
+        text = readFileSync(reportPath, 'utf8')
       } finally {
         rmSync(dir, { recursive: true, force: true })
       }
     }
     let json
     try {
-      json = JSON.parse(text.trim() || '[]')
+      json = JSON.parse(text.trim())
     } catch {
       return nr('gitleaks wrote a report that is not JSON')
     }
+    if (!Array.isArray(json)) return nr('gitleaks report is not a list')
     return report('gitleaks-secrets', parseGitleaks(json, root))
   }
 
@@ -404,9 +513,18 @@ export function main(argv, env = process.env) {
       if (!bin) return missing(tool, tool === 'staticcheck' ? 'install with: go install honnef.co/go/tools/cmd/staticcheck@latest' : 'install with: go install golang.org/x/vuln/cmd/govulncheck@latest')
       const r = spawn(bin, tool === 'staticcheck' ? ['-f', 'json', './...'] : ['-format', 'json', './...'], root, 900_000)
       text = r.stdout ?? ''
-      if (r.error || (r.status !== 0 && r.status !== 1 && r.status !== 3)) return nr(`${tool} failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr ?? '').trim().split('\n').pop()?.slice(0, 200)}`)
+      // govulncheck -format json exits 0 even with findings, so 1 or anything else is a failed run; staticcheck exits 1 when it reports.
+      const okStatus = tool === 'govulncheck' ? r.status === 0 : r.status === 0 || r.status === 1
+      if (r.error || !okStatus) return nr(`${tool} failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr ?? '').trim().split('\n').pop()?.slice(0, 200)}`)
+      if (tool === 'staticcheck' && r.status === 1 && !parseStaticcheck(text, root).length) return nr('staticcheck exited 1 but reported no SA finding (the package may not compile)')
     }
-    return report(name, tool === 'staticcheck' ? parseStaticcheck(text, root) : parseGovulncheck(text, root))
+    if (tool === 'staticcheck') {
+      const bad = staticcheckProblem(text)
+      if (bad) return nr(`staticcheck could not analyse the code: ${bad}`)
+      return report(name, parseStaticcheck(text, root))
+    }
+    if (!splitJsonStream(text).some((m) => m.config)) return nr('govulncheck printed no config message, so its output cannot be trusted')
+    return report(name, parseGovulncheck(text, root))
   }
 
   if (name === 'actionlint-workflows') {
