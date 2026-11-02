@@ -44,3 +44,6 @@ tests/falsepositives.test.ts:260
 tests/falsepositives.test.ts
 tests/redact-remainder.test.ts
 tests/e2e-fakeapps.test.ts
+# nv-round-5a and 5b tests hold deliberately bad snippets (empty catch, duplicate test names) as sample text.
+tests/nv-round-5a.test.ts
+tests/nv-round-5b.test.ts

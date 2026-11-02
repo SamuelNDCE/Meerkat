@@ -40,3 +40,5 @@ tests/mutation.test.ts:258
 tests/falsepositives.test.ts:291
 tests/falsepositives.test.ts
 tests/guards-ipc.test.ts
+# nv-round-5b tests plant a broken import, a duplicate title and an empty catch on purpose to prove the rules still report.
+tests/nv-round-5b.test.ts
