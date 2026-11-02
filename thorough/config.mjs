@@ -144,6 +144,7 @@ const tomlProblems = (text) => {
   const out = []
   let multi = null
   let depth = 0
+  let arrayStart = 0
   let table = ''
   let keys = new Set()
   const tables = new Set()
@@ -199,7 +200,9 @@ const tomlProblems = (text) => {
     if (value.startsWith('"') && !/^"(?:[^"\\]|\\.)*"/.test(value)) out.push(`line ${n} has a basic string that is never closed`)
     else if (value.startsWith("'") && !/^'[^']*'/.test(value)) out.push(`line ${n} has a literal string that is never closed`)
     depth = Math.max(0, brackets(value))
+    if (depth > 0) arrayStart = n
   })
+  if (depth > 0 && !multi) out.push(`line ${arrayStart} opens an array that is never closed (the file ends inside it)`)
   return out
 }
 const tomlValid = (root) => {

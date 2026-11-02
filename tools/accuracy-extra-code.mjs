@@ -644,7 +644,7 @@ function parseBlob(ctx) {
     else if (cur) cur.push(line.replace(/§/g, '`').replace(/@\{/g, '${'))
   }
   flush()
-  // The alias files hold their dangerous call inside a plain context block: the first line of each is the planted line.
+  // The alias files hold their dangerous call after a few plain setup lines; the planted line is the call.
   const alias = {
     'src/js/exec-aliases-1.js': ['v-js-exec-alias-destructure', JS, 'exec taken by destructuring require and called with a template literal'],
     'src/js/exec-aliases-2.mjs': ['v-js-exec-alias-renamed', JS, 'exec imported under another name and called with concatenation'],
@@ -657,8 +657,10 @@ function parseBlob(ctx) {
   }
   for (const [path, [key, expectation, desc]] of Object.entries(alias)) {
     const lines = files[path]
-    const text = lines.join('\n')
-    files[path] = [ctx.d(key, desc, text), '']
+    // The defect is the call at the end of the file: setup lines (imports, the promisify wrapper) stay plain, so the planted line is the call's.
+    const keep = Math.max(0, lines.length - 3)
+    const text = lines.slice(keep).join('\n')
+    files[path] = [...lines.slice(0, keep), ctx.d(key, desc, text), '']
     expect[key] = expectation
   }
   return { files, expect }
