@@ -43,3 +43,7 @@ commit-message-format ba34149
 commit-message-format 4c6251e
 commit-message-format 510bf2a
 commit-message-format bd2fce3
+# b617894, 7831b82, 37a19d9: subjects of 74 to 78 characters; the pull request is squashed under a short title.
+commit-message-format b617894
+commit-message-format 7831b82
+commit-message-format 37a19d9

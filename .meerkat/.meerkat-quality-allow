@@ -47,3 +47,5 @@ tests/e2e-fakeapps.test.ts
 # nv-round-5a and 5b tests hold deliberately bad snippets (empty catch, duplicate test names) as sample text.
 tests/nv-round-5a.test.ts
 tests/nv-round-5b.test.ts
+# fp-security tests quote #[ignore] inside Rust sample strings to prove the rules skip ignored tests.
+tests/fp-security.test.ts
