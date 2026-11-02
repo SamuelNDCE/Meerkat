@@ -67,8 +67,8 @@ describe('security pattern rules: insecure sample text in a rule-fixture .rs fil
     expect(r.code, r.out).toBe(1)
   })
 
-  test('the same sample string in a normally named .rs file still reports (the convention is by name)', () => {
-    const body = 'fn q() -> &\'static str {\n    r#"res.cookie(\'s\', t, { secure: false });"#\n}\n'
+  test('a string passed to a call in a normally named .rs file still reports (a string-only table line is skipped everywhere, a call argument is not)', () => {
+    const body = 'fn q() {\n    send(r#"res.cookie(\'s\', t, { secure: false });"#);\n}\n'
     const r = run('thorough/sec-code.mjs', 'cookie-flags', folderWith({ 'src/rules.rs': body }))
     expect(r.code, r.out).toBe(1)
   })
