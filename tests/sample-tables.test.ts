@@ -58,6 +58,15 @@ describe('sec-code pattern checks and sample tables', () => {
   test('the same call as real code in a JavaScript file is', () => {
     expect(status('cookie-flags', { 'src/app.js': `${bad}\n` })).toBe(1)
   })
+  test('a configuration key with a string value is code in JavaScript and Python, not a table', () => {
+    expect(status('cors-wildcard', { 'src/app.js': "app.use(cors({\n  origin: '*',\n  credentials: true,\n}))\n" })).toBe(1)
+    expect(status('jwt-weak', { 'src/auth.js': "jwt.verify(token, secret, {\n  algorithms: ['none'],\n})\n" })).toBe(1)
+  })
+  test('a template literal with a ${} hole is code, and an IP address written as a string is still reported', () => {
+    const is = stringOnlyLines('a.ts', 'const q = `SELECT * FROM t WHERE id = ${id}`\nconst s = `plain text`')
+    expect(is(1)).toBe(false)
+    expect(status('hardcoded-ip', { 'src/hosts.js': "module.exports = [\n  '45.33.12.9',\n]\n" })).toBe(1)
+  })
   test('a user name and password in a URL string is still reported in a table', () => {
     expect(status('credentials-in-urls', { 'src/samples.rs': 'pub const S: &[(&str, &str)] = &[\n    ("a.js", "const u = \'postgres://admin:Sup3rS3cretPw@db.acme.io/app\';"),\n];\n' })).toBe(1)
   })

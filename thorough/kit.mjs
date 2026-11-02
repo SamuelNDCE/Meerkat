@@ -146,11 +146,14 @@ export const rustTestLines = (file, text) => {
 export const stringOnlyLines = (file, text) => {
   if (!/\.(?:rs|py|go|[cm]?[jt]sx?)$/i.test(file)) return () => false
   const lines = text.split('\n')
-  const blank = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`[^`]*`/g, (s) => s.replace(/[^\n]/g, ' ')).split('\n')
+  // A template literal with ${} is code (its holes are expressions), so it is not blanked and leaves identifiers behind.
+  const blank = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`$\\]|\\[\s\S]|\$(?!\{))*`/g, (s) => s.replace(/[^\n]/g, ' ')).split('\n')
+  const rust = /\.rs$/i.test(file)
   return (line) => {
     const o = (lines[line - 1] ?? '').trim()
-    // Field names and dictionary keys (`bad:`), `&`, `vec!` and `Some(` around the strings are part of a table, not a call.
-    const rest = (blank[line - 1] ?? '').replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ')
+    // In a Rust table, struct field names (`bad:`), `&`, `vec!` and `Some(` around the strings are part of the table. In other languages `key: "value"` is configuration
+    // (`origin: "*"`, `algorithms: ["none"]`), which a security check must still see, so no label is allowed there.
+    const rest = rust ? (blank[line - 1] ?? '').replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ') : (blank[line - 1] ?? '')
     return o !== '' && blank[line - 1] !== undefined && /^[,;()[\]{}\s]*$/.test(rest) && !/^\s*(?:\/\/|#|\/\*|\*)/.test(o)
   }
 }

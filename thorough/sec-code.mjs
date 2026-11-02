@@ -300,7 +300,7 @@ main({
   'jwt-weak': define('jwt-weak', jwtRules, 'tokens are checked with a real signature and a secret kept out of the code',
     { 'auth.js': "const t = jwt.sign({ id: 1 }, 'hunter22')\n" }),
   'hardcoded-ip': define('hardcoded-ip', [hardcodedIp], 'no public IP address is written into the code',
-    { 'server.js': "const upstream = '45.33.12.9'\n" }),
+    { 'server.js': "const upstream = '45.33.12.9'\n" }, { skipSamples: false }), // the finding is the literal value itself, so a string-only line must still be read
   'debug-enabled': define('debug-enabled', debugRules, 'no debug mode is switched on where it should be off',
     { 'settings.py': 'DEBUG = True\n' }),
   'sql-concat': define('sql-concat', [sqlBuilt], 'no SQL statement is built by joining text and values together',
