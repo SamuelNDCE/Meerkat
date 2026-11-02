@@ -110,3 +110,13 @@ describe('electron-context-isolation and the Electron version', () => {
     expect(run('^41.0.0', 'new BrowserWindow({ webPreferences: { sandbox: true } })\n')).toBe(0)
   })
 })
+
+describe('review follow-ups', () => {
+  test('canonicalize alone or starts_with alone is not enough', () => {
+    expect(fsPath('#[tauri::command]\nfn read(name: String) -> String {\n    let p = base().join(name).canonicalize().unwrap();\n    std::fs::read_to_string(&p).unwrap()\n}\n')).toBe(1)
+    expect(fsPath('#[tauri::command]\nfn read(name: String) -> String {\n    let p = base().join(name);\n    if !p.starts_with(base()) { return String::new(); }\n    std::fs::read_to_string(&p).unwrap()\n}\n')).toBe(1)
+  })
+  test('a tainted name anywhere in the fs call is reported, for example the destination of a copy', () => {
+    expect(fsPath('#[tauri::command]\nfn put(dest: String) {\n    std::fs::copy(base(), &dest).unwrap();\n}\n')).toBe(1)
+  })
+})

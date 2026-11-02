@@ -670,8 +670,8 @@ const commandBodies = (text) => {
             if ([...names].some((n) => new RegExp(`\\b${n}\\b`).test(l[2]))) names.add(l[1])
           }
         }
-        // A command that resolves the path and checks it stays inside a folder is doing the check this rule asks for.
-        const guarded = /\bcanonicali[sz]e\b|\bstarts_with\b|\bstrip_prefix\b|\bscope\b/.test(body)
+        // A command that both resolves the path and checks it stays inside a folder is doing the check this rule asks for (one without the other is not enough).
+        const guarded = /\bcanonicali[sz]e\b/.test(body) && /\bstarts_with\b|\bstrip_prefix\b|\bis_allowed\b/.test(body)
         out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names: guarded ? new Set() : names })
         break
       }
@@ -682,13 +682,14 @@ const commandBodies = (text) => {
   return out
 }
 // A path argument that comes straight from the page into std::fs: the call is inside a Tauri command, outside a test module, and the name is one of the command's own parameters.
-const FS_PATH_CALL = /\bfs::\w+\(\s*&?(\w+)\s*[,)]/
+const FS_PATH_CALL = /\bfs::\w+\(/
 const fsPathTest = (line, ctx) => {
   const m = FS_PATH_CALL.exec(line)
   if (!m) return false
+  const args = line.slice(m.index)
   const at = ctx.index + 1
   if (rustTestLines(ctx.file ?? 'x.rs', ctx.text)(at)) return false
-  return commandBodies(ctx.text).some((b) => at >= b.from && at <= b.to && b.names.has(m[1]))
+  return commandBodies(ctx.text).some((b) => at >= b.from && at <= b.to && [...b.names].some((n) => new RegExp(`\\b${n}\\b`).test(args)))
 }
 const tauriJson = (id, title, re, bad, good, extra = {}) => ({ id, title, files: TAURI_JSON, sample: 'src-tauri/tauri.conf.json', re, notIn: TEST_OUT, bad, good, ...extra })
 export const EP_TAURI_CROSS = [
@@ -729,7 +730,7 @@ export const EP_TAURI_CROSS = [
   tauriRs('ep-tauri-command-fs-path', 'a Tauri command passes a path argument straight into std::fs with no scope or canonical check',
     /\bfs::\w+\(\s*&?(?:path|file_path|filepath|file|filename|dest|target)\s*[,)]/,
     '#[tauri::command]\nfn read(path: String) -> String { std::fs::read_to_string(path).unwrap() }',
-    '#[tauri::command]\nfn read(name: String) -> String { let p = notes_dir().join(name); std::fs::read_to_string(&canonical(p)).unwrap() }',
+    '#[tauri::command]\nfn read(name: String) -> String { let p = notes_dir().join(name).canonicalize().unwrap(); if !p.starts_with(notes_dir()) { return String::new(); } std::fs::read_to_string(&p).unwrap() }',
     { test: fsPathTest }),
   tauriRs('ep-tauri-command-program-variable', 'a Tauri command starts a program named by a variable (Command::new with a bare variable)',
     /\bCommand::new\(\s*[a-z_][a-z0-9_]*\s*\)/,

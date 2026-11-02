@@ -76,8 +76,11 @@ const electronMajor = (root) => {
     try {
       const j = JSON.parse(readText(root, x))
       const v = j.dependencies?.electron ?? j.devDependencies?.electron ?? j.peerDependencies?.electron ?? j.optionalDependencies?.electron
-      const m = /(\d+)\./.exec(String(v ?? ''))
-      if (m) majors.push(Number(m[1]))
+      if (v === undefined) continue
+      // Every alternative in a range counts (^41.0.0 || ^9.0.0 is 9); a value with no number in it (latest, a workspace link) makes the version unknown.
+      const nums = String(v).split('||').map((alt) => /(\d+)/.exec(alt)).map((m) => (m ? Number(m[1]) : null))
+      if (nums.some((n) => n === null)) return null
+      majors.push(...nums)
     } catch {
       // not a readable manifest: skip it
     }
