@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test } from 'vitest'
 // @ts-ignore plain .mjs module has no type declarations
-import { stringOnlyLines } from '../thorough/kit.mjs'
+import { blankStrings, stringOnlyLines } from '../thorough/kit.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const made: string[] = []
@@ -47,6 +47,43 @@ describe('stringOnlyLines', () => {
   })
   test('other file kinds are never data', () => {
     expect(stringOnlyLines('a.md', '"x"')(1)).toBe(false)
+  })
+})
+
+describe('blankStrings', () => {
+  const lines = (t: string, py = false) => blankStrings(t, py).split('\n')
+  test('a nested template literal keeps the code after it as code', () => {
+    const t = ['const a = `x ${ f(`b ${c}`) } y`', 'crypto.createCipher("aes192", pw)', 'const z = 1'].join('\n')
+    const out = lines(t)
+    expect(out[1]).toContain('crypto.createCipher(')
+    expect(out[2]).toBe('const z = 1')
+    expect(out[0]).toContain('f(')
+  })
+  test('a multi-line nested template does not swallow the lines below', () => {
+    const t = ['const a = `line one', '  ${ g(`inner', '  text`) }', '  end`', 'res.cookie("s", t, { secure: false })'].join('\n')
+    expect(lines(t)[4]).toContain('res.cookie(')
+  })
+  test('a backtick or an apostrophe in a comment opens nothing', () => {
+    const t = ['// use `x` here, don\'t forget', 'danger(1)', '/* a `b */ danger(2)', 'danger(3)'].join('\n')
+    const out = lines(t)
+    expect(out[1]).toBe('danger(1)')
+    expect(out[2]).toContain('danger(2)')
+    expect(out[3]).toBe('danger(3)')
+    expect(lines('# it\'s `py`\nprint(1)', true)[1]).toBe('print(1)')
+  })
+  test('a template literal that is never closed stays code', () => {
+    const t = 'const a = `never closed\nexec(userInput)'
+    expect(blankStrings(t)).toContain('exec(userInput)')
+  })
+  test('plain strings and Rust raw strings are blanked, lifetimes are not strings', () => {
+    expect(lines('x("a b", \'c\')')[0].trim()).toBe('x(     ,    )')
+    expect(lines('let s = r#"say "hi" there"#;')[0].replace(/ +/g, ' ')).toBe('let s = ;')
+    expect(lines("fn f<'a, 'b>(x: &'a str)")[0]).toContain('fn f<')
+  })
+  test('the text length and the newlines never change', () => {
+    const t = 'a `b\nc ${ d } e` f "g" r#"h\ni"# \'j\'\n'
+    expect(blankStrings(t).length).toBe(t.length)
+    expect(blankStrings(t).split('\n').length).toBe(t.split('\n').length)
   })
 })
 

@@ -140,15 +140,87 @@ export const rustTestLines = (file, text) => {
   }
   return (line) => ranges.some(([a, b]) => line >= a && line <= b)
 }
+// Replaces the text of string literals with spaces (newlines kept), so what is left is the code around them. A small scanner, not a regex, because template literals nest:
+// the text of `a ${ f(`b`) } c` is blanked but its hole `${ ... }` stays as code, with its own strings blanked inside it. Raw strings (Rust r#"..."#), single-line quotes,
+// and comments (// and /* */, and # in Python) are understood, so an apostrophe or a backtick in a comment never opens a string. A template literal that is never closed
+// is left as code, and a template literal with no hole is blanked completely, backticks included. Anything unclear is left unblanked: the result then reads as code.
+export function blankStrings(text, python = false) {
+  const n = text.length
+  const spaces = (s) => s.replace(/[^\n]/g, ' ')
+  const raw = /(?<![A-Za-z0-9_])(?:b|c)?r(#*)"/y
+  // text[start] is a backtick; returns [output, end index]
+  const template = (start) => {
+    let i = start + 1
+    let out = '`'
+    let hole = false
+    while (i < n) {
+      const c = text[i]
+      if (c === '\\') { out += spaces(text.slice(i, i + 2)); i += 2; continue }
+      if (c === '`') { out += '`'; return [hole ? out : spaces(out), i + 1] }
+      if (c === '$' && text[i + 1] === '{') {
+        hole = true
+        let depth = 1
+        let j = i + 2
+        let inner = '${'
+        while (j < n && depth > 0) {
+          const d = text[j]
+          if (d === '`') { const [t, e] = template(j); inner += t; j = e; continue }
+          if (d === '"' || d === "'") {
+            let k = j + 1
+            while (k < n && text[k] !== d && text[k] !== '\n') k += text[k] === '\\' ? 2 : 1
+            inner += spaces(text.slice(j, Math.min(n, k + 1)))
+            j = Math.min(n, k + 1)
+            continue
+          }
+          if (d === '{') depth++
+          else if (d === '}') depth--
+          inner += d
+          j++
+        }
+        out += inner
+        i = j
+        continue
+      }
+      out += c === '\n' ? '\n' : ' '
+      i++
+    }
+    return [text.slice(start), n] // never closed: leave it as code
+  }
+  let out = ''
+  let i = 0
+  while (i < n) {
+    const c = text[i]
+    if (c === '/' && text[i + 1] === '/') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
+    if (c === '/' && text[i + 1] === '*') { const e = text.indexOf('*/', i + 2); const end = e < 0 ? n : e + 2; out += text.slice(i, end); i = end; continue }
+    if (python && c === '#') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
+    if (c === '"' || c === "'") {
+      raw.lastIndex = i
+      let k = i + 1
+      while (k < n && text[k] !== c && text[k] !== '\n') k += text[k] === '\\' ? 2 : 1
+      if (k < n && text[k] === c) { out += spaces(text.slice(i, k + 1)); i = k + 1; continue }
+      out += c; i++; continue // an apostrophe that opens nothing
+    }
+    if (c === '`') { const [t, e] = template(i); out += t; i = e; continue }
+    if (c === 'r' || c === 'b' || c === 'c') {
+      raw.lastIndex = i
+      const m = raw.exec(text)
+      if (m) {
+        const close = text.indexOf('"' + m[1], i + m[0].length)
+        if (close >= 0) { const end = close + 1 + m[1].length; out += spaces(text.slice(i, end)); i = end; continue }
+      }
+    }
+    out += c
+    i++
+  }
+  return out
+}
 // Returns a function: is this 1-based line only string literals and punctuation (a table of sample code a detector or a test feeds to itself, such as
 // `("js", r#"db.query(...)"#),`, or a line inside a multi-line string)? Strings are blanked first, raw and multi-line ones too; a line with any identifier left
 // outside a string is code and is not data. Only for checks that look for code patterns; never for secrets, where the string itself is the problem.
 export const stringOnlyLines = (file, text) => {
   if (!/\.(?:rs|py|go|[cm]?[jt]sx?)$/i.test(file)) return () => false
   const lines = text.split('\n')
-  // A template literal with ${} is code (its holes are expressions), so it is not blanked and leaves identifiers behind.
-  // The whole literal is always matched, so the opening and closing backticks stay paired; one with a ${} hole is then left as it is.
-  const blank = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\[\s\S])*`/g, (s) => (s[0] === '`' && s.includes('${') ? s : s.replace(/[^\n]/g, ' '))).split('\n')
+  const blank = blankStrings(text, /\.py$/i.test(file)).split('\n')
   const rust = /\.rs$/i.test(file)
   return (line) => {
     const o = (lines[line - 1] ?? '').trim()
