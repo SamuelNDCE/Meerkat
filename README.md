@@ -39,8 +39,9 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 **Why it is good**
 
 - **Honest.** NOT RUN is never a pass. A check that stopped working is caught by `meerkat self-test`.
-- **Accurate.** Over a thousand rules, each with its own bad and good sample, plus a corpus of planted defects. Recall and false-alarm rates are committed to the repository, see [docs/accuracy.md](docs/accuracy.md).
-- **Fast.** The quick preset runs every short check in seconds. Light checks run together, heavy ones run alone.
+- **Accurate.** Over a thousand rules, each with its own bad and good sample, plus a corpus of planted defects (97.4% of 622 detected on 2026-11-02) and a ground-truth benchmark on a known vulnerable open-source project (`tools/benchmark.mjs`, which is far lower and lists the real misses). Both are committed to the repository, see [docs/accuracy.md](docs/accuracy.md).
+- **Fast.** The quick preset runs every short check in seconds. Light checks run together, heavy ones run alone, and `full` and `thorough` leave out your project's own window checks unless you ask, so they are much faster, see [docs/scheduling.md](docs/scheduling.md).
+- **Quiet.** Pedantic quality rules (and the whole Rust style family) are hidden by default and counted, so a first scan lists what matters. `MEERKAT_FINDINGS=all` shows everything.
 - **Private.** Zero dependencies, no telemetry, nothing uploaded. The one network call is a once-a-day version look-up you can turn off.
 - **Yours.** Add a command as a check in one line, write a check in JavaScript, make your own presets, silence a known finding with a reason.
 - **Readable by people and machines.** A live board and a results screen for you; JSON, SARIF, Markdown and an MCP server for scripts, CI and AI agents.
@@ -49,8 +50,10 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 
 | Feature | In one line |
 |---|---|
-| **Presets** | `quick` before every push, `full` before a release, plus security, ui, performance, refactor, ci and more |
-| **Mature detectors (opt-in)** | `--preset detectors` runs osv-scanner, Semgrep, clippy and `tsc --strict` if installed, keeping their rule ids; a missing tool is NOT RUN with an install hint |
+| **Presets** | `quick` before every push, `full` before a release (it leaves out your project's own window checks; `MEERKAT_WINDOWS=1` or `release` runs them), plus security, ui, performance, refactor, ci, `detectors` and more |
+| **Mature detectors (opt-in)** | `--preset detectors` runs osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint if installed, keeping their rule ids; a missing tool is NOT RUN with an install hint. Some need the network or have their own licence: see [docs/credits.md](docs/credits.md) |
+| **Cross-tool confirmation** | When two checks report the same problem it is one finding, marked "confirmed by N checks" and sorted first ([docs/findings.md](docs/findings.md)) |
+| **Quiet by default** | Pedantic quality rules (`lib/quarantine.mjs`) and the Rust style family are hidden and counted ("hidden by default"); `MEERKAT_FINDINGS=all` lists every one |
 | **Suites and sub-checks** | Checks grouped by topic; each reports every rule it tested, so a failure names the exact rule |
 | **Live board** | Progress, what is running now, a status line, a bug counter by severity, a timeline; skip a stuck check with a key |
 | **Results screen** | Findings worst-first with severity in words and colour and a reason, every check with its time, a scrolling timeline |
