@@ -17,7 +17,7 @@
 // Regexes are linear: bounded quantifiers ({0,200}) and no nested open spans, so a hostile 100 KB line cannot blow up.
 // Rules that need a sibling line (for example a handler body) look only at a fixed window of lines after the match.
 
-import { inDevOnlyBlock, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked } from './guards.mjs'
+import { appDeniesWindowOpen, argIsModuleConstString, channelChecked, holesAllWrapped, inDevOnlyBlock, inIpcHandler, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked, withinCallBody } from './guards.mjs'
 import { rustTestLines } from './kit.mjs'
 const JS = ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'jsx', 'tsx']
 const HTML = ['html', 'htm']
@@ -159,11 +159,13 @@ export const EP_WINDOW = [
     /\b(?:loadURL|loadUrl)\(\s*(?!process\.env\.)[A-Za-z_$][\w$.]*\s*[,)]/,
     'win.loadURL(target)',
     "win.loadFile('index.html')",
-    { severity: 'medium' }),
+    { severity: 'medium', unless: argIsModuleConstString('(?:loadURL|loadUrl)') }),
   js('ep-load-url-concat', 'a window address is built by joining strings or template values, which can take input from outside the app',
     /\b(?:loadURL|loadUrl)\(\s*(?:['"`][^'"`]{0,200}['"`]\s*\+|`[^`]{0,200}\$\{)/,
     'win.loadURL(`https://app.example.com/?q=${query}`)',
-    "win.loadURL('https://app.example.com/')"),
+    "win.loadURL('https://app.example.com/')",
+    // A data: address whose every hole is encodeURIComponent(...) is the app's own page, percent-encoded: it cannot name another origin.
+    { unless: holesAllWrapped('(?:loadURL|loadUrl)', 'encodeURIComponent', /^data:text\/html/) }),
   js('ep-load-file-protocol', 'a window loads a page through file://, which gets extra privileges (checklist item 18 prefers a custom protocol)',
     /\b(?:loadURL|loadUrl)\(\s*['"`]file:\/\//,
     "win.loadURL('file:///app/index.html')",
@@ -172,11 +174,14 @@ export const EP_WINDOW = [
     /\bwebContents\.executeJavaScript\(\s*(?!process\.env\.)[A-Za-z_$][\w$.]*\s*[,)]/,
     'win.webContents.executeJavaScript(code)',
     "win.webContents.executeJavaScript('document.title')",
-    { unless: (_l, ctx) => inDevOnlyBlock(ctx) }),
+    // A module-level const holding a fixed string is not input from outside.
+    { unless: (l, ctx) => inDevOnlyBlock(ctx) || argIsModuleConstString('executeJavaScript')(l, ctx) }),
   js('ep-execute-js-concat', 'builds the script run inside a page from joined strings or template values',
     /\bexecuteJavaScript\(\s*(?:['"`][^'"`]{0,200}['"`]\s*\+|`[^`]{0,200}\$\{)/,
     'win.webContents.executeJavaScript(`window.user = ${input}`)',
-    "win.webContents.executeJavaScript('window.ready = true')"),
+    "win.webContents.executeJavaScript('window.ready = true')",
+    // JSON.stringify(value) is a quoted, escaped JavaScript literal: a template whose every hole is one cannot change the shape of the script.
+    { unless: holesAllWrapped('executeJavaScript', 'JSON\\.stringify') }),
   js('ep-insert-css-variable', 'inserts CSS from a bare variable into a page; CSS can read and send page data through selectors and URLs',
     /\binsertCSS\(\s*[A-Za-z_$][\w$.]*\s*[,)]/,
     'contents.insertCSS(css)',
@@ -199,7 +204,8 @@ export const EP_WINDOW = [
     lineIf(/\breturn\s+true\b|=>\s*true\b/, (t) => /setPermissionCheckHandler/.test(t)),
     'ses.setPermissionCheckHandler(() => true)',
     "ses.setPermissionCheckHandler((wc, permission) => permission === 'clipboard-read')",
-    { test: lineIf(/\breturn\s+true\b|=>\s*true\b/, (t) => /setPermissionCheckHandler/.test(t)) }),
+    // The yes must sit in the handler (within 20 lines below the setPermissionCheckHandler call), not in any other function of a file that also sets one.
+    { test: (line, ctx) => lineIf(/\breturn\s+true\b|=>\s*true\b/, (t) => /setPermissionCheckHandler/.test(t))(line, ctx) && withinCallBody('setPermissionCheckHandler', 20)(line, ctx) }),
   js('ep-cert-verify-null-accept', 'a certificate verify proc answers 0 for every certificate, which accepts it without checks',
     lineIf(/\b(?:callback|cb|resolve)\(\s*0\s*\)/, (t) => /setCertificateVerifyProc/.test(t)),
     'ses.setCertificateVerifyProc((request, cb) => cb(0))',
@@ -279,7 +285,9 @@ export const EP_IPC_PRELOAD = [
   js('ep-ipc-listen-channel-variable', 'the preload listens on a channel name passed in by the page',
     /\bipcRenderer\.(?:on|once|removeListener)\(\s*(?:channel|ch|chan|topic)\b/,
     'ipcRenderer.on(channel, callback)',
-    "ipcRenderer.on('update-counter', callback)"),
+    "ipcRenderer.on('update-counter', callback)",
+    // The channel was checked against a list on the lines above (ALLOWED.includes(channel), a thrown error otherwise).
+    { unless: channelChecked }),
   js('ep-ipc-channel-built', 'the preload builds an IPC channel name from a template or a variable and concatenation',
     /\bipcRenderer\.(?:invoke|send)\(\s*(?:`[^`]{0,120}\$\{|[A-Za-z_$][\w$]*\s*\+)/,
     'ipcRenderer.invoke(`file:${operation}`)',
@@ -295,7 +303,8 @@ export const EP_IPC_PRELOAD = [
     'ipcMain.handle("read", async () => { try { return read() } catch (err) { return { ok: false } } })',
     { test: lineIf(/\bcatch\s*\(\s*\w+\s*\)\s*\{\s*return\s+\w+\s*;?\s*\}/, (t) => /ipcMain/.test(t)) }),
   js('ep-ipc-stack-sent', 'an error stack trace is sent back to the page',
-    /\b(?:return|reply|send)\b.*\b(?:error|err|e)\.stack\b/,
+    // A reply or send always goes somewhere; a bare return counts only inside an ipcMain handler (a helper that describes an error for the main process is not a reply).
+    (line, ctx) => /\b(?:reply|send)\b.*\b(?:error|err|e)\.stack\b/.test(line) || (/\breturn\b.*\b(?:error|err|e)\.stack\b/.test(line) && inIpcHandler(line, ctx)),
     "event.reply('read-error', err.stack)",
     "event.reply('read-error', 'read failed')"),
   js('ep-ipc-remove-all-listeners', 'the main process removes every listener on a channel, which can silently drop another feature handler',
@@ -616,7 +625,9 @@ export const EP_CONTENT_RENDERER = [
   js('ep-window-open-variable', 'the page opens a window whose address comes from a bare variable',
     /\bwindow\.open\(\s*(?![A-Z][A-Z0-9_]{2,}\s*[,)])[A-Za-z_$][\w$.]*\s*[,)]/,
     'window.open(url)',
-    "window.open('https://docs.example.com')"),
+    "window.open('https://docs.example.com')",
+    // The app's main process denies every window the page opens (setWindowOpenHandler returning deny) and decides itself, so the page's variable never opens one.
+    { unless: appDeniesWindowOpen }),
   js('ep-location-from-variable', 'the page navigates to an address taken from a bare variable',
     /(?<![\w.])(?<!\b(?:const|let|var)\s)(?:window\.)?location(?:\.href)?\s*=\s*(?!['"`=])[A-Za-z_$]/,
     'location.href = target',

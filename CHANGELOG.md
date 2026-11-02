@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- fewer false alarms in the security and Electron/Rust rules (NeuralVault audits): window.open is fine when the app denies all windows; constant or escaped executeJavaScript/loadURL arguments, allowlisted IPC channels and non-handler `return true` are not reported; Rust secret-log, env::set_var, Vec::set_len and unwrap rules ignore test code, message words and File::set_len; Docker USER is judged on the final stage; changelog prose, comments, timestamp URLs, Electron shells and boolean-guarded merges are not reported
 - the code-pattern checks of the security-plus pack (cookie flags, JWT, SQL, CORS, XML, weak crypto, regex, redirects, paths) skip lines that are only string literals and punctuation, such as a detector table of sample vulnerable code; the credentials-in-URL check does not, because there the string is the problem
 - PII in a Rust test module is not reported; meta-seo leaves mockups, prototypes and generated code maps alone
 - documentation and markup hygiene findings (links, final newline, code fence language, headings, whitespace, HTML structure, SEO tags) and two Rust style rules are low, not medium

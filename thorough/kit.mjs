@@ -143,6 +143,38 @@ export const rustTestLines =(file, text) => {
   }
   return (line) => ranges.some(([a, b]) => line >= a && line <= b)
 }
+// Whether the line at ctx.index (a rule context: { file, lines, index, text, project }) is Rust test code: inside a #[cfg(test)] module, inside a #[test] / #[tokio::test]
+// function, or anywhere in a file that starts with #![cfg(test)] or that its parent module declares as `#[cfg(test)] mod name;`. None of that ships.
+const rustTestCache = new WeakMap()
+export const rustInTest = (ctx) => {
+  let fn = rustTestCache.get(ctx.lines)
+  if (fn === undefined) {
+    const text = ctx.text ?? ctx.lines.join('\n')
+    const mod = rustTestLines(ctx.file ?? 'a.rs', text)
+    const blanked = /#\[(?:[\w:]+::)?test\b/.test(text) ? rustBlank(text) : ''
+    const fns = []
+    for (const m of blanked.matchAll(/#\[(?:[\w:]+::)?test(?:\([^\]\n]*\))?\][ \t]*\r?\n(?:[ \t]*#\[[^\]\n]*\][ \t]*\r?\n)*[^{;\n]*\bfn\s+\w+[^{;]*\{/g)) {
+      let depth = 0
+      for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
+        if (blanked[i] === '{') depth++
+        else if (blanked[i] === '}' && --depth === 0) {
+          fns.push([blanked.slice(0, m.index).split('\n').length, blanked.slice(0, i).split('\n').length])
+          break
+        }
+      }
+    }
+    let whole = /^\s*#!\[cfg\(test\)\]/m.test(text)
+    const f = /^(.*?)\/?([^/]+)\.rs$/.exec(ctx.file ?? '')
+    if (!whole && f && !/^(?:mod|lib|main)$/.test(f[2]) && ctx.project?.read) {
+      const pre = f[1] ? `${f[1]}/` : ''
+      const decl = new RegExp(`#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]\\n]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+${f[2]}\\s*;`)
+      whole = [`${pre}mod.rs`, `${pre}lib.rs`, `${pre}main.rs`, ...(f[1] ? [`${f[1]}.rs`] : [])].some((p) => ctx.project.files?.includes(p) && decl.test(ctx.project.read(p) ?? ''))
+    }
+    fn = (line) => whole || mod(line) || fns.some(([a, b]) => line >= a && line <= b)
+    rustTestCache.set(ctx.lines, fn)
+  }
+  return fn(ctx.index + 1)
+}
 // Replaces the text of string literals with spaces (newlines kept), so what is left is the code around them. A small scanner, not a regex, because template literals nest:
 // the text of `a ${ f(`b`) } c` is blanked but its hole `${ ... }` stays as code, with its own strings blanked inside it. Raw strings (Rust r#"..."#), single-line quotes,
 // and comments (// and /* */, and # in Python) are understood, so an apostrophe or a backtick in a comment never opens a string. A template literal that is never closed

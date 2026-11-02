@@ -122,6 +122,8 @@ const piiInLogs = (root) => {
     const scan = isRust ? rustBlank(text).split('\n').map((l) => l.replace(/\r$/, '')) : ls
     const inTest = rustTestLines(x, text)
     scan.forEach((line, i) => {
+      // A line that is only a comment (// ... , /* ... , * ... , # ... in Python) is text, not a call.
+      if (!isRust && (/^\s*(?:\/\/|\/\*|\*)/.test(line) || (/\.py$/i.test(x) && /^\s*#/.test(line)))) return
       const m = LOG_CALL.exec(line)
       if (!m || inTest(i + 1)) return
       // Only what is interpolated counts: the words of a string or template are text, not a value. A ${...} keeps its expression.
@@ -129,6 +131,8 @@ const piiInLogs = (root) => {
         .slice(m.index + m[0].length)
         .replace(/`([^`]*)`/g, (s, body) => ` ${[...body.matchAll(/\$\{([^}]*)\}/g)].map((e) => e[1]).join(' ')} `)
         .replace(STRING_LITERAL, '')
+        // A trailing comment after the call is not logged: `log('done') // token count`.
+        .replace(isRust ? /$^/ : /\s\/\/.*$/, '')
       const id = [...args.matchAll(SENSITIVE_NAME)].find((e) => !CLEANING_CALL.test(enclosingCallee(args, e.index)))
       if (!id) return
       const near = [ls[i - 2] ?? '', ls[i - 1] ?? '', ls[i] ?? ''].join('\n')
