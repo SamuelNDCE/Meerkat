@@ -14,9 +14,13 @@ for (const p of PACKS) checks += (await loadChecks(join(MEERKAT_DIR, 'packs', p)
 // The suite and sub-check totals come from the generated list (node tools/gen-checks.mjs), so run that first after changing checks.
 const summary = /\*\*(\d+) checks\*\* in (\d+) suites with (\d+) sub-checks/.exec(readFileSync(join(MEERKAT_DIR, 'docs', 'checks.md'), 'utf8')) ?? []
 
+// The accuracy figure comes from the generated corpus section of docs/accuracy.md (node tools/accuracy-corpus.mjs --run), so it is measured, not typed.
+const accuracy = /planted defects in \d+ projects, \d+ detected \((\d+(?:\.\d+)?)%\)/.exec(readFileSync(join(MEERKAT_DIR, 'docs', 'accuracy.md'), 'utf8'))
+
 // label, value, colour of the value half
 const BADGES = [
   ['licence', 'PCL 1.0', '#8a5cf5'],
+  ['planted-defect recall', accuracy ? `${accuracy[1]}%` : '?', '#2ea44f'],
   ['version', `v${VERSION}`, '#7d5bd6'], // from package.json, so it follows every bump when this is run again
   ['telemetry', 'none', '#2ea44f'],
   ['dependencies', 'zero', '#2ea44f'],
