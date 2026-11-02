@@ -73,7 +73,7 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
   const na = []
   // Other files of the project, for a guard that must look beyond the file with the hit (read on demand).
   const project = { files: usable, read }
-  const everything = showAll()
+  const everything = showAll() || process.argv.includes('--fixtures') // a check proves itself on its own fixture with every rule on
   for (const rule of rules) {
     // Pedantic style rules (undocumented Rust items, string errors, ...) are only evaluated when asked for with MEERKAT_FINDINGS=all.
     if (!everything && isPedanticRule(rule.id, rule.severity ?? RULE_SEVERITY[rule.id])) {

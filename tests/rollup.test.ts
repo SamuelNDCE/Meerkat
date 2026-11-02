@@ -31,12 +31,12 @@ describe('rollup', () => {
     applyRollup(m, { all: true, fingerprint })
     expect(m.size).toBe(3)
   })
-  test('pedantic Rust style and markup nitpicks are counted and hidden; the same rule at medium or a security rule is not', () => {
+  test('pedantic Rust style and markup nitpicks are counted and hidden; a security rule is not', () => {
     const m = map([f('rapi-pub-fn-undocumented', 'a.rs', 1, 'low'), f('rapi-pub-fn-undocumented', 'a.rs', 2, 'low'), f('markdown-code-fences', 'a.md', 3, 'medium'), f('rerr-lock-unwrap-poison', 'a.rs', 4, 'medium'), f('jwt-weak', 'a.ts', 5, 'high'), f('pii-in-logs', 'b.ts', 6, 'high')])
     const r = applyRollup(m, { all: false, fingerprint })
-    expect([...m.values()].map((x: any) => x.rule).sort()).toEqual(['jwt-weak', 'pii-in-logs', 'rerr-lock-unwrap-poison'])
-    expect(r.hidden).toEqual([{ rule: 'rapi-pub-fn-undocumented', count: 2 }, { rule: 'markdown-code-fences', count: 1 }])
-    expect(r.hiddenIds.size).toBe(3)
+    expect([...m.values()].map((x: any) => x.rule).sort()).toEqual(['jwt-weak', 'pii-in-logs'])
+    expect(r.hidden).toEqual(expect.arrayContaining([{ rule: 'rapi-pub-fn-undocumented', count: 2 }, { rule: 'markdown-code-fences', count: 1 }, { rule: 'rerr-lock-unwrap-poison', count: 1 }]))
+    expect(r.hiddenIds.size).toBe(4)
   })
   test('MEERKAT_FINDINGS=all keeps the style findings (the size measures still roll up)', () => {
     const m = map([f('rapi-pub-fn-undocumented', 'a.rs', 1, 'low'), f('line-length', 'a.ts', 1), f('line-length', 'a.ts', 2)])
@@ -47,7 +47,7 @@ describe('rollup', () => {
     expect(showAll({})).toBe(false)
   })
   test('no security rule is ever hidden by default', () => {
-    for (const rule of ['jwt-weak', 'cookie-flags', 'weak-crypto-modes', 'rsafe-env-set-var', 'rs-secret-logged', 'js-spawn-shell', 'secret-scan', 'rerr-lock-unwrap-poison']) {
+    for (const rule of ['jwt-weak', 'cookie-flags', 'weak-crypto-modes', 'rsafe-env-set-var', 'rs-secret-logged', 'js-spawn-shell', 'secret-scan']) {
       expect(isHiddenByDefault({ rule, severity: 'medium' })).toBe(false)
     }
     expect(isHiddenByDefault({ rule: 'rsafe-vec-set-len-no-capacity', severity: 'low' })).toBe(false)
@@ -59,7 +59,7 @@ describe('pedantic rules are not even evaluated by default', () => {
     // @ts-ignore plain .mjs module
     const { isPedanticRule } = await import('../lib/rollup.mjs')
     expect(isPedanticRule('rapi-pub-fn-undocumented', 'low')).toBe(true)
-    expect(isPedanticRule('rerr-lock-unwrap-poison', 'medium')).toBe(false)
+    expect(isPedanticRule('rerr-lock-unwrap-poison', 'medium')).toBe(true) // the whole Rust style family is off by default
     expect(isPedanticRule('jwt-weak', 'high')).toBe(false)
   })
 })

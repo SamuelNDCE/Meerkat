@@ -110,3 +110,14 @@ describe('findings with no line number', () => {
     expect(run([a, b]).out).toHaveLength(2)
   })
 })
+
+describe('grouping does not chain through a third finding', () => {
+  test('two rules of one check stay apart even when another check matches both', () => {
+    const a = f({ check: 'secrets-plus', suite: 'secrets', rule: 'aws-session-key-id', file: 'a.py', line: 3, severity: 'high', message: 'aws id' })
+    const c = f({ check: 'secrets-plus', suite: 'secrets', rule: 'generic-keyword-secret', file: 'a.py', line: 3, severity: 'high', message: 'keyword secret' })
+    const b = f({ check: 'secret-scan', suite: 'secrets', rule: null, file: 'a.py', line: 3, severity: 'high', message: 'secret' })
+    const { out } = run([a, c, b])
+    expect(out.map((x: any) => x.rule).sort()).toContain('aws-session-key-id')
+    expect(out.map((x: any) => x.rule)).toContain('generic-keyword-secret')
+  })
+})
