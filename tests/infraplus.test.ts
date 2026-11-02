@@ -220,6 +220,23 @@ describe('the checks', () => {
     expect(run('ip-docker', ['--root', dir]).stdout).not.toMatch(/MEERKAT-SUB FAIL docker-dockerignore-missing/)
   })
 
+  test('the .dockerignore of the BUILD CONTEXT counts: a compose context, or a Dockerfile built from the project root', () => {
+    const missing = /MEERKAT-SUB FAIL docker-dockerignore-missing/
+    const df = lines('FROM alpine:3.20', 'USER app', 'HEALTHCHECK CMD true')
+    // compose in the same folder points the context at the project root, which has the .dockerignore
+    const viaCompose = writeTree({ '.dockerignore': 'node_modules\n', 'apps/s/Dockerfile': df, 'apps/s/docker-compose.yml': lines('services:', '  s:', '    build:', '      context: ../..', '      dockerfile: apps/s/Dockerfile') })
+    expect(run('ip-docker', ['--root', viaCompose]).stdout).not.toMatch(missing)
+    // the Dockerfile says it is built from the workspace root
+    const viaHeader = writeTree({ '.dockerignore': 'node_modules\n', 'apps/s/Dockerfile': lines('# Build from the WORKSPACE ROOT:', '#   docker build -f apps/s/Dockerfile -t s .', df) })
+    expect(run('ip-docker', ['--root', viaHeader]).stdout).not.toMatch(missing)
+    // a root .dockerignore does not cover a Dockerfile in a subfolder that is built from its own folder
+    const own = writeTree({ '.dockerignore': 'node_modules\n', 'apps/s/Dockerfile': df })
+    expect(run('ip-docker', ['--root', own]).stdout).toMatch(missing)
+    // a compose context that is the Dockerfile's own folder, with no .dockerignore there, is still a finding
+    const noIgnore = writeTree({ 'apps/s/Dockerfile': df, 'apps/s/docker-compose.yml': lines('services:', '  s:', '    build:', '      context: .') })
+    expect(run('ip-docker', ['--root', noIgnore]).stdout).toMatch(missing)
+  })
+
   test('a folder of workloads with no NetworkPolicy is a finding', () => {
     const dir = writeTree({ 'k8s/app.yaml': CLEAN['k8s/app.yaml'].split('---')[0] })
     expect(run('ip-k8s', ['--root', dir]).stdout).toMatch(/MEERKAT-SUB FAIL k8s-networkpolicy-missing/)
