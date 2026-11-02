@@ -3,7 +3,7 @@
 //   node thorough/quality.mjs <check> [--root <dir>]      node thorough/quality.mjs <check> --fixtures   (must exit 1)
 // Limits are set in .meerkat-budgets.json under "quality". A finding you accept goes in .meerkat-quality-allow (a path, or path:line).
 import { posix } from 'node:path'
-import { finish, isFixture, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isTestFile, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.quality ?? {}
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?)\//i
@@ -128,7 +128,7 @@ const debugLeftovers = (root) => {
   const bins = binFiles(root)
   const f = []
   for (const x of files(root, SOURCE)) {
-    const testy = TEST_FILE.test(x)
+    const testy = TEST_FILE.test(x) || isTestFile(x)
     const cliish = /(^|\/)(bin|scripts|tools|cli)\//i.test(x) || bins.has(x) || /^#!/.test(readText(root, x)) || /\brequire\.main\s*===\s*module\b|\bprocess\.argv\b|\bimport\.meta\.main\b/.test(readText(root, x))
     const lines = readText(root, x).split('\n')
     lines.forEach((line, i) => {
@@ -185,15 +185,35 @@ const EMPTY_CATCH = [
   /\bcatch\s*(?:\([^)]*\))?\s*\{\s*\}/g,
   /\bexcept(?:\s+[\w.()[\], ]+?)?(?:\s+as\s+\w+)?\s*:\s*pass(?![ \t]*#)\b/g,
 ]
+// The text with // and /* */ comments turned to spaces (strings are left alone), so the length and the line numbers stay the same.
+const blankComments = (src) => src.replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m) => (m[0] === '/' ? m.replace(/[^\n]/g, ' ') : m))
+const BEST_EFFORT = /best[- ]effort|ignor|swallow|non-?fatal|harmless|deliberate|intentional|optional|not (?:an )?(?:error|fatal|critical)|safe to|may not exist|fall ?back|nothing to do|no-?op/i
+// An empty handler is deliberate when a comment after it on the same line, or a comment line right above it that says why, explains it.
+const documentedHandler = (raw, t, index, end) => {
+  if (/\/\/|\/\*/.test(raw.slice(index, end))) return true
+  const lineEnd = raw.indexOf('\n', end)
+  const stop = lineEnd < 0 ? raw.length : lineEnd
+  // The comment text on the rest of the line: characters that were blanked out of t but are not blank in raw (a // inside a string stays in t).
+  let same = ''
+  for (let k = end; k < stop; k++) if (t[k] === ' ') same += raw[k]
+  if (BEST_EFFORT.test(same)) return true
+  const above = raw.slice(0, index).split('\n')
+  above.pop()
+  const prev = above.reverse().find((l) => l.trim()) ?? ''
+  return /^\s*(\/\/|\*|\/\*)/.test(prev) && BEST_EFFORT.test(prev)
+}
 const emptyCatch = (root) => {
   const allow = allowSet(root)
   const f = []
   for (const x of files(root, SOURCE)) {
     if (allow.has(x)) continue
-    const t = readText(root, x)
+    const raw = readText(root, x)
+    const py = /\.py$/.test(x)
+    const t = py ? raw : blankComments(raw)
     for (const re of EMPTY_CATCH) {
       for (const m of t.matchAll(re)) {
         const line = lineOf(t, m.index)
+        if (!py && documentedHandler(raw, t, m.index, m.index + m[0].length)) continue
         if (!allowed(allow, x, line)) f.push(`${x}:${line} swallows an error with an empty handler`)
       }
     }

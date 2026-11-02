@@ -113,16 +113,19 @@ const jsonParseInLoop = (root) => {
   const per = []
   let total = 0
   for (const x of files(root, SCRIPT)) {
-    if (allowed(allow, id, x)) continue
+    if (allowed(allow, id, x) || TEST_PATH.test(x)) continue
     const cl = codeLines(readText(root, x))
     const inLoop = regions(cl, LOOP)
     let n = 0
+    let first = 0
     cl.forEach((l, i) => {
-      if (inLoop[i]) n += (l.match(JSON_CALL) ?? []).length
+      const c = inLoop[i] ? (l.match(JSON_CALL) ?? []).length : 0
+      if (c && !first) first = i + 1
+      n += c
     })
     if (n) {
       total += n
-      per.push(`${x} calls JSON.parse or JSON.stringify ${n} time(s) inside a loop`)
+      per.push(`${x}:${first} calls JSON.parse or JSON.stringify ${n} time(s) inside a loop`)
     }
   }
   if (total > max) return finish(id, [`${total} JSON calls sit inside loops, over the budget of ${max} (set health.maxJsonInLoop)`, ...per])
