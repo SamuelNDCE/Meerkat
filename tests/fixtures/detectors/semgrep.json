@@ -1,0 +1,20 @@
+{
+  "version": "1.100.0",
+  "results": [
+    {
+      "check_id": "javascript.lang.security.audit.eval-detected.eval-detected",
+      "path": "src/run.js",
+      "start": { "line": 12, "col": 3 },
+      "end": { "line": 12, "col": 20 },
+      "extra": { "message": "Detected use of eval(). This can allow arbitrary code execution.", "severity": "WARNING", "metadata": {} }
+    },
+    {
+      "check_id": "python.django.security.injection.sql.sql-injection-using-raw.sql-injection-using-raw",
+      "path": "app/views.py",
+      "start": { "line": 40, "col": 5 },
+      "end": { "line": 40, "col": 30 },
+      "extra": { "message": "User-controlled data flows into a raw SQL query.", "severity": "ERROR", "metadata": {} }
+    }
+  ],
+  "errors": []
+}

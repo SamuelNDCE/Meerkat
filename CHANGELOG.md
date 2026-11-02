@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- a new opt-in detectors pack and `--preset detectors` run mature tools when installed and keep their own rule ids: osv-scanner (advisories with the fixed version), Semgrep security-audit, cargo clippy correctness and suspicious lints, and tsc --strict (capped at 200 with a rollup); a missing tool is NOT RUN with an install hint (issue 72)
 - the code-pattern checks of the security-plus pack (cookie flags, JWT, SQL, CORS, XML, weak crypto, regex, redirects, paths) skip lines that are only string literals and punctuation, such as a detector table of sample vulnerable code; the credentials-in-URL check does not, because there the string is the problem
 - PII in a Rust test module is not reported; meta-seo leaves mockups, prototypes and generated code maps alone
 - documentation and markup hygiene findings (links, final newline, code fence language, headings, whitespace, HTML structure, SEO tags) and two Rust style rules are low, not medium

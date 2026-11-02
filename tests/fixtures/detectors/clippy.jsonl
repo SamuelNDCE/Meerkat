@@ -1,0 +1,5 @@
+{"reason":"compiler-artifact","package_id":"demo 0.1.0","target":{"name":"demo"}}
+{"reason":"compiler-message","package_id":"demo 0.1.0","message":{"code":{"code":"clippy::absurd_extreme_comparisons","explanation":null},"level":"error","message":"this comparison involving the minimum or maximum element for this type contains a case that is always true or always false","spans":[{"file_name":"src/main.rs","line_start":5,"line_end":5,"is_primary":true}]}}
+{"reason":"compiler-message","package_id":"demo 0.1.0","message":{"code":{"code":"clippy::suspicious_else_formatting","explanation":null},"level":"warning","message":"this looks like an `else if` but the `else` is missing","spans":[{"file_name":"src/lib.rs","line_start":22,"line_end":23,"is_primary":true}]}}
+{"reason":"compiler-message","package_id":"demo 0.1.0","message":{"code":{"code":"unused_variables","explanation":null},"level":"warning","message":"unused variable: `x`","spans":[{"file_name":"src/lib.rs","line_start":3,"line_end":3,"is_primary":true}]}}
+{"reason":"build-finished","success":false}

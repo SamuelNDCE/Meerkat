@@ -1,0 +1,32 @@
+{
+  "results": [
+    {
+      "source": { "path": "/work/app/package-lock.json", "type": "lockfile" },
+      "packages": [
+        {
+          "package": { "name": "minimist", "version": "1.2.5", "ecosystem": "npm" },
+          "vulnerabilities": [
+            {
+              "id": "GHSA-xvch-5gv4-984h",
+              "summary": "Prototype Pollution in minimist",
+              "affected": [
+                { "package": { "name": "minimist", "ecosystem": "npm" }, "ranges": [{ "type": "SEMVER", "events": [{ "introduced": "1.0.0" }, { "fixed": "1.2.6" }] }] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": { "path": "/work/app/Cargo.lock", "type": "lockfile" },
+      "packages": [
+        {
+          "package": { "name": "regex", "version": "1.3.1", "ecosystem": "crates.io" },
+          "vulnerabilities": [
+            { "id": "RUSTSEC-2022-0013", "summary": "Regexes with large repetitions can cause a denial of service", "affected": [{ "package": { "name": "regex", "ecosystem": "crates.io" }, "ranges": [{ "type": "SEMVER", "events": [{ "introduced": "0" }] }] }] }
+          ]
+        }
+      ]
+    }
+  ]
+}
