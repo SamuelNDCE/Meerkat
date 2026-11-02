@@ -15,8 +15,21 @@ const K8S_CONTENT = (t) => /^apiVersion:/m.test(t) && /^kind:/m.test(t)
 const isWorkload = (t) => /^kind:\s*["']?(Deployment|StatefulSet|DaemonSet|ReplicaSet|Job|CronJob|Pod|ReplicationController)\b/m.test(t)
 
 // Folder-level rules: each returns { id, title, fails: [path], na } and is skipped when the family has no files.
+// Docker reads .dockerignore from the root of the BUILD CONTEXT, which is not always the Dockerfile's folder: a compose file next to it can name another one
+// (`context: ../..`), and a Dockerfile in a subfolder often says it is built from the project root. All of those places count.
+const buildContexts = (root, f, readOf) => {
+  const dir = dirname(f)
+  const out = new Set([dir === '.' ? '' : dir])
+  const sibling = trackedFiles(root).filter((x) => dirname(x) === dir && /(^|\/)(docker-)?compose[^/]*\.ya?ml$/i.test(x))
+  for (const c of sibling) {
+    for (const m of readOf(c).matchAll(/^\s*context:\s*["']?([^\s"'#]+)/gm)) out.add(join(dir === '.' ? '' : dir, m[1]).replace(/\\/g, '/').replace(/^\.\/?$/, ''))
+  }
+  if (/\b(?:workspace|repo(?:sitory)?|project)\s+root\b|\bdocker\s+build\b[^\n]*\s-f\s+\S+[^\n]*\s\.\s*$/im.test(readOf(f))) out.add('')
+  return [...out]
+}
 const dockerignore = (root, files) => {
-  const fails = files.filter((f) => !existsSync(join(root, dirname(f), '.dockerignore')) && !existsSync(join(root, `${f}.dockerignore`)))
+  const readOf = (x) => readText(root, x) ?? ''
+  const fails = files.filter((f) => !existsSync(join(root, `${f}.dockerignore`)) && !buildContexts(root, f, readOf).some((c) => existsSync(join(root, c, '.dockerignore'))))
   return { id: 'docker-dockerignore-missing', title: 'no .dockerignore beside the Dockerfile, so the build context sends secrets and junk to the daemon', fails }
 }
 const networkPolicy = (files, read) => {

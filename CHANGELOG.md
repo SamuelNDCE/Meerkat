@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- fewer false alarms: "no .dockerignore beside the Dockerfile" now also accepts the .dockerignore of the real build context (a compose `context:` such as `../..`, or a Dockerfile that says it is built from the workspace/project root)
 - gentle by default, review fixes: CI=false or CI=0 is not a CI runner, the priority name is not case sensitive, an unknown --priority value is an error, and the time-left estimates use the same default parallelism as the run
 - gentle by default: Meerkat lowers its own priority to below normal (checks inherit it), runs about half as many checks at once as there are cores (2 to 8; all but one on CI), and accepts --priority normal|idle and MEERKAT_PARALLEL. Meerkat's own tests do the same and put every temp project under one folder, meerkat-tests-<your user name>, in the temp folder (private to you), so one antivirus exclusion covers them
 - scheduling: while the longest waiting check is held for room, short checks that fit now run beside the running one (backfilling) instead of all waiting behind it. On the first full NeuralVault run 97 percent of the 26 minutes had exactly one check running while 300 or more checks waited
