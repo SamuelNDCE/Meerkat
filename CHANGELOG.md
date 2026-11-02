@@ -2,6 +2,8 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## Unreleased
+
 ## 0.3.15 (2026-11-02)
 
 - Fewer false alarms and a much faster scan: noisy rule families rolled up or off by default, a detectors preset with cross-tool confirmation, a ground-truth benchmark, window checks left out of full
@@ -33,8 +35,6 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - the JavaScript await-in-loop, var, == and unhandled-promise checks, the PII check and the size and complexity checks leave test and probe files alone; the SQL-concat check leaves probe scripts alone
 - Rust documentation and error-style rules (undocumented pub items, String errors, discarded results, spawn handles) are low, not medium
 - meerkat doctor and the NeuralVault click-shards script start again: lib/paths.mjs now exports importFromApp (0.3.13 and 0.3.14 died with "does not provide an export named importFromApp")
-
-## Unreleased
 
 ## 0.3.14 (2026-11-01)
 
