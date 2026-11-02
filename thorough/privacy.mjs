@@ -4,7 +4,7 @@
 // Limits are set in .meerkat-budgets.json under "privacy". Accepted findings go in .meerkat-privacy-allow, one "check-id path" per line
 // (the path may end in * to cover a folder). Informational checks list what they find and still pass, unless their budget key is true:
 //   noTrackers, noTelemetry, requirePolicy, noThirdPartyFonts, noCopyleft.
-import { finish, isFixture, isTestFile, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isTestFile, main, readBudgets, readText, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.privacy ?? {}
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?)\//i
@@ -141,7 +141,9 @@ const piiPatternsInSource = (root) => {
   const f = []
   for (const x of files(root, CODE)) {
     if (allowed(root, 'pii-patterns-in-source', x)) continue
+    const inRustTest = rustTestLines(x, readText(root, x)) // sample personal data in a #[cfg(test)] module is test data
     lines(root, x).forEach((line, i) => {
+      if (inRustTest(i + 1)) return
       const at = `${x}:${i + 1}`
       for (const m of line.matchAll(EMAIL)) {
         const [local, domain] = [m[0].split('@')[0], m[0].split('@')[1]]

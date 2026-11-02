@@ -381,7 +381,7 @@ const metaSeo = (root) => {
   const desktop = /"electron"\s*:/.test(pkg) || trackedFiles(root).some((x) => /(^|\/)src-tauri\/tauri\.conf\.json$/.test(x))
   const f = []
   for (const x of trackedFiles(root)) {
-    if (!/\.html?$/i.test(x) || /(^|\/)(node_modules|dist|build|fixtures?)\//.test(x)) continue
+    if (!/\.html?$/i.test(x) || /(^|\/)(node_modules|dist|build|fixtures?|mockups?|codemap|prototypes?|wireframes?)\//.test(x)) continue
     if (desktop && !/(^|\/)(docs?|site|website|www|landing|pages|public)\//i.test(x)) continue
     const t = readText(root, x)
     if (!/<html\b/i.test(t)) continue

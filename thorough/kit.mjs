@@ -140,6 +140,20 @@ export const rustTestLines = (file, text) => {
   }
   return (line) => ranges.some(([a, b]) => line >= a && line <= b)
 }
+// Returns a function: is this 1-based line only string literals and punctuation (a table of sample code a detector or a test feeds to itself, such as
+// `("js", r#"db.query(...)"#),`, or a line inside a multi-line string)? Strings are blanked first, raw and multi-line ones too; a line with any identifier left
+// outside a string is code and is not data. Only for checks that look for code patterns; never for secrets, where the string itself is the problem.
+export const stringOnlyLines = (file, text) => {
+  if (!/\.(?:rs|py|go|[cm]?[jt]sx?)$/i.test(file)) return () => false
+  const lines = text.split('\n')
+  const blank = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`[^`]*`/g, (s) => s.replace(/[^\n]/g, ' ')).split('\n')
+  return (line) => {
+    const o = (lines[line - 1] ?? '').trim()
+    // Field names and dictionary keys (`bad:`), `&`, `vec!` and `Some(` around the strings are part of a table, not a call.
+    const rest = (blank[line - 1] ?? '').replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ')
+    return o !== '' && blank[line - 1] !== undefined && /^[,;()[\]{}\s]*$/.test(rest) && !/^\s*(?:\/\/|#|\/\*|\*)/.test(o)
+  }
+}
 // A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.
 export const FAKE_VALUE = /fake|dummy|placeholder|supersecret|not[-_]?(?:a[-_])?real|redacted|changeme|example|sample|[_-]test[_-]|your[-_]?(?:key|token|secret)/i
 

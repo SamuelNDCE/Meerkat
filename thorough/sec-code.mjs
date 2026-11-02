@@ -3,7 +3,7 @@
 // Run through the security-plus pack, or by hand:
 //   node thorough/sec-code.mjs <check> [--root <dir>]      node thorough/sec-code.mjs <check> --fixtures   (must exit 1)
 // A finding you accept goes in .meerkat-seccode-allow: a path (accepts the whole file) or path:line, one per line, # for comments.
-import { finish, main, readText, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
+import { finish, main, readText, rustTestLines, stringOnlyLines, trackedFiles, withFixture } from './kit.mjs'
 
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|kt|cs|svelte|vue)$/i
 const CONFIG = /\.(ya?ml|toml|json|ini|env|conf|cfg|properties|xml)$|(^|\/)\.env[^/]*$|(^|\/)(Dockerfile[^/]*|docker-compose[^/]*)$/i
@@ -56,17 +56,19 @@ const pat = (files, re, why) => ({
 })
 
 // Runs every rule over the files git tracks (a plain walk outside a repository) and returns the findings as text.
-function runRules(root, rules) {
+function runRules(root, rules, { skipSamples = true } = {}) {
   const allow = allowSet(root)
   const f = []
   for (const x of trackedFiles(root)) {
     if (SKIP.test(x) || BINARY.test(x) || allow.has(x)) continue
     const t = readText(root, x)
     const inTest = rustTestLines(x, t) // Rust unit tests sit in the same file, in a #[cfg(test)] module: not shipped code
+    // A line that is only string literals (a table of sample code a detector feeds to itself) is data, not a call: the pattern checks leave it alone.
+    const isSample = skipSamples ? stringOnlyLines(x, t) : () => false
     for (const r of rules) {
       if (!r.files(x)) continue
       for (const { line, why } of r.scan(t, x)) {
-        if (line && inTest(line)) continue
+        if (line && (inTest(line) || isSample(line))) continue
         const where = line ? `${x}:${line}` : x
         if (!allow.has(where)) f.push(`${where} ${why}`)
       }
@@ -75,8 +77,8 @@ function runRules(root, rules) {
   return f
 }
 
-const define = (id, rules, ok, fixture) => {
-  const run = (root) => finish(id, runRules(root, rules), ok)
+const define = (id, rules, ok, fixture, opts) => {
+  const run = (root) => finish(id, runRules(root, rules, opts), ok)
   return { run, fixture: () => withFixture(fixture, run) }
 }
 
@@ -312,7 +314,7 @@ main({
   'weak-crypto-modes': define('weak-crypto-modes', weakCrypto, 'no weak cipher, ECB mode, fixed key or guessable token is used',
     { 'crypto.js': "const c = crypto.createCipher('aes192', pw)\n" }),
   'credentials-in-urls': define('credentials-in-urls', [credsInUrl], 'no web address carries a user name and password',
-    { 'db.js': "const url = 'postgres://admin:S3cretPass@db.internal:5432/app'\n" }),
+    { 'db.js': "const url = 'postgres://admin:S3cretPass@db.internal:5432/app'\n" }, { skipSamples: false }),
   'xxe-and-deserialize': define('xxe-and-deserialize', xxeDeser, 'XML parsers are locked down and no untrusted data is deserialized',
     { 'parse.py': 'parser = etree.XMLParser(resolve_entities=True)\n' }),
 })
