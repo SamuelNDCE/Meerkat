@@ -106,7 +106,8 @@ main({
       if (COMMENT.test(lineText(t, m.index))) return []
       const line = lineOf(t, m.index)
       const iso = /\bcontextIsolation\s*:\s*(\w+)/.exec(block(t, m.index + m[0].length - 1))
-      if (!iso) return [{ line, why: 'webPreferences does not set contextIsolation (set it to true, so page code cannot reach the preload scope)' }]
+      // Electron 12 and later turn contextIsolation on by default, so leaving it out is safe; only an explicit non-true value is a problem.
+      if (!iso) return []
       return iso[1] === 'true' ? [] : [{ line, why: `sets contextIsolation to ${iso[1]} (it must be true)` }]
     })),
     fixture: { ...E, 'main.js': "new BrowserWindow({ webPreferences: { contextIsolation: false } })\n" },

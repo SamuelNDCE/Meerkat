@@ -18,6 +18,7 @@
 // Rules that need a sibling line (for example a handler body) look only at a fixed window of lines after the match.
 
 import { inDevOnlyBlock, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked } from './guards.mjs'
+import { rustTestLines } from './kit.mjs'
 const JS = ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'jsx', 'tsx']
 const HTML = ['html', 'htm']
 const COMMENT = /^\s*(\/\/|\/\*|\*|<!--)/
@@ -648,6 +649,38 @@ const tauriRs = (id, title, re, bad, good, extra = {}) => {
   const gate = /#\[tauri::command\]|tauri::Builder|tauri::command\b/
   return { id, title, ext: ['rs'], skipLine: COMMENT, notIn: TEST_OUT, re: undefined, test: lineIf(re, (t) => gate.test(t)), bad, good, ...extra }
 }
+// The body of each #[tauri::command] function: its 1-based line range and the names of the parameters the page controls (text and path types).
+// Strings and comments are blanked first so a brace inside one is not counted. Cached for the last file text.
+let bodiesFor = ''
+let bodiesOf = []
+const commandBodies = (text) => {
+  if (text === bodiesFor) return bodiesOf
+  const blanked = text.replace(/"(?:[^"\\]|\\[\s\S])*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, ' '))
+  const out = []
+  for (const m of blanked.matchAll(/#\[tauri::command[^\]]{0,80}\]\s{0,40}(?:pub(?:\([^)]{0,20}\))?\s+)?(?:async\s+)?fn\s+\w+\s*(?:<[^>]{0,80}>)?\s*\(([^)]{0,400})\)[^{;]{0,200}\{/g)) {
+    const names = new Set([...m[1].matchAll(/\b(\w+)\s*:\s*(?:&\s*)?(?:mut\s+)?(?:Option<\s*)?(?:String|str|PathBuf|Path)\b/g)].map((x) => x[1]))
+    let depth = 0
+    for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
+      if (blanked[i] === '{') depth++
+      else if (blanked[i] === '}' && --depth === 0) {
+        out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names })
+        break
+      }
+    }
+  }
+  bodiesFor = text
+  bodiesOf = out
+  return out
+}
+// A path argument that comes straight from the page into std::fs: the call is inside a Tauri command, outside a test module, and the name is one of the command's own parameters.
+const FS_PATH_CALL = /\bfs::\w+\(\s*&?(path|file_path|filepath|file|filename|dest|target)\s*[,)]/
+const fsPathTest = (line, ctx) => {
+  const m = FS_PATH_CALL.exec(line)
+  if (!m) return false
+  const at = ctx.index + 1
+  if (rustTestLines(ctx.file ?? 'x.rs', ctx.text)(at)) return false
+  return commandBodies(ctx.text).some((b) => at >= b.from && at <= b.to && b.names.has(m[1]))
+}
 const tauriJson = (id, title, re, bad, good, extra = {}) => ({ id, title, files: TAURI_JSON, sample: 'src-tauri/tauri.conf.json', re, notIn: TEST_OUT, bad, good, ...extra })
 export const EP_TAURI_CROSS = [
   tauriJson('ep-tauri-scope-user-folder', 'file access is granted to a whole user folder ($HOME/** and similar) instead of an app folder',
@@ -687,7 +720,8 @@ export const EP_TAURI_CROSS = [
   tauriRs('ep-tauri-command-fs-path', 'a Tauri command passes a path argument straight into std::fs with no scope or canonical check',
     /\bfs::\w+\(\s*&?(?:path|file_path|filepath|file|filename|dest|target)\s*[,)]/,
     '#[tauri::command]\nfn read(path: String) -> String { std::fs::read_to_string(path).unwrap() }',
-    '#[tauri::command]\nfn read(name: String) -> String { let p = notes_dir().join(name); std::fs::read_to_string(&canonical(p)).unwrap() }'),
+    '#[tauri::command]\nfn read(name: String) -> String { let p = notes_dir().join(name); std::fs::read_to_string(&canonical(p)).unwrap() }',
+    { test: fsPathTest }),
   tauriRs('ep-tauri-command-program-variable', 'a Tauri command starts a program named by a variable (Command::new with a bare variable)',
     /\bCommand::new\(\s*[a-z_][a-z0-9_]*\s*\)/,
     '#[tauri::command]\nfn run(cmd: String) { std::process::Command::new(cmd).status().ok(); }',
