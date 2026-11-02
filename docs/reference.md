@@ -269,7 +269,7 @@ A quick check runs in `quick`. The full run contains every quick check, or a wid
 
 ## Every check
 
-Meerkat ships hundreds of checks in 47 packs, grouped into five kinds: **Security**, **Functionality**, **UI**, **Performance** and **Refactor**. The full list, with what each check does, how heavy it is, how long it takes and which tool it needs, is [docs/checks.md](checks.md). It is generated from the checks themselves (`node tools/gen-checks.mjs`), so it cannot drift from the code. `meerkat list` prints the same list in your terminal, and `meerkat suite list` shows it by suite.
+Meerkat ships hundreds of checks in 48 packs, grouped into five kinds: **Security**, **Functionality**, **UI**, **Performance** and **Refactor**. The full list, with what each check does, how heavy it is, how long it takes and which tool it needs, is [docs/checks.md](checks.md). It is generated from the checks themselves (`node tools/gen-checks.mjs`), so it cannot drift from the code. `meerkat list` prints the same list in your terminal, and `meerkat suite list` shows it by suite.
 
 ## What it works on
 

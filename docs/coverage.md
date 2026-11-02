@@ -9,21 +9,22 @@ In short: Meerkat reads files as text and applies rules. It is a fast first line
 ## 1. What Meerkat scans
 
 <!-- coverage:start -->
-Counted from all 47 packs under `packs/`: **360 checks** in **47 suites** with **1402 rules** (sub-checks).
+Counted from all 48 packs under `packs/`: **368 checks** in **48 suites** with **1414 rules** (sub-checks).
 
-Run by default: 327 quick checks and 15 full-only checks. Opt-in: 18 (`--include ai`, `--include runtime`, `--include mutation`, `--include deny`).
+Run by default: 334 quick checks and 8 full-only checks. Opt-in: 26 (`--include ai`, `--include detectors`, `--include runtime`, `--include mutation`, `--include deny`).
 
-Checks that need an outside tool (NOT RUN without it): 44 of 360. The other 316 need only Node.
+Checks that need an outside tool (NOT RUN without it): 39 of 368. The other 329 need only Node.
 
 Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results inside them. **Runs by default**: quick = in `meerkat verify`; full = only in `meerkat full`; both = a mix; opt-in = only when you ask. **Tool**: yes means at least one check in the suite is NOT RUN without that outside tool; the others still work.
 
 | Suite | What it looks at | Checks | Rules | Runs by default | Needs an outside tool? |
 |---|---|---|---|---|---|
 | `secrets` | Any text file git tracks; private key and credential files | 4 | 285 | quick | no |
-| `risky-calls` | JS/TS, Python, Go, Rust, Java and more (code), plus tracked text files | 7 | 92 | quick | no |
-| `injection-patterns` | JS/TS, Python, Java, C#, PHP, Ruby source | 7 | 69 | quick | no |
+| `risky-calls` | JS/TS, Python, Go, Rust, Java and more (code), plus tracked text files | 7 | 95 | quick | no |
+| `injection-patterns` | JS/TS, Python, Java, C#, PHP, Ruby source | 7 | 71 | quick | no |
 | `crypto-and-auth` | Source files (JWT and cipher settings) | 2 | 2 | quick | no |
 | `supply-chain` | package.json, lockfiles, requirements, .npmrc | 8 | 23 | both | yes: npm |
+| `detectors` | your lockfiles, source and workflows, through osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint (opt-in) | 8 | 8 | opt-in | no |
 | `ci-workflows` | GitHub Actions workflow files | 3 | 36 | quick | no |
 | `web-security` | HTML, JSX/TSX, Vue, Svelte, server and host config, JS (cookies, CORS, headers, privacy) | 20 | 76 | quick | no |
 | `accessibility` | HTML, JSX/TSX, Vue, Svelte, CSS | 10 | 10 | quick | no |
@@ -31,28 +32,28 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `seo-and-meta` | HTML pages, robots.txt, sitemap | 2 | 2 | quick | no |
 | `code-quality` | Source and text files (whitespace, leftovers, imports) | 10 | 10 | quick | no |
 | `test-hygiene` | Test files; opt-in: runs your project | 21 | 88 | quick + opt-in | no |
-| `refactor` | Source files (JS/TS first) | 9 | 9 | both | no |
+| `refactor` | Source files (JS/TS first) | 9 | 9 | quick | no |
 | `javascript` | JS and TS source | 7 | 7 | quick | no |
 | `slow-code-patterns` | JS and TS source | 4 | 4 | quick | no |
 | `repo-docs` | README, SECURITY, CONTRIBUTING, CODEOWNERS, CHANGELOG | 5 | 5 | quick | no |
 | `repo-files` | File names, sizes, modes, .gitignore, .editorconfig | 12 | 12 | quick | no |
 | `licensing` | LICENSE, NOTICE, package licences | 5 | 5 | quick | no |
-| `config-files` | JSON, YAML, TOML, .env.example, Makefile, game-engine and CMS projects | 22 | 22 | quick | yes: yamllint |
+| `config-files` | JSON, YAML, TOML, .env.example, Makefile, game-engine and CMS projects | 22 | 22 | quick | no |
 | `ci-config` | CI files (GitLab, CircleCI, Azure, Jenkins, GitHub), Helm, Ansible, pre-commit | 18 | 18 | quick | yes: actionlint |
-| `content-and-docs` | Markdown, links, changelog, typos | 11 | 11 | quick | yes: lychee, markdownlint-cli2, typos |
+| `content-and-docs` | Markdown, links, changelog, typos | 11 | 11 | quick | no |
 | `i18n` | Translation JSON files | 2 | 2 | quick | no |
 | `data-files` | JSON, CSV, Jupyter notebooks, model and data files | 15 | 15 | quick | no |
 | `api-contracts` | OpenAPI and GraphQL files | 4 | 4 | quick | no |
 | `database` | SQL migrations, Prisma schema | 4 | 4 | quick | no |
 | `api-resilience` | Server code (timeouts, limits, errors, paging) | 4 | 4 | quick | no |
 | `desktop-apps` | Electron, Tauri, Capacitor, Cordova, Android manifest | 19 | 176 | quick | no |
-| `git-history` | Git commit history (needs a git repository) | 8 | 8 | both | no |
+| `git-history` | Git commit history (needs a git repository) | 8 | 8 | quick | no |
 | `git-workflow` | Branches, tags, submodules (needs a git repository) | 3 | 3 | quick | no |
 | `release-versioning` | Versions, tags, package publish files (npm, PyPI, crates) | 15 | 15 | quick | no |
 | `dependencies` | Manifests and lockfiles; opt-in: clean install | 15 | 15 | quick + opt-in | no |
 | `performance` | Images, assets, and budgets you set (.meerkat-budgets.json) | 11 | 11 | both | no |
 | `node` | JS/TS projects (package.json, tsconfig) | 9 | 9 | both | yes: eslint, madge, prettier, tsc |
-| `rust` | Rust crates (Cargo.toml) | 16 | 156 | both + opt-in | yes: cargo, cargo-audit, cargo-deny |
+| `rust` | Rust crates (Cargo.toml) | 16 | 155 | both + opt-in | yes: cargo, cargo-audit, cargo-deny |
 | `python` | Python projects | 8 | 8 | both | yes: bandit, mypy, pytest, ruff, vulture |
 | `go` | Go modules | 4 | 4 | quick | yes: go |
 | `java` | Maven projects (pom.xml) | 3 | 3 | quick | yes: mvn |
@@ -64,7 +65,7 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `terraform` | Terraform files (.tf); its check also holds the Compose rules | 2 | 38 | quick | yes: terraform |
 | `kubernetes` | Helm charts and Kubernetes YAML | 3 | 52 | quick | yes: helm, kube-linter |
 | `docker` | Dockerfiles and Compose files | 4 | 40 | quick | yes: hadolint |
-| `shell-scripts` | Shell scripts (.sh) | 2 | 2 | quick | yes: shellcheck |
+| `shell-scripts` | Shell scripts (.sh) | 2 | 2 | quick | no |
 | `ai-review` | Routes and the git diff, read by an AI model | 2 | 2 | opt-in | no |
 <!-- coverage:end -->
 
@@ -77,20 +78,20 @@ Legend. **DEEP**: 20 or more rules of Meerkat's own, and the rules were run agai
 
 | Area | Level | Own rules | Tools it can run | Note |
 |---|---|---|---|---|
-| JavaScript, TypeScript | DEEP | 31 | - |  |
-| Python | BASIC | 33 | - | rules not yet tried on real Python code |
+| JavaScript, TypeScript | DEEP | 32 | - |  |
+| Python | BASIC | 35 | - | rules not yet tried on real Python code |
 | Go | BASIC | 27 | go | use on real Go code not confirmed |
 | Rust | BASIC | 13 | cargo, cargo-audit, cargo-deny | rules tried on real Rust code (one corpus repo) |
-| Java | BASIC | 25 | mvn | rules not yet tried on real Java code |
+| Java | BASIC | 26 | mvn | rules not yet tried on real Java code |
 | C# | BASIC | 15 | dotnet | rules not yet tried on real C# code |
 | PHP | BASIC | 13 | composer, phpstan | rules not yet tried on real PHP code |
-| Ruby | BASIC | 11 | rubocop, rspec | rules not yet tried on real Ruby code |
+| Ruby | BASIC | 12 | rubocop, rspec | rules not yet tried on real Ruby code |
 | Swift | NONE | 0 | swiftlint, swift | no rules of its own |
 | Dart, Flutter | NONE | 0 | dart | no rules of its own |
-| Shell scripts | BASIC | 1 | shellcheck | PowerShell is not covered |
+| Shell scripts | BASIC | 2 | - | PowerShell is not covered |
 | HTML, CSS | DEEP | 26 | htmlhint, stylelint | checks whose files are HTML, CSS or templates, plus the web-hardening HTML table |
-| Markdown | BASIC | 9 | lychee, markdownlint-cli2, typos |  |
-| YAML, TOML, JSON | BASIC | 4 | yamllint | syntax and duplicate keys only |
+| Markdown | BASIC | 12 | - |  |
+| YAML, TOML, JSON | BASIC | 5 | - | syntax and duplicate keys only |
 | Dockerfile | BASIC | 38 | hadolint | infra rules were measured on the corpus as one group; per-family use not confirmed |
 | Kubernetes, Helm | BASIC | 52 | helm, kube-linter | as for Dockerfile |
 | Terraform | BASIC | 29 | terraform | rules from the Terraform table of ip-terraform-compose |

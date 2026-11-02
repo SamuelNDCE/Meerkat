@@ -8,7 +8,7 @@
 Security, correctness, accessibility, performance and code health, for any kind of app, with every result saved and explained.
 
 <!-- counts:start -->
-**360 checks · 1406 sub-checks · 47 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
+**368 checks · 1414 sub-checks · 48 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
 <!-- counts:end -->
 
 ![Meerkat running: what is running now, a status line, every check with its time, and a timeline](docs/images/meerkat-run.gif)
