@@ -4,8 +4,8 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- scheduling: while the longest waiting check is held for room, short checks that fit now run beside the running one (backfilling) instead of all waiting behind it. On the first full NeuralVault run 97 percent of the 26 minutes had exactly one check running while 300 or more checks waited
 - review fixes: the plain-http exemption looks at the URL itself (its host, or being the direct argument of a prefix helper), not the whole line; probe folders are test code only under scripts, tools, supabase, qa or e2e; serde_json unwrap and spawn_blocking findings keep their medium severity
-
 - risky-code ignores comments, strings in Rust and Python files, Rust unit-test modules, test and fixture files, XML namespace names and URL-prefix trims; an MD5 with no secret or signature nearby is an info note and does not fail the check (NeuralVault: 39 high findings down to 0)
 - the JavaScript await-in-loop, var, == and unhandled-promise checks, the PII check and the size and complexity checks leave test and probe files alone; the SQL-concat check leaves probe scripts alone
 - Rust documentation and error-style rules (undocumented pub items, String errors, discarded results, spawn handles) are low, not medium
