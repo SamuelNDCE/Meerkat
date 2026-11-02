@@ -4,14 +4,16 @@
 //   <check-id> <file>        or        <check-id> <file>:<line>
 // Known limits: a tag is read up to its first ">", so an attribute holding ">" (for example an arrow function in JSX) can hide it;
 // style blocks inside HTML files are not read by the CSS checks; "another site" means any absolute URL, since the project's own host is not known.
-import { finish, isFixture, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isTestFile, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.a11y ?? {}
 const MARKUP = /\.(html?|jsx|tsx|vue|svelte)$/i
 const STYLES = /\.(css|scss)$/i
 const SKIP_DIR = /(^|\/)(node_modules|dist|build|vendor)\//
 const filesMatching = (root, re) => trackedFiles(root).filter((x) => re.test(x) && !SKIP_DIR.test(x) && !isFixture(x))
-const stripComments = (t) => t.replace(/<!--[\s\S]*?-->/g, '')
+// Markup that ships: not a test (its markup is sample input, often a deliberate XSS payload) and not a design mockup or prototype.
+const shippedMarkup = (root) => filesMatching(root, MARKUP).filter((x) => !isTestFile(x) && !/(^|\/)(mockups?|prototypes?|wireframes?)\//i.test(x))
+const stripComments =(t) => t.replace(/<!--[\s\S]*?-->/g, '')
 const lineOf = (text, index) => text.slice(0, index).split('\n').length
 
 const ARIA_ATTRS = new Set(`aria-activedescendant aria-atomic aria-autocomplete aria-busy aria-checked aria-colcount aria-colindex
@@ -145,7 +147,7 @@ const iframeTitle = check('iframe-title', 'every iframe has a title', (root, add
 
 // ---- table-headers: a data table with no header cells, or header cells that do not say what they head
 const tableHeaders = check('table-headers', 'data tables have header cells, and each header says what it heads', (root, add) => {
-  for (const x of filesMatching(root, MARKUP)) {
+  for (const x of shippedMarkup(root)) {
     const t = stripComments(readText(root, x))
     for (const m of t.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table\s*>/gi)) {
       if (/role\s*=\s*["'](?:presentation|none)["']/i.test(m[1])) continue
@@ -237,9 +239,9 @@ const mixedContent = check('mixed-content', 'no resource is loaded over plain ht
 // ---- render-blocking: scripts in the head that stop the page drawing, images with no size, and images that load late
 const renderBlocking = check('render-blocking', 'head scripts do not block drawing, and images have a size and load lazily', (root, add) => {
   const afterImages = cfg(root).lazyAfterImages ?? 3
-  for (const x of filesMatching(root, MARKUP)) {
+  for (const x of shippedMarkup(root)) {
     const t = stripComments(readText(root, x))
-    const head = /<head\b[^>]*>[\s\S]*?<\/head\s*>/i.exec(t)
+    const head =/<head\b[^>]*>[\s\S]*?<\/head\s*>/i.exec(t)
     if (head) {
       for (const m of t.matchAll(/<script\b[^>]*>/gi)) {
         const inHead = m.index >= head.index && m.index < head.index + head[0].length

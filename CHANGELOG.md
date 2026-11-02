@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- round 5b false alarms (audit of a real scan): pii-in-logs reads only interpolated values (template and Rust raw-string text is skipped, a UI "card" is not a payment card, a name passed into a sanitise/redact call is not a leak, Rust test modules are skipped); ui-static, table-headers and render-blocking skip test files and mockup/prototype folders; duplicate-test-names compares titles per describe scope; broken-imports ignores imports named in comments or quoted in strings
 - a guide to how a run is scheduled and tuned: docs/scheduling.md
 - gentle by default, review fixes: CI=false or CI=0 is not a CI runner, the priority name is not case sensitive, an unknown --priority value is an error, and the time-left estimates use the same default parallelism as the run
 - gentle by default: Meerkat lowers its own priority to below normal (checks inherit it), runs about half as many checks at once as there are cores (2 to 8; all but one on CI), and accepts --priority normal|idle and MEERKAT_PARALLEL. Meerkat's own tests do the same and put every temp project under one folder, meerkat-tests-<your user name>, in the temp folder (private to you), so one antivirus exclusion covers them

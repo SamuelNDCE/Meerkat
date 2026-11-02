@@ -4,7 +4,7 @@
 // Limits are set in .meerkat-budgets.json under "privacy". Accepted findings go in .meerkat-privacy-allow, one "check-id path" per line
 // (the path may end in * to cover a folder). Informational checks list what they find and still pass, unless their budget key is true:
 //   noTrackers, noTelemetry, requirePolicy, noThirdPartyFonts, noCopyleft.
-import { finish, isFixture, isTestFile, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isTestFile, main, readBudgets, readText, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.privacy ?? {}
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?)\//i
@@ -94,20 +94,45 @@ const analyticsConsent = (root) => {
 
 // ---- pii-in-logs: a log, print or console call that writes a variable named like personal or secret data, with no redaction nearby
 const LOG_CALL = /\bconsole\.(log|info|warn|error|debug)\s*\(|\blogger\.\w+\s*\(|\blog\.(info|debug|warn|error|trace|log)\s*\(|\bLog\.[dviwe]\s*\(|\bprintln\s*\(|System\.out\.print(ln)?\s*\(|\bNSLog\s*\(|\bfmt\.Print\w*\s*\(|(^|[^\w.])print\s*\(/
-const SENSITIVE_NAME = /\w*(email|password|passwd|token|ssn|phone|address|card|secret)\w*/i
+// "card" alone is a UI card or a kanban card; only payment-card shapes (card number, cvv, credit card ...) count as personal data.
+const SENSITIVE_NAME = /\w*(email|password|passwd|token|ssn|phone|address|secret|(?:credit|debit)_?card|card_?(?:num\w*|no\b|pan\b|cvv|cvc|holder\w*))\w*/gi
 const STRING_LITERAL = /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g
 const REDACTION = /redact|mask|scrub|hash|omit|\*{3}|anonymi/i
+// A sensitive name passed INTO one of these is the redaction list or the thing being cleaned, not a value written out.
+const CLEANING_CALL = /^(?:sanitis|sanitiz|redact|mask|scrub|censor|coded$)/i
+const RUST_BLANK = /(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\]|\\[\s\S])*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g
+// The name of the call that directly encloses position `at` of `args`, or '' when it sits at the top level of the log call.
+const enclosingCallee = (args, at) => {
+  let depth = 0
+  for (let i = at - 1; i >= 0; i--) {
+    if (args[i] === ')') depth++
+    else if (args[i] === '(') {
+      if (depth === 0) return /([A-Za-z_$][\w$]*)\s*$/.exec(args.slice(0, i))?.[1] ?? ''
+      depth--
+    }
+  }
+  return ''
+}
 const piiInLogs = (root) => {
   const f = []
   for (const x of files(root, CODE)) {
+    const text = readText(root, x)
     const ls = lines(root, x)
-    ls.forEach((line, i) => {
+    const isRust = /\.rs$/i.test(x)
+    // Rust: strings and comments are blanked across lines (a sample string spanning lines is not a log), and #[cfg(test)] modules are not shipped code.
+    const scan = isRust ? text.replace(RUST_BLANK, (s) => s.replace(/[^\n]/g, ' ')).split('\n').map((l) => l.replace(/\r$/, '')) : ls
+    const inTest = rustTestLines(x, text)
+    scan.forEach((line, i) => {
       const m = LOG_CALL.exec(line)
-      if (!m) return
-      const args = line.slice(m.index + m[0].length).replace(STRING_LITERAL, '')
-      const id = SENSITIVE_NAME.exec(args)
+      if (!m || inTest(i + 1)) return
+      // Only what is interpolated counts: the words of a string or template are text, not a value. A ${...} keeps its expression.
+      const args = line
+        .slice(m.index + m[0].length)
+        .replace(/`([^`]*)`/g, (s, body) => ` ${[...body.matchAll(/\$\{([^}]*)\}/g)].map((e) => e[1]).join(' ')} `)
+        .replace(STRING_LITERAL, '')
+      const id = [...args.matchAll(SENSITIVE_NAME)].find((e) => !CLEANING_CALL.test(enclosingCallee(args, e.index)))
       if (!id) return
-      const near = [ls[i - 2] ?? '', ls[i - 1] ?? '', line].join('\n')
+      const near = [ls[i - 2] ?? '', ls[i - 1] ?? '', ls[i] ?? ''].join('\n')
       if (REDACTION.test(near) || allowed(root, 'pii-in-logs', x)) return
       f.push(`${x}:${i + 1} logs "${id[0]}", which looks like personal or secret data, with no redaction nearby`)
     })
