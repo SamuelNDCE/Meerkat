@@ -154,6 +154,27 @@ The list above is generated. The reasons, from reading each rule, are in the tab
 
 Each has a regression test in `lib/accuracy.test.ts`.
 
+## Ground truth on real code
+
+The planted-defect corpus above holds defects we wrote ourselves, so its recall says little about real code. `tools/benchmark.mjs` scans a known vulnerable open-source project and compares Meerkat's findings with the project's own published vulnerability list, stored as data in `benchmarks/<name>.json` (file, line range, vulnerability class, source URL, pinned commit).
+
+```
+node tools/benchmark.mjs nodegoat                      clone the pinned commit into a new temp folder, scan it, compare
+node tools/benchmark.mjs nodegoat --dir <checkout>     scan a checkout you already have (a note appears if it is not the pinned commit)
+```
+
+It runs `node run.mjs --preset quick --plain` with `MEERKAT_FINDINGS=all`, then prints recall (expected found / expected), the missed vulnerabilities, and the findings that match no expected vulnerability, counted by rule. A finding matches an entry when it is in the same file, has the same vulnerability class (a table in the tool maps rules to classes) and a line within 5 lines of the entry's range; a finding that names no line matches by file and class. Unmatched findings are candidate false alarms only: nobody has judged them, and most are style or hygiene findings that a vulnerability list does not cover. The downloaded code is only read, never installed or run.
+
+First measurement (2026-11-02, Meerkat 0.3.14, OWASP NodeGoat at `c5cb68a7084e`, 17 expected vulnerabilities):
+
+| Result | Count |
+|---|---|
+| Found | 5 of 17 (29.4% recall): eval injection, open redirect, ReDoS, plain-HTTP server, missing security headers (matched by file) |
+| Missed | 12: NoSQL injection (`$where`), SSRF, missing function-level access control, IDOR, XSS (autoescape off, wrong encoding context), insecure session cookie settings, missing CSRF protection, hard-coded cookie secret, session fixation, user enumeration, log injection |
+| Findings matching no expected entry | 171 of 184 (top rules: deprecated-deps 25, final-newline 16, trailing-whitespace 9, iframe-title 8, ui-static 8) |
+
+No rule was tuned for this measurement. The gap between this recall and the corpus recall is the point of the benchmark: it is the list of real misses to work from (GitHub issue 70).
+
 ## The false-positive side
 
 The mirror of this corpus is the compatibility matrix (`tools/compat-fixtures.mjs`, `tools/compat-matrix.mjs`, `lib/compat.test.ts`, `docs/compatibility.md`): small CLEAN projects of twenty kinds on which every check must pass, not crash and not hang. Together the two say the checks neither cry wolf nor stay silent.
