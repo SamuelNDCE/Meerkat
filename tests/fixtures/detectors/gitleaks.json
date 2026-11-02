@@ -1,0 +1,42 @@
+[
+ {
+  "RuleID": "stripe-access-token",
+  "Description": "Found a Stripe Access Token, posing a risk to payment processing services and sensitive financial data.",
+  "StartLine": 2,
+  "EndLine": 2,
+  "StartColumn": 12,
+  "EndColumn": 48,
+  "Match": "REDACTED\"",
+  "Secret": "REDACTED",
+  "File": "cfg.py",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 4.781036,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "cfg.py:stripe-access-token:2"
+ },
+ {
+  "RuleID": "aws-access-token",
+  "Description": "Identified a pattern that may indicate AWS credentials, risking unauthorized cloud resource access and data breaches on AWS platforms.",
+  "StartLine": 1,
+  "EndLine": 1,
+  "StartColumn": 12,
+  "EndColumn": 31,
+  "Match": "REDACTED",
+  "Secret": "REDACTED",
+  "File": "cfg.py",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.7841837,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "cfg.py:aws-access-token:1"
+ }
+]
