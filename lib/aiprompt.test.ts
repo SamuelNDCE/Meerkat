@@ -297,3 +297,14 @@ describe('the prompt file name', () => {
     expect(promptFileName({ run: { id: 'not-a-run' } })).toBe('ai-prompt.md')
   })
 })
+
+describe('secrets in per-check output', () => {
+  test('a key in a check command or result is blanked in the prompt', () => {
+    const key = 'AKIA' + 'QWERTYUIOPASDFGH'
+    const doc = { run: { id: '20261102-010101', preset: 'quick', project: { name: 'p', path: '/p' } }, counts: { total: 0, bySeverity: {}, new: 0, known: 0, fixed: 0 }, findings: [], notRun: [] }
+    const summary = { ms: 10, results: [{ id: 'x', status: 'PASS', ms: 5, suite: 's', origin: 'custom', command: `tool --token ${key}`, detail: `found ${key} in a file` }] }
+    const text = buildAiPrompt({ doc, summary, runDir: '/r' } as never)
+    expect(text).not.toContain(key)
+    expect(text).toContain('## 8. Every check')
+  })
+})
