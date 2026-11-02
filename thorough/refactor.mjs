@@ -12,12 +12,12 @@
 // Limits live in .meerkat-budgets.json under "refactor". Accepted dead names go in .meerkat-dead-allow, one per line.
 // The function finder (findFunctions) is a heuristic: it blanks out strings and comments first, then matches signatures per language.
 import { extname, join, posix } from 'node:path'
-import { finish, main, readBudgets, readText, sizeOf, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isTestFile, main, readBudgets, readText, sizeOf, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.refactor ?? {}
 const CODE = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.rs', '.py', '.go', '.svelte', '.vue', '.java', '.cs', '.c', '.cpp', '.h', '.rb', '.php', '.swift', '.kt'])
 const SKIP = /(^|\/)(node_modules|dist|build|target|vendor|generated|__snapshots__|fixtures?|\.svelte-kit)\//i
-const sources = (root) => trackedFiles(root).filter((x) => CODE.has(extname(x)) && !SKIP.test(x) && !/\.(min|d)\.(js|ts)$|\.lock$/.test(x))
+const sources = (root) => trackedFiles(root).filter((x) => CODE.has(extname(x)) && !SKIP.test(x) && !isTestFile(x) && !/\.(min|d)\.(js|ts)$|\.lock$/.test(x))
 const allowList = (root, name) => new Set(readText(root, name).split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')))
 const lineOf = (text, index) => text.slice(0, index).split('\n').length
 
