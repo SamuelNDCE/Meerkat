@@ -4,7 +4,7 @@
 // Limits are set in .meerkat-budgets.json under "privacy". Accepted findings go in .meerkat-privacy-allow, one "check-id path" per line
 // (the path may end in * to cover a folder). Informational checks list what they find and still pass, unless their budget key is true:
 //   noTrackers, noTelemetry, requirePolicy, noThirdPartyFonts, noCopyleft.
-import { finish, isFixture, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isFixture, isTestFile, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.privacy ?? {}
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?)\//i
@@ -21,7 +21,7 @@ const tracked = (root) => {
   if (!cache.has(root)) cache.set(root, trackedFiles(root))
   return cache.get(root)
 }
-const files = (root, re) => tracked(root).filter((x) => re.test(x) && !SKIP.test(x) && !MINIFIED.test(x) && !TEST_FILE.test(x) && !OWN.test(x) && !isFixture(x))
+const files = (root, re) => tracked(root).filter((x) => re.test(x) && !SKIP.test(x) && !MINIFIED.test(x) && !TEST_FILE.test(x) && !isTestFile(x) && !OWN.test(x) && !isFixture(x))
 const lines = (root, x) => readText(root, x).split('\n').map((l) => l.replace(/\r$/, ''))
 
 const allowRules = new Map()
