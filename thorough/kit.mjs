@@ -195,6 +195,21 @@ export function blankStrings(text, lang = 'js') {
     if (!python && c === '/' && text[i + 1] === '/') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
     if (c === '/' && text[i + 1] === '*') { const e = text.indexOf('*/', i + 2); const end = e < 0 ? n : e + 2; out += text.slice(i, end); i = end; continue }
     if (python && c === '#') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
+    if (lang === 'js' && c === '/') {
+      // A regex literal can hold a quote or a backtick (/`/g), which must not open a string or a template. It starts where a value is expected: after ( , = : [ ! & | ? { } ; or at the start.
+      const prev = out.replace(/\s+$/, '').slice(-1)
+      if (prev === '' || '(,=:[!&|?{};'.includes(prev)) {
+        let k = i + 1
+        let cls = false
+        while (k < n && text[k] !== '\n' && (cls || text[k] !== '/')) {
+          if (text[k] === '\\') k++
+          else if (text[k] === '[') cls = true
+          else if (text[k] === ']') cls = false
+          k++
+        }
+        if (k < n && text[k] === '/') { out += text.slice(i, k + 1); i = k + 1; continue }
+      }
+    }
     if (c === '"' || c === "'") {
       raw.lastIndex = i
       let k = i + 1

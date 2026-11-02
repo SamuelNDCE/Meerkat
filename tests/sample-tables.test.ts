@@ -132,6 +132,13 @@ describe('review of PR 46: shapes that look like tables but are real configurati
     expect(stringOnlyLines('a.js', t)(2)).toBe(false)
     expect(lines('"""a ` b"""\nprint(1)', 'py')[1]).toBe('print(1)')
   })
+  test('a backtick inside a regex literal does not open a template literal', () => {
+    for (const re of ['x.replace(/`/g, "")', 'const re = /[`]/', 'if (/`/.test(s)) go()']) {
+      const t = [re, 'res.cookie("s", t, { httpOnly: false })', 'const q = `ok`'].join('\n')
+      expect(stringOnlyLines('a.js', t)(2)).toBe(false)
+    }
+    expect(stringOnlyLines('a.js', ['const a = 6 / 2', 'res.cookie("s", t, { httpOnly: false })', 'const q = `ok`'].join('\n'))(2)).toBe(false)
+  })
   test('a Go raw string ends at the next backtick, a backslash is not an escape', () => {
     const t = ['p := `C:\\dir\\`', 'http.SetCookie(w, &http.Cookie{Name: "s", Value: t})', 'q := `x`'].join('\n')
     const out = lines(t, 'go')
