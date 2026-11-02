@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- round 5a false alarms (NeuralVault audit): js-await-in-loop skips polling, retry, sleep, early-exit and dependent while loops; js-unhandled-promise accepts a .catch nested in the then callback (and long callbacks); json-parse-in-loop leaves test files out and names a real line; empty-catch ignores catch {} written inside comments and accepts a same-line or preceding best-effort comment; debug-leftovers treats probe folders and programs that call process.exit as CLIs
 - a guide to how a run is scheduled and tuned: docs/scheduling.md
 - gentle by default, review fixes: CI=false or CI=0 is not a CI runner, the priority name is not case sensitive, an unknown --priority value is an error, and the time-left estimates use the same default parallelism as the run
 - gentle by default: Meerkat lowers its own priority to below normal (checks inherit it), runs about half as many checks at once as there are cores (2 to 8; all but one on CI), and accepts --priority normal|idle and MEERKAT_PARALLEL. Meerkat's own tests do the same and put every temp project under one folder, meerkat-tests-<your user name>, in the temp folder (private to you), so one antivirus exclusion covers them

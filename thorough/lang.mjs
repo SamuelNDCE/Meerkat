@@ -177,6 +177,19 @@ const jsVarUsage = (root) => {
 // ---- js-await-in-loop: await inside the body of a plain for or while loop, so each step waits for the one before.
 // Functions written inside the loop are not counted (they run later, and often in parallel), and for await is not matched.
 const FN_BODY = /(?:\bfunction\b[^{;]*|=>[ \t\n]*)\{/g
+// A loop whose steps must run one after another: it polls, retries or sleeps, leaves early (break, continue, return),
+// stores each awaited result into an outer variable, or (a while loop) changes what its own condition tests.
+const SEQUENTIAL_WORDS = /sleep|delay|(?<!a)wait|timeout|deadline|retr(?:y|ies)|attempt|poll|backoff|Date\.now/i
+function dependentLoop(header, body, kind) {
+  if (SEQUENTIAL_WORDS.test(header) || SEQUENTIAL_WORDS.test(body)) return true
+  if (/(?<![\w$.])(?:break|continue|return)\b/.test(body)) return true
+  if (/(?:^|[;{}\n])[ \t]*(?!(?:const|let|var)\b)[A-Za-z_$][\w$.[\]]*[ \t]*(?:[-+*/]|\?\?|\|\|)?=(?!=)[ \t]*await\b/.test(body)) return true
+  if (kind === 'while') {
+    const names = new Set(header.match(/[A-Za-z_$][\w$]*/g) ?? [])
+    for (const n of names) if (new RegExp(`(?<![\\w$.])${n.replace(/\$/g, '\\$')}[ \\t]*(?:[-+*/]|\\?\\?)?=(?!=)|(?:\\+\\+|--)[ \\t]*${n.replace(/\$/g, '\\$')}\\b|(?<![\\w$.])${n.replace(/\$/g, '\\$')}[ \\t]*(?:\\+\\+|--)`).test(body)) return true
+  }
+  return false
+}
 const jsAwaitInLoop = (root) => {
   const allow = allowSet(root)
   const f = []
@@ -188,7 +201,8 @@ const jsAwaitInLoop = (root) => {
       let k = close + 1
       while (k < t.length && /\s/.test(t[k])) k++
       const body = t[k] === '{' ? t.slice(k + 1, matchClose(t, k)) : t.slice(k, endOfLine(t, k))
-      if (/(?<![\w$.])await\b/.test(blankBodies(body, FN_BODY))) f.push(`${x}:${lineOf(t, m.index)} awaits inside a ${m[1]} loop, so each step waits for the one before (collect the promises and await Promise.all)`)
+      const bare = blankBodies(body, FN_BODY)
+      if (/(?<![\w$.])await\b/.test(bare) && !dependentLoop(t.slice(m.index, close + 1), bare, m[1])) f.push(`${x}:${lineOf(t, m.index)} awaits inside a ${m[1]} loop, so each step waits for the one before (collect the promises and await Promise.all)`)
     }
   }
   return finish('js-await-in-loop', f, 'no loop awaits each step in turn')
@@ -234,7 +248,7 @@ const hasRejectionArg = (chunk) => [...chunk.matchAll(/\.then[ \t]*\(/g)].some((
 function statementText(t, start) {
   let depth = 0
   let k = start
-  for (; k < t.length && k - start < 3000; k++) {
+  for (; k < t.length && k - start < 40000; k++) {
     const ch = t[k]
     if ('([{'.includes(ch)) depth++
     else if (')]}'.includes(ch)) depth--
@@ -259,7 +273,7 @@ const unhandledPromise = (root) => {
       if (!STMT_START.test(line) || KEYWORDS.test(line) || !startsStatement(t, start)) continue
       const chunk = statementText(t, start)
       const top = topLevel(chunk)
-      if (/\.then[ \t]*\(/.test(top) && !/\.catch[ \t]*\(/.test(top) && !hasRejectionArg(chunk)) f.push(`${x}:${lineOf(t, start)} starts a promise chain with .then and never handles a rejection (add .catch, or await it)`)
+      if (/\.then[ \t]*\(/.test(top) && !/\.catch[ \t]*\(/.test(chunk) &&!hasRejectionArg(chunk)) f.push(`${x}:${lineOf(t, start)} starts a promise chain with .then and never handles a rejection (add .catch, or await it)`)
     }
   }
   return finish('js-unhandled-promise', f, 'promise chains handle their rejections')
