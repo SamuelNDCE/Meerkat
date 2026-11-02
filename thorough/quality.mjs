@@ -129,7 +129,7 @@ const debugLeftovers = (root) => {
   const f = []
   for (const x of files(root, SOURCE)) {
     const testy = TEST_FILE.test(x) || isTestFile(x)
-    const cliish = /(^|\/)(bin|scripts|tools|cli)\//i.test(x) || bins.has(x) || /^#!/.test(readText(root, x)) || /\brequire\.main\s*===\s*module\b|\bprocess\.argv\b|\bimport\.meta\.main\b|\bprocess\.exit(?:Code)?\b/.test(readText(root, x))
+    const cliish = /(^|\/)(bin|scripts|tools|cli)\//i.test(x) || bins.has(x) || /^#!/.test(readText(root, x)) || /\brequire\.main\s*===\s*module\b|\bprocess\.argv\b|\bimport\.meta\.main\b/.test(readText(root, x))
     const lines = readText(root, x).split('\n')
     lines.forEach((line, i) => {
       const why = debugWhy(x, line, lines[i - 1] ?? '', testy, cliish, () => guardedBlock(lines, i))
@@ -189,10 +189,14 @@ const EMPTY_CATCH = [
 const blankComments = (src) => src.replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m) => (m[0] === '/' ? m.replace(/[^\n]/g, ' ') : m))
 const BEST_EFFORT = /best[- ]effort|ignor|swallow|non-?fatal|harmless|deliberate|intentional|optional|not (?:an )?(?:error|fatal|critical)|safe to|may not exist|fall ?back|nothing to do|no-?op/i
 // An empty handler is deliberate when a comment after it on the same line, or a comment line right above it that says why, explains it.
-const documentedHandler = (raw, index, end) => {
+const documentedHandler = (raw, t, index, end) => {
   if (/\/\/|\/\*/.test(raw.slice(index, end))) return true
   const lineEnd = raw.indexOf('\n', end)
-  if (/\/\/|\/\*/.test(raw.slice(end, lineEnd < 0 ? raw.length : lineEnd))) return true
+  const stop = lineEnd < 0 ? raw.length : lineEnd
+  // The comment text on the rest of the line: characters that were blanked out of t but are not blank in raw (a // inside a string stays in t).
+  let same = ''
+  for (let k = end; k < stop; k++) if (t[k] === ' ') same += raw[k]
+  if (BEST_EFFORT.test(same)) return true
   const above = raw.slice(0, index).split('\n')
   above.pop()
   const prev = above.reverse().find((l) => l.trim()) ?? ''
@@ -209,7 +213,7 @@ const emptyCatch = (root) => {
     for (const re of EMPTY_CATCH) {
       for (const m of t.matchAll(re)) {
         const line = lineOf(t, m.index)
-        if (!py && documentedHandler(raw, m.index, m.index + m[0].length)) continue
+        if (!py && documentedHandler(raw, t, m.index, m.index + m[0].length)) continue
         if (!allowed(allow, x, line)) f.push(`${x}:${line} swallows an error with an empty handler`)
       }
     }
