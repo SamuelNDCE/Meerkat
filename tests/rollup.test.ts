@@ -63,3 +63,14 @@ describe('pedantic rules are not even evaluated by default', () => {
     expect(isPedanticRule('jwt-weak', 'high')).toBe(false)
   })
 })
+
+describe('security-relevant Rust rules stay on', () => {
+  test('names that touch secrets, eval, HTML sinks, unsafe pointers, timeouts or SQL are never hidden', () => {
+    // @ts-ignore plain .mjs module
+    const { isHiddenByDefault: hidden } = require('../lib/rollup.mjs')
+    for (const rule of ['rapi-wasm-inner-html-format', 'rapi-wasm-html-sink', 'rapi-js-eval', 'rapi-secret-field-serialized', 'rapi-debug-secret-field', 'rapi-cstr-from-ptr-unchecked', 'rapi-wasm-unchecked-cast', 'rasync-reqwest-no-timeout', 'rerr-sql-format']) {
+      expect(hidden({ rule, severity: 'medium' })).toBe(false)
+    }
+    for (const rule of ['rapi-serde-json-unwrap', 'rerr-lock-unwrap-poison', 'rapi-pub-fn-undocumented']) expect(hidden({ rule, severity: 'medium' })).toBe(true)
+  })
+})
