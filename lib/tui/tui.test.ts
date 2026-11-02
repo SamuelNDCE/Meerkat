@@ -285,7 +285,7 @@ describe('the live board', () => {
     const seen = new Set([0, 24, 48, 72, 99, 100, 150].map((tick) => poseFor({ mood: 'watch', tick })))
     expect(seen).toEqual(new Set(['right']))
     expect(poseFor({ mood: 'watch', tick: 36 })).toBe('blink-right')
-    expect(poseFor({ mood: 'cheer', tick: 0 })).toBe('happy')
+    expect(poseFor({ mood: 'cheer', tick: 0 })).toBe('joy')
     expect(poseFor({ mood: 'alarm', tick: 0 })).toBe('wide')
   })
   test('the board shows every lane, every check as a word, what the running one is doing, and no escape codes without colour', () => {

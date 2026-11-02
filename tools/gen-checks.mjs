@@ -1,14 +1,15 @@
 // Writes the list of every check into docs/checks.md and into the README between their markers, from the checks themselves, so the
 // documentation cannot drift from the code:   node tools/gen-checks.mjs
 // One section per kind of check. Example packs (examples/) are not listed: they belong to one app.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { isAlone } from '../lib/runner.mjs'
 import { declaredSubs, groupBySuite, suiteIdOf } from '../lib/suites.mjs'
 
-const PACKS = ['security', 'hygiene', 'rust', 'ui', 'node', 'python', 'go', 'java', 'dotnet', 'php', 'ruby', 'swift', 'dart', 'web', 'docs', 'infra', 'terraform', 'kubernetes', 'performance', 'refactor', 'repo', 'a11y', 'security-plus', 'quality', 'web-plus', 'lang', 'config', 'content', 'git', 'desktop', 'api', 'health', 'data-science', 'packaging', 'ci-systems', 'privacy', 'engines', 'secrets-plus', 'code-patterns', 'infra-plus', 'web-hardening', 'functionality-run', 'mutation', 'robustness', 'electron-plus', 'rust-plus', 'ai']
+// Every folder under packs/ is a pack, so a new pack is counted without anyone remembering to list it here.
+const PACKS = readdirSync(join(MEERKAT_DIR, 'packs'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort()
 const KINDS = [
   ['security', 'Security', 'Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review.'],
   ['functionality', 'Functionality', 'Does it build, type-check, lint and pass its tests; is the repository in order.'],

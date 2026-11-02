@@ -37,3 +37,16 @@ A private placeholder created 2026-10-30 under the `perpetual-technologies-offic
 - **Every check proves itself.** A new check ships with a `selfTest` on a small broken fixture and an `expectMatch` for the reason it must fail; after adding or changing checks run `node tools/gen-checks.mjs`.
 
 - **Meerkat's own budgets.** `.meerkat-budgets.json` holds this repository's own limits (long lines, function size, complexity, nesting, `any` in tests, JSON in loops), set just above what the code needs because Meerkat's style is long lines. They are not defaults for other projects. Every `.meerkat-*-allow` file names sample text, deliberate calls or old git history, each with a reason line; the self-run (`node run.mjs --app . --preset full --plain`) must show no failures and no findings.
+
+## README sweep after every change (set 2026-11-02 at Samuel's instruction)
+
+**Any change that adds, improves or removes something gets a sweep of the README and the docs in the SAME pull request**, so they never lag the code. Samuel: "anytime we do any changes, we improve anything, add anything, we should definitely do a kind of sweep of the README, make sure it contains all the necessary information to make sure everything is in fact done accurately."
+
+The sweep, in this order:
+1. **Counts and badges are generated, never typed.** Run `node tools/gen-checks.mjs` (checks, suites, sub-checks, README counts line, docs/checks.md), `node tools/gen-coverage.mjs` (docs/coverage.md; a new suite needs a `LOOKS_AT` line there), then `node tools/make-badges.mjs` (version, counts, planted-defect recall). Packs are read from the `packs/` folder, so a new pack is counted automatically; check that the three numbers agree with `docs/checks.md`.
+2. **The accuracy figure** comes from `node tools/accuracy-corpus.mjs --run --write-thresholds` (docs/accuracy.md); the README and badge repeat it, so rerun the badge step after it.
+3. **Presets, flags, environment variables, tools and opt-ins** named in README.md, docs/reference.md and docs/scheduling.md must match `lib/presets.mjs`, `run.mjs`, `lib/quarantine.mjs` and the code (grep each name you touched).
+4. **Pictures:** when a screen changes, regenerate `docs/images/meerkat-run.gif`, `results-scroll.gif`, `menu.png` and `results-happy.png` with the repo tools (their header comments give the commands; no browser tools), then look at the final frame. The finished-and-clean meerkat must show the smiling `joy` face.
+5. **Version and changelog:** `package.json` is the single source; the README never hard-codes a version number; notes go under `## Unreleased` (or the new version at release time).
+6. **Read it as a newcomer:** the quick start works as written, sections are in a sensible order, no em dashes, no stale claims; the self-run (`node run.mjs --app . --preset quick --plain`) must show no failures.
+Credit goes where it is due: tools Meerkat runs are credited with licence and URL in `docs/credits.md`.

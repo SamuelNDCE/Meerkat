@@ -55,6 +55,7 @@ Now a waiting check may start early if two things are true: it fits the free roo
 | Less load on a busy PC | `--priority idle` and `MEERKAT_PARALLEL=2` |
 | The fastest run on a build server | `--priority normal` (this also uses all but one core) |
 | More heavy checks together | raise `budget.cpu` and `budget.maxParallel` in `meerkat.config.json`; watch the run, because window checks slow down when the machine is crowded |
+| A faster `full` run | nothing: `full` and `thorough` already leave out your project's own window checks (listed as skipped); `MEERKAT_WINDOWS=1` or `release` puts them back |
 | Better order and time-left figures | nothing: they improve by themselves as runs are recorded |
 | See how a run went | open `timeline.jsonl` and `summary.json` in the run folder (`~/.meerkat/logs/runs/<run>`); a run that kept one check running at a time while many waited is the signal that the budget or the weights need a look |
 

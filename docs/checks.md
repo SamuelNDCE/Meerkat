@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**360 checks** in 47 suites with 1406 sub-checks (a check that declares no rules counts as one), across 47 packs: 335 quick, 25 thorough, 18 opt-in. [Security 106](#security-checks) · [Functionality 205](#functionality-checks) · [UI 22](#ui-checks) · [Performance 16](#performance-checks) · [Refactor 11](#refactor-checks)
+**368 checks** in 48 suites with 1414 sub-checks (a check that declares no rules counts as one), across 48 packs: 335 quick, 33 thorough, 26 opt-in. [Security 111](#security-checks) · [Functionality 208](#functionality-checks) · [UI 22](#ui-checks) · [Performance 16](#performance-checks) · [Refactor 11](#refactor-checks)
 
 ## Suites
 
@@ -16,6 +16,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `injection-patterns` | Injection patterns | 7 | 71 | Code shapes that lead to SQL injection, path traversal, open redirects, regex DoS and XXE. |
 | `crypto-and-auth` | Crypto and auth | 2 | 2 | Weak JWT settings and weak encryption modes. |
 | `supply-chain` | Supply chain | 8 | 23 | Dependency pinning, lockfile integrity, known-vulnerable packages, install scripts and look-alike names. |
+| `detectors` | Mature detectors | 8 | 8 | Well-known outside tools run on your project: osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint. Opt in with the detectors preset. |
 | `ci-workflows` | Workflow security | 3 | 36 | GitHub Actions: pinned actions, limited permissions, no script injection, no secrets echoed. |
 | `web-security` | Web security | 20 | 76 | CORS, cookies, CSP, unsafe links and inline handlers, mixed content and debug modes left on. |
 | `accessibility` | Accessibility | 10 | 10 | ARIA, link text, focus, zoom, captions, table headers and colour contrast. |
@@ -61,7 +62,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 
 ## Security checks
 
-Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 106 checks.
+Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 111 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -168,13 +169,18 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `wh-supply` | fast | tiny | 1 s | Vendored libraries are not known-vulnerable versions, and lockfile and manifest entries are complete and pinned | web-hardening |
 | `workflow-security` | fast | tiny | 1 s | GitHub Actions: pinned actions, limited permissions, no script injection | security |
 | `xxe-and-deserialize` | fast | tiny | 1 s | XML parsers are locked down and untrusted data is not deserialized | security-plus |
+| `actionlint-workflows` | thorough | light | 10 s | GitHub Actions workflow mistakes from actionlint, when .github/workflows exists *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `ai-diff-review` | thorough | light | 1.0 min | AI security review of the changes against the base branch *(opt-in: `--include ai`)* | ai |
 | `ai-route-audit` | thorough | light | 5.0 min | AI audit of every route, handler and IPC channel *(opt-in: `--include ai`)* | ai |
+| `gitleaks-secrets` | thorough | light | 20 s | Secrets in files and git history from gitleaks (values redacted, never shown) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
+| `govulncheck-go` | thorough | light | 1.0 min | Go vulnerabilities in code you actually call (govulncheck, needs the network), when go.mod exists *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `npm-audit-all` | thorough | tiny | 30 s | npm audit, high severity, every dependency including dev ones | security |
+| `osv-scan` | thorough | light | 20 s | Dependency advisories from osv-scanner: each vulnerable package with its OSV id and fixed version *(opt-in: `--include detectors`)* *(needs: )* | detectors |
+| `semgrep-security` | thorough | medium | 2.0 min | Semgrep security-audit rules (needs the network for the rule set, up to 10 minutes) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 
 ## Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 205 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 208 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -367,6 +373,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `yaml-valid` | fast | tiny | 1 s | Tracked YAML files read as valid (no tab indentation, repeated top-level keys or unclosed quotes) | config |
 | `yamllint` | fast | tiny | 3 s | YAML files (yamllint) *(needs: )* | infra |
 | `clean-copy-builds` | thorough | alone | 3.0 min | A clean copy of the tracked files installs, builds and passes its tests *(opt-in: `--include runtime`)* | functionality-run |
+| `clippy-correctness` | thorough | heavy | 2.0 min | Rust clippy correctness and suspicious lints only (cargo clippy) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `crash-fuzz` | thorough | heavy | 1.5 min | Exported functions survive nasty inputs: no hang, crash, stack overflow or prototype pollution *(opt-in: `--include runtime`)* | robustness |
 | `env-example-boot` | thorough | heavy | 1.0 min | The app starts with the variables .env.example lists (no undocumented variable) *(opt-in: `--include runtime`)* | functionality-run |
 | `flaky-tests` | thorough | alone | 3.0 min | The tests give the same result every time they run *(opt-in: `--include runtime`)* | functionality-run |
@@ -379,8 +386,10 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `rust-build-release` | thorough | heavy | 6.7 min | Rust release build (cargo build --release) | rust |
 | `rust-doc` | thorough | heavy | 2.0 min | Rust documentation builds without warnings (cargo doc) | rust |
 | `slow-test-regression` | thorough | heavy | 2.0 min | No test got more than 3x slower than its recent median (and the five slowest tests are listed) *(opt-in: `--include runtime`)* | robustness |
+| `staticcheck-go` | thorough | light | 30 s | Go staticcheck bugs (SA rules only), when go.mod exists *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `test-order-independence` | thorough | alone | 2.0 min | The tests still pass when run in a different order (no hidden coupling between tests) *(opt-in: `--include runtime`)* | robustness |
 | `tests-fail-without-source` | thorough | alone | 4.0 min | Source files that no test depends on: emptying one file at a time (in a temporary copy) must make a test fail *(opt-in: `--include mutation`)* | mutation |
+| `tsc-strict` | thorough | light | 30 s | TypeScript strict mode diagnostics (tsc --noEmit --strict), only when typescript is already in node_modules *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `tz-locale-matrix` | thorough | alone | 2.0 min | The tests pass in other time zones and locales too (UTC, Los Angeles, Kolkata, Kiritimati; Turkish, German) *(opt-in: `--include runtime`)* | robustness |
 | `unused-dependency-proof` | thorough | alone | 4.0 min | Production dependencies that are not imported can be removed without breaking tests or build *(opt-in: `--include runtime`)* | robustness |
 

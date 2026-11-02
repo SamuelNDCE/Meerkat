@@ -137,7 +137,7 @@ function def(id, pick, naText, okNote, perFile) {
 }
 
 // ---- GitLab CI (.gitlab-ci.yml) -------------------------------------------------------------------------------------
-const GITLAB = /(^|\/)\.gitlab-ci\.ya?ml$/
+const GITLAB = /(^|\/)(?:[^/]*\.)?gitlab-ci\.ya?ml$/
 const NO_GITLAB = 'GitLab CI file (.gitlab-ci.yml)'
 
 // ---- gitlab-ci-secrets: credentials or tokens written into the file, not into masked CI/CD variables
@@ -229,6 +229,7 @@ const circleConfig = def('circleci-config', pickRe(CIRCLE), 'CircleCI config (.c
   ls.forEach((l, i) => {
     if (/@volatile\b/.test(l)) f.push(`${x}:${i + 1} uses an orb pinned to @volatile, which takes whatever release is newest. Pin a version number.`)
     if (OLD_CIRCLE_IMAGE.test(l)) f.push(`${x}:${i + 1} uses a machine image on the deprecated list. Move to a current image.`)
+    if (/^\s*(?:-\s+)?image:\s*["']?[^\s"'#]+:latest["']?\s*(#.*)?$/.test(l)) f.push(`${x}:${i + 1} uses an executor image with the latest tag, which moves without notice. Pin a version tag.`)
   })
   for (const h of secretHits(ls)) f.push(`${x}:${h.i + 1} sets ${h.what} to a literal value. Keep it in a CircleCI project environment variable.`)
 })
@@ -251,6 +252,7 @@ const jenkinsSafety = def('jenkinsfile-safety', pickRe(JENKINS), 'Jenkinsfile', 
   ls.forEach((l, i) => {
     if (/\bsh\b[^\n]*"[^"]*\$\{?params\./.test(l)) f.push(`${x}:${i + 1} puts a build parameter inside a double-quoted sh step, so its value can inject shell commands. Pass it through an environment variable.`)
     if (/\b(echo|println|print)\b.*\$\{?\w*(PASS|TOKEN|SECRET|API_?KEY)\w*\}?/i.test(l)) f.push(`${x}:${i + 1} prints a credential to the build log`)
+    if (/\bsh\b[^\n]*\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+)?(ba|z)?sh\b/.test(l)) f.push(`${x}:${i + 1} pipes a download straight into a shell`)
     if (anyAgent && /docker\.sock/.test(l)) f.push(`${x}:${i + 1} mounts the Docker socket on an agent that can be any machine. Use a labelled agent instead.`)
   })
 })

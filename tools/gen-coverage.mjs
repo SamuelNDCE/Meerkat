@@ -27,6 +27,7 @@ const LOOKS_AT = {
   'injection-patterns': 'JS/TS, Python, Java, C#, PHP, Ruby source',
   'crypto-and-auth': 'Source files (JWT and cipher settings)',
   'supply-chain': 'package.json, lockfiles, requirements, .npmrc',
+  detectors: 'your lockfiles, source and workflows, through osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint (opt-in)',
   'ci-workflows': 'GitHub Actions workflow files',
   'web-security': 'HTML, JSX/TSX, Vue, Svelte, server and host config, JS (cookies, CORS, headers, privacy)',
   accessibility: 'HTML, JSX/TSX, Vue, Svelte, CSS',

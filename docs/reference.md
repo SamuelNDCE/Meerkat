@@ -194,7 +194,7 @@ Measured on Meerkat's own repository, a small project, on one PC (median of 3 ru
 | `meerkat fast` | every quick check (same as quick) | 292 | 10.4 s |
 | `meerkat full` | every check, the slow ones too: before a release | 294 | 10.5 s |
 | `meerkat thorough` | every check, the slow ones too (same as full) | 294 | 11.0 s |
-| `meerkat run --preset detectors` | full plus opt-in tools: osv-scanner, Semgrep, clippy, tsc --strict | n/a | n/a |
+| `meerkat run --preset detectors` | full plus opt-in tools: osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck, actionlint | n/a | n/a |
 
 ### By kind
 
@@ -269,7 +269,7 @@ A quick check runs in `quick`. The full run contains every quick check, or a wid
 
 ## Every check
 
-Meerkat ships hundreds of checks in 47 packs, grouped into five kinds: **Security**, **Functionality**, **UI**, **Performance** and **Refactor**. The full list, with what each check does, how heavy it is, how long it takes and which tool it needs, is [docs/checks.md](checks.md). It is generated from the checks themselves (`node tools/gen-checks.mjs`), so it cannot drift from the code. `meerkat list` prints the same list in your terminal, and `meerkat suite list` shows it by suite.
+Meerkat ships hundreds of checks in 48 packs, grouped into five kinds: **Security**, **Functionality**, **UI**, **Performance** and **Refactor**. The full list, with what each check does, how heavy it is, how long it takes and which tool it needs, is [docs/checks.md](checks.md). It is generated from the checks themselves (`node tools/gen-checks.mjs`), so it cannot drift from the code. `meerkat list` prints the same list in your terminal, and `meerkat suite list` shows it by suite.
 
 ## What it works on
 
@@ -550,6 +550,8 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 |---|---|
 | `MEERKAT_LOG_DIR` | where run logs go (default `~/.meerkat/logs`) |
 | `MEERKAT_APP_DIR` | the folder to check, if not given with `--app` |
+| `MEERKAT_FINDINGS` | `all` lists every finding, including the pedantic quality rules hidden by default (counted as "hidden by default"; the rules are in `lib/quarantine.mjs`) and the Rust style family, which is off by default |
+| `MEERKAT_WINDOWS` | `1` runs your project's own window checks (Electron, Playwright, click-through) in `full` and `thorough` too; they are left out by default |
 | `MEERKAT_BASE` | the branch changes are measured against (default: what `origin/HEAD` points at, else `main`, `master`, `dev`) |
 | `MEERKAT_PLAIN=1` | plain lines instead of the live board |
 | `NO_COLOR` | no colour |
@@ -658,5 +660,5 @@ The package is `@samuelndce/meerkat` (the plain name `meerkat` belongs to anothe
 
 To publish a version: run the tests and the self-run, cut the version with `node tools/release.mjs patch "what changed"`, check the contents with `npm pack --dry-run`, then log in with `npm login` and run `npm publish`. Publishing needs the owner's npm account, so it is never done by a script or an agent.
 
-The `detectors` preset (pack `detectors`) runs osv-scanner, Semgrep (`p/security-audit`, needs the network), `cargo clippy` correctness and suspicious lints, and `tsc --strict` when typescript is already in the project's node_modules.
+The `detectors` preset (pack `detectors`) runs osv-scanner, gitleaks, Semgrep (`p/security-audit`, needs the network), `cargo clippy` correctness and suspicious lints, `tsc --strict` when typescript is already in the project's node_modules, staticcheck, govulncheck and actionlint. Which of them use the network, and their licences, are in [credits.md](credits.md).
 A missing tool is NOT RUN with an install hint; Meerkat never installs anything. Findings keep the tool's own rule ids.
