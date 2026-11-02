@@ -293,7 +293,7 @@ const sgSample = (port, cidr) => `resource "aws_security_group_rule" "r" {\n  ty
 const SG_PORTS = [[22, 'SSH'], [3389, 'RDP'], [3306, 'MySQL'], [5432, 'PostgreSQL'], [6379, 'Redis'], [27017, 'MongoDB']]
 const SG_RULES = SG_PORTS.map(([port, name]) => {
   const portRe = new RegExp(`\\b(from|to)_port\\s*=\\s*${port}\\b`)
-  return T(`tf-sg-open-${port}`, `a security group opens ${name} (port ${port}) to every address`, (l, c) => /\b(?:ipv6_)?cidr_blocks\s*=\s*\[\s*"(?:0\.0\.0\.0\/0|::\/0)"/.test(l) && windowHas(c, portRe, 8), sgSample(port, '0.0.0.0/0'), sgSample(port, '10.0.0.0/16'))
+  return T(`tf-sg-open-${port}`, `a security group opens ${name} (port ${port}) to every address`, (l, c) => /cidr_blocks\s*=\s*\[\s*"(?:0\.0\.0\.0\/0|::\/0)"/.test(l) && windowHas(c, portRe, 8), sgSample(port, '0.0.0.0/0'), sgSample(port, '10.0.0.0/16'))
 })
 
 const TF_RULES = withScope(TF_FILES, TF_COMMENT, [

@@ -48,6 +48,12 @@ describe('terraform: SSH open to every IPv6 address', () => {
   test('a private ipv6 range does not', () => {
     expect(fired('ip-terraform-compose', folder({ 'terraform/v6.tf': sg('ipv6_cidr_blocks = ["fd00::/8"]') }), 'tf-sg-open-22')).toBe(false)
   })
+  test('a prefixed key (ingress_cidr_blocks) open to ipv4 still reports', () => {
+    expect(fired('ip-terraform-compose', folder({ 'terraform/p.tf': sg('ingress_cidr_blocks = ["0.0.0.0/0"]') }), 'tf-sg-open-22')).toBe(true)
+  })
+  test('a prefixed key with a private range does not', () => {
+    expect(fired('ip-terraform-compose', folder({ 'terraform/p.tf': sg('ingress_cidr_blocks = ["10.0.0.0/8"]') }), 'tf-sg-open-22')).toBe(false)
+  })
   test('a private ipv4 range still does not', () => {
     expect(fired('ip-terraform-compose', folder({ 'terraform/v4.tf': sg('cidr_blocks = ["10.0.0.0/8"]') }), 'tf-sg-open-22')).toBe(false)
   })
