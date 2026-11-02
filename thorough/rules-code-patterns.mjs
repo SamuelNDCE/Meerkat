@@ -40,7 +40,17 @@ const outsideStrings = (re) => {
   }
 }
 
-const TIMING_RE = /\b\w*(?:(?:auth|api|access|session|csrf|bearer|refresh)_?token|secret|signature|hmac|apiKey|password)\w*\s*(?:===|!==)\s*(?!(?:undefined|null|true|false|NaN)\b)[A-Za-z_$][\w.$[\]]{0,79}/i
+// A confirm field next to a password (`password !== confirm`, `newPassword === repeatPassword`) compares two things the same person typed: there is no secret to leak by timing.
+const CONFIRM_PAIR = /\b\w*password\w*\s*[!=]==\s*\w*(?:confirm|repeat|retype|again|verify)\w*|\b\w*(?:confirm|repeat|retype|again|verify)\w*\s*[!=]==\s*\w*password\w*/i
+// A bare "signature" is a secret to compare only with cryptographic context on the line; `seenSignature !== signature` (a list fingerprint kept in UI state) is not one.
+const CRYPTO_CONTEXT = /hmac|webhook|jwt|digest|header|expected|computed|stripe|github|signing|signed|secret|token|payload|req\b|request/i
+const UI_SIGNATURE = (line) => {
+  const m = TIMING_RE.exec(line)
+  if (!m || !/signature/i.test(m[0])) return false
+  const withoutSignature = m[0].replace(/signature/gi, '')
+  return !/(?:secret|hmac|token|password|apiKey)/i.test(withoutSignature) && !CRYPTO_CONTEXT.test(line)
+}
+const TIMING_RE =/\b\w*(?:(?:auth|api|access|session|csrf|bearer|refresh)_?token|secret|signature|hmac|apiKey|password)\w*\s*(?:===|!==)\s*(?!(?:undefined|null|true|false|NaN)\b)[A-Za-z_$][\w.$[\]]{0,79}/i
 
 // A regex literal whose character class lists the characters (a scanner that looks for them): not a hidden character.
 const REGEX_CLASS_LINE = /[=(,:]\s*\/\[[^\]\n]{1,80}\]\/[gimsuy]*\s*[;,).]?\s*$/
@@ -176,7 +186,7 @@ export const JS = [
   JSF('js-pseudorandom-bytes', 'crypto.pseudoRandomBytes is used, which is not cryptographic random', /\bpseudoRandomBytes\s*\(/, 'crypto.pseudoRandomBytes(16)', 'crypto.randomBytes(16)'),
   JSF('js-timing-unsafe-compare', 'a secret or token is compared with === to another variable (timing leaks the value; use a constant-time compare)', TIMING_RE, 'if (req.authToken === expected) ok()', 'if (safeEqual(a, b)) ok()', {
     // typeof checks and comparisons with a literal (a string, a number, null) are not a secret-versus-secret compare.
-    test: (line) => !/\btypeof\b/.test(line) && outsideStrings(TIMING_RE)(line),
+    test: (line) => !/\btypeof\b/.test(line) && outsideStrings(TIMING_RE)(line) && !CONFIRM_PAIR.test(line) && !UI_SIGNATURE(line),
   }),
   JSF('js-nested-quantifier-regex', 'a regular expression has a nested quantifier that can take exponential time', /\((?!(?:\?:)?(?:\\\.|-|\/))(?:\?:)?[^()[\]\n]{1,40}[+*]\)[+*{]/, 'const re = /(a+)+$/', 'const re = /a+$/'),
   JSF('js-template-no-escape', 'a template turns off HTML escaping (noEscape or a triple-stash tag)', /\bnoEscape\s*:\s*true\b|\{\{\{\s*[\w.]+\s*\}\}\}/, 'Handlebars.compile(t, { noEscape: true })', 'Handlebars.compile(t)'),
