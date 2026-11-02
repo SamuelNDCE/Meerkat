@@ -43,7 +43,7 @@ const outsideStrings = (re) => {
 // A confirm field next to a password (`password !== confirm`, `newPassword === repeatPassword`) compares two things the same person typed: there is no secret to leak by timing.
 // Each comparison is judged on its own (a line can hold a confirm check and a real secret compare). A side that holds a stored value (hash, stored, saved, db, expected,
 // current, old) is a real compare, never a confirm pair; "verify" counts only as verifyPassword or passwordVerify.
-const STORED_WORD = /hash|stored|saved|db\b|expected|current|old|actual|digest/i
+const STORED_WORD = /hash|stored|saved|db\b|expected|current|old|actual|digest|process\.env|\benv\b|secret|config/i
 const CONFIRM_WORD = /confirm|repeat|retype|again|verify_?password|password_?verify/i
 const isConfirmPair = (m0) => {
   const sides = m0.split(/[!=]==/).map((s) => s.trim())
@@ -54,7 +54,7 @@ const isConfirmPair = (m0) => {
 // A bare "signature" is a secret to compare only when the compare is not plainly UI state: `seenSignature !== signature` (a list fingerprint kept in React state) has a
 // state-word prefix on one side, no secret word, and no cryptographic context anywhere on the line.
 const CRYPTO_CONTEXT = /hmac|webhook|jwt|digest|header|expected|computed|calculated|generated|hash|sha\d*|\bmac\b|verify|received|provided|sig\b|stripe|github|signing|signed|secret|token|payload|req\b|request/i
-const STATE_SIGNATURE = /\b(?:seen|last|prev|previous|current|cached|old|next|memo|rendered)\w*Signature\b/
+const STATE_SIGNATURE = /\b(?:seen|last|prev|previous|memo|rendered)\w*Signature\b/
 const isUiSignature = (m0, line) => /signature/i.test(m0) && STATE_SIGNATURE.test(m0) && !/(?:secret|hmac|token|password|apiKey)/i.test(m0.replace(/signature/gi, '')) && !CRYPTO_CONTEXT.test(line)
 // True when at least one comparison outside a string is NOT excluded.
 const anyUnexcluded = (re, line, excluded) => {

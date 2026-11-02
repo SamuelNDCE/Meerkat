@@ -26,6 +26,11 @@ describe('js-timing-unsafe-compare', () => {
     expect(hit('if (password === verifiedToken) go()')).toBe(true)
     expect(hit('if (password !== verifyPassword) return')).toBe(false)
   })
+  test('a secret from the environment or config is never a confirm field, and current/old/next/cached do not make a signature UI state', () => {
+    expect(hit('if (password === process.env.CONFIRM_PASSWORD) go()')).toBe(true)
+    expect(hit('if (currentSignature !== incoming) reject()')).toBe(true)
+    expect(hit('if (oldSignature !== incoming) reject()')).toBe(true)
+  })
   test('only a state-prefixed signature is UI state; other signature compares report', () => {
     expect(hit('if (signature !== calculatedSignature) reject()')).toBe(true)
     expect(hit('if (signature === receivedSignature) ok()')).toBe(true)
