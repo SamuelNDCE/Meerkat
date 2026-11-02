@@ -5,3 +5,6 @@ thorough/api.mjs:287
 thorough/engines.mjs:569
 lib/tui/resultssample.mjs:72
 lib/tui/resultssample.mjs:83
+# thorough/api.mjs:297 and health.mjs:291 name the dangerous calls in rule text and messages, not call them.
+thorough/api.mjs:297
+thorough/health.mjs:291

@@ -123,10 +123,13 @@ export const isFixture = (f) => /(^|\/)(fixtures?|testdata|__fixtures__|test-fix
 export const isTestFile = (f) => isFixture(f) || /(^|\/)(tests?|__tests__|e2e|spec)\//i.test(f) || /(^|\/)(?:scripts|tools|supabase|qa|e2e)\/probes?\//i.test(f) || /\.(test|spec)\.[a-z]+$/i.test(f) || /(^|\/)[\w.-]+_tests?\.(rs|go|py)$/i.test(f) || /(^|\/)test_[\w.-]+\.py$/i.test(f) || /(^|\/)tests\.rs$/i.test(f) || /[-_.]fixtures?\.[a-z]+$/i.test(f) || /(^|\/)test[_-]?(?:support|utils?|helpers?)\.[a-z]+$/i.test(f) || /(^|\/)probe-[\w.-]+\.(?:[cm]?[jt]s|py)$/i.test(f)
 // Returns a function: is this 1-based line inside a `#[cfg(test)] mod name { ... }` block? Only that block counts (found by matching braces, with string and char
 // literals blanked first); an attribute that is not followed by a module, or a block that never closes, covers nothing.
-export const rustTestLines = (file, text) => {
+// Rust source with raw strings, strings, char literals and comments blanked (same length, newlines kept). The char literal comes before the string
+// alternative so a '"' cannot open a string that swallows the code after it.
+export const rustBlank = (text) => text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|'(?:[^'\\\n]|\\.)'|"(?:[^"\\]|\\[\s\S])*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (s) => s.replace(/[^\n]/g, ' '))
+export const rustTestLines =(file, text) => {
   if (!/\.rs$/i.test(file) || !text.includes('#[cfg(test)]')) return () => false
   // Raw strings (r#"..."#), strings, char literals and comments are blanked (same length, newlines kept) so a brace inside one is not counted.
-  const blanked = text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\\n]|\\.)'|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (s) => s.replace(/[^\n]/g, ' '))
+  const blanked = rustBlank(text)
   const ranges = []
   for (const m of blanked.matchAll(/^[ \t]*#\[cfg\(test\)\][ \t]*\r?\n(?:[ \t]*#\[[^\]\n]*\][ \t]*\r?\n)*[ \t]*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{/gm)) {
     let depth = 0
@@ -139,6 +142,173 @@ export const rustTestLines = (file, text) => {
     }
   }
   return (line) => ranges.some(([a, b]) => line >= a && line <= b)
+}
+// Replaces the text of string literals with spaces (newlines kept), so what is left is the code around them. A small scanner, not a regex, because template literals nest:
+// the text of `a ${ f(`b`) } c` is blanked but its hole `${ ... }` stays as code, with its own strings blanked inside it. Raw strings (Rust r#"..."#), single-line quotes,
+// and comments (// and /* */, and # in Python) are understood, so an apostrophe or a backtick in a comment never opens a string. A template literal that is never closed
+// is left as code, and a template literal with no hole is blanked completely, backticks included. Anything unclear is left unblanked: the result then reads as code.
+export function blankStrings(text, lang = 'js') {
+  // lang: js (JavaScript and TypeScript), py, go or rs. A backtick means a template literal only in js, a raw string (no escapes) in go, and nothing in py or rs.
+  const python = lang === 'py'
+  const n = text.length
+  const spaces = (s) => s.replace(/[^\n]/g, ' ')
+  const raw = /(?<![A-Za-z0-9_])(?:b|c)?r(#*)"/y
+  // text[start] is a backtick; returns [output, end index]
+  const template = (start) => {
+    let i = start + 1
+    let out = '`'
+    let hole = false
+    while (i < n) {
+      const c = text[i]
+      if (c === '\\') { out += spaces(text.slice(i, i + 2)); i += 2; continue }
+      if (c === '`') { out += '`'; return [hole ? out : spaces(out), i + 1] }
+      if (c === '$' && text[i + 1] === '{') {
+        hole = true
+        let depth = 1
+        let j = i + 2
+        let inner = '${'
+        while (j < n && depth > 0) {
+          const d = text[j]
+          if (d === '`') { const [t, e] = template(j); inner += t; j = e; continue }
+          if (d === '"' || d === "'") {
+            let k = j + 1
+            while (k < n && text[k] !== d && text[k] !== '\n') k += text[k] === '\\' ? 2 : 1
+            inner += spaces(text.slice(j, Math.min(n, k + 1)))
+            j = Math.min(n, k + 1)
+            continue
+          }
+          if (d === '{') depth++
+          else if (d === '}') depth--
+          inner += d
+          j++
+        }
+        out += inner
+        i = j
+        continue
+      }
+      out += c === '\n' ? '\n' : ' '
+      i++
+    }
+    return [text.slice(start), n] // never closed: leave it as code
+  }
+  let out = ''
+  let i = 0
+  while (i < n) {
+    const c = text[i]
+    if (!python && c === '/' && text[i + 1] === '/') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
+    if (c === '/' && text[i + 1] === '*') { const e = text.indexOf('*/', i + 2); const end = e < 0 ? n : e + 2; out += text.slice(i, end); i = end; continue }
+    if (python && c === '#') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
+    if (lang === 'js' && c === '/') {
+      // A regex literal can hold a quote or a backtick (/`/g), which must not open a string or a template. It starts where a value is expected: after ( , = : [ ! & | ? { } ; or at the start.
+      let p = out.length - 1
+      while (p >= 0 && /\s/.test(out[p])) p-- // walk back over trailing whitespace; never copy the whole buffer
+      const prev = p < 0 ? '' : out[p]
+      if (prev === '' || '(,=:[!&|?{};'.includes(prev)) {
+        let k = i + 1
+        let cls = false
+        while (k < n && text[k] !== '\n' && (cls || text[k] !== '/')) {
+          if (text[k] === '\\') k++
+          else if (text[k] === '[') cls = true
+          else if (text[k] === ']') cls = false
+          k++
+        }
+        if (k < n && text[k] === '/') { out += text.slice(i, k + 1); i = k + 1; continue }
+      }
+    }
+    if (c === '"' || c === "'") {
+      raw.lastIndex = i
+      let k = i + 1
+      while (k < n && text[k] !== c && text[k] !== '\n') k += text[k] === '\\' ? 2 : 1
+      if (k < n && text[k] === c) { out += spaces(text.slice(i, k + 1)); i = k + 1; continue }
+      out += c; i++; continue // an apostrophe that opens nothing
+    }
+    if (c === '`' && lang === 'js') { const [t, e] = template(i); out += t; i = e; continue }
+    if (c === '`' && lang === 'go') { const e = text.indexOf('`', i + 1); const end = e < 0 ? n : e + 1; out += e < 0 ? text.slice(i) : spaces(text.slice(i, end)); i = end; continue }
+    if (lang === 'rs' && (c === 'r' || c === 'b' || c === 'c')) {
+      raw.lastIndex = i
+      const m = raw.exec(text)
+      if (m) {
+        const close = text.indexOf('"' + m[1], i + m[0].length)
+        if (close >= 0) { const end = close + 1 + m[1].length; out += spaces(text.slice(i, end)); i = end; continue }
+      }
+    }
+    out += c
+    i++
+  }
+  return out
+}
+// Returns a function: is this 1-based line only string literals and punctuation (a table of sample code a detector or a test feeds to itself, such as
+// `("js", r#"db.query(...)"#),`, or a line inside a multi-line string)? Strings are blanked first, raw and multi-line ones too; a line with any identifier left
+// outside a string is code and is not data. Only for checks that look for code patterns; never for secrets, where the string itself is the problem.
+export const langOf = (file) => (/\.rs$/i.test(file) ? 'rs' : /\.py$/i.test(file) ? 'py' : /\.go$/i.test(file) ? 'go' : /\.[cm]?[jt]sx?$/i.test(file) ? 'js' : '')
+export const stringOnlyLines = (file, text) => {
+  const lang = langOf(file)
+  if (!lang) return () => false
+  const lines = text.split('\n')
+  const blank = blankStrings(text, lang).split('\n')
+  return (line) => {
+    const o = (lines[line - 1] ?? '').trim()
+    const b = blank[line - 1]
+    if (o === '' || b === undefined || /^\s*(?:\/\/|#|\/\*|\*)/.test(o)) return false
+    // In a Rust table of (language, sample) pairs, field names (`bad:`), `&`, `vec!` and `Some(` around the strings are part of the table; on a line with no tuple
+    // (`origin: "*",`) a label is a configuration field and the line is code. In other languages `key: "value"` is always configuration.
+    // The descriptive fields of a rules table (a pattern, the reason, the advice) hold regexes and prose, never configuration values, so they count as table fields too.
+    // Exactly one field on the line, holding one string: the array forms (`bad: &[(...)]`) are judged as tuples below.
+    const descriptive = lang === 'rs' && (b.match(/\b\w+\s*:(?!:)/g) ?? []).length === 1 && /^(?:pat|pattern|why|instead|title|msg|message|hint|note|reason|help|desc|description|example)\s*:\s*(?:r#*"|")/.test(o)
+    const rest = lang === 'rs' && (b.includes('(') || descriptive) ? b.replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ') : b
+    if (!/^[,;()[\]{}\s]*$/.test(rest)) return false
+    // The strings must be sample CODE: the text that was blanked contains a call (this also covers the first line of a multi-line string), or nothing was blanked.
+    const orig = lines[line - 1] ?? ''
+    let content = ''
+    for (let k = 0; k < orig.length && k < b.length; k++) if (b[k] === ' ' && !/\s/.test(orig[k])) content += orig[k]
+    // Or the line is a (language tag, code) pair, the shape of a detector's sample table: `("java", r##"..."##)`, also after a field name (`bad: &[("php", ...)]`).
+    // Only in Rust, only when it is the one tuple on the line, and only when the second string has code in it (an assignment, a statement end, a call, a variable or a brace),
+    // so `("js", "postgres://user:pw@host")` and `("go", "45.33.12.9")` are still read as the values they are.
+    const tagged = lang === 'rs' && (b.match(/\(/g) ?? []).length === 1 && /[=;($<{]/.test(content.replace(/^r?#*"?[a-z]+"?#*/i, '')) &&
+      /^\s*(?:\w+\s*:\s*&?\[)?\(\s*r?#*"(?:js|jsx|ts|tsx|py|java|php|go|rs|rb|cs|kt|sh|bash|cpp|html|sql|yaml|toml|xml)"#*\s*,/.test(orig)
+    return content === '' || tagged || descriptive || /[\w\])]\s*\(/.test(content)
+  }
+}
+// Rust files that hold deliberately insecure sample code as string data (a scanner's own rule tables). The NAME is the convention: insecure_code*.rs,
+// vulnerable_samples*.rs, bad_examples*.rs. Only the strings in such a file are sample text; code written outside a string there is still scanned.
+export const isInsecureSampleFile = (f) => /(^|\/)(?:insecure_code|vulnerable_samples?|bad_examples?)[\w.-]*\.rs$/i.test(f)
+// The text with every Rust string literal (plain, byte and raw r#"..."#) blanked: same length, newlines kept, so line numbers stay true. Comments are left as they are.
+// Only strings that sit inside a DATA TABLE are blanked: the initializer of a `const` or `static` (an array or slice of tuples or struct literals holding sample text).
+// A string used anywhere else, such as an argument of a call inside a function, is real code and is left alone. Char literals ('"') are consumed so they cannot shift
+// the string pairing.
+export const blankRustStrings = (text) => {
+  const tok = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|(?<![A-Za-z0-9_])b?"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\\n]|\\.)'|=(?![=>])|[(){}[\];]|\b(?:const|static)\b/g
+  let out = ''
+  let last = 0
+  let state = 'code' // code | pending (after const/static, before =) | table
+  let depth = 0
+  for (const m of text.matchAll(tok)) {
+    const s = m[0]
+    if (/^\/[/*]/.test(s) || s[0] === "'") continue
+    if (state === 'pending' && depth === 0 && s === '{') {
+      state = 'code' // const fn / static block, not a table
+      continue
+    }
+    if (s === 'const' || s === 'static') {
+      if (state === 'code') {
+        state = 'pending'
+        depth = 0
+      }
+    } else if (s === '=') {
+      if (state === 'pending' && depth === 0) {
+        state = 'table'
+        depth = 0
+      }
+    } else if (s === '(' || s === '[' || s === '{') depth++
+    else if (s === ')' || s === ']' || s === '}') depth = Math.max(0, depth - 1)
+    else if (s === ';') {
+      if (depth === 0 && state !== 'code') state = 'code'
+    } else if (state === 'table') {
+      out += text.slice(last, m.index) + s.replace(/[^\n]/g, ' ')
+      last = m.index + s.length
+    }
+  }
+  return out + text.slice(last)
 }
 // A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.
 export const FAKE_VALUE = /fake|dummy|placeholder|supersecret|not[-_]?(?:a[-_])?real|redacted|changeme|example|sample|[_-]test[_-]|your[-_]?(?:key|token|secret)/i

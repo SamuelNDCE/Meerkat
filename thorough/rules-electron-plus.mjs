@@ -18,6 +18,7 @@
 // Rules that need a sibling line (for example a handler body) look only at a fixed window of lines after the match.
 
 import { inDevOnlyBlock, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked } from './guards.mjs'
+import { rustTestLines } from './kit.mjs'
 const JS = ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'jsx', 'tsx']
 const HTML = ['html', 'htm']
 const COMMENT = /^\s*(\/\/|\/\*|\*|<!--)/
@@ -29,7 +30,25 @@ const BUILD = /(^|\/)(electron-builder\.[A-Za-z0-9]+|forge\.config\.[cm]?[jt]s)$
 const ENT = /(^|\/)[^/]*entitlements[^/]*\.plist$/i
 const PLIST = /(^|\/)Info\.plist$/
 const FUSES_SET = /FuseV1Options|flipFuses|electronFuses|@electron\/fuses/
-const isBuildConfig = (file, text) => BUILD.test(file) || (PKG.test(file) && /"build"\s*:|"electron-builder"|"@electron-forge\//.test(text))
+// A package.json counts as an Electron build config only when it names Electron itself (an "electron" or "electron-builder" entry, or Electron Forge); a bare "build"
+// script or key is in every Tauri, VS Code extension and web package.
+// Electron may be declared in a workspace root package.json above the app (a monorepo), so the folders above are read too; electron-vite projects count as well.
+const ELECTRON_SIGNAL = /"electron-builder"|"@electron-forge\/|"electron(?:-vite(?:-vue)?)?"\s*:|"electron-vite(?:-vue)?"/
+const electronAbove = (file, project) => {
+  if (!project || !project.read || !project.files) return false
+  const parts = file.split('/').slice(0, -1)
+  while (parts.length) {
+    parts.pop()
+    const p = [...parts, 'package.json'].join('/')
+    if (project.files.includes(p)) {
+      const t = project.read(p)
+      if (typeof t === 'string' && ELECTRON_SIGNAL.test(t)) return true
+    }
+  }
+  return false
+}
+const isBuildConfig = (file, text, project) =>
+  BUILD.test(file) || (PKG.test(file) && /"build"\s*:|"electron-builder"|"@electron-forge\//.test(text) && (ELECTRON_SIGNAL.test(text) || electronAbove(file, project)))
 
 // Caches the answer for one file text: a whole-file predicate runs once even when a line test calls it for every matching line.
 const memo = (fn) => {
@@ -49,7 +68,7 @@ const lineIf = (re, pred) => {
   return (line, ctx) => re.test(line) && p(ctx.text)
 }
 // A once-per-file test (on the first line): pred(text, file) holds.
-const fileIf = (pred) => (line, ctx) => ctx.index === 0 && pred(ctx.text, ctx.file)
+const fileIf = (pred) => (line, ctx) => ctx.index === 0 && pred(ctx.text, ctx.file, ctx.project)
 // A line that matches re, with nre found in the window of lines from this one (inclusive) to n lines after it.
 const near = (re, nre, n = 10) => (line, ctx) => re.test(line) && ctx.lines.slice(ctx.index, ctx.index + n + 1).some((l) => nre.test(l))
 // A line that matches re, with nre NOT found in that window.
@@ -360,7 +379,7 @@ const absentFuse = (id, title, camel, pascal, severity) => ({
   sample: 'forge.config.js',
   notIn: TEST_OUT,
   severity,
-  test: fileIf((t, f) => isBuildConfig(f, t) && FUSES_SET.test(t) && !fuseNamed(camel, pascal).test(t)),
+  test: fileIf((t, f, p) => isBuildConfig(f, t, p) && FUSES_SET.test(t) && !fuseNamed(camel, pascal).test(t)),
   // The bad sample configures a different fuse and leaves this one unset; the good sample sets it to the secure value.
   bad: `const { FuseV1Options } = require('@electron/fuses')\nflipFuses(app, { [FuseV1Options.${camel === 'runAsNode' ? 'EnableCookieEncryption' : 'RunAsNode'}]: true })`,
   good: `const { FuseV1Options } = require('@electron/fuses')\nflipFuses(app, { [FuseV1Options.${camel === 'runAsNode' ? 'EnableCookieEncryption' : 'RunAsNode'}]: true, [FuseV1Options.${pascal}]: ${['embeddedAsarIntegrityValidation', 'onlyLoadAppFromAsar', 'enableCookieEncryption'].includes(camel) ? 'true' : 'false'} })`,
@@ -392,7 +411,7 @@ export const EP_FUSES_BUILD = [
     sample: 'electron-builder.json',
     notIn: TEST_OUT,
     severity: 'info',
-    test: fileIf((t, f) => isBuildConfig(f, t) && !FUSES_SET.test(t) && !/electronFuses/.test(t)),
+    test: fileIf((t, f, p) => isBuildConfig(f, t, p) && !FUSES_SET.test(t) && !/electronFuses/.test(t)),
     bad: '{ "appId": "com.acme.notes", "productName": "Notes", "asar": true }',
     good: '{ "appId": "com.acme.notes", "productName": "Notes", "electronFuses": { "runAsNode": false } }',
   },
@@ -440,7 +459,7 @@ export const EP_FUSES_BUILD = [
     sample: 'electron-builder.json',
     notIn: TEST_OUT,
     severity: 'info',
-    test: fileIf((t, f) => isBuildConfig(f, t) && !/"productName"/.test(t)),
+    test: fileIf((t, f, p) => isBuildConfig(f, t, p) && !/"productName"/.test(t)),
     bad: '{ "appId": "com.acme.notes" }',
     good: '{ "appId": "com.acme.notes", "productName": "Notes" }',
   },
@@ -451,7 +470,7 @@ export const EP_FUSES_BUILD = [
     sample: 'electron-builder.json',
     notIn: TEST_OUT,
     severity: 'info',
-    test: fileIf((t, f) => isBuildConfig(f, t) && !/"copyright"/.test(t)),
+    test: fileIf((t, f, p) => isBuildConfig(f, t, p) && !/"copyright"/.test(t)),
     bad: '{ "appId": "com.acme.notes", "productName": "Notes" }',
     good: '{ "appId": "com.acme.notes", "productName": "Notes", "copyright": "Copyright 2026 Acme" }',
   },
@@ -648,6 +667,48 @@ const tauriRs = (id, title, re, bad, good, extra = {}) => {
   const gate = /#\[tauri::command\]|tauri::Builder|tauri::command\b/
   return { id, title, ext: ['rs'], skipLine: COMMENT, notIn: TEST_OUT, re: undefined, test: lineIf(re, (t) => gate.test(t)), bad, good, ...extra }
 }
+// The body of each #[tauri::command] function: its 1-based line range and the names of the parameters the page controls (text and path types).
+// Strings and comments are blanked first so a brace inside one is not counted. Cached for the last file text.
+let bodiesFor = ''
+let bodiesOf = []
+const commandBodies = (text) => {
+  if (text === bodiesFor) return bodiesOf
+  const blanked = text.replace(/"(?:[^"\\]|\\[\s\S])*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, ' '))
+  const out = []
+  for (const m of blanked.matchAll(/#\[tauri::command[^\]]{0,80}\]\s{0,40}(?:#\[[^\]]{0,80}\]\s{0,40}){0,4}(?:pub(?:\([^)]{0,20}\))?\s+)?(?:async\s+)?fn\s+\w+\s*(?:<[^>]{0,80}>)?\s*\(([^)]{0,400})\)[^{;]{0,200}\{/g)) {
+    const names = new Set([...m[1].matchAll(/\b(\w+)\s*:\s*(?:&\s*)?(?:'\w+\s+)?(?:mut\s+)?(?:Option<\s*)?(?:&\s*)?(?:std::path::|std::string::)?(?:String|str|PathBuf|Path)\b/g)].map((x) => x[1]))
+    let depth = 0
+    for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
+      if (blanked[i] === '{') depth++
+      else if (blanked[i] === '}' && --depth === 0) {
+        const body = blanked.slice(m.index + m[0].length, i)
+        // A local built from a parameter (`let p = base.join(name)`) carries the page's value too.
+        for (let pass = 0; pass < 3; pass++) {
+          for (const l of body.matchAll(/\blet\s+(?:mut\s+)?(\w+)\s*(?::[^=;]{0,60})?=\s*([^;]{0,300});/g)) {
+            if ([...names].some((n) => new RegExp(`\\b${n}\\b`).test(l[2]))) names.add(l[1])
+          }
+        }
+        // A command that both resolves the path and checks it stays inside a folder is doing the check this rule asks for (one without the other is not enough).
+        const guarded = /\bcanonicali[sz]e\b/.test(body) && /\bstarts_with\b|\bstrip_prefix\b|\bis_allowed\b/.test(body)
+        out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names: guarded ? new Set() : names })
+        break
+      }
+    }
+  }
+  bodiesFor = text
+  bodiesOf = out
+  return out
+}
+// A path argument that comes straight from the page into std::fs: the call is inside a Tauri command, outside a test module, and the name is one of the command's own parameters.
+const FS_PATH_CALL = /\bfs::\w+\(/
+const fsPathTest = (line, ctx) => {
+  const m = FS_PATH_CALL.exec(line)
+  if (!m) return false
+  const args = line.slice(m.index)
+  const at = ctx.index + 1
+  if (rustTestLines(ctx.file ?? 'x.rs', ctx.text)(at)) return false
+  return commandBodies(ctx.text).some((b) => at >= b.from && at <= b.to && [...b.names].some((n) => new RegExp(`\\b${n}\\b`).test(args)))
+}
 const tauriJson = (id, title, re, bad, good, extra = {}) => ({ id, title, files: TAURI_JSON, sample: 'src-tauri/tauri.conf.json', re, notIn: TEST_OUT, bad, good, ...extra })
 export const EP_TAURI_CROSS = [
   tauriJson('ep-tauri-scope-user-folder', 'file access is granted to a whole user folder ($HOME/** and similar) instead of an app folder',
@@ -687,7 +748,8 @@ export const EP_TAURI_CROSS = [
   tauriRs('ep-tauri-command-fs-path', 'a Tauri command passes a path argument straight into std::fs with no scope or canonical check',
     /\bfs::\w+\(\s*&?(?:path|file_path|filepath|file|filename|dest|target)\s*[,)]/,
     '#[tauri::command]\nfn read(path: String) -> String { std::fs::read_to_string(path).unwrap() }',
-    '#[tauri::command]\nfn read(name: String) -> String { let p = notes_dir().join(name); std::fs::read_to_string(&canonical(p)).unwrap() }'),
+    '#[tauri::command]\nfn read(name: String) -> String { let p = notes_dir().join(name).canonicalize().unwrap(); if !p.starts_with(notes_dir()) { return String::new(); } std::fs::read_to_string(&p).unwrap() }',
+    { test: fsPathTest }),
   tauriRs('ep-tauri-command-program-variable', 'a Tauri command starts a program named by a variable (Command::new with a bare variable)',
     /\bCommand::new\(\s*[a-z_][a-z0-9_]*\s*\)/,
     '#[tauri::command]\nfn run(cmd: String) { std::process::Command::new(cmd).status().ok(); }',

@@ -1266,12 +1266,13 @@ async function allPacks() {
 export function runProject({ name, dir, work, timeoutSeconds = 60, overallSeconds = 100, packs }) {
   return new Promise((done) => {
     const cfg = join(work, `${name}.config.json`)
-    writeFileSync(cfg, JSON.stringify({ packs, override: {} }, null, 2))
+    writeFileSync(cfg, JSON.stringify({ packs, override: {}, presets: { everything: { tier: 'thorough', groups: [], allPacks: true } } }, null, 2))
     const json = join(work, `${name}.result.json`)
     const logs = join(work, 'logs', name)
     mkdirSync(logs, { recursive: true })
-    const env = { ...process.env, MEERKAT_PLAIN: '1', MEERKAT_LOG_DIR: logs, MEERKAT_TIMINGS: join(work, 'timings.json'), MEERKAT_STATUS: join(work, `${name}.status.json`), MEERKAT_HISTORY: join(work, 'history.json'), MEERKAT_USER_CONFIG: join(work, 'no-user-config.json'), MEERKAT_CHECK_TIMEOUT: String(timeoutSeconds) }
-    const child = spawn(process.execPath, [join(ROOT, 'run.mjs'), '--app', dir, '--config', cfg, '--preset', 'full', '--plain', '--json', json], { cwd: ROOT, env, windowsHide: true })
+    // The corpus measures detection, not the default view: every finding is kept (MEERKAT_FINDINGS=all), none rolled away or hidden.
+    const env = { ...process.env, MEERKAT_FINDINGS: 'all', MEERKAT_PLAIN: '1', MEERKAT_LOG_DIR: logs, MEERKAT_TIMINGS: join(work, 'timings.json'), MEERKAT_STATUS: join(work, `${name}.status.json`), MEERKAT_HISTORY: join(work, 'history.json'), MEERKAT_USER_CONFIG: join(work, 'no-user-config.json'), MEERKAT_CHECK_TIMEOUT: String(timeoutSeconds) }
+    const child = spawn(process.execPath, [join(ROOT, 'run.mjs'), '--app', dir, '--config', cfg, '--preset', 'everything', '--plain', '--json', json], { cwd: ROOT, env, windowsHide: true })
     let outText = ''
     child.stdout.on('data', (b) => (outText += b))
     child.stderr.on('data', (b) => (outText += b))

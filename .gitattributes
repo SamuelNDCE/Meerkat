@@ -8,3 +8,4 @@
 *.woff binary
 *.woff2 binary
 *.pdf binary
+CHANGELOG.md merge=union
