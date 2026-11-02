@@ -246,7 +246,7 @@ Your own presets can carry the same two texts. `about` is one line (up to 200 ch
 
 `meerkat discover` lists the tests your project already has: scripts in `package.json`, Makefile targets, and Playwright or Cypress setups. It runs nothing by itself.
 
-`full`, `thorough` and `release` also run them, labelled `found` in the results. Scripts that take a shard option run as several parts side by side, on a capped number of windows at once. `quick` and `ci` never run them. To turn this off, add `"discover": false` to `meerkat.config.json`. Details: [docs/discover.md](discover.md).
+`full`, `thorough` and `release` also run them, labelled `found` in the results, except the ones that open windows (Electron, Playwright, a click-through): `full` and `thorough` skip those (listed as skipped, not failed), and `release`, `--include windows` or `MEERKAT_WINDOWS=1` run them. Scripts that take a shard option run as several parts side by side, on a capped number of windows at once. `quick` and `ci` never run them. To turn this off, add `"discover": false` to `meerkat.config.json`. Details: [docs/discover.md](discover.md).
 
 ## Opt-in deeper checks
 
