@@ -232,15 +232,20 @@ export const stringOnlyLines = (file, text) => {
     if (o === '' || b === undefined || /^\s*(?:\/\/|#|\/\*|\*)/.test(o)) return false
     // In a Rust table of (language, sample) pairs, field names (`bad:`), `&`, `vec!` and `Some(` around the strings are part of the table; on a line with no tuple
     // (`origin: "*",`) a label is a configuration field and the line is code. In other languages `key: "value"` is always configuration.
-    const rest = lang === 'rs' && b.includes('(') ? b.replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ') : b
+    // The descriptive fields of a rules table (a pattern, the reason, the advice) hold regexes and prose, never configuration values, so they count as table fields too.
+    const descriptive = lang === 'rs' && /^(?:pat|pattern|why|instead|bad|good|title|msg|message|hint|note|reason|help|desc|description|example)\s*:\s*&?(?:\[|r#*"|")/.test(o)
+    const rest = lang === 'rs' && (b.includes('(') || descriptive) ? b.replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ') : b
     if (!/^[,;()[\]{}\s]*$/.test(rest)) return false
     // The strings must be sample CODE: the text that was blanked contains a call (this also covers the first line of a multi-line string), or nothing was blanked.
     const orig = lines[line - 1] ?? ''
     let content = ''
     for (let k = 0; k < orig.length && k < b.length; k++) if (b[k] === ' ' && !/\s/.test(orig[k])) content += orig[k]
     // Or the line is a (language tag, code) pair, the shape of a detector's sample table: `("java", r##"..."##)`, also after a field name (`bad: &[("php", ...)]`).
-    const tagged = /^\s*(?:\w+\s*:\s*&?\[)?\(\s*r?#*"(?:js|jsx|ts|tsx|py|java|php|go|rs|rb|cs|kt|sh|bash|c|cpp|html|sql|yaml|toml|xml)"#*\s*,/.test(orig)
-    return content === '' || tagged || /[\w\])]\s*\(/.test(content)
+    // Only in Rust, only when it is the one tuple on the line, and only when the second string has code in it (an assignment, a statement end, a call, a variable or a brace),
+    // so `("js", "postgres://user:pw@host")` and `("go", "45.33.12.9")` are still read as the values they are.
+    const tagged = lang === 'rs' && (b.match(/\(/g) ?? []).length === 1 && /[=;($<{]/.test(content.replace(/^r?#*"?[a-z]+"?#*/i, '')) &&
+      /^\s*(?:\w+\s*:\s*&?\[)?\(\s*r?#*"(?:js|jsx|ts|tsx|py|java|php|go|rs|rb|cs|kt|sh|bash|cpp|html|sql|yaml|toml|xml)"#*\s*,/.test(orig)
+    return content === '' || tagged || descriptive || /[\w\])]\s*\(/.test(content)
   }
 }
 // A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.

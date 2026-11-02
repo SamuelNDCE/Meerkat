@@ -111,6 +111,22 @@ describe('review of PR 46: shapes that look like tables but are real configurati
     expect(is(3)).toBe(true)
     expect(is(4)).toBe(false)
   })
+  test('descriptive fields of a Rust rules table are table lines; configuration fields are not', () => {
+    const t = ['CRule {', '    pat: r##"(?i)createHash\\(\\s*"md5"\\)"##,', '    why: "A password is hashed with MD5 or SHA-1.",', '    origin: "*",', '    algorithm: "none",', '    bad: &[("rs", r##"let q = format!("SELECT {}", id);"##)],', '}'].join('\n')
+    const is = stringOnlyLines('rules.rs', t)
+    expect(is(2)).toBe(true)
+    expect(is(3)).toBe(true)
+    expect(is(4)).toBe(false)
+    expect(is(5)).toBe(false)
+    expect(is(6)).toBe(true)
+  })
+  test('a tagged pair holding a plain value, a second tuple on the line, or outside Rust is not a sample', () => {
+    expect(stringOnlyLines('v.rs', '&[\n    ("js", "postgres://user:pw@host"),\n]')(2)).toBe(false)
+    expect(stringOnlyLines('v.rs', '&[\n    ("go", "45.33.12.9"),\n]')(2)).toBe(false)
+    expect(stringOnlyLines('v.rs', '&[\n    ("js", r#"a = 1;"#), ("py", r#"b = 2"#),\n]')(2)).toBe(false)
+    expect(stringOnlyLines('v.py', 'TABLE = [\n    ("js", "a = 1;"),\n]')(2)).toBe(false)
+    expect(stringOnlyLines('v.rs', '&[\n    ("c", r#"a = 1;"#),\n]')(2)).toBe(false)
+  })
   test('a lone backtick in a comment does not turn the next lines into data', () => {
     const t = ['// strip the ` character', 'res.cookie("session", token, { httpOnly: false })', 'const q = `ok`'].join('\n')
     expect(stringOnlyLines('a.js', t)(2)).toBe(false)
