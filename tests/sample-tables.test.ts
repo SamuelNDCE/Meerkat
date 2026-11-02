@@ -30,11 +30,11 @@ const status = (check: string, files: Record<string, string>) => {
 }
 
 describe('stringOnlyLines', () => {
-  const t = ['fn samples() -> Vec<(&str, &str)> {', '    vec![', '        ("js", r##"db.query("SELECT 1 " + id);"##),', '        ("go", "x := 1"),', '    ]', '}', 'let q = format!("a") + user_input;'].join('\n')
+  const t = ['fn samples() -> Vec<(&str, &str)> {', '    vec![', '        ("js", r##"db.query("SELECT 1 " + id);"##),', '        ("label", "x := 1"),', '    ]', '}', 'let q = format!("a") + user_input;'].join('\n')
   const is = stringOnlyLines('a.rs', t)
   test('a tuple whose string is sample code is data, even with quotes inside; one whose string is not code is not', () => {
     expect(is(3)).toBe(true)
-    expect(is(4)).toBe(false) // ("go", "x := 1") holds no call, so it could be configuration
+    expect(is(4)).toBe(false) // ("label", "x := 1") holds no call and no language tag, so it could be configuration
   })
   test('code is not', () => {
     expect(is(1)).toBe(false)
@@ -103,6 +103,13 @@ describe('review of PR 46: shapes that look like tables but are real configurati
   test('a sample of code in a table is still a table', () => {
     expect(stringOnlyLines('t.rs', 'const S: &[(&str, &str)] = &[\n    ("js", r#"res.cookie(\'s\', t, { secure: false });"#),\n];')(2)).toBe(true)
     expect(stringOnlyLines('t.rs', 'CRule {\n    bad: &[(r#"js"#, r#"res.cookie(\'s\', t, { secure: false });"#)],\n}')(2)).toBe(true)
+  })
+  test('a (language tag, code) pair is a sample even without a call; a header pair is not', () => {
+    const t = ['const S: &[(&str, &str)] = &[', '    ("java", r##"String q = "SELECT * FROM t WHERE n = \'" + name + "\'";"##),', '    ("php", r##"$q = "SELECT * FROM users WHERE id = $id";"##),', '    ("Access-Control-Allow-Origin", "*"),', '];'].join('\n')
+    const is = stringOnlyLines('s.rs', t)
+    expect(is(2)).toBe(true)
+    expect(is(3)).toBe(true)
+    expect(is(4)).toBe(false)
   })
   test('a lone backtick in a comment does not turn the next lines into data', () => {
     const t = ['// strip the ` character', 'res.cookie("session", token, { httpOnly: false })', 'const q = `ok`'].join('\n')

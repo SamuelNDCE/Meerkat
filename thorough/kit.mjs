@@ -238,7 +238,9 @@ export const stringOnlyLines = (file, text) => {
     const orig = lines[line - 1] ?? ''
     let content = ''
     for (let k = 0; k < orig.length && k < b.length; k++) if (b[k] === ' ' && !/\s/.test(orig[k])) content += orig[k]
-    return content === '' || /[\w\])]\s*\(/.test(content)
+    // Or the line is a (language tag, code) pair, the shape of a detector's sample table: `("java", r##"..."##)`, also after a field name (`bad: &[("php", ...)]`).
+    const tagged = /^\s*(?:\w+\s*:\s*&?\[)?\(\s*r?#*"(?:js|jsx|ts|tsx|py|java|php|go|rs|rb|cs|kt|sh|bash|c|cpp|html|sql|yaml|toml|xml)"#*\s*,/.test(orig)
+    return content === '' || tagged || /[\w\])]\s*\(/.test(content)
   }
 }
 // A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.
