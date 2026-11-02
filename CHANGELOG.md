@@ -4,6 +4,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- accuracy corpus recall 97.4% (was 95.0%): the web, CI and infrastructure, and code and config gaps are closed; the accuracy thresholds were raised to match; the update-feed check exempts only timestamp servers by host, not any line that says timestamp
 - Detection gaps closed in web security and packages: Caddy CSP unsafe-inline, helmet with HSTS or CSP off, session cookie with httpOnly false, app.enable('x-powered-by'), multi-line iframes without sandbox, shipped .map files, strict-ssl off, open >= and x-ranges, plain-http scripts and single-quoted positive tabindex.
 
 ## 0.3.15 (2026-11-02)

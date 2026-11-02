@@ -26,3 +26,8 @@ ccdec21 thorough/secret-scan.mjs
 eb805f1 tests/fp-security.test.ts
 # 37a19d9: the recorded gitleaks fixture holds the tool's own REDACTED placeholder, not a secret.
 37a19d9 tests/fixtures/detectors/gitleaks.json
+# 183a447: the fp-security test holds a sample AWS-style key to prove the rule still reports; history is not rewritten.
+183a447 tests/fp-security.test.ts
+# Squash merges give a new commit hash that cannot be listed in advance, so these two files are accepted by path: the fp-security test holds a sample AWS-style key, and the recorded gitleaks fixture holds the tool's own REDACTED placeholder.
+tests/fp-security.test.ts
+tests/fixtures/detectors/gitleaks.json

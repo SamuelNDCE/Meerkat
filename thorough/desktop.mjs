@@ -221,7 +221,6 @@ main({
       /autoUpdater|electron-updater|setFeedURL|feedURL|updateURL|\bpublish\b/.test(t)
         // An Authenticode / RFC 3161 timestamp server (timestamp.acs.microsoft.com ...) is conventionally plain http and its answer is signed: it is not an update feed.
         ? lineHits(t, /['"`]http:\/\/(?!localhost|127\.0\.0\.1|\[::1\])(?!timestamp\.)/)
-          .filter((h) => !/timestamp/i.test(t.split('\n')[h.line - 1] ?? ''))
           .map((h) => ({ line: h.line, why: 'fetches app updates over plain http://, so the update can be swapped on the network (use https://)' }))
         : []
     )),
