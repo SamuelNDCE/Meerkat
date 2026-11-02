@@ -122,8 +122,9 @@ function findFile(dir, name) {
 function runMeerkat(appDir) {
   const logs = mkdtempSync(join(tmpdir(), 'meerkat-bench-logs-'))
   const jsonOut = join(logs, 'run.json')
-  const env = { ...process.env, MEERKAT_FINDINGS: 'all', MEERKAT_LOG_DIR: logs }
-  spawnSync(process.execPath, [join(ROOT, 'run.mjs'), '--app', appDir, '--preset', 'quick', '--plain', '--json', jsonOut], { env, stdio: ['ignore', 'ignore', 'inherit'], timeout: 20 * 60 * 1000 })
+  // The scanned checkout is untrusted code: a minimal environment (no tokens), no project config and no project code (MEERKAT_NO_PROJECT_CODE reads no script, imports no .meerkat/checks).
+  const env = { PATH: process.env.PATH, PATHEXT: process.env.PATHEXT, SystemRoot: process.env.SystemRoot, HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE, TEMP: process.env.TEMP, TMP: process.env.TMP, MEERKAT_FINDINGS: 'all', MEERKAT_NO_PROJECT_CODE: '1', MEERKAT_LOG_DIR: logs }
+  spawnSync(process.execPath, [join(ROOT, 'run.mjs'), '--app', appDir, '--no-config', '--preset', 'quick', '--plain', '--json', jsonOut], { env, stdio: ['ignore', 'ignore', 'inherit'], timeout: 20 * 60 * 1000 })
   const file = findFile(logs, 'findings.json')
   if (!file) throw new Error(`Meerkat wrote no findings.json under ${logs}`)
   const doc = JSON.parse(readFileSync(file, 'utf8'))
