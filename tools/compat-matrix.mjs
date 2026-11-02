@@ -27,7 +27,8 @@ export const toolReason = (d) => /missing on PATH|^needs [\w.,@/ -]+: |not insta
 export const configReason = (d) => /.meerkat-budgets.json|Add, for example|has no (?:eslint|prettier|stylelint) configuration|could not reach (?:the service|the npm registry)|registry could not be reached/i.test(d)
 // FAILs that are TRUE on a fixture because the fixture is empty on purpose: a repo with no files really has no README or licence.
 export const EXPECTED_FAILS = { 'empty-git-repo': ['license', 'readme-sections', 'security-policy', 'gitignore-essentials'] }
-export const gitReason = (d) => /not a git repo|no git repo|not a git folder|git repository/i.test(d)
+// The reason is cut to a fixed length, and a long temp path (macOS: /private/var/folders/...) cuts "not a git repo" short, so only the start of the phrase is matched.
+export const gitReason = (d) => /not a git rep|no git rep|not a git folder|git repository/i.test(d)
 
 // Every check id the packs define, with the pack folder it came from (for duplicate detection).
 export async function allCheckIds() {
