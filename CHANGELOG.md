@@ -4,6 +4,8 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- Detection gaps closed in web security and packages: Caddy CSP unsafe-inline, helmet with HSTS or CSP off, session cookie with httpOnly false, app.enable('x-powered-by'), multi-line iframes without sandbox, shipped .map files, strict-ssl off, open >= and x-ranges, plain-http scripts and single-quoted positive tabindex.
+
 ## 0.3.15 (2026-11-02)
 
 - Fewer false alarms and a much faster scan: noisy rule families rolled up or off by default, a detectors preset with cross-tool confirmation, a ground-truth benchmark, window checks left out of full
