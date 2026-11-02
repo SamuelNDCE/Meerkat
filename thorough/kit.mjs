@@ -269,6 +269,47 @@ export const stringOnlyLines = (file, text) => {
     return content === '' || tagged || descriptive || /[\w\])]\s*\(/.test(content)
   }
 }
+// Rust files that hold deliberately insecure sample code as string data (a scanner's own rule tables). The NAME is the convention: insecure_code*.rs,
+// vulnerable_samples*.rs, bad_examples*.rs. Only the strings in such a file are sample text; code written outside a string there is still scanned.
+export const isInsecureSampleFile = (f) => /(^|\/)(?:insecure_code|vulnerable_samples?|bad_examples?)[\w.-]*\.rs$/i.test(f)
+// The text with every Rust string literal (plain, byte and raw r#"..."#) blanked: same length, newlines kept, so line numbers stay true. Comments are left as they are.
+// Only strings that sit inside a DATA TABLE are blanked: the initializer of a `const` or `static` (an array or slice of tuples or struct literals holding sample text).
+// A string used anywhere else, such as an argument of a call inside a function, is real code and is left alone. Char literals ('"') are consumed so they cannot shift
+// the string pairing.
+export const blankRustStrings = (text) => {
+  const tok = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|(?<![A-Za-z0-9_])b?"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\\n]|\\.)'|=(?![=>])|[(){}[\];]|\b(?:const|static)\b/g
+  let out = ''
+  let last = 0
+  let state = 'code' // code | pending (after const/static, before =) | table
+  let depth = 0
+  for (const m of text.matchAll(tok)) {
+    const s = m[0]
+    if (/^\/[/*]/.test(s) || s[0] === "'") continue
+    if (state === 'pending' && depth === 0 && s === '{') {
+      state = 'code' // const fn / static block, not a table
+      continue
+    }
+    if (s === 'const' || s === 'static') {
+      if (state === 'code') {
+        state = 'pending'
+        depth = 0
+      }
+    } else if (s === '=') {
+      if (state === 'pending' && depth === 0) {
+        state = 'table'
+        depth = 0
+      }
+    } else if (s === '(' || s === '[' || s === '{') depth++
+    else if (s === ')' || s === ']' || s === '}') depth = Math.max(0, depth - 1)
+    else if (s === ';') {
+      if (depth === 0 && state !== 'code') state = 'code'
+    } else if (state === 'table') {
+      out += text.slice(last, m.index) + s.replace(/[^\n]/g, ' ')
+      last = m.index + s.length
+    }
+  }
+  return out + text.slice(last)
+}
 // A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.
 export const FAKE_VALUE = /fake|dummy|placeholder|supersecret|not[-_]?(?:a[-_])?real|redacted|changeme|example|sample|[_-]test[_-]|your[-_]?(?:key|token|secret)/i
 

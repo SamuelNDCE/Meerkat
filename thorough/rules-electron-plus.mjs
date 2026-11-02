@@ -30,7 +30,25 @@ const BUILD = /(^|\/)(electron-builder\.[A-Za-z0-9]+|forge\.config\.[cm]?[jt]s)$
 const ENT = /(^|\/)[^/]*entitlements[^/]*\.plist$/i
 const PLIST = /(^|\/)Info\.plist$/
 const FUSES_SET = /FuseV1Options|flipFuses|electronFuses|@electron\/fuses/
-const isBuildConfig = (file, text) => BUILD.test(file) || (PKG.test(file) && /"build"\s*:|"electron-builder"|"@electron-forge\//.test(text))
+// A package.json counts as an Electron build config only when it names Electron itself (an "electron" or "electron-builder" entry, or Electron Forge); a bare "build"
+// script or key is in every Tauri, VS Code extension and web package.
+// Electron may be declared in a workspace root package.json above the app (a monorepo), so the folders above are read too; electron-vite projects count as well.
+const ELECTRON_SIGNAL = /"electron-builder"|"@electron-forge\/|"electron(?:-vite(?:-vue)?)?"\s*:|"electron-vite(?:-vue)?"/
+const electronAbove = (file, project) => {
+  if (!project || !project.read || !project.files) return false
+  const parts = file.split('/').slice(0, -1)
+  while (parts.length) {
+    parts.pop()
+    const p = [...parts, 'package.json'].join('/')
+    if (project.files.includes(p)) {
+      const t = project.read(p)
+      if (typeof t === 'string' && ELECTRON_SIGNAL.test(t)) return true
+    }
+  }
+  return false
+}
+const isBuildConfig = (file, text, project) =>
+  BUILD.test(file) || (PKG.test(file) && /"build"\s*:|"electron-builder"|"@electron-forge\//.test(text) && (ELECTRON_SIGNAL.test(text) || electronAbove(file, project)))
 
 // Caches the answer for one file text: a whole-file predicate runs once even when a line test calls it for every matching line.
 const memo = (fn) => {
@@ -50,7 +68,7 @@ const lineIf = (re, pred) => {
   return (line, ctx) => re.test(line) && p(ctx.text)
 }
 // A once-per-file test (on the first line): pred(text, file) holds.
-const fileIf = (pred) => (line, ctx) => ctx.index === 0 && pred(ctx.text, ctx.file)
+const fileIf = (pred) => (line, ctx) => ctx.index === 0 && pred(ctx.text, ctx.file, ctx.project)
 // A line that matches re, with nre found in the window of lines from this one (inclusive) to n lines after it.
 const near = (re, nre, n = 10) => (line, ctx) => re.test(line) && ctx.lines.slice(ctx.index, ctx.index + n + 1).some((l) => nre.test(l))
 // A line that matches re, with nre NOT found in that window.
@@ -361,7 +379,7 @@ const absentFuse = (id, title, camel, pascal, severity) => ({
   sample: 'forge.config.js',
   notIn: TEST_OUT,
   severity,
-  test: fileIf((t, f) => isBuildConfig(f, t) && FUSES_SET.test(t) && !fuseNamed(camel, pascal).test(t)),
+  test: fileIf((t, f, p) => isBuildConfig(f, t, p) && FUSES_SET.test(t) && !fuseNamed(camel, pascal).test(t)),
   // The bad sample configures a different fuse and leaves this one unset; the good sample sets it to the secure value.
   bad: `const { FuseV1Options } = require('@electron/fuses')\nflipFuses(app, { [FuseV1Options.${camel === 'runAsNode' ? 'EnableCookieEncryption' : 'RunAsNode'}]: true })`,
   good: `const { FuseV1Options } = require('@electron/fuses')\nflipFuses(app, { [FuseV1Options.${camel === 'runAsNode' ? 'EnableCookieEncryption' : 'RunAsNode'}]: true, [FuseV1Options.${pascal}]: ${['embeddedAsarIntegrityValidation', 'onlyLoadAppFromAsar', 'enableCookieEncryption'].includes(camel) ? 'true' : 'false'} })`,
@@ -393,7 +411,7 @@ export const EP_FUSES_BUILD = [
     sample: 'electron-builder.json',
     notIn: TEST_OUT,
     severity: 'info',
-    test: fileIf((t, f) => isBuildConfig(f, t) && !FUSES_SET.test(t) && !/electronFuses/.test(t)),
+    test: fileIf((t, f, p) => isBuildConfig(f, t, p) && !FUSES_SET.test(t) && !/electronFuses/.test(t)),
     bad: '{ "appId": "com.acme.notes", "productName": "Notes", "asar": true }',
     good: '{ "appId": "com.acme.notes", "productName": "Notes", "electronFuses": { "runAsNode": false } }',
   },
@@ -441,7 +459,7 @@ export const EP_FUSES_BUILD = [
     sample: 'electron-builder.json',
     notIn: TEST_OUT,
     severity: 'info',
-    test: fileIf((t, f) => isBuildConfig(f, t) && !/"productName"/.test(t)),
+    test: fileIf((t, f, p) => isBuildConfig(f, t, p) && !/"productName"/.test(t)),
     bad: '{ "appId": "com.acme.notes" }',
     good: '{ "appId": "com.acme.notes", "productName": "Notes" }',
   },
@@ -452,7 +470,7 @@ export const EP_FUSES_BUILD = [
     sample: 'electron-builder.json',
     notIn: TEST_OUT,
     severity: 'info',
-    test: fileIf((t, f) => isBuildConfig(f, t) && !/"copyright"/.test(t)),
+    test: fileIf((t, f, p) => isBuildConfig(f, t, p) && !/"copyright"/.test(t)),
     bad: '{ "appId": "com.acme.notes", "productName": "Notes" }',
     good: '{ "appId": "com.acme.notes", "productName": "Notes", "copyright": "Copyright 2026 Acme" }',
   },
