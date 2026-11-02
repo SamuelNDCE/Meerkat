@@ -13,7 +13,7 @@ const SKIP_DIR = /(^|\/)(node_modules|dist|build|vendor)\//
 const filesMatching = (root, re) => trackedFiles(root).filter((x) => re.test(x) && !SKIP_DIR.test(x) && !isFixture(x))
 // Markup that ships: not a test (its markup is sample input, often a deliberate XSS payload) and not a design mockup or prototype.
 const shippedMarkup = (root) => filesMatching(root, MARKUP).filter((x) => !isTestFile(x) && !/(^|\/)(mockups?|prototypes?|wireframes?)\//i.test(x))
-const stripComments =(t) => t.replace(/<!--[\s\S]*?-->/g, '')
+const stripComments = (t) => t.replace(/<!--[\s\S]*?-->/g, '')
 const lineOf = (text, index) => text.slice(0, index).split('\n').length
 
 const ARIA_ATTRS = new Set(`aria-activedescendant aria-atomic aria-autocomplete aria-busy aria-checked aria-colcount aria-colindex
@@ -241,7 +241,7 @@ const renderBlocking = check('render-blocking', 'head scripts do not block drawi
   const afterImages = cfg(root).lazyAfterImages ?? 3
   for (const x of shippedMarkup(root)) {
     const t = stripComments(readText(root, x))
-    const head =/<head\b[^>]*>[\s\S]*?<\/head\s*>/i.exec(t)
+    const head = /<head\b[^>]*>[\s\S]*?<\/head\s*>/i.exec(t)
     if (head) {
       for (const m of t.matchAll(/<script\b[^>]*>/gi)) {
         const inHead = m.index >= head.index && m.index < head.index + head[0].length

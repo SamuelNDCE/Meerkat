@@ -234,7 +234,7 @@ const duplicateTestNames = (root) => {
     const t = readText(root, x)
     // The same title under two different describe blocks is two different tests, so a title is only a repeat inside one describe scope.
     // Braces are read from a copy with strings, templates and comments blanked, so a brace in a title or a comment cannot shift the scope.
-    const blanked = t.replace(/\/\*[\s\S]*?\*\/|(^|[\s;{}(,])\/\/[^\n]*|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g, (s) => s.replace(/[^\n]/g, ' '))
+    const blanked = t.replace(/\/\*[\s\S]*?\*\/|(^|[\s;{}(,])\/\/[^\n]*|(?<=[(,=:[!&|?;{}]\s*)\/(?![/*])(?:[^/\\\n[]|\\.|\[(?:[^\]\\\n]|\\.)*\])+\/[a-z]*|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g, (s) => s.replace(/[^\n]/g, ' '))
     const events = []
     for (const m of blanked.matchAll(/[{}]/g)) events.push({ at: m.index, kind: m[0] })
     for (const m of t.matchAll(/\b(?:describe|suite)(?:\.\w+)*\s*\(\s*(['"`])(.+?)\1/g)) events.push({ at: m.index, kind: 'describe', name: m[2], end: m.index + m[0].length })

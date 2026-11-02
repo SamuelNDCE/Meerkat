@@ -38,7 +38,7 @@ describe('pii-in-logs', () => {
     expect(pii({ 'a.ts': 'console.warn(`stripe-webhook: autotopup_save_card failed: ${error.message}`)\n' }).code).toBe(0)
   })
   test('a redaction list passed to a sanitiser is not a leak', () => {
-    expect(pii({ 'a.rs': 'fn f() {\n    print(&sanitise_path_text(raw, secrets), json)\n}\n' }).code).toBe(0)
+    expect(pii({ 'a.rs': 'fn f() {\n    print(&redact_path_text(raw, secrets), json)\n}\n' }).code).toBe(0)
   })
   test('a sample string spanning lines in Rust is not a log call', () => {
     expect(pii({ 'a.rs': 'const S: &str = r#"\nprintln(token)\n"#;\n' }).code).toBe(0)
@@ -48,6 +48,36 @@ describe('pii-in-logs', () => {
     expect(pii({ 'a.js': 'console.log("pay", cardNumber)\n' }).code).toBe(1)
     expect(pii({ 'a.js': 'console.log(JSON.stringify(secrets))\n' }).code).toBe(1)
     expect(pii({ 'a.js': 'console.log(token)\n' }).code).toBe(1)
+  })
+})
+
+describe('pii-in-logs review fixes: defects still report', () => {
+  const pii = (files: Record<string, string>) => run('privacy.mjs', 'pii-in-logs', files).code
+  test('Rust macros are log calls, and a char literal quote does not hide a later log', () => {
+    expect(pii({ 'a.rs': 'fn f() {\n    println!("{}", token);\n}\n' })).toBe(1)
+    expect(pii({ 'a.rs': 'fn f() {\n    tracing::info!("x {}", password);\n}\n' })).toBe(1)
+    expect(pii({ 'a.rs': 'fn f() {\n    let c = \'"\'; println!("{}", token); let s = "x";\n}\n' })).toBe(1)
+    expect(pii({ 'a.rs': 'fn f() {}\n#[cfg(test)]\nmod t {\n    fn g() { println!("{}", token); }\n}\n' })).toBe(0)
+  })
+  test('payment card shapes report, including dotted paths', () => {
+    expect(pii({ 'a.js': 'console.log(card.number)\n' })).toBe(1)
+    expect(pii({ 'a.js': 'console.log(card.cvv)\n' })).toBe(1)
+    expect(pii({ 'a.js': 'console.log(stripeCard)\n' })).toBe(1)
+    expect(pii({ 'a.js': 'console.log(cvc)\n' })).toBe(1)
+    expect(pii({ 'a.js': 'console.log(card.title)\n' })).toBe(0)
+  })
+  test('only an explicit redact/mask call exempts a value', () => {
+    expect(pii({ 'a.js': 'console.log(sanitizeEmail(email))\n' })).toBe(1)
+    expect(pii({ 'a.js': 'console.log(redactEmail(email))\n' })).toBe(0)
+  })
+})
+
+describe('duplicate-test-names regex literal', () => {
+  test('a regex with a brace does not end the describe scope', () => {
+    const text = "describe('a', () => {\n  it('x', () => { expect(s).toMatch(/\\}/) })\n  it('x', () => {})\n})\ndescribe('b', () => {\n  it('x', () => {})\n})\n"
+    expect(run('quality.mjs', 'duplicate-test-names', { 'a.test.ts': text }).code).toBe(1)
+    const ok = "describe('a', () => {\n  it('x', () => { expect(s).toMatch(/\\}/) })\n})\ndescribe('b', () => {\n  it('x', () => {})\n})\n"
+    expect(run('quality.mjs', 'duplicate-test-names', { 'a.test.ts': ok }).code).toBe(0)
   })
 })
 
