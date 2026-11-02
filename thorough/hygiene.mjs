@@ -136,6 +136,7 @@ const uiStatic = (root) => {
       if (!/<meta[^>]+viewport/i.test(t)) f.push(`${x}: no viewport meta tag (breaks on phones)`)
       if (!/<title>\s*\S/i.test(t)) f.push(`${x}: no page <title>`)
     }
+    for (const m of t.matchAll(/<[a-z][\w-]*\b[^>]*\btabindex\s*=\s*["']?[1-9]/gi)) f.push(`${x}:${t.slice(0, m.index).split('\n').length}: a positive tabindex (breaks the natural tab order)`)
     for (const m of t.matchAll(/<button\b[^>]*>\s*<\/button>/gi)) f.push(`${x}: an empty <button> (no name for a screen reader) ${m[0].slice(0, 40)}`)
   }
   return finish('ui-static', f, 'images have alt text, pages have a language, title and viewport')

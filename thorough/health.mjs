@@ -222,6 +222,9 @@ const duplicateDependencies = (root) => {
 
 // ---- wildcard-versions: a dependency that floats (*, latest, empty, or a git or URL spec) and unpinned lines in Python and Rust manifests
 const floating = (r) => r === '*' || r === 'latest' || r === '' || /^(git\+https?:|git:\/\/|https?:\/\/)/.test(r)
+// A range with no upper bound (">=1.0.0" alone) or an x-range ("1.x", "1.2.x") also floats. Peer ranges are exempt: a library states the
+// versions of the host it works with, and ">=16" there is normal.
+const openRange = (r) => /^>=?\s*v?\d[\w.-]*$/.test(r) || /^v?\d+(\.\d+)?\.(?:x|X|\*)$/.test(r)
 const wildcardVersions = (root) => {
   const id = 'wildcard-versions'
   const allow = allowSet(root)
@@ -230,6 +233,7 @@ const wildcardVersions = (root) => {
     if (allowed(allow, id, x)) continue
     for (const e of depEntries(readText(root, x))) {
       if (floating(e.range)) f.push(`${x} depends on ${e.name} at "${e.range}", which is not a fixed version`)
+      else if (e.section !== 'peerDependencies' && openRange(e.range)) f.push(`${x} depends on ${e.name} at "${e.range}", a range with no upper bound`)
     }
   }
   for (const x of files(root, /(^|\/)requirements[^/]*\.txt$/i)) {

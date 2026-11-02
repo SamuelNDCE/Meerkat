@@ -19,7 +19,7 @@
 // ---------- wh-headers: HTTP headers and TLS settings in server, framework and hosting config ----------
 
 // A file that really configures a web server or host (not a random .js file that happens to mention a header name).
-const WEBCFG = /server\s*\{|location\s+[\/~=^]|<VirtualHost\b|RewriteEngine\b|\bOptions\s|\[\[headers\]\]|\[build\]|\bpublish\s*=|outputDirectory|"headers"\s*:|async headers\(|headers\s*\(\)|app\.use\(|express\(|add_header|Header\s+(always\s+)?set|setHeader\(|<system\.webServer>|^\/\*/m
+const WEBCFG = /server\s*\{|location\s+[\/~=^]|<VirtualHost\b|RewriteEngine\b|\bOptions\s|\[\[headers\]\]|\[build\]|\bpublish\s*=|outputDirectory|"headers"\s*:|async headers\(|headers\s*\(\)|app\.use\(|express\(|add_header|Header\s+(always\s+)?set|^\s*header\s+(?:[-+]?[A-Za-z][\w-]*\s+["'\w]|\{)|setHeader\(|<system\.webServer>|^\/\*/m
 const HDR = /(^|\/)(nginx[^\/]*\.conf|[^\/]*\.conf|\.htaccess|httpd[^\/]*|Caddyfile[^\/]*|web\.config|_headers|netlify\.toml|vercel\.json|staticwebapp\.config\.json|firebase\.json|wrangler\.toml|next\.config\.(m?js|ts)|server\.(m?js|ts)|app\.(m?js|ts))$/i
 const NGINX = /(^|\/)nginx[^\/]*\.conf$/i
 const APACHE = /(^|\/)(\.htaccess|httpd[^\/]*|[^\/]*\.conf)$/i
@@ -91,8 +91,16 @@ export const HEADERS = [
     bad: 'server {\n  listen 80;\n}\n', good: 'server {\n  add_header Cross-Origin-Resource-Policy "same-origin";\n}\n' },
   { id: 'nginx-server-tokens-on', title: 'nginx sends its version in the Server header (server_tokens is not off)', files: NGINX, when: WEBCFG, lacks: /server_tokens\s+off/, sample: 'nginx.conf',
     bad: 'server {\n  listen 80;\n}\n', good: 'server {\n  server_tokens off;\n}\n' },
-  { id: 'express-x-powered-by-enabled', title: 'Express sends X-Powered-By (app.disable x-powered-by or helmet is missing)', files: /(^|\/)(server|app)\.(m?js|ts)$/, when: /express\(/, lacks: /disable\(\s*['"]x-powered-by|helmet\(/i, sample: 'app.js',
+  { id: 'express-x-powered-by-enabled', title: 'Express sends X-Powered-By (app.disable x-powered-by or helmet is missing)', files: /(^|\/)(server|app)([-_.][\w.-]*)?\.(m?js|ts)$/, when: /express\(/, sample: 'app.js',
+    // A plain server.js / app.js without disable() or helmet(), or any server-*.js / app-*.js that turns the header back on with enable().
+    whole: (t, path) => (/(^|\/)(server|app)\.(m?js|ts)$/.test(path) && !/disable\(\s*['"]x-powered-by|helmet\(/i.test(t)) || /\.enable\(\s*['"]x-powered-by['"]\s*\)/i.test(t),
     bad: 'const app = express()\napp.listen(3000)\n', good: 'const app = express()\napp.disable(\'x-powered-by\')\n' },
+  { id: 'helmet-hsts-off', title: 'helmet is configured with HSTS turned off, so browsers are never told to stay on https', files: CODE, when: /\bhelmet\b/, sample: 'server.js',
+    test: (l) => /\bhsts\s*:\s*false\b/.test(l),
+    bad: 'app.use(helmet({ hsts: false }))\n', good: 'app.use(helmet({ hsts: { maxAge: 31536000 } }))\n' },
+  { id: 'helmet-csp-off', title: 'helmet is configured with the Content-Security-Policy turned off', files: CODE, when: /\bhelmet\b/, sample: 'server.js',
+    test: (l) => /\bcontentSecurityPolicy\s*:\s*false\b/.test(l),
+    bad: 'app.use(helmet({ contentSecurityPolicy: false }))\n', good: 'app.use(helmet())\n' },
   { id: 'nginx-autoindex-on', title: 'nginx autoindex is on, so folders list their own files', files: NGINX, when: WEBCFG, sample: 'nginx.conf',
     test: (l) => /autoindex\s+on\b/.test(l),
     bad: 'server {\n  autoindex on;\n}\n', good: 'server {\n  autoindex off;\n}\n' },
@@ -122,7 +130,7 @@ export const HEADERS = [
     whole: (t) => /sameSite\s*[:=]\s*['"]?none\b/i.test(t) && !/secure\s*:\s*true|;\s*Secure\b|secure\s*=\s*true/i.test(t),
     bad: 'res.cookie("sid", v, { sameSite: \'none\' })\n', good: 'res.cookie("sid", v, { sameSite: \'none\', secure: true, httpOnly: true })\n' },
   { id: 'session-cookie-no-httponly', title: 'A session cookie is set without HttpOnly', files: CODE, sample: 'server.js',
-    whole: (t) => /(res\.cookie\(|setCookie\(|session_set_cookie_params\(|setcookie\(|express-session['"]?\s*\)?\s*\(|cookie-session['"]?\s*\)?\s*\(|session\(\s*\{|\.setHeader\(\s*['"]Set-Cookie)/i.test(t) && !/httpOnly\s*:\s*true|HttpOnly|httponly\s*=\s*true|httponly\s*:\s*true/i.test(t),
+    whole: (t) => /(res\.cookie\(|setCookie\(|session_set_cookie_params\(|setcookie\(|express-session['"]?\s*\)?\s*\(|cookie-session['"]?\s*\)?\s*\(|session\(\s*\{|\.setHeader\(\s*['"]Set-Cookie)/i.test(t) && (/\bhttpOnly\s*[:=]\s*(false|0)\b/i.test(t) || !/httpOnly\s*:\s*true|HttpOnly|httponly\s*=\s*true|httponly\s*:\s*true/i.test(t)),
     bad: 'app.use(session({ secret: s }))\n// express-session\n', good: 'app.use(session({ secret: s, cookie: { httpOnly: true } }))\n// express-session\n' },
   { id: 'cors-credentials-with-wildcard', title: 'CORS allows credentials together with a wildcard origin', files: CODE, sample: 'server.js',
     whole: (t) => /Access-Control-Allow-Origin["'\s:=,]+\*/i.test(t) && /Allow-Credentials["'\s:=,]+true|credentials\s*:\s*true/i.test(t),
@@ -181,7 +189,8 @@ export const HTML = [
     test: (l) => /<input\b(?![^>]{0,2000}\btype\s*=)[^>]{0,2000}\bname\s*=\s*["']password["']/i.test(l),
     bad: '<input name="password">\n', good: '<input type="password" name="password">\n' },
   { id: 'iframe-no-sandbox', title: 'An iframe has no sandbox attribute', files: HTML_FILES, sample: 'index.html',
-    test: (l) => /<iframe\b(?![^>]*\bsandbox\b)[^>]*>/i.test(l),
+    // Read the whole file so a tag whose attributes sit on several lines is one tag. Returns the line of each offending <iframe.
+    whole: (t) => [...t.matchAll(/<iframe\b[^>]*>/gi)].filter((m) => !/\bsandbox\b/i.test(m[0])).map((m) => t.slice(0, m.index).split('\n').length),
     bad: '<iframe src="https://example.com/widget"></iframe>\n', good: '<iframe src="https://example.com/widget" sandbox="allow-scripts"></iframe>\n' },
   { id: 'meta-refresh-to-other-site', title: 'A meta refresh sends the visitor to another site', files: HTML_FILES, sample: 'index.html',
     test: (l) => /<meta\b[^>]*http-equiv\s*=\s*["']refresh["'][^>]*url\s*=\s*["']?https?:\/\//i.test(l),
@@ -228,8 +237,9 @@ export const HTML = [
   { id: 'multipart-form-no-csrf', title: 'A multipart form has no visible CSRF token field (informational)', files: HTML_FILES, sample: 'index.html',
     whole: (t) => /<form\b[^>]*enctype\s*=\s*["']multipart\/form-data/i.test(t) && !/csrf|xsrf|_token|authenticity_token|RequestVerificationToken/i.test(t),
     bad: '<form enctype="multipart/form-data" method="post"><input type="file" name="f"></form>\n', good: '<form enctype="multipart/form-data"><input name="csrf_token" type="hidden" value="x"></form>\n' },
-  { id: 'sourcemap-shipped', title: 'A built script or stylesheet points at a source map (the source is readable)', files: /(^|\/)(dist|build|public|out|www)\/.*\.(m?js|css)$/i, sample: 'dist/app.js',
-    test: (l) => /sourceMappingURL=/.test(l),
+  { id: 'sourcemap-shipped', title: 'A built script or stylesheet points at a source map (the source is readable)', files: /(^|\/)(dist|build|public|out|www)\/.*\.(m?js|css|map)$/i, sample: 'dist/app.js',
+    // A .map file itself (JSON with a "mappings" string) counts too: it is the readable source, whether or not a script points at it.
+    test: (l) => /sourceMappingURL=/.test(l) || /"mappings"\s*:\s*"/.test(l),
     bad: '//# sourceMappingURL=app.js.map\n', good: 'console.log(1)\n' },
   { id: 'comment-holds-secret-literal', title: 'A code or markup comment holds a password, secret or API key value', files: HTML_FILES, sample: 'index.html',
     test: (l) => /(<!--|\/\/|\/\*|#)[^\n]{0,200}?\b(password|passwd|secret|api[_-]?key)\s*[:=]\s*["']?[A-Za-z0-9_\/+\-]{8,}/i.test(l),
@@ -347,6 +357,8 @@ export const SUPPLY = [
     bad: '{"name":"a","version":"1.0.0"}', good: '{"name":"a","version":"1.0.0","license":"MIT"}' },
   { id: 'npmrc-registry-over-http', title: 'An .npmrc points the registry at plain http://', files: /(^|\/)\.npmrc$/, sample: '.npmrc', re: /^\s*registry\s*=\s*http:\/\//i,
     bad: 'registry=http://packages.example/', good: 'registry=https://registry.npmjs.org/' },
+  { id: 'npmrc-strict-ssl-off', title: 'An .npmrc turns strict-ssl off, so package downloads skip certificate checks', files: /(^|\/)\.npmrc$/, sample: '.npmrc', re: /^\s*strict-ssl\s*=\s*["']?false\b/i,
+    bad: 'strict-ssl = false', good: 'strict-ssl = true' },
   { id: 'npmrc-scope-registry-other-host', title: 'An .npmrc sends a scope to a registry other than the default npm registry', files: /(^|\/)\.npmrc$/, sample: '.npmrc', re: /^@[^:\s]+:registry\s*=\s*https?:\/\/(?!registry\.npmjs\.org)/i,
     bad: '@acme:registry=https://packages.example/', good: '@acme:registry=https://registry.npmjs.org/' },
   { id: 'release-workflow-no-sbom', title: 'A release workflow publishes an artifact with no SBOM step (CycloneDX, Syft or SPDX)', files: /(^|\/)\.github\/workflows\/[^\/]+\.ya?ml$/i, sample: '.github/workflows/release.yml',

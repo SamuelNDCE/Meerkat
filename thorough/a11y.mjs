@@ -221,8 +221,9 @@ const mixedContent = check('mixed-content', 'no resource is loaded over plain ht
   for (const x of filesMatching(root, MARKUP)) {
     const t = stripComments(readText(root, x))
     const httpsPage = /<link\b[^>]*rel\s*=\s*["']canonical["'][^>]*href\s*=\s*["']https:/i.test(t) || /og:url["'][^>]*content\s*=\s*["']https:/i.test(t) || /(?:src|href)\s*=\s*["']https:\/\//i.test(t)
-    if (!httpsPage) continue
     for (const m of t.matchAll(/<(link|script|img)\b[^>]*>/gi)) {
+      // A page with no https sign is still flagged for a remote script: active content over plain http can be rewritten on the way.
+      if (!httpsPage && m[1].toLowerCase() !== 'script') continue
       const ref = /(?<![\w-])(?:src|href)\s*=\s*["'](http:\/\/[^"']*)["']/i.exec(m[0])
       if (ref && !LOCAL.test(ref[1])) add(x, lineOf(t, m.index), `<${m[1].toLowerCase()}> loads ${ref[1].slice(0, 80)} over plain http on an https page (browsers block or warn)`)
     }

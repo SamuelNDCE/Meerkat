@@ -73,7 +73,12 @@ export function hitsIn(rule, file, text) {
     }
     return out
   }
-  if (rule.whole) return rule.whole(text, file) ? [file] : []
+  if (rule.whole) {
+    const w = rule.whole(text, file)
+    // A rule that returns line numbers gets a file:line finding for each; a plain true is one finding for the file.
+    if (Array.isArray(w)) return w.map((n) => `${file}:${n}`)
+    return w ? [file] : []
+  }
   if (rule.lacks) return rule.lacks.test(text) ? [] : [file]
   return []
 }
