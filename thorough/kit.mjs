@@ -144,7 +144,9 @@ export const rustTestLines = (file, text) => {
 // the text of `a ${ f(`b`) } c` is blanked but its hole `${ ... }` stays as code, with its own strings blanked inside it. Raw strings (Rust r#"..."#), single-line quotes,
 // and comments (// and /* */, and # in Python) are understood, so an apostrophe or a backtick in a comment never opens a string. A template literal that is never closed
 // is left as code, and a template literal with no hole is blanked completely, backticks included. Anything unclear is left unblanked: the result then reads as code.
-export function blankStrings(text, python = false) {
+export function blankStrings(text, lang = 'js') {
+  // lang: js (JavaScript and TypeScript), py, go or rs. A backtick means a template literal only in js, a raw string (no escapes) in go, and nothing in py or rs.
+  const python = lang === 'py'
   const n = text.length
   const spaces = (s) => s.replace(/[^\n]/g, ' ')
   const raw = /(?<![A-Za-z0-9_])(?:b|c)?r(#*)"/y
@@ -190,7 +192,7 @@ export function blankStrings(text, python = false) {
   let i = 0
   while (i < n) {
     const c = text[i]
-    if (c === '/' && text[i + 1] === '/') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
+    if (!python && c === '/' && text[i + 1] === '/') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
     if (c === '/' && text[i + 1] === '*') { const e = text.indexOf('*/', i + 2); const end = e < 0 ? n : e + 2; out += text.slice(i, end); i = end; continue }
     if (python && c === '#') { const e = text.indexOf('\n', i); const end = e < 0 ? n : e; out += text.slice(i, end); i = end; continue }
     if (c === '"' || c === "'") {
@@ -200,8 +202,9 @@ export function blankStrings(text, python = false) {
       if (k < n && text[k] === c) { out += spaces(text.slice(i, k + 1)); i = k + 1; continue }
       out += c; i++; continue // an apostrophe that opens nothing
     }
-    if (c === '`') { const [t, e] = template(i); out += t; i = e; continue }
-    if (c === 'r' || c === 'b' || c === 'c') {
+    if (c === '`' && lang === 'js') { const [t, e] = template(i); out += t; i = e; continue }
+    if (c === '`' && lang === 'go') { const e = text.indexOf('`', i + 1); const end = e < 0 ? n : e + 1; out += e < 0 ? text.slice(i) : spaces(text.slice(i, end)); i = end; continue }
+    if (lang === 'rs' && (c === 'r' || c === 'b' || c === 'c')) {
       raw.lastIndex = i
       const m = raw.exec(text)
       if (m) {
@@ -217,17 +220,25 @@ export function blankStrings(text, python = false) {
 // Returns a function: is this 1-based line only string literals and punctuation (a table of sample code a detector or a test feeds to itself, such as
 // `("js", r#"db.query(...)"#),`, or a line inside a multi-line string)? Strings are blanked first, raw and multi-line ones too; a line with any identifier left
 // outside a string is code and is not data. Only for checks that look for code patterns; never for secrets, where the string itself is the problem.
+export const langOf = (file) => (/\.rs$/i.test(file) ? 'rs' : /\.py$/i.test(file) ? 'py' : /\.go$/i.test(file) ? 'go' : /\.[cm]?[jt]sx?$/i.test(file) ? 'js' : '')
 export const stringOnlyLines = (file, text) => {
-  if (!/\.(?:rs|py|go|[cm]?[jt]sx?)$/i.test(file)) return () => false
+  const lang = langOf(file)
+  if (!lang) return () => false
   const lines = text.split('\n')
-  const blank = blankStrings(text, /\.py$/i.test(file)).split('\n')
-  const rust = /\.rs$/i.test(file)
+  const blank = blankStrings(text, lang).split('\n')
   return (line) => {
     const o = (lines[line - 1] ?? '').trim()
-    // In a Rust table, struct field names (`bad:`), `&`, `vec!` and `Some(` around the strings are part of the table. In other languages `key: "value"` is configuration
-    // (`origin: "*"`, `algorithms: ["none"]`), which a security check must still see, so no label is allowed there.
-    const rest = rust ? (blank[line - 1] ?? '').replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ') : (blank[line - 1] ?? '')
-    return o !== '' && blank[line - 1] !== undefined && /^[,;()[\]{}\s]*$/.test(rest) && !/^\s*(?:\/\/|#|\/\*|\*)/.test(o)
+    const b = blank[line - 1]
+    if (o === '' || b === undefined || /^\s*(?:\/\/|#|\/\*|\*)/.test(o)) return false
+    // In a Rust table of (language, sample) pairs, field names (`bad:`), `&`, `vec!` and `Some(` around the strings are part of the table; on a line with no tuple
+    // (`origin: "*",`) a label is a configuration field and the line is code. In other languages `key: "value"` is always configuration.
+    const rest = lang === 'rs' && b.includes('(') ? b.replace(/\b\w+\s*:(?!:)/g, ' ').replace(/&|\bvec!|\bSome\b/g, ' ') : b
+    if (!/^[,;()[\]{}\s]*$/.test(rest)) return false
+    // The strings must be sample CODE: the text that was blanked contains a call (this also covers the first line of a multi-line string), or nothing was blanked.
+    const orig = lines[line - 1] ?? ''
+    let content = ''
+    for (let k = 0; k < orig.length && k < b.length; k++) if (b[k] === ' ' && !/\s/.test(orig[k])) content += orig[k]
+    return content === '' || /[\w\])]\s*\(/.test(content)
   }
 }
 // A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.

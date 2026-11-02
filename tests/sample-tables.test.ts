@@ -32,18 +32,18 @@ const status = (check: string, files: Record<string, string>) => {
 describe('stringOnlyLines', () => {
   const t = ['fn samples() -> Vec<(&str, &str)> {', '    vec![', '        ("js", r##"db.query("SELECT 1 " + id);"##),', '        ("go", "x := 1"),', '    ]', '}', 'let q = format!("a") + user_input;'].join('\n')
   const is = stringOnlyLines('a.rs', t)
-  test('a tuple of strings is data, even with quotes and calls inside the strings', () => {
+  test('a tuple whose string is sample code is data, even with quotes inside; one whose string is not code is not', () => {
     expect(is(3)).toBe(true)
-    expect(is(4)).toBe(true)
+    expect(is(4)).toBe(false) // ("go", "x := 1") holds no call, so it could be configuration
   })
   test('code is not', () => {
     expect(is(1)).toBe(false)
     expect(is(7)).toBe(false)
   })
-  test('the inside of a multi-line raw string is data', () => {
+  test('the first line of a multi-line raw string that holds a call is data; its continuation without a call is judged on its own', () => {
     const m = stringOnlyLines('a.rs', ['let s = [', '    r#"res.cookie(\'a\', t,', '       { httpOnly: false })"#,', '];'].join('\n'))
     expect(m(2)).toBe(true)
-    expect(m(3)).toBe(true)
+    expect(m(3)).toBe(false) // no call on this line, so it is read like any other line
   })
   test('other file kinds are never data', () => {
     expect(stringOnlyLines('a.md', '"x"')(1)).toBe(false)
@@ -51,7 +51,7 @@ describe('stringOnlyLines', () => {
 })
 
 describe('blankStrings', () => {
-  const lines = (t: string, py = false) => blankStrings(t, py).split('\n')
+  const lines = (t: string, lang = 'js') => blankStrings(t, lang).split('\n')
   test('a nested template literal keeps the code after it as code', () => {
     const t = ['const a = `x ${ f(`b ${c}`) } y`', 'crypto.createCipher("aes192", pw)', 'const z = 1'].join('\n')
     const out = lines(t)
@@ -69,21 +69,51 @@ describe('blankStrings', () => {
     expect(out[1]).toBe('danger(1)')
     expect(out[2]).toContain('danger(2)')
     expect(out[3]).toBe('danger(3)')
-    expect(lines('# it\'s `py`\nprint(1)', true)[1]).toBe('print(1)')
+    expect(lines('# it\'s `py`\nprint(1)', 'py')[1]).toBe('print(1)')
   })
   test('a template literal that is never closed stays code', () => {
     const t = 'const a = `never closed\nexec(userInput)'
-    expect(blankStrings(t)).toContain('exec(userInput)')
+    expect(blankStrings(t, 'js')).toContain('exec(userInput)')
   })
   test('plain strings and Rust raw strings are blanked, lifetimes are not strings', () => {
     expect(lines('x("a b", \'c\')')[0].trim()).toBe('x(     ,    )')
-    expect(lines('let s = r#"say "hi" there"#;')[0].replace(/ +/g, ' ')).toBe('let s = ;')
-    expect(lines("fn f<'a, 'b>(x: &'a str)")[0]).toContain('fn f<')
+    expect(lines('let s = r#"say "hi" there"#;', 'rs')[0].replace(/ +/g, ' ')).toBe('let s = ;')
+    expect(lines("fn f<'a, 'b>(x: &'a str)", 'rs')[0]).toContain('fn f<')
   })
   test('the text length and the newlines never change', () => {
     const t = 'a `b\nc ${ d } e` f "g" r#"h\ni"# \'j\'\n'
     expect(blankStrings(t).length).toBe(t.length)
     expect(blankStrings(t).split('\n').length).toBe(t.split('\n').length)
+  })
+})
+
+describe('review of PR 46: shapes that look like tables but are real configuration or code', () => {
+  const lines = (t: string, lang = 'js') => blankStrings(t, lang).split('\n')
+  test('a Rust configuration struct field with a string value is code', () => {
+    const t = ['let cors = Cors {', '    origin: "*",', '    credentials: true,', '};', 'let algorithm = Config {', '    algorithm: "none",', '};'].join('\n')
+    const is = stringOnlyLines('src/cors.rs', t)
+    expect(is(2)).toBe(false)
+    expect(is(6)).toBe(false)
+  })
+  test('header lists in Python, JavaScript and Rust are code, not sample tables', () => {
+    expect(stringOnlyLines('app.py', 'start_response("200 OK", [\n    ("Access-Control-Allow-Origin", "*"),\n    ("Access-Control-Allow-Credentials", "true"),\n])')(2)).toBe(false)
+    expect(stringOnlyLines('app.js', "res.writeHead(200, [\n  ['Set-Cookie', 'sid=abc'],\n])")(2)).toBe(false)
+    expect(stringOnlyLines('h.rs', 'let headers = [\n    ("Access-Control-Allow-Origin", "*"),\n];')(2)).toBe(false)
+  })
+  test('a sample of code in a table is still a table', () => {
+    expect(stringOnlyLines('t.rs', 'const S: &[(&str, &str)] = &[\n    ("js", r#"res.cookie(\'s\', t, { secure: false });"#),\n];')(2)).toBe(true)
+    expect(stringOnlyLines('t.rs', 'CRule {\n    bad: &[(r#"js"#, r#"res.cookie(\'s\', t, { secure: false });"#)],\n}')(2)).toBe(true)
+  })
+  test('a lone backtick in a comment does not turn the next lines into data', () => {
+    const t = ['// strip the ` character', 'res.cookie("session", token, { httpOnly: false })', 'const q = `ok`'].join('\n')
+    expect(stringOnlyLines('a.js', t)(2)).toBe(false)
+    expect(lines('"""a ` b"""\nprint(1)', 'py')[1]).toBe('print(1)')
+  })
+  test('a Go raw string ends at the next backtick, a backslash is not an escape', () => {
+    const t = ['p := `C:\\dir\\`', 'http.SetCookie(w, &http.Cookie{Name: "s", Value: t})', 'q := `x`'].join('\n')
+    const out = lines(t, 'go')
+    expect(out[1]).toContain('http.SetCookie(')
+    expect(out[0].trim()).toBe('p :=')
   })
 })
 
