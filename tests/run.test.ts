@@ -7,7 +7,7 @@ import { lastLine } from '../lib/exec.mjs'
 import { globToRegExp, matchesAny } from '../lib/glob.mjs'
 import { loadChecks, validateCheck } from '../lib/load-checks.mjs'
 import { bashFor, wrapForLane } from '../lib/lanes.mjs'
-import { canBackfill, costOf, orderForSpeed, runAll, runOne, selectChecks, summarise } from '../lib/runner.mjs'
+import { canBackfill, costOf, orderForSpeed, runAll, runOne, selectChecks, shadowSeconds, summarise } from '../lib/runner.mjs'
 import { applyConfig, findConfig, readConfig } from '../lib/config.mjs'
 import { detect, initConfig } from '../lib/init.mjs'
 import { parseGroups, PRESETS, resolvePreset } from '../lib/presets.mjs'
@@ -496,15 +496,20 @@ describe('the scheduler gives light checks the machine together and heavy ones r
     expect(costOf({ lane: 'cargo' } as never).cpu).toBeGreaterThan(3)
     expect(costOf({ lane: 'free', cost: { cpu: 7 } } as never)).toMatchObject({ cpu: 7 })
   })
-  test('canBackfill: a short check may start beside a running one when it ends first, a long one may not', () => {
-    const running = [{ check: { estSeconds: 100 }, startedAt: 1_000 }]
-    expect(canBackfill({ estSeconds: 1 } as never, running, 11_000)).toBe(true) // 90 s left, 1 s check
-    expect(canBackfill({ estSeconds: 200 } as never, running, 11_000)).toBe(false) // longer than the 120 s cap
-    expect(canBackfill({ estSeconds: 60 } as never, [{ check: { estSeconds: 20 }, startedAt: 1_000 }], 11_000)).toBe(false) // only 10 s left on the runner
-    expect(canBackfill({ estSeconds: 8 } as never, [{ check: { estSeconds: 20 }, startedAt: 1_000 }], 11_000)).toBe(true)
-    expect(canBackfill({ estSeconds: 1 } as never, [], 0)).toBe(false) // nothing running: nothing to wait for
-    expect(canBackfill({ estSeconds: 6 } as never, [{ check: { estSeconds: 20 }, startedAt: 1_000 }], 100_000)).toBe(true) // overdue runner counts as 5 s, floor of 10 s
-    expect(canBackfill({ estSeconds: 30 } as never, [{ check: { estSeconds: 20 }, startedAt: 1_000 }], 100_000)).toBe(false)
+  test('shadowSeconds and canBackfill: a check may start beside the running ones only if it ends before the waiting one could start', () => {
+    const budget = { cpu: 10 }
+    const heavy = { cpu: 8, memGB: 0 }
+    const run = (est: number, started: number, cpu: number) => ({ check: { estSeconds: est, cost: { cpu, memGB: 0 } }, startedAt: started })
+    // one runner holding 6 cpu with 90 s left: the waiting 8-cpu check fits when it ends, so the shadow is 90 s
+    expect(shadowSeconds(heavy, [run(100, 1_000, 6)], budget, 11_000)).toBe(90)
+    // two runners: 4 cpu ends in 10 s, 4 cpu in 50 s; the waiting check needs both gone only if 4+8 > 10, so it fits once the first ends? 4 left + 8 = 12 > 10, so it waits for both: 50 s
+    expect(shadowSeconds(heavy, [run(20, 1_000, 4), run(60, 1_000, 4)], budget, 11_000)).toBe(50)
+    // a continuous stream of 1 s checks cannot starve it: a 1 s check does not end before a 1 s shadow
+    expect(canBackfill({ estSeconds: 1 } as never, 0.4)).toBe(false)
+    expect(canBackfill({ estSeconds: 1 } as never, 90)).toBe(true)
+    expect(canBackfill({ estSeconds: 200 } as never, 500)).toBe(false) // longer than the 120 s cap
+    expect(canBackfill({ estSeconds: 1 } as never, 0)).toBe(false) // nothing to wait for
+    expect(canBackfill({ estSeconds: 1 } as never, Infinity)).toBe(false)
   })
   test('while a big check waits for room, a tiny one that fits runs beside the running check instead of waiting behind it', async () => {
     const order: string[] = []
