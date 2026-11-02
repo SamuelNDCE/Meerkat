@@ -35,8 +35,12 @@ describe('ep-tauri-command-fs-path', () => {
   test('a helper in the same file that is not a command is not reported', () => {
     expect(fsPath('#[tauri::command]\nfn ping() {}\nfn load(path: &Path) -> String {\n    std::fs::read_to_string(path).unwrap()\n}\n')).toBe(0)
   })
-  test('a command that builds its own path is not reported', () => {
-    expect(fsPath('#[tauri::command]\nfn read(name: String) -> String {\n    let path = base().join(name);\n    std::fs::read_to_string(&path).unwrap()\n}\n')).toBe(0)
+  test('a path built from the parameter is still reported, unless the command checks it stays in a folder', () => {
+    expect(fsPath('#[tauri::command]\nfn read(name: String) -> String {\n    let p = base().join(name);\n    std::fs::read_to_string(&p).unwrap()\n}\n')).toBe(1)
+    expect(fsPath('#[tauri::command]\nfn read(name: String) -> String {\n    let p = base().join(name).canonicalize().unwrap();\n    if !p.starts_with(base()) { return String::new(); }\n    std::fs::read_to_string(&p).unwrap()\n}\n')).toBe(0)
+  })
+  test('other attributes between the command attribute and fn do not hide it', () => {
+    expect(fsPath('#[tauri::command]\n#[allow(dead_code)]\npub async fn read(path: String) -> String {\n    std::fs::read_to_string(&path).unwrap()\n}\n')).toBe(1)
   })
   test('a unit test in the same file is not reported', () => {
     expect(fsPath('#[tauri::command]\nfn ping() {}\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn t() {\n        let path = tmp();\n        std::fs::read_to_string(&path).unwrap();\n    }\n}\n')).toBe(0)
@@ -82,9 +86,27 @@ describe('pii-patterns-in-source', () => {
   }
   test('user:password@host in a web address is not an email address', () => {
     expect(pii("const u = 'postgres://admin:Sup3rS3cretPw@db.acme.io/app'\n")).toBe(0)
-    expect(pii("// see https://evil.example/x@registry.npmjs.org\n")).toBe(0)
+    expect(pii("// see https://evil.example/x@registry.npmjs.org\n")).toBe(1) // an @ later in the path is still reported
   })
   test('a real-looking email address is still reported', () => {
     expect(pii("const owner = 'maria.lopez@gmail.com'\n")).toBe(1)
+  })
+})
+
+describe('electron-context-isolation and the Electron version', () => {
+  const run = (electron: string | null, win: string) => {
+    const pkg = { name: 'a', main: 'main.js', ...(electron ? { devDependencies: { electron } } : { dependencies: { electron: 'latest' } }) }
+    const dir = tree({ 'package.json': JSON.stringify(pkg), 'main.js': win })
+    try {
+      execFileSync(process.execPath, ['thorough/desktop.mjs', 'electron-context-isolation', '--root', dir], { cwd: fileURLToPath(new URL('..', import.meta.url)), stdio: 'pipe', encoding: 'utf8' })
+      return 0
+    } catch (e: any) {
+      return e.status ?? -1
+    }
+  }
+  test('an omitted setting is reported for Electron below 12 or an unknown version', () => {
+    expect(run('^9.0.0', 'new BrowserWindow({ webPreferences: { sandbox: true } })\n')).toBe(1)
+    expect(run(null, 'new BrowserWindow({ webPreferences: { sandbox: true } })\n')).toBe(1)
+    expect(run('^41.0.0', 'new BrowserWindow({ webPreferences: { sandbox: true } })\n')).toBe(0)
   })
 })

@@ -657,13 +657,22 @@ const commandBodies = (text) => {
   if (text === bodiesFor) return bodiesOf
   const blanked = text.replace(/"(?:[^"\\]|\\[\s\S])*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, ' '))
   const out = []
-  for (const m of blanked.matchAll(/#\[tauri::command[^\]]{0,80}\]\s{0,40}(?:pub(?:\([^)]{0,20}\))?\s+)?(?:async\s+)?fn\s+\w+\s*(?:<[^>]{0,80}>)?\s*\(([^)]{0,400})\)[^{;]{0,200}\{/g)) {
-    const names = new Set([...m[1].matchAll(/\b(\w+)\s*:\s*(?:&\s*)?(?:mut\s+)?(?:Option<\s*)?(?:String|str|PathBuf|Path)\b/g)].map((x) => x[1]))
+  for (const m of blanked.matchAll(/#\[tauri::command[^\]]{0,80}\]\s{0,40}(?:#\[[^\]]{0,80}\]\s{0,40}){0,4}(?:pub(?:\([^)]{0,20}\))?\s+)?(?:async\s+)?fn\s+\w+\s*(?:<[^>]{0,80}>)?\s*\(([^)]{0,400})\)[^{;]{0,200}\{/g)) {
+    const names = new Set([...m[1].matchAll(/\b(\w+)\s*:\s*(?:&\s*)?(?:'\w+\s+)?(?:mut\s+)?(?:Option<\s*)?(?:&\s*)?(?:std::path::|std::string::)?(?:String|str|PathBuf|Path)\b/g)].map((x) => x[1]))
     let depth = 0
     for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
       if (blanked[i] === '{') depth++
       else if (blanked[i] === '}' && --depth === 0) {
-        out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names })
+        const body = blanked.slice(m.index + m[0].length, i)
+        // A local built from a parameter (`let p = base.join(name)`) carries the page's value too.
+        for (let pass = 0; pass < 3; pass++) {
+          for (const l of body.matchAll(/\blet\s+(?:mut\s+)?(\w+)\s*(?::[^=;]{0,60})?=\s*([^;]{0,300});/g)) {
+            if ([...names].some((n) => new RegExp(`\\b${n}\\b`).test(l[2]))) names.add(l[1])
+          }
+        }
+        // A command that resolves the path and checks it stays inside a folder is doing the check this rule asks for.
+        const guarded = /\bcanonicali[sz]e\b|\bstarts_with\b|\bstrip_prefix\b|\bscope\b/.test(body)
+        out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names: guarded ? new Set() : names })
         break
       }
     }
@@ -673,7 +682,7 @@ const commandBodies = (text) => {
   return out
 }
 // A path argument that comes straight from the page into std::fs: the call is inside a Tauri command, outside a test module, and the name is one of the command's own parameters.
-const FS_PATH_CALL = /\bfs::\w+\(\s*&?(path|file_path|filepath|file|filename|dest|target)\s*[,)]/
+const FS_PATH_CALL = /\bfs::\w+\(\s*&?(\w+)\s*[,)]/
 const fsPathTest = (line, ctx) => {
   const m = FS_PATH_CALL.exec(line)
   if (!m) return false

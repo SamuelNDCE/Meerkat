@@ -145,8 +145,8 @@ const piiPatternsInSource = (root) => {
       const at = `${x}:${i + 1}`
       for (const m of line.matchAll(EMAIL)) {
         const [local, domain] = [m[0].split('@')[0], m[0].split('@')[1]]
-        // user:password@host or a path segment holding an @ inside a web address is part of a URL, not an email address (credentials in URLs have their own check).
-        if (/\w:\/\/[^\s"'`]*$/.test(line.slice(0, m.index))) continue
+        // user:password@host (the @ right after the web address's own host part) is part of a URL, not an email address (credentials in URLs have their own check).
+        if (/\w:\/\/[^\s"'`/?#]*$/.test(line.slice(0, m.index))) continue
         if (GENERIC_LOCAL.test(local) || FAKE_DOMAIN.test(domain) || /noreply\.github\.com$/i.test(domain)) continue
         f.push(`${at} has the email address ${m[0]}`)
         break
