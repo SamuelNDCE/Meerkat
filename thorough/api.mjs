@@ -6,6 +6,7 @@
 // pagination-bounds (api.requirePaginationBounds). Framework checks pass with a note when the project has no such files.
 import { posix } from 'node:path'
 import { finish, isFixture, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { FN_HEADS, projectContext } from './project-ctx.mjs'
 
 const SELF = /(^|\/)thorough\/api\.mjs$/
 const cfg = (root) => readBudgets(root)?.api ?? {}
@@ -392,7 +393,31 @@ const errorLeak = (root) => {
       for (const [re, why, pyOnly] of LEAK) if ((py || !pyOnly) && re.test(line)) f.push(`${x}:${i + 1} ${why}: ${snip(line)}`)
     })
   }
+  f.push(...leakingHelpers(root, files(root, CODE).filter((x) => !TEST_FILE.test(x) && !allowed(allow, 'error-leak', x))))
   return finish('error-leak', f, 'no handler sends error details to the client')
+}
+// A small helper that returns its error argument's stack or message (describe = (err) => err.stack), flagged when a response call anywhere
+// in the project sends the helper's result: the helper hop for the error leak. Reported at the helper, which is the line to change.
+const RESPONSE_SEND = /\b(?:res|response|reply)\s*(?:\.status\([^)\n]*\)\s*)?\.(?:send|json|render)\s*\(/
+function leakingHelpers(root, list) {
+  const ctx = projectContext(root, list)
+  const out = []
+  for (const [x, text] of ctx.all) {
+    if (/\.py$/i.test(x)) continue
+    const lines = text.split('\n')
+    lines.forEach((line, i) => {
+      const head = FN_HEADS.map((re) => re.exec(line)).find(Boolean)
+      if (!head) return
+      const param = head[2].split(',')[0].replace(/[:=].*$/, '').trim()
+      if (!/^\w+$/.test(param)) return
+      const leak = new RegExp(`(?:=>\\s*|\\breturn\\s+)${param}\\.(?:stack|message)\\b`)
+      if (!leak.test(line) && !lines.slice(i + 1, i + 4).some((l) => leak.test(l))) return
+      const call = new RegExp(`(?<![\\w$.])${head[1]}\\s*\\(`)
+      const sent = [...ctx.all].some(([, other]) => other.split('\n').some((l) => RESPONSE_SEND.test(l) && call.test(l.slice(l.search(RESPONSE_SEND)))))
+      if (sent) out.push(`${x}:${i + 1} ${head[1]} returns the error stack or message and a response sends its result, so details reach the client: ${snip(line)}`)
+    })
+  }
+  return out
 }
 
 // ---- Page sizes read from the request with no upper bound in the next 10 lines (informational unless api.requirePaginationBounds)

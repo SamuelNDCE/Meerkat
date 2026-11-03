@@ -102,7 +102,47 @@ const syncFsInHandlers = (root) => {
       if (inHandler[i] && SYNC_IO.test(l)) f.push(`${x}:${i + 1} blocks the event loop inside a request or event handler (use fs.promises or the callback form)`)
     })
   }
+  f.push(...syncFsHelpers(root, id, allow, new Set(f.map((s) => s.split(' ')[0]))))
   return finish(id, f, 'no server handler makes a blocking file or process call')
+}
+// A helper function (any file) that makes a blocking call, called from inside a request or event handler of a server file: the helper hop.
+// Reported at the blocking line in the helper, because that is the line to change. A name the project defines more than once is skipped.
+const HELPER_HEADS = [
+  /(?:exports|module\.exports)\.(\w+)\s*=\s*(?:async\s*)?(?:function\s*\w*\s*)?\(/,
+  /\bfunction\s+(\w+)\s*\(/,
+  /\b(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|\w+\s*=>)/,
+]
+function syncFsHelpers(root, id, allow, already) {
+  const helpers = new Map()
+  const seen = new Map()
+  const handlerCalls = new Set()
+  const parsed = files(root, SCRIPT).filter((x) => !TEST_PATH.test(x) && !allowed(allow, id, x)).map((x) => [x, codeLines(readText(root, x))])
+  for (const [x, cl] of parsed) {
+    cl.forEach((l, i) => {
+      const head = HELPER_HEADS.map((re) => re.exec(l)).find(Boolean)
+      if (head) seen.set(head[1], (seen.get(head[1]) ?? 0) + 1)
+      if (!SYNC_IO.test(l) || already.has(`${x}:${i + 1}`)) return
+      for (let k = i; k >= Math.max(0, i - 12); k--) {
+        const h = HELPER_HEADS.map((re) => re.exec(cl[k])).find(Boolean)
+        if (h) {
+          if (!helpers.has(h[1])) helpers.set(h[1], `${x}:${i + 1}`)
+          break
+        }
+      }
+    })
+  }
+  for (const [, cl] of parsed) {
+    if (!SERVER_HINT.test(cl.join('\n'))) continue
+    const inHandler = regions(cl, HANDLER)
+    cl.forEach((l, i) => {
+      const at = HANDLER.exec(l)
+      for (const name of helpers.keys()) {
+        const call = new RegExp(String.raw`(?<![\w$.])${name}\s*\(`).exec(l)
+        if (call && (inHandler[i] || (at && call.index > at.index)) && !HELPER_HEADS.some((re) => re.exec(l)?.[1] === name)) handlerCalls.add(name)
+      }
+    })
+  }
+  return [...handlerCalls].filter((n) => seen.get(n) === 1).map((n) => `${helpers.get(n)} blocks the event loop inside ${n}(), which a request or event handler calls (use fs.promises or the callback form)`)
 }
 
 // ---- json-parse-in-loop: JSON.parse or JSON.stringify inside loop bodies, counted across the project against a budget
@@ -221,7 +261,8 @@ const duplicateDependencies = (root) => {
 }
 
 // ---- wildcard-versions: a dependency that floats (*, latest, empty, or a git or URL spec) and unpinned lines in Python and Rust manifests
-const floating = (r) => r === '*' || r === 'latest' || r === '' || /^(git\+https?:|git:\/\/|https?:\/\/)/.test(r)
+// Floating also means open-ended: a lower bound with no upper one (>=1.0.0, >1) and x-ranges (1.x, 1.2.x, 1.*, x).
+const floating = (r) => r === '*' || r === 'latest' || r === '' || /^(git\+https?:|git:\/\/|https?:\/\/)/.test(r) || /^>=?\s*v?[\d.]+$/.test(r) || /^[=v]*(?:\d+\.)*(?:x|X|\*)(?:\.(?:x|X|\*))*$/.test(r)
 const wildcardVersions = (root) => {
   const id = 'wildcard-versions'
   const allow = allowSet(root)

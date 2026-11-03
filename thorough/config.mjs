@@ -5,7 +5,7 @@
 // A finding you accept goes in .meerkat-config-allow as "<check-id> <path>" (one per line, # starts a comment).
 // These are tolerant line-based reads, not full parsers: each check says what it looks at, and a finding is a prompt to look, not a proof.
 import { execFileSync } from 'node:child_process'
-import { finish, isFixture, main, notRun, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isComposeText, isFixture, main, notRun, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?)\//i
 const MINIFIED = /\.min\.(m?js|css)$/i
@@ -286,9 +286,12 @@ const composeProblems = (text) => {
 const composeHygiene = (root) => {
   const allow = allowSet(root)
   const f = []
-  for (const x of files(root, COMPOSE)) {
+  // Named like a Compose file, or (whatever the name) a services: map of images or builds.
+  for (const x of files(root, /\.ya?ml$/i)) {
     if (accepted(allow, 'compose-hygiene', x)) continue
-    for (const p of composeProblems(readText(root, x))) f.push(`${x}: ${p}`)
+    const text = readText(root, x)
+    if (!COMPOSE.test(x) && !isComposeText(text)) continue
+    for (const p of composeProblems(text)) f.push(`${x}: ${p}`)
   }
   return finish('compose-hygiene', f, 'every Compose file pins its images and avoids the risky settings')
 }
@@ -456,7 +459,7 @@ main({
   'gitignored-but-tracked': { run: gitignoredButTracked, ...gitFx({ '.gitignore': 'debug.log\n', 'debug.log': 'x\n' }, ['debug.log'], gitignoredButTracked) },
   'compose-hygiene': {
     run: composeHygiene,
-    ...fx({ 'docker-compose.yml': 'services:\n  db:\n    image: postgres\n    privileged: true\n    environment:\n      POSTGRES_PASSWORD: hunter2\n    ports:\n      - "5432:5432"\n' }, composeHygiene),
+    ...fx({ 'deploy/db.yml': 'services:\n  db:\n    image: postgres\n    privileged: true\n    environment:\n      POSTGRES_PASSWORD: hunter2\n    ports:\n      - "5432:5432"\n' }, composeHygiene),
   },
   'ci-timeouts': { run: ciTimeouts, ...fx({ '.github/workflows/ci.yml': 'name: ci\non: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n' }, ciTimeouts) },
   'ci-node-version-pinned': {

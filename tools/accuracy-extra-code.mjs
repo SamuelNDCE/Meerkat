@@ -609,6 +609,7 @@ function secretFiles(ctx) {
       ctx.d('v-sec-props-aws', 'an AWS access key id in a properties file', `aws.accessKeyId=${S.awsId}`),
       ctx.d('v-sec-props-password', 'a password in a properties file', `db.password=${S.dbPass}`),
     ],
+    '.dockerignore': ['node_modules\n.git\n.env\n'],
     'Dockerfile.worker': [
       'FROM node:20.11.1-alpine3.19',
       ctx.d('v-sec-docker-env-token', 'a GitHub token in an ENV line', `ENV GITHUB_TOKEN=${S.ghPat}`),

@@ -9,11 +9,11 @@ In short: Meerkat reads files as text and applies rules. It is a fast first line
 ## 1. What Meerkat scans
 
 <!-- coverage:start -->
-Counted from all 48 packs under `packs/`: **368 checks** in **48 suites** with **1414 rules** (sub-checks).
+Counted from all 49 packs under `packs/`: **383 checks** in **48 suites** with **1421 rules** (sub-checks).
 
-Run by default: 334 quick checks and 8 full-only checks. Opt-in: 26 (`--include ai`, `--include detectors`, `--include runtime`, `--include mutation`, `--include deny`).
+Run by default: 337 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
 
-Checks that need an outside tool (NOT RUN without it): 39 of 368. The other 329 need only Node.
+Checks that need an outside tool (NOT RUN without it): 39 of 383. The other 344 need only Node.
 
 Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results inside them. **Runs by default**: quick = in `meerkat verify`; full = only in `meerkat full`; both = a mix; opt-in = only when you ask. **Tool**: yes means at least one check in the suite is NOT RUN without that outside tool; the others still work.
 
@@ -23,15 +23,15 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `risky-calls` | JS/TS, Python, Go, Rust, Java and more (code), plus tracked text files | 7 | 95 | quick | no |
 | `injection-patterns` | JS/TS, Python, Java, C#, PHP, Ruby source | 7 | 71 | quick | no |
 | `crypto-and-auth` | Source files (JWT and cipher settings) | 2 | 2 | quick | no |
-| `supply-chain` | package.json, lockfiles, requirements, .npmrc | 8 | 23 | both | yes: npm |
-| `detectors` | your lockfiles, source and workflows, through osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint (opt-in) | 8 | 8 | opt-in | no |
+| `supply-chain` | package.json, lockfiles, requirements, .npmrc | 8 | 24 | both | yes: npm |
+| `detectors` | your lockfiles, source and workflows, through osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint (opt-in) | 20 | 20 | opt-in | no |
 | `ci-workflows` | GitHub Actions workflow files | 3 | 36 | quick | no |
-| `web-security` | HTML, JSX/TSX, Vue, Svelte, server and host config, JS (cookies, CORS, headers, privacy) | 20 | 76 | quick | no |
+| `web-security` | HTML, JSX/TSX, Vue, Svelte, server and host config, JS (cookies, CORS, headers, privacy) | 22 | 85 | quick | no |
 | `accessibility` | HTML, JSX/TSX, Vue, Svelte, CSS | 10 | 10 | quick | no |
 | `html-and-css` | HTML, CSS, web manifests, templates | 10 | 35 | quick | yes: htmlhint, stylelint |
 | `seo-and-meta` | HTML pages, robots.txt, sitemap | 2 | 2 | quick | no |
 | `code-quality` | Source and text files (whitespace, leftovers, imports) | 10 | 10 | quick | no |
-| `test-hygiene` | Test files; opt-in: runs your project | 21 | 88 | quick + opt-in | no |
+| `test-hygiene` | Test files; opt-in: runs your project | 21 | 68 | quick + opt-in | no |
 | `refactor` | Source files (JS/TS first) | 9 | 9 | quick | no |
 | `javascript` | JS and TS source | 7 | 7 | quick | no |
 | `slow-code-patterns` | JS and TS source | 4 | 4 | quick | no |
@@ -46,7 +46,7 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `api-contracts` | OpenAPI and GraphQL files | 4 | 4 | quick | no |
 | `database` | SQL migrations, Prisma schema | 4 | 4 | quick | no |
 | `api-resilience` | Server code (timeouts, limits, errors, paging) | 4 | 4 | quick | no |
-| `desktop-apps` | Electron, Tauri, Capacitor, Cordova, Android manifest | 19 | 176 | quick | no |
+| `desktop-apps` | Electron, Tauri, Capacitor, Cordova, Android manifest | 20 | 180 | quick | no |
 | `git-history` | Git commit history (needs a git repository) | 8 | 8 | quick | no |
 | `git-workflow` | Branches, tags, submodules (needs a git repository) | 3 | 3 | quick | no |
 | `release-versioning` | Versions, tags, package publish files (npm, PyPI, crates) | 15 | 15 | quick | no |
@@ -62,7 +62,7 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `ruby` | Ruby projects | 2 | 2 | quick | yes: rspec, rubocop |
 | `swift` | Swift packages | 2 | 2 | quick | yes: swift, swiftlint |
 | `dart` | Dart and Flutter projects | 2 | 2 | quick | yes: dart |
-| `terraform` | Terraform files (.tf); its check also holds the Compose rules | 2 | 38 | quick | yes: terraform |
+| `terraform` | Terraform files (.tf); its check also holds the Compose rules | 2 | 39 | quick | yes: terraform |
 | `kubernetes` | Helm charts and Kubernetes YAML | 3 | 52 | quick | yes: helm, kube-linter |
 | `docker` | Dockerfiles and Compose files | 4 | 40 | quick | yes: hadolint |
 | `shell-scripts` | Shell scripts (.sh) | 2 | 2 | quick | no |
@@ -89,13 +89,13 @@ Legend. **DEEP**: 20 or more rules of Meerkat's own, and the rules were run agai
 | Swift | NONE | 0 | swiftlint, swift | no rules of its own |
 | Dart, Flutter | NONE | 0 | dart | no rules of its own |
 | Shell scripts | BASIC | 2 | - | PowerShell is not covered |
-| HTML, CSS | DEEP | 26 | htmlhint, stylelint | checks whose files are HTML, CSS or templates, plus the web-hardening HTML table |
+| HTML, CSS | DEEP | 29 | htmlhint, stylelint | checks whose files are HTML, CSS or templates, plus the web-hardening HTML table |
 | Markdown | BASIC | 12 | - |  |
 | YAML, TOML, JSON | BASIC | 5 | - | syntax and duplicate keys only |
 | Dockerfile | BASIC | 38 | hadolint | infra rules were measured on the corpus as one group; per-family use not confirmed |
 | Kubernetes, Helm | BASIC | 52 | helm, kube-linter | as for Dockerfile |
 | Terraform | BASIC | 29 | terraform | rules from the Terraform table of ip-terraform-compose |
-| Docker Compose | BASIC | 9 | - | rules from the Compose table of ip-terraform-compose |
+| Docker Compose | BASIC | 10 | - | rules from the Compose table of ip-terraform-compose |
 | GitHub Actions | BASIC | 39 | actionlint | as for Dockerfile |
 | GitLab, CircleCI, Azure, Jenkins | BASIC | 7 | - |  |
 | Jupyter notebooks | BASIC | 6 | - |  |

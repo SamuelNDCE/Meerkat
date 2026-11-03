@@ -36,7 +36,7 @@ export default [
 |---|---|
 | `id` | kebab-case and unique. Another check with the same id is replaced |
 | `group` | the kind: `security`, `functionality`, `ui`, `performance` or `refactor`. `--group` and the presets select by it |
-| `tier` | `fast` runs in `quick`; `thorough` runs only in `full` |
+| `tier` | `fast` runs in `quick`; `thorough` runs only in `full`. A `fast` check that compiles the project or runs its tests is left out of `quick` and `fast` anyway (see [tiers.md](tiers.md)); the presets `functionality-fast`, `app-fast` and `ci` still run it |
 | `lane` | `free` runs beside others; `cargo` takes the Rust lock; `electron` takes the window lock |
 | `weight` | `tiny`, `light`, `medium`, `heavy` or `alone`: how much of the machine it needs (10 slots per run). No weight means the lane's usual one. `cost: { cpu, memGB }` sets exact numbers instead |
 | `title` | one plain line saying what it checks |

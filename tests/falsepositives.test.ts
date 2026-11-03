@@ -220,7 +220,10 @@ describe('false negatives stay detected', () => {
       'package.json': JSON.stringify({ name: 'x', version: '1.0.0', devDependencies: { electron: '41.0.0' } }),
       'electron/main.cjs': "const { ipcMain } = require('electron')\nipcMain.handle('app:devtools', () => win && win.webContents.toggleDevTools())\nipcMain.handle('file:read', async (_e, p) => fs.readFileSync(p))\n",
     })
-    expect(run('thorough/desktop.mjs', 'electron-devtools-prod', dir).code).toBe(1)
+    // 2026-11-03: a user-invoked toggle (an ipc handler) is a deliberate shortcut and is reported as info, not as a failure; a forced openDevTools() still fails (tests/plume-fp.test.ts).
+    const dev = run('thorough/desktop.mjs', 'electron-devtools-prod', dir)
+    expect(dev.code).toBe(0)
+    expect(dev.out).toMatch(/MEERKAT-FINDING info electron-devtools-prod-deliberate/)
     const ipc = run('thorough/electron-plus.mjs', 'ep-ipc-preload', dir)
     expect(ipc.out).toMatch(/FAIL ep-ipc-handler-no-sender-check/)
   })

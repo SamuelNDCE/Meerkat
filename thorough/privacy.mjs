@@ -4,7 +4,7 @@
 // Limits are set in .meerkat-budgets.json under "privacy". Accepted findings go in .meerkat-privacy-allow, one "check-id path" per line
 // (the path may end in * to cover a folder). Informational checks list what they find and still pass, unless their budget key is true:
 //   noTrackers, noTelemetry, requirePolicy, noThirdPartyFonts, noCopyleft.
-import { finish, isFixture, isTestFile, main, readBudgets, readText, rustBlank, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
+import { finding, finish, isFixture, isTestFile, main, readBudgets, readText, rustBlank, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.privacy ?? {}
 const SKIP = /(^|\/)(node_modules|dist|build|vendor|target|fixtures?)\//i
@@ -43,6 +43,11 @@ const informational = (root, name, key, f, ok) => {
   console.log(`${name}: ${f.length} listed, informational (set privacy.${key} to true to fail on them)`)
   for (const line of f.slice(0, LIST_MAX)) console.log(`  ${line}`)
   if (f.length > LIST_MAX) console.log(`  ... and ${f.length - LIST_MAX} more`)
+  // The check still passes, but each listed place is also reported as an info finding (lib/findings.mjs), so findings.json shows it to a person or an AI reading it.
+  for (const line of f) {
+    const m = /^(\S+?):(\d+)\s+(.+)$/s.exec(String(line))
+    if (m) finding('info', name, m[1], Number(m[2]), m[3].replace(/\s+/g, ' ').slice(0, 8000))
+  }
   return 0
 }
 
@@ -306,13 +311,21 @@ const geolocationAndMediaRequests = (root) => {
 }
 
 // ---- local-storage-pii: personal or secret values written to browser storage under a key named like them
-const STORE_PII = /(localStorage|sessionStorage)\.setItem\(\s*(['"`])[^'"`]*(email|password|passwd|token|jwt|ssn)[^'"`]*\2/i
+const STORE_PII = /(localStorage|sessionStorage)\.setItem\(\s*(['"`])([^'"`]*(?:email|password|passwd|token|jwt|ssn)[^'"`]*)\2/i
+// A key that names a preference or a UI flag about the word, not the value itself: emailDigestFrequency, passwordHintShown, tokenizerMode. A key ending in a state
+// word (Frequency, Shown, Mode, Enabled, Count...) holds a setting, and "tokenizer" is not a token. authToken, savedPassword, userEmail and jwt are still reported.
+const SETTING_KEY = /(?:frequency|prefs?|preferences?|shown|seen|dismissed|mode|enabled|disabled|count|settings?|visible|collapsed|hidden|opt_?(?:in|out)|banner|format|style)$/i
+const secretKey = (key) => {
+  if (SETTING_KEY.test(key)) return false
+  return /email|password|passwd|token|jwt|ssn/i.test(key.replace(/tokeni[sz]\w*/gi, ''))
+}
 const localStoragePii = (root) => {
   const f = []
   for (const x of files(root, FRONT)) {
     if (allowed(root, 'local-storage-pii', x)) continue
     lines(root, x).forEach((line, i) => {
-      if (STORE_PII.test(line)) f.push(`${x}:${i + 1} stores a personal or secret value in browser storage`)
+      const m = STORE_PII.exec(line)
+      if (m && secretKey(m[3])) f.push(`${x}:${i + 1} stores a personal or secret value in browser storage`)
     })
   }
   return finish('local-storage-pii', f, 'no personal or secret value is kept in browser storage')

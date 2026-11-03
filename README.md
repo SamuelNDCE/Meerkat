@@ -2,20 +2,22 @@
 
 # Meerkat
 
-<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <a href="docs/accuracy.md"><img src="docs/images/badges/planted-defect-recall.svg" alt="planted-defect recall: 97.4%"></a> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11"> <a href="https://perpetualtechnologies.co.uk"><img src="docs/images/badges/made-with.svg" alt="made with Perpetual Technologies"></a> <img src="docs/images/badges/works-with.svg" alt="works with NeuralVault and MCP">
+<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <a href="https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md"><img src="docs/images/badges/planted-defect-recall.svg" alt="planted-defect recall"></a> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11"> <a href="https://perpetualtechnologies.co.uk"><img src="docs/images/badges/made-with.svg" alt="made with Perpetual Technologies"></a> <img src="docs/images/badges/works-with.svg" alt="works with NeuralVault and MCP">
 
 **One command that checks your whole project before you ship it.**<br>
 Security, correctness, accessibility, performance and code health, for any kind of app, with every result saved and explained.
 
+[npm package](https://www.npmjs.com/package/@samuelndce/meerkat) · [GitHub repository](https://github.com/SamuelNDCE/Meerkat)
+
 <!-- counts:start -->
-**368 checks · 1414 sub-checks · 48 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
+**383 checks · 1421 sub-checks · 48 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
 <!-- counts:end -->
 
 ![Meerkat running: what is running now, a status line, every check with its time, and a timeline](docs/images/meerkat-run.gif)
 
 <sub>Sample data: a made-up project, drawn by Meerkat's real screens.</sub>
 
-**[Why](#why-meerkat) · [Features](#what-you-get) · [Quick start](#quick-start) · [What it looks like](#what-it-looks-like) · [Make it yours](#make-it-yours) · [Commands](#commands) · [Reference](docs/reference.md) · [Licence](#licence)**
+**[Why](#why-meerkat) · [Features](#what-you-get) · [Quick start](#quick-start) · [What it looks like](#what-it-looks-like) · [Make it yours](#make-it-yours) · [Commands](#commands) · [Reference](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/reference.md) · [Licence](#licence)**
 
 </div>
 
@@ -39,8 +41,8 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 **Why it is good**
 
 - **Honest.** NOT RUN is never a pass. A check that stopped working is caught by `meerkat self-test`.
-- **Accurate.** Over a thousand rules, each with its own bad and good sample, plus a corpus of planted defects (97.4% of 622 detected on 2026-11-02) and a ground-truth benchmark on a known vulnerable open-source project (`tools/benchmark.mjs`, which is far lower and lists the real misses). Both are committed to the repository, see [docs/accuracy.md](docs/accuracy.md).
-- **Fast.** The quick preset runs every short check in seconds. Light checks run together, heavy ones run alone, and `full` and `thorough` leave out your project's own window checks unless you ask, so they are much faster, see [docs/scheduling.md](docs/scheduling.md).
+- **Accurate.** Over a thousand rules, each with its own bad and good sample, plus a corpus of planted defects (the current figure is in the Planted-bug accuracy section below) and a ground-truth benchmark on a known vulnerable open-source project (`tools/benchmark.mjs`, which is far lower and lists the real misses). Both are committed to the repository, see [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md).
+- **Fast.** The quick preset runs every short static check and the direct unit-test runs (vitest, jest), but no builds or compiled test suites in 5 to 10 minutes at most on a large app, seconds on a small one. Light checks run together, heavy ones run alone, and `full` and `thorough` leave out your project's own window checks unless you ask, so they are much faster, see [docs/scheduling.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/scheduling.md).
 - **Quiet.** Pedantic quality rules (and the whole Rust style family) are hidden by default and counted, so a first scan lists what matters. `MEERKAT_FINDINGS=all` shows everything.
 - **Private.** Zero dependencies, no telemetry, nothing uploaded. The one network call is a once-a-day version look-up you can turn off.
 - **Yours.** Add a command as a check in one line, write a check in JavaScript, make your own presets, silence a known finding with a reason.
@@ -51,8 +53,8 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 | Feature | In one line |
 |---|---|
 | **Presets** | `quick` before every push, `full` before a release (it leaves out your project's own window checks; `MEERKAT_WINDOWS=1` or `release` runs them), plus security, ui, performance, refactor, ci, `detectors` and more |
-| **Mature detectors (opt-in)** | `--preset detectors` runs osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint if installed, keeping their rule ids; a missing tool is NOT RUN with an install hint. Some need the network or have their own licence: see [docs/credits.md](docs/credits.md) |
-| **Cross-tool confirmation** | When two checks report the same problem it is one finding, marked "confirmed by N checks" and sorted first ([docs/findings.md](docs/findings.md)) |
+| **Mature detectors (opt-in)** | `--preset detectors` runs osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint if installed, keeping their rule ids; a missing tool is NOT RUN with an install hint. Some need the network or have their own licence: see [docs/credits.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/credits.md) |
+| **Cross-tool confirmation** | When two checks report the same problem it is one finding, marked "confirmed by N checks" and sorted first ([docs/findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md)) |
 | **Quiet by default** | Pedantic quality rules (`lib/quarantine.mjs`) and the Rust style family are hidden and counted ("hidden by default"); `MEERKAT_FINDINGS=all` lists every one |
 | **Suites and sub-checks** | Checks grouped by topic; each reports every rule it tested, so a failure names the exact rule |
 | **Live board** | Progress, what is running now, a status line, a bug counter by severity, a timeline; skip a stuck check with a key |
@@ -67,7 +69,26 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 | **Updates** | Your version and the newest one are shown on the menu and results screen; one key installs it |
 | **Logs** | One folder per run named with the project and preset; `meerkat why <check>` explains a failure |
 
-Every check, with what it needs and how long it takes, is listed in [docs/checks.md](docs/checks.md). It is generated from the checks themselves, so it cannot drift from the code.
+Every check, with what it needs and how long it takes, is listed in [docs/checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/checks.md). It is generated from the checks themselves, so it cannot drift from the code.
+
+## Verification
+
+How well Meerkat was tested before this release, with the full details in two documents.
+
+- **Unit tests:** 2,657 of 2,657 tests that ran passed (100%), 0 failed, and 11 skipped. The suite has 133 test files, run on 2026-11-03.
+- **Planted bugs:** Meerkat is also tested against a corpus of deliberately planted bugs. The figures are below, and they are generated from the final run.
+- **Safe projects:** a separate set of clean projects checks that Meerkat stays quiet on safe code. Its false-alarm rate was measured before the last fixes and has not been re-measured, so the figure is stated as such in the details.
+- **Full details:** [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) has the final run, its tables and its caveats. [docs/accuracy-results.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy-results.md) lists every planted bug and its result.
+
+### Planted-bug accuracy
+
+<!-- accuracy-readme:begin -->
+Meerkat is tested against a corpus of 1540 deliberately planted defects. Two measures are reported: 1533 (99.5%) were detected by a check (the check's own verdict), and 1532 (99.5%) appear in `findings.json` (what a person or an AI reading the findings file sees).
+<!-- accuracy-readme:end -->
+
+Recall on planted bugs measures what was planted, not real-world accuracy.
+
+Every planted defect, its tier, suite and result is listed in [docs/accuracy-results.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy-results.md).
 
 ## Quick start
 
@@ -181,8 +202,8 @@ Meerkat is built to be extended without touching its code.
 | To | Do this |
 |---|---|
 | Add a command you already run | `meerkat check new --id e2e --cmd "npm run test:e2e" --yes` |
-| Add a real-window click-through for your app | [docs/click-through.md](docs/click-through.md) |
-| Understand or tune how a run is scheduled | [docs/scheduling.md](docs/scheduling.md) |
+| Add a real-window click-through for your app | [docs/click-through.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md) |
+| Understand or tune how a run is scheduled | [docs/scheduling.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/scheduling.md) |
 | Get suggestions for tests your project can run | `meerkat recommend` |
 | Make a preset of your own | `meerkat preset new --name pre-push --tier fast --group security,ui --personal` |
 | Write a check in JavaScript | a file in `.meerkat/checks/`, found with no setting |
@@ -192,7 +213,7 @@ Meerkat is built to be extended without touching its code.
 | Leave files out of the scans | list them in `.meerkatignore` |
 | Set limits for your project | `.meerkat-budgets.json` (line length, complexity, timeouts and more) |
 
-Your settings for every project live in `~/.meerkat.json`; settings for one project live in its `meerkat.config.json`. A five-minute walk-through: [docs/customizing.md](docs/customizing.md). Writing a check: [docs/writing-checks.md](docs/writing-checks.md).
+Your settings for every project live in `~/.meerkat.json`; settings for one project live in its `meerkat.config.json`. A five-minute walk-through: [docs/customizing.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/customizing.md). Writing a check: [docs/writing-checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/writing-checks.md).
 
 ## Commands
 
@@ -214,11 +235,11 @@ Everything the menu does is also a command, so scripts, CI and AI agents never n
 | update Meerkat | `meerkat update` |
 | print a bug report to paste into an issue | `meerkat bug` |
 
-The exit code is 0 when everything passed, 1 when something failed and 75 when something could not run. Every command and flag: [docs/commands.md](docs/commands.md) and the full [reference](docs/reference.md).
+The exit code is 0 when everything passed, 1 when something failed and 75 when something could not run. Every command and flag: [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) and the full [reference](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/reference.md).
 
 ## For AI agents and scripts
 
-Meerkat is built to be driven by tools as well as people: plain output, `--json`, SARIF for code-scanning, an MCP server (`bin/meerkat-mcp.mjs`) with `meerkat_run`, `meerkat_last`, `meerkat_why` and more, and a stable findings protocol (`MEERKAT-FINDING` lines). Start at [docs/for-ai-agents.md](docs/for-ai-agents.md).
+Meerkat is built to be driven by tools as well as people: plain output, `--json`, SARIF for code-scanning, an MCP server (`bin/meerkat-mcp.mjs`) with `meerkat_run`, `meerkat_last`, `meerkat_why` and more, and a stable findings protocol (`MEERKAT-FINDING` lines). Start at [docs/for-ai-agents.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/for-ai-agents.md).
 
 ### AI prompts and verification
 
@@ -232,7 +253,7 @@ On the results screen press `p`. Meerkat writes `meerkat-prompt-<date>-<time>-<p
 
 Optional and off by default: `meerkat verify --ai-verify` (or `v` on the results screen) asks the model you chose with `meerkat ai use` to double-check each medium, high and critical finding. It tells you exactly what it will send (the finding, about 30 lines of code around it with secrets removed, and the rule description) and asks first unless you pass `--yes`. Verdicts only add notes to findings; nothing is deleted, and a model error means NOT RUN, never a pass.
 
-Every run also saves `run.log`, a timestamped record of how it went. Details: [docs/reference.md](docs/reference.md), [docs/logs.md](docs/logs.md), [docs/findings.md](docs/findings.md).
+Every run also saves `run.log`, a timestamped record of how it went. Details: [docs/reference.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/reference.md), [docs/logs.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/logs.md), [docs/findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md).
 
 ### Connect Meerkat to NeuralVault, Claude Code or any MCP client
 
@@ -248,7 +269,7 @@ nv mcp add meerkat --command node --grant-read-only meerkat_last --grant-read-on
 nv mcp test meerkat
 ```
 
-The read-only tools can only read results; `meerkat_run` is the one that starts a run, so grant it only to agents you want to run checks. **Claude Code:** `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs`. Other clients: [docs/for-ai-agents.md](docs/for-ai-agents.md).
+The read-only tools can only read results; `meerkat_run` is the one that starts a run, so grant it only to agents you want to run checks. **Claude Code:** `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs`. Other clients: [docs/for-ai-agents.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/for-ai-agents.md).
 
 **About NeuralVault.** NeuralVault is an agent harness you own, from [Perpetual Technologies](https://perpetualtechnologies.co.uk): it remembers how your business works, acts only where you allow it, and keeps a record of everything it does. Meerkat is made with Perpetual Technologies: it started as the verification layer for NeuralVault, is used there, and works on any project on its own. Learn more at [perpetualtechnologies.co.uk](https://perpetualtechnologies.co.uk).
 
@@ -281,7 +302,7 @@ If you wrote a check, a pack or a preset that other people would find useful, pl
 
 ## Keeping the rules accurate
 
-Rules change as new bugs are found. If Meerkat reports something that is fine, open a [false alarm](https://github.com/SamuelNDCE/Meerkat/issues/new?template=false-positive.yml) issue; if it misses a real problem, open a [missed problem](https://github.com/SamuelNDCE/Meerkat/issues/new?template=missed-bug.yml) issue. Every fix ships with a sample that proves it and is listed in [CHANGELOG.md](CHANGELOG.md). Accuracy is measured against a corpus of planted defects, see [docs/accuracy.md](docs/accuracy.md).
+Rules change as new bugs are found. If Meerkat reports something that is fine, open a [false alarm](https://github.com/SamuelNDCE/Meerkat/issues/new?template=false-positive.yml) issue; if it misses a real problem, open a [missed problem](https://github.com/SamuelNDCE/Meerkat/issues/new?template=missed-bug.yml) issue. Every fix ships with a sample that proves it and is listed in [CHANGELOG.md](CHANGELOG.md). Accuracy is measured against a corpus of planted defects, see [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md).
 
 **On the roadmap:** syncing rules and advisories automatically from trusted vulnerability sources, so Meerkat also works as a vulnerability checker ([issue 26](https://github.com/SamuelNDCE/Meerkat/issues/26)).
 
@@ -294,20 +315,20 @@ Meerkat is under the [Perpetual Community Licence 1.0](LICENSE), written for thi
 - **Nobody may sell Meerkat itself** or run it as a paid service for others. A company that builds it into its own product and sells *that* may, if it credits Meerkat and links here. Extensions you write are yours to sell.
 - **No telemetry**, and nothing is sent to an AI model unless you turn that check on.
 
-The numbered terms in [`LICENSE`](LICENSE) are what counts; this summary is a guide. It is not an OSI open-source licence (it restricts selling) and has not been reviewed by a solicitor. See [docs/licence-notes.md](docs/licence-notes.md).
+The numbered terms in [`LICENSE`](LICENSE) are what counts; this summary is a guide. It is not an OSI open-source licence (it restricts selling) and has not been reviewed by a solicitor. See [docs/licence-notes.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/licence-notes.md).
 
 ## More documentation
 
 | Read | For |
 |---|---|
-| [docs/reference.md](docs/reference.md) | the full manual: presets, settings, environment variables, timeouts, logs |
-| [docs/checks.md](docs/checks.md) | every check and suite |
-| [docs/commands.md](docs/commands.md) | every command and flag |
-| [docs/tiers.md](docs/tiers.md) | what runs in quick and what in full |
-| [docs/findings.md](docs/findings.md) | the findings files and protocol |
-| [docs/discover.md](docs/discover.md) | your project's own tests |
-| [docs/accuracy.md](docs/accuracy.md) | how accuracy is measured |
-| [docs/mutation.md](docs/mutation.md), [docs/functionality-run.md](docs/functionality-run.md), [docs/robustness.md](docs/robustness.md) | the deeper checks |
+| [docs/reference.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/reference.md) | the full manual: presets, settings, environment variables, timeouts, logs |
+| [docs/checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/checks.md) | every check and suite |
+| [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) | every command and flag |
+| [docs/tiers.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/tiers.md) | what runs in quick and what in full |
+| [docs/findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md) | the findings files and protocol |
+| [docs/discover.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/discover.md) | your project's own tests |
+| [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) | how accuracy is measured |
+| [docs/mutation.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/mutation.md), [docs/functionality-run.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/functionality-run.md), [docs/robustness.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/robustness.md) | the deeper checks |
 | [PROJECT.md](PROJECT.md) | rules for working in this repository |
 
-Credits: the external tools Meerkat can run, their licences, and what each sends over the network are listed in [docs/credits.md](docs/credits.md). Meerkat runs them but does not bundle them.
+Credits: the external tools Meerkat can run, their licences, and what each sends over the network are listed in [docs/credits.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/credits.md). Meerkat runs them but does not bundle them.

@@ -3,7 +3,7 @@
 // Run through the desktop pack, or by hand:
 //   node thorough/desktop.mjs <check> [--root <dir>]      node thorough/desktop.mjs <check> --fixtures   (must exit 1)
 // A finding you accept goes in .meerkat-desktop-allow as "<check-id> <path>" (the whole file) or "<check-id> <path>:<line>", one per line, # for comments.
-import { finish, isTestFile, main, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finding, finish, isTestFile, main, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const CODE = /\.(m?[jt]sx?|cjs|cts|mts)$/i
 const PAGE = /\.(m?[jt]sx?|cjs|cts|mts|html?)$/i
@@ -22,6 +22,8 @@ const mentionsElectronImport = (text) => {
 }
 const ALLOW_WORDS = /allow|whitelist|allowlist|\.includes\(|\.has\(|protocol|isSafe|isAllowed/i
 const DEV_GATE = /isDev|isDevelopment|isPackaged|NODE_ENV|development|VITE_DEV|DEV_URL|\bQA\b|__DEV__|import\.meta\.env\.DEV/i
+// The DevTools toggle is the body of a handler the user triggers: an ipc handler or listener, a before-input-event key handler, a global shortcut or a menu item click.
+const DEVTOOLS_SHORTCUT = /ipc(?:Main)?\.(?:handle|on)\s*\(|before-input-event|globalShortcut\.register|\bclick\s*:/
 const IPC_GUARD = /assert|grant|allow|whitelist|valid|sanitiz|normaliz|isOwnPage|safe|check|ensure|need\(|isAbsolute/i
 const IPC_HANDLER = /ipcMain\.(?:handle|on)\s*\(\s*[^,\n]+,\s*(?:async\s*)?(?:function\s*\w*\s*)?\(\s*\w+\s*,\s*(\w+)/g
 const BARE_EXPOSED = /\bipcRenderer\b(?!\s*\.\s*(?:invoke|send|on|once|removeListener|removeAllListeners|sendSync|sendTo|sendToHost)\b)|(?<=[:,{]\s*)\brequire\b|(?<=[:,{]\s*)\bprocess\b(?!\s*\.\s*(?:platform|arch|versions?)\b)|\.\.\.\s*(?:require|process)\b|\brequire\s*\(\s*(?:['"`](?:node:)?(?:child_process|fs|fs\/promises|os|net|http|https|vm|worker_threads|cluster|dgram|tls)['"`]|[^'"`\s)])|\bprocess\s*\.\s*(?:env|exit|kill|binding|mainModule|dlopen|abort|chdir|execPath)\b/
@@ -101,10 +103,16 @@ function rule(id, { app, pick = CODE, ok, scan, fixture }) {
     const allow = allowSet(root)
     const texts = tracked(root, pick).map((x) => ({ x, t: readText(root, x) }))
     const f = []
-    for (const { x, line = 0, why } of scan(texts, root)) {
-      if (!allowed(allow, id, x, line)) f.push(`${line ? `${x}:${line}` : x} ${why}`)
+    const infos = []
+    for (const { x, line = 0, why, info } of scan(texts, root)) {
+      if (allowed(allow, id, x, line)) continue
+      // A hit the rule judges deliberate is reported as info (still visible in findings), and does not fail the check.
+      if (info) infos.push([x, line, why])
+      else f.push(`${line ? `${x}:${line}` : x} ${why}`)
     }
-    return finish(id, f, ok)
+    const r = finish(id, f, ok)
+    for (const [x, line, why] of infos) finding('info', `${id}-deliberate`, x, line, why)
+    return r
   }
   return { run, fixture: () => withFixture(fixture, run) }
 }
@@ -233,7 +241,10 @@ main({
       const L = t.split('\n')
       return lineHits(t, /\.(?:openDevTools|toggleDevTools)\s*\(/)
         .filter((h) => !DEV_GATE.test(L.slice(Math.max(0, h.line - 7), h.line).join('\n')))
-        .map((h) => ({ line: h.line, why: 'opens DevTools with no dev-only condition, so a shipped build can be inspected (gate it on app.isPackaged or a dev flag)' }))
+        .map((h) => (DEVTOOLS_SHORTCUT.test(L.slice(Math.max(0, h.line - 4), h.line).join('\n')) && /toggleDevTools/.test(L[h.line - 1])
+          // A user-invoked toggle (a shortcut or menu command handler, not a forced open) is a deliberate developer tool: info, not a bug.
+          ? { line: h.line, info: true, why: 'a user-invoked shortcut toggles DevTools with no dev-only condition, so a shipped build can be inspected (deliberate? gate it on app.isPackaged if not)' }
+          : { line: h.line, why: 'opens DevTools with no dev-only condition, so a shipped build can be inspected (gate it on app.isPackaged or a dev flag)' }))
     }),
     fixture: { ...E, 'main.js': 'win.webContents.openDevTools()\n' },
   }),

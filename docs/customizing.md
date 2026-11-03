@@ -8,7 +8,7 @@ Meerkat is built to fit a project, not the other way round. Everything below is 
 2. **Run it on its own.** Run `meerkat check try e2e`. It shows PASS or FAIL, or NOT RUN when its program is missing.
 3. **See it labelled.** Run `meerkat check list`. `e2e` shows the tag `project`, because it went into this project's `meerkat.config.json`. Add `--personal` to step 1 to keep it for every project instead, and it shows `yours`.
 
-The check is `thorough` by default, so `meerkat full` runs it with the rest. `meerkat verify` runs only the quick checks and leaves it out.
+The check is `thorough` by default, so `meerkat full` runs it with the rest. `meerkat verify` runs only the quick checks and leaves it out. (A `fast` check whose command builds the project or runs its tests, such as `npm test`, `cargo test` or `pytest`, is also left out of `quick`: see [tiers.md](tiers.md).)
 
 The sections below cover the other ways to add checks, presets and packs.
 

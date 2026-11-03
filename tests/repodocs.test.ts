@@ -30,7 +30,7 @@ const CLEAN: Record<string, string> = {
   '.editorconfig': 'root = true\n',
   LICENSE: 'MIT License\n\nCopyright (c) 2026 Demo\n\nPermission is hereby granted, free of charge, to any person obtaining a copy.\n',
   'package.json': '{"name":"demo","license":"MIT"}\n',
-  'CHANGELOG.md': '# Changelog\n\n## Unreleased\n\n## 1.0.0\n',
+  'CHANGELOG.md': '# Changelog\n\n## Unreleased\n\n## 1.0.0 - 2026-01-02\n',
   CODEOWNERS: '* @example/team\n',
   '.github/workflows/ci.yml': 'name: ci\non: push\n',
   '.github/dependabot.yml': 'version: 2\n',

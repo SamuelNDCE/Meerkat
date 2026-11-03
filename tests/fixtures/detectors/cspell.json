@@ -1,0 +1,76 @@
+{
+    "issues": [
+        {
+            "text": "documnet",
+            "offset": 13,
+            "line": {
+                "text": "This documnet has a mispelled wrd.\n",
+                "offset": 8
+            },
+            "length": 8,
+            "isFlagged": false,
+            "isFound": false,
+            "suggestions": [
+                "document"
+            ],
+            "suggestionsEx": [
+                {
+                    "word": "document",
+                    "isPreferred": true
+                }
+            ],
+            "row": 2,
+            "col": 6,
+            "uri": "file:///proj/README.md",
+            "hasPreferredSuggestions": true,
+            "hasSimpleSuggestions": true,
+            "context": {
+                "text": "This documnet has a mispelled wrd.\n",
+                "offset": 8
+            }
+        },
+        {
+            "text": "mispelled",
+            "offset": 28,
+            "line": {
+                "text": "This documnet has a mispelled wrd.\n",
+                "offset": 8
+            },
+            "length": 9,
+            "isFlagged": false,
+            "isFound": false,
+            "suggestions": [
+                "misspelled"
+            ],
+            "suggestionsEx": [
+                {
+                    "word": "misspelled",
+                    "isPreferred": true
+                }
+            ],
+            "row": 2,
+            "col": 21,
+            "uri": "file:///proj/README.md",
+            "hasPreferredSuggestions": true,
+            "hasSimpleSuggestions": true,
+            "context": {
+                "text": "This documnet has a mispelled wrd.\n",
+                "offset": 8
+            }
+        }
+    ],
+    "info": [],
+    "debug": [],
+    "error": [],
+    "progress": [],
+    "result": {
+        "files": 2,
+        "filesWithIssues": [
+            "README.md"
+        ],
+        "issues": 2,
+        "errors": 0,
+        "cachedFiles": 0,
+        "skippedFiles": 0
+    }
+}

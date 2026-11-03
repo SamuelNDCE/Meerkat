@@ -33,7 +33,7 @@ if (args.includes('after-run')) {
   let state = initialState(menuItems({ user, project: {}, update }))
   state = menuStep(state, 'down').state // the highlight on the second item, as a person would see it
   lines = renderScreen(state, {
-    project: 'C:\\Users\\SamuelNDCE\\code\\plume',
+    project: 'C:\\Users\\me\\code\\plume',
     version: '1.3.2',
     question: 'What would you like to run?',
     hint: '  Up/Down move   Enter choose   1-9 jump   u update   q quit',

@@ -19,9 +19,10 @@
 // ---------- wh-headers: HTTP headers and TLS settings in server, framework and hosting config ----------
 
 // A file that really configures a web server or host (not a random .js file that happens to mention a header name).
-const WEBCFG = /server\s*\{|location\s+[\/~=^]|<VirtualHost\b|RewriteEngine\b|\bOptions\s|\[\[headers\]\]|\[build\]|\bpublish\s*=|outputDirectory|"headers"\s*:|async headers\(|headers\s*\(\)|app\.use\(|express\(|add_header|Header\s+(always\s+)?set|setHeader\(|<system\.webServer>|^\/\*/m
+const WEBCFG = /server\s*\{|location\s+[\/~=^]|<VirtualHost\b|RewriteEngine\b|\bOptions\s|\[\[headers\]\]|\[build\]|\bpublish\s*=|outputDirectory|"headers"\s*:|async headers\(|headers\s*\(\)|app\.use\(|express\(|add_header|Header\s+(always\s+)?set|setHeader\(|<system\.webServer>|^\/\*|^[ \t]*header[ \t]+\S|\bfile_server\b|\breverse_proxy\b/m
 const HDR = /(^|\/)(nginx[^\/]*\.conf|[^\/]*\.conf|\.htaccess|httpd[^\/]*|Caddyfile[^\/]*|web\.config|_headers|netlify\.toml|vercel\.json|staticwebapp\.config\.json|firebase\.json|wrangler\.toml|next\.config\.(m?js|ts)|server\.(m?js|ts)|app\.(m?js|ts))$/i
-const NGINX = /(^|\/)nginx[^\/]*\.conf$/i
+// nginx config: nginx.conf, nginx-site.conf, or any .conf inside a folder named nginx (nginx/autoindex.conf, deploy/nginx/site.conf)
+const NGINX = /(^|\/)(nginx[^\/]*\.conf|nginx\/[^\/]+\.conf)$/i
 const APACHE = /(^|\/)(\.htaccess|httpd[^\/]*|[^\/]*\.conf)$/i
 const CSP_LINE = /Content-Security-Policy/i
 // A CSP directive value check on one line. The [^;'"]* runs are bounded by the separators, so they are linear.
@@ -93,6 +94,15 @@ export const HEADERS = [
     bad: 'server {\n  listen 80;\n}\n', good: 'server {\n  server_tokens off;\n}\n' },
   { id: 'express-x-powered-by-enabled', title: 'Express sends X-Powered-By (app.disable x-powered-by or helmet is missing)', files: /(^|\/)(server|app)\.(m?js|ts)$/, when: /express\(/, lacks: /disable\(\s*['"]x-powered-by|helmet\(/i, sample: 'app.js',
     bad: 'const app = express()\napp.listen(3000)\n', good: 'const app = express()\napp.disable(\'x-powered-by\')\n' },
+  { id: 'express-x-powered-by-enable-call', title: 'Express switches X-Powered-By on with app.enable', files: CODE, sample: 'server.js',
+    test: (l) => /\.enable\(\s*['"]x-powered-by['"]/i.test(l),
+    bad: "app.enable('x-powered-by')\n", good: "app.disable('x-powered-by')\n" },
+  { id: 'cookie-httponly-false', title: 'A cookie or session setting turns HttpOnly off, so page scripts can read it', files: CODE, sample: 'server.js',
+    test: (l) => /\bhttp_?only['"]?\s*[:=]\s*(?:false|False)\b/i.test(l),
+    bad: 'cookie: {\n  httpOnly: false,\n}\n', good: 'cookie: {\n  httpOnly: true,\n}\n' },
+  { id: 'helmet-protection-off', title: 'helmet is told to leave a protection off (hsts, contentSecurityPolicy, frameguard, noSniff)', files: CODE, sample: 'server.js',
+    test: (l) => /\bhelmet\s*\(\s*\{[^}]*\b(?:hsts|contentSecurityPolicy|frameguard|noSniff|referrerPolicy|crossOriginOpenerPolicy)\s*:\s*false\b/.test(l),
+    bad: 'app.use(helmet({ hsts: false }))\n', good: 'app.use(helmet({ hsts: true }))\n' },
   { id: 'nginx-autoindex-on', title: 'nginx autoindex is on, so folders list their own files', files: NGINX, when: WEBCFG, sample: 'nginx.conf',
     test: (l) => /autoindex\s+on\b/.test(l),
     bad: 'server {\n  autoindex on;\n}\n', good: 'server {\n  autoindex off;\n}\n' },
@@ -181,7 +191,7 @@ export const HTML = [
     test: (l) => /<input\b(?![^>]{0,2000}\btype\s*=)[^>]{0,2000}\bname\s*=\s*["']password["']/i.test(l),
     bad: '<input name="password">\n', good: '<input type="password" name="password">\n' },
   { id: 'iframe-no-sandbox', title: 'An iframe has no sandbox attribute', files: HTML_FILES, sample: 'index.html',
-    test: (l) => /<iframe\b(?![^>]*\bsandbox\b)[^>]*>/i.test(l),
+    span: /<iframe\b(?![^>]*\bsandbox\b)[^>]*>/gi, // the tag may run over several lines
     bad: '<iframe src="https://example.com/widget"></iframe>\n', good: '<iframe src="https://example.com/widget" sandbox="allow-scripts"></iframe>\n' },
   { id: 'meta-refresh-to-other-site', title: 'A meta refresh sends the visitor to another site', files: HTML_FILES, sample: 'index.html',
     test: (l) => /<meta\b[^>]*http-equiv\s*=\s*["']refresh["'][^>]*url\s*=\s*["']?https?:\/\//i.test(l),
@@ -245,6 +255,7 @@ const PUBLIC_DIR = '(public|static|dist|build|out|www|htdocs|wwwroot)'
 const SECRET_TEST = /(^|\/)(tests?|fixtures?|__tests__|examples?)\//i
 
 export const PUBLISH = [
+  { id: 'sourcemap-in-publish', title: 'A source map (.map file) sits in a published folder, so the original source is readable', path: new RegExp(`(^|\\/)${PUBLIC_DIR}\\/(?:.*\\/)?[^\\/]+\\.(js|mjs|css)\\.map$`, 'i'), bad: 'public/app.js.map', good: 'src/app.js' },
   { id: 'git-dir-in-publish', title: 'A nested .git folder (repository history) sits inside the project tree', path: /^(?!\.git\/)(.+\/)?\.git\/(config|HEAD|index)$/, sample: '', bad: 'dist/.git/config', good: '.git/config' },
   { id: 'svn-or-hg-dir', title: 'A Subversion or Mercurial metadata folder is in the tree', path: /(^|\/)\.(svn|hg)\//, bad: 'site/.svn/entries', good: 'site/index.html' },
   { id: 'env-file-present', title: 'A .env file with settings or secrets is in the tree (templates excluded)', path: /(^|\/)\.env(?!\.(example|sample|template|dist)$)(\.[^\/]+)?$/, bad: 'app/.env.production', good: 'app/.env.example' },
@@ -347,6 +358,8 @@ export const SUPPLY = [
     bad: '{"name":"a","version":"1.0.0"}', good: '{"name":"a","version":"1.0.0","license":"MIT"}' },
   { id: 'npmrc-registry-over-http', title: 'An .npmrc points the registry at plain http://', files: /(^|\/)\.npmrc$/, sample: '.npmrc', re: /^\s*registry\s*=\s*http:\/\//i,
     bad: 'registry=http://packages.example/', good: 'registry=https://registry.npmjs.org/' },
+  { id: 'npmrc-strict-ssl-off', title: 'An .npmrc turns strict-ssl off, so package downloads do not check certificates', files: /(^|\/)\.npmrc$/, sample: '.npmrc', re: /^\s*strict-ssl\s*=\s*false\b/i,
+    bad: 'strict-ssl = false', good: 'strict-ssl = true' },
   { id: 'npmrc-scope-registry-other-host', title: 'An .npmrc sends a scope to a registry other than the default npm registry', files: /(^|\/)\.npmrc$/, sample: '.npmrc', re: /^@[^:\s]+:registry\s*=\s*https?:\/\/(?!registry\.npmjs\.org)/i,
     bad: '@acme:registry=https://packages.example/', good: '@acme:registry=https://registry.npmjs.org/' },
   { id: 'release-workflow-no-sbom', title: 'A release workflow publishes an artifact with no SBOM step (CycloneDX, Syft or SPDX)', files: /(^|\/)\.github\/workflows\/[^\/]+\.ya?ml$/i, sample: '.github/workflows/release.yml',

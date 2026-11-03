@@ -4,7 +4,7 @@
 import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
 
 const S = `${MK}/thorough/functionality-run.mjs`
-const make = (id, title, { estSeconds, timeoutSeconds, weight = 'heavy', suite = 'test-hygiene', selfTest = true }) => ({
+const make = (id, title, { estSeconds, timeoutSeconds, weight = 'heavy', suite = 'test-hygiene', selfTest = true, subs }) => ({
   id,
   group: 'functionality',
   tier: 'thorough',
@@ -15,13 +15,14 @@ const make = (id, title, { estSeconds, timeoutSeconds, weight = 'heavy', suite =
   title,
   estSeconds,
   timeoutSeconds,
+  ...(subs ? { subs } : {}),
   needs: ['node'],
   run: { cmd: 'node', args: [S, id], cwd: 'repo' },
   ...(selfTest ? { selfTest: { cmd: 'node', args: [S, id, '--fixtures'], cwd: 'repo', expectFail: true } } : {}),
 })
 
 export default [
-  make('clean-copy-builds', 'A clean copy of the tracked files installs, builds and passes its tests', { estSeconds: 180, timeoutSeconds: 2400, weight: 'alone' }),
+  make('clean-copy-builds', 'A clean copy of the tracked files installs, builds and passes its tests', { estSeconds: 180, timeoutSeconds: 2400, weight: 'alone', subs: 3 }),
   make('install-reproducible', 'The frozen install works and the lockfile matches the manifest', { estSeconds: 60, timeoutSeconds: 900, suite: 'dependencies', selfTest: false }),
   make('readme-commands-work', 'The shell commands the README tells people to run work (allowlisted commands only)', { estSeconds: 90, timeoutSeconds: 1800 }),
   make('flaky-tests', 'The tests give the same result every time they run', { estSeconds: 180, timeoutSeconds: 3600, weight: 'alone' }),

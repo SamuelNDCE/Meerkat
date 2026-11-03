@@ -44,7 +44,7 @@ Tab or the arrow keys move between the findings, every check with its time, and 
 
 | System | What it does | Read more |
 |---|---|---|
-| Presets | `quick` runs every short check in seconds; `full` adds the slow ones and your project's own tests | [docs/tiers.md](tiers.md) |
+| Presets | `quick` runs every short static check (no builds or test runs; 5 to 10 minutes at most); `full` adds the slow ones, the builds and your project's own tests | [docs/tiers.md](tiers.md) |
 | Suites and sub-checks | checks grouped by topic; each check reports every rule it tested | [docs/suites.md](suites.md) |
 | Live board | progress bar, what is running, a bug counter by severity, and a timeline; press `s` to skip a stuck check | [docs/commands.md](commands.md) |
 | Findings | every detection in one file (`findings.json`, `.md`, `.sarif`), worst first | [docs/findings.md](findings.md) |
@@ -184,14 +184,14 @@ In a pipe, in CI, or when an AI agent calls it, nothing is drawn and the output 
 `meerkat <preset>` picks how much to run. Everything below also works as `node run.mjs --app <folder> --preset <name>`. `--list` shows every check, and `--estimate` says how long a run should take on your PC without running anything.
 
 <!-- presets:start -->
-Measured on Meerkat's own repository, a small project, on one PC (median of 3 runs). Real projects take as long as their builds and tests; the quick checks that only read files stay at a second or two.
+Measured on 2026-11-01 on Meerkat's own repository, a small project, on one PC (median of 3 runs), before the 0.4.0 change that took the compile-heavy checks out of `quick` and `fast`. The numbers below are that snapshot; they were not re-measured, so the `quick` and `fast` rows show no figure (rerun `node tools/measure-presets.mjs` to refresh the whole table). Real projects take as long as their builds and tests; the quick checks that only read files stay at a second or two.
 
 ### Everything
 
 | Command | What it runs | Checks | Time |
 |---|---|---|---|
-| `meerkat quick` | every quick check: before every push | 292 | 10.2 s |
-| `meerkat fast` | every quick check (same as quick) | 292 | 10.4 s |
+| `meerkat quick` | the everyday check, 5 to 10 minutes at most: every short static check, no builds or test runs | not re-measured | not re-measured |
+| `meerkat fast` | same as quick | not re-measured | not re-measured |
 | `meerkat full` | every check, the slow ones too: before a release | 294 | 10.5 s |
 | `meerkat thorough` | every check, the slow ones too (same as full) | 294 | 11.0 s |
 | `meerkat run --preset detectors` | full plus opt-in tools: osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck, actionlint | n/a | n/a |
@@ -262,14 +262,14 @@ Details: [docs/mutation.md](mutation.md), [docs/functionality-run.md](functional
 
 ## Suites and sub-checks
 
-Picking from hundreds of checks is slow, so checks are grouped into **suites** (`secrets`, `web-security`, `accessibility`, `rust` and so on). `meerkat suite list` shows them, `meerkat check secrets` runs one, `meerkat check secrets/secret-scan` runs one check of it. A check can also report each of its rules as a **sub-check** (`MEERKAT-SUB` lines), so a run says "1032 sub-checks: 1010 passed, 3 failed, 19 not applicable here" and the report names the exact rule that failed. A check that reports no rules counts as one sub-check, and `meerkat suite list` keeps the catalogue (everything Meerkat ships) apart from what applies to your folder. Turn a suite or a rule off with `"disable": ["suite:web-security"]` and `"disableSubs": ["secret-scan/aws-access-key"]`. Full description: [docs/suites.md](suites.md).
+Picking from hundreds of checks is slow, so checks are grouped into **suites** (`secrets`, `web-security`, `accessibility`, `rust` and so on). `meerkat suite list` shows them, `meerkat check secrets` runs one, `meerkat check secrets/secret-scan` runs one check of it. A check can also report each of its rules as a **sub-check** (`MEERKAT-SUB` lines), so a run says, for example, "N sub-checks: P passed, F failed, A not applicable here" and the report names the exact rule that failed. A check that reports no rules counts as one sub-check, and `meerkat suite list` keeps the catalogue (everything Meerkat ships) apart from what applies to your folder. Turn a suite or a rule off with `"disable": ["suite:web-security"]` and `"disableSubs": ["secret-scan/aws-access-key"]`. Full description: [docs/suites.md](suites.md).
 
 
-A quick check runs in `quick`. The full run contains every quick check, or a wider one that replaces it. Checks come in **packs**: `security`, `hygiene`, `rust`, `ui`, `performance`, `refactor` and `ai` need no extra tools (or only the language's own). `node`, `python`, `go`, `java`, `dotnet`, `php`, `ruby`, `swift`, `dart`, `web`, `docs`, `infra`, `terraform` and `kubernetes` wrap tools you install yourself, and are switched on by adding the pack name to `packs` in `meerkat.config.json`; `meerkat init` names the ones it finds a use for. The wrappers for Java, .NET, PHP, Ruby, Swift, Dart, Terraform and Kubernetes were written from each tool's documentation and have not been run against the real tools yet: run `meerkat self-test` once you have them installed.
+A quick check runs in `quick`, except the compile-heavy ones (cargo clippy, test and build, go test, mvn, dotnet build, swift build, pytest, rspec, a project's build and test scripts), which run in `full`, `thorough`, `release` and the functionality presets only. A unit-test runner that calls vitest or jest directly stays in `quick`. The full run contains every quick check, or a wider one that replaces it. Checks come in **packs**: `security`, `hygiene`, `rust`, `ui`, `performance`, `refactor` and `ai` need no extra tools (or only the language's own). `node`, `python`, `go`, `java`, `dotnet`, `php`, `ruby`, `swift`, `dart`, `web`, `docs`, `infra`, `terraform` and `kubernetes` wrap tools you install yourself, and are switched on by adding the pack name to `packs` in `meerkat.config.json`; `meerkat init` names the ones it finds a use for. The wrappers for Java, .NET, PHP, Ruby, Swift, Dart, Terraform and Kubernetes were written from each tool's documentation and have not been run against the real tools yet: run `meerkat self-test` once you have them installed.
 
 ## Every check
 
-Meerkat ships hundreds of checks in 48 packs, grouped into five kinds: **Security**, **Functionality**, **UI**, **Performance** and **Refactor**. The full list, with what each check does, how heavy it is, how long it takes and which tool it needs, is [docs/checks.md](checks.md). It is generated from the checks themselves (`node tools/gen-checks.mjs`), so it cannot drift from the code. `meerkat list` prints the same list in your terminal, and `meerkat suite list` shows it by suite.
+Meerkat ships hundreds of checks in dozens of packs (the exact counts are generated at the top of [docs/checks.md](checks.md)), grouped into five kinds: **Security**, **Functionality**, **UI**, **Performance** and **Refactor**. The full list, with what each check does, how heavy it is, how long it takes and which tool it needs, is [docs/checks.md](checks.md). It is generated from the checks themselves (`node tools/gen-checks.mjs`), so it cannot drift from the code. `meerkat list` prints the same list in your terminal, and `meerkat suite list` shows it by suite.
 
 ## What it works on
 

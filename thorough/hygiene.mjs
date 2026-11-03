@@ -3,7 +3,7 @@
 // Limits can be changed in .meerkat-budgets.json under "hygiene" (see docs/customizing.md).
 import { existsSync, statSync, readdirSync } from 'node:fs'
 import { dirname, extname, join } from 'node:path'
-import { finish, isFixture, isTestFile, isText, main, readBudgets, readText, trackedFiles as allTracked, withFixture } from './kit.mjs'
+import { envFileHoldsSecret, finish, isFixture, keyFileHasContent, isTestFile, isText, main, readBudgets, readText, trackedFiles as allTracked, withFixture } from './kit.mjs'
 
 // The hygiene checks leave folders of deliberately broken test files (fixtures/) alone.
 const trackedFiles = (root) => allTracked(root).filter((f) => !isFixture(f))
@@ -115,27 +115,37 @@ const sensitive = (root) => {
   const f = []
   for (const x of everyFile(root)) {
     const base = x.split('/').pop()
-    if (/^\.env(\..+)?$/.test(base) && !/example|sample|template/.test(base)) f.push(`${x} is an environment file tracked by git`)
-    else if (/\.(pem|p12|pfx|key|keystore|jks)$/i.test(base) || /^id_(rsa|ed25519|ecdsa)$/.test(base)) f.push(`${x} looks like a private key or keystore`)
+    // An environment file of placeholders (${VAR}) and plain settings documents what to set; only one that holds a secret is a leak.
+    if (/^\.env(\..+)?$/.test(base) && !/example|sample|template/.test(base)) {
+      if (envFileHoldsSecret(readText(root, x))) f.push(`${x} is an environment file tracked by git`)
+    } else if (/\.(pem|p12|pfx|key|keystore|jks)$/i.test(base) || /^id_(rsa|ed25519|ecdsa)$/.test(base)) {
+      // A .pem or .key that holds only comments is a stub ("mounted at runtime"), not a key.
+      if (!/\.(pem|key)$/i.test(base) || keyFileHasContent(readText(root, x))) f.push(`${x} looks like a private key or keystore`)
+    }
     else if (base === '.npmrc' && /_authToken=(?!\$\{)/.test(readText(root, x))) f.push(`${x} holds an npm token`)
   }
   return finish('sensitive-files', f, 'no environment files, keys or tokens are tracked')
 }
 
+// A desktop shell (Electron, Tauri, NW.js) shows its pages in a window on a computer, so "no viewport meta tag (breaks on phones)" does not apply to them.
+const isDesktopApp = (root, files) => /"(electron|electron-builder|electron-forge|@electron-forge\/[\w-]+|@tauri-apps\/[\w-]+|nw)"\s*:/.test(readText(root, 'package.json')) || files.some((x) => /(^|\/)(tauri\.conf\.json|electron-builder\.(ya?ml|json))$/.test(x))
 const uiStatic = (root) => {
   const f = []
-  for (const x of trackedFiles(root)) {
+  const files = trackedFiles(root)
+  const desktop = isDesktopApp(root, files)
+  for (const x of files) {
     if (!/\.(html?|tsx|jsx|vue|svelte)$/i.test(x) || /(^|\/)(node_modules|dist|build)\//.test(x)) continue
     // Tests and design mockups/prototypes are not shipped pages: their markup is sample input or a sketch.
     if (isTestFile(x) || /(^|\/)(mockups?|prototypes?|wireframes?)\//i.test(x)) continue
     const t = readText(root, x)
     for (const m of t.matchAll(/<img\b[^>]*>/gi)) if (!/\balt\s*=/.test(m[0])) f.push(`${x}: an <img> with no alt text`)
-    for (const m of t.matchAll(/<a\b[^>]*target\s*=\s*["']_blank["'][^>]*>/gi)) if (!/rel\s*=\s*["'][^"']*noopener/.test(m[0])) f.push(`${x}: a link that opens a new tab without rel="noopener"`)
+    for (const m of t.matchAll(/<a\b[^>]*target\s*=\s*["']_blank["'][^>]*>/gi)) if (!/rel\s*=\s*["'][^"']*no(?:opener|referrer)/.test(m[0])) f.push(`${x}: a link that opens a new tab without rel="noopener"`)
     if (/\.html?$/i.test(x) && /<html\b/i.test(t)) {
       if (!/<html\b[^>]*\blang\s*=/i.test(t)) f.push(`${x}: <html> has no lang attribute`)
-      if (!/<meta[^>]+viewport/i.test(t)) f.push(`${x}: no viewport meta tag (breaks on phones)`)
+      if (!desktop && !/<meta[^>]+viewport/i.test(t)) f.push(`${x}: no viewport meta tag (breaks on phones)`)
       if (!/<title>\s*\S/i.test(t)) f.push(`${x}: no page <title>`)
     }
+    for (const m of t.matchAll(/<[a-z][\w-]*\b[^>]*\btabindex\s*=\s*["']?\s*([1-9]\d*)/gi)) f.push(`${x}:${t.slice(0, m.index).split('\n').length} a positive tabindex (${m[1]}) breaks the natural tab order`)
     for (const m of t.matchAll(/<button\b[^>]*>\s*<\/button>/gi)) f.push(`${x}: an empty <button> (no name for a screen reader) ${m[0].slice(0, 40)}`)
   }
   return finish('ui-static', f, 'images have alt text, pages have a language, title and viewport')
@@ -203,7 +213,7 @@ main({
   markers: { run: markers, ...fixture({ 'a.js': '// FIXME: broken\n' }, markers) },
   lockfiles: { run: lockfiles, ...fixture({ 'package.json': '{}' }, lockfiles) },
   links: { run: links, ...fixture({ 'README.md': 'see [x](missing.md)\n' }, links) },
-  'sensitive-files': { run: sensitive, ...fixture({ '.env': 'A=1\n' }, sensitive) },
+  'sensitive-files': { run: sensitive, ...fixture({ '.env': 'API_SECRET=abc123def456\n' }, sensitive) },
   'ui-static': { run: uiStatic, ...fixture({ 'p.html': '<html><body><img src="a.png"></body></html>' }, uiStatic) },
   'json-valid': { run: jsonValid, ...fixture({ 'c.json': '{ not json' }, jsonValid) },
   'conflict-markers': { run: conflicts, ...fixture({ 'a.js': 'x\n<<<<<<< HEAD\ny\n' }, conflicts) },

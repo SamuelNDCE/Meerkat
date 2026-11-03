@@ -442,3 +442,28 @@ export async function main(checks, argv = process.argv) {
   process.exitCode = code
   setTimeout(() => process.exit(code), 3000).unref()
 }
+
+// A Docker Compose file by its content, whatever it is called (compose/db.yml, deploy/stack.yaml): a top-level services: map whose entries carry an image or a build.
+// A GitLab CI "services:" list (dash items), a GitHub Actions job "services:" (indented) and a Kubernetes manifest do not match.
+export const isComposeText = (t) => /^services:[ \t]*(?:#.*)?\r?\n(?:[ \t]*(?:#.*)?\r?\n)*[ \t]+[\w.-]+:/m.test(t) && /^[ \t]+(?:image|build):/m.test(t)
+
+// Whether an environment file (.env, .env.production) holds anything worth keeping out of git. A file of placeholders (${VAR}, $VAR, <value>,
+// empty), comments and plain settings (a site name, a public URL) is how many projects document what must be set, so it is not a leak.
+// A secret is a literal value under a key named like one (password, secret, token, key, ...), a URL with a user and password in it, or a value
+// shaped like a well-known token.
+const ENV_SECRET_KEY = /(pass(word|wd)?|secret|token|api[_-]?key|private|credential|auth|salt|dsn|access[_-]?key|signing|bearer|(^|_)key($|_))/i
+const ENV_SECRET_VALUE = /^(sk_(live|test)_|rk_live_|pk_live_|AKIA[0-9A-Z]{8}|xox[abprs]-|gh[pousr]_|github_pat_|SG\.|AIza|npm_[A-Za-z0-9]{20}|eyJ[A-Za-z0-9_-]{10}\.)/
+export const envFileHoldsSecret = (text) => {
+  for (const raw of String(text ?? '').split(/\r?\n/)) {
+    const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_.-]*)\s*[=:]\s*(.*?)\s*$/.exec(raw)
+    if (!m || raw.trim().startsWith('#')) continue
+    let value = m[2].replace(/\s+#.*$/, '').replace(/^(["'])(.*)\1$/, '$2')
+    if (!value || /^\$\{[^}]*\}$/.test(value) || /^\$[A-Za-z_]\w*$/.test(value) || /^<[^>]*>$/.test(value)) continue
+    value = value.trim()
+    if (ENV_SECRET_VALUE.test(value) || /:\/\/[^/\s:@]+:[^@\s]+@/.test(value)) return true
+    if (ENV_SECRET_KEY.test(m[1])) return true
+  }
+  return false
+}
+// Whether a key or certificate file has any content beyond comments and blank lines (a stub that says "mounted at runtime" holds no key).
+export const keyFileHasContent = (text) => String(text ?? '').split(/\r?\n/).some((l) => l.trim() && !/^\s*(#|;|\/\/)/.test(l))

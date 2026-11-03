@@ -1,0 +1,37 @@
+Preparing a sysroot for Miri (target: x86_64-pc-windows-msvc)... done
+   Compiling miri-ub v0.1.0 (fixtures\miri-ub)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running unittests src\lib.rs (target\miri\x86_64-pc-windows-msvc\debug\build\miri-ub/29814ef931cd1142\out\miri_ub-29814ef931cd1142.exe)
+
+running 1 test
+test tests::reads ... error: Undefined Behavior: in-bounds pointer arithmetic failed: attempting to offset pointer by 5 bytes, but got alloc44246 which is only 3 bytes from the end of the allocation
+ --> src\lib.rs:4:15
+  |
+4 |     unsafe { *p.add(5) }
+  |               ^^^^^^^^ Undefined Behavior occurred here
+  |
+  = help: this indicates a bug in the program: it performed an invalid operation, and caused Undefined Behavior
+  = help: see https://doc.rust-lang.org/nightly/reference/behavior-considered-undefined.html for further information
+help: alloc44246 was allocated here:
+ --> src\lib.rs:2:13
+  |
+2 |     let v = vec![1u8, 2, 3];
+  |             ^^^^^^^^^^^^^^^
+  = note: this is on thread `tests::reads`
+  = note: stack backtrace:
+          0: read_past_end
+              at src\lib.rs:4:15: 4:23
+          1: tests::reads
+              at src\lib.rs:11:17: 11:39
+          2: tests::reads::{closure#0}
+              at src\lib.rs:10:15: 10:15
+
+note: some details are omitted, run with `MIRIFLAGS=-Zmiri-backtrace=full` for a verbose backtrace
+
+error: aborting due to 1 previous error
+
+error: test failed, to rerun pass `--lib`
+
+Caused by:
+  process didn't exit successfully: `<home>\.rustup\toolchains\nightly-x86_64-pc-windows-msvc\bin\cargo-miri.exe runner 'fixtures\miri-ub\target\miri\x86_64-pc-windows-msvc\debug\build\miri-ub/29814ef931cd1142\out\miri_ub-29814ef931cd1142.exe'` (exit code: 1)
+note: test exited abnormally; to see the full output pass --no-capture to the harness.

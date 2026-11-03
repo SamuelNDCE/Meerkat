@@ -161,6 +161,26 @@ describe('regressions found in review', () => {
     expect(helmetOut).not.toMatch(/FAIL (hsts|xfo|xcto|referrer-policy)-missing/)
     expect(headerRun({ 'server.js': 'const app = express()\napp.use(x)\n' })).toMatch(/FAIL hsts-missing/)
   })
+  test('nginx settings in a file inside an nginx/ folder are read, and the safe settings stay clean', () => {
+    const run = (conf: string) => {
+      const dir = mkdtempSync(join(tmpdir(), 'meerkat-wh-nginx-'))
+      mkdirSync(join(dir, 'nginx'))
+      writeFileSync(join(dir, 'nginx', 'site.conf'), conf)
+      try {
+        return execFileSync(process.execPath, ['thorough/web-hardening.mjs', 'wh-headers', '--root', dir], { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' })
+      } catch (e: any) {
+        return String(e.stdout ?? '')
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    }
+    const bad = run('server {\n  listen 80;\n  location /files/ {\n    autoindex on;\n  }\n}\n')
+    expect(bad).toMatch(/nginx\/site\.conf:4 nginx autoindex is on/)
+    expect(bad).toMatch(/nginx\/site\.conf nginx sends its version/)
+    const good = run('server {\n  listen 80;\n  server_tokens off;\n  location /files/ {\n    autoindex off;\n  }\n}\n')
+    expect(good).not.toMatch(/FAIL nginx-autoindex-on/)
+    expect(good).not.toMatch(/FAIL nginx-server-tokens-on/)
+  })
   test('an unquoted type=password input is found, a marquee-component element is not a marquee', () => {
     const rule = (id: string): any => [...HTML].find((r: any) => r.id === id)
     expect(rule('password-input-no-autocomplete').test('<input name="p" type=password>')).toBe(true)

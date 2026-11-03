@@ -131,16 +131,16 @@ describe('statuses, order and fail-fast', () => {
 })
 
 describe('hard timeout', () => {
-  test('a function check that never settles is FAIL after its timeout', async () => {
+  test('a function check that never settles is NOT RUN (timed out) after its timeout', async () => {
     const hang = fake({ id: 'hang', timeoutSeconds: 0.2, run: () => new Promise(() => {}) })
     const r = await runOne(hang, ctx())
-    expect(r.status).toBe('FAIL')
+    expect(r.status).toBe('NOT RUN')
     expect(r.detail).toContain('timed out')
   })
-  test('a command that hangs is killed and reported as FAIL', async () => {
+  test('a command that hangs is killed and reported as NOT RUN (timed out)', async () => {
     const t0 = Date.now()
     const r = await runOne(node('setInterval(() => {}, 1000)', { timeoutSeconds: 1 }), ctx())
-    expect(r.status).toBe('FAIL')
+    expect(r.status).toBe('NOT RUN')
     expect(r.detail).toContain('timed out')
     expect(Date.now() - t0).toBeLessThan(15_000)
   }, 20_000)

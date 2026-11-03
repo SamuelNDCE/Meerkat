@@ -9,11 +9,11 @@ A check is **quick** (`tier: 'fast'`) when it is cheap everywhere it has been me
 | Rule | Quick | Thorough |
 |---|---|---|
 | Measured median under 3 s and max under 6 s everywhere measured, Node only, no window, no network, not opt-in, not heavy | yes | |
-| Compiles, builds or runs a test suite (cargo clippy/test/doc/build, tsc, npm test, dotnet, mvn, gradle, go test) | stays where it is, never moved INTO quick | |
+| Compiles, builds or runs a test suite (cargo clippy/test/doc/build, npm test, dotnet, mvn, gradle, go test, swift, pytest, rspec) | left out of `quick` and `fast` (preset `skipCompile`), kept in `full`, `thorough`, `release` and the focused functionality presets | yes |
 | Heavy, alone, non-free lane or opt-in | | yes |
 | Quick check whose median goes over 8 s | | move it here |
 
-Compile and test checks that are already in quick are kept there on purpose (the quick preset is "before every push": build, type check, tests). They are listed with a reason in `tests/tiers.test.ts`, which fails when a new compile check is added to quick without one.
+Changed 2026-11-03: the quick preset is "before every push", 5 to 10 minutes at most on a large app, so it no longer runs anything that compiles the project or runs its tests (cargo clippy/test/build, go test, mvn, dotnet build, swift build, pytest, rspec, npm run build, vite/webpack/next build, `npm test`). A direct JavaScript unit-test runner (`npx vitest run`, `npx jest`) runs no compiler or build and stays in quick (for example `unit-tests-changed`). Those checks keep their `fast` tier (so `functionality-fast`, `app-fast` and `ci` still run them) but the `quick` and `fast` presets set `skipCompile`, which drops them and any check that waits on them (a window test that needs the build). The list is `COMPILE_HEAVY_IDS` and `COMPILE_HEAVY_COMMAND` in `lib/presets.mjs`; a new check that runs a compiler is caught by its command, and `tests/presets-quick-budget.test.ts` fails if quick selects one. Type checks that only read the code (`tsc --noEmit`, `go vet`) stay in quick (`QUICK_TYPECHECKS`). Naming a check with `--only` still runs it.
 
 The `quick` and `fast` presets now bring every pack that applies to the folder (`allPacks`), the same as `full`. Before, they only ran the packs named in the project config, so most of the short checks never ran in quick.
 
@@ -31,7 +31,20 @@ The `quick` and `fast` presets now bring every pack that applies to the folder (
 
 Considered and left thorough (allowlist in `tests/tiers.test.ts`): npm-audit-all (network, max 6600), circular-imports and dead-python (outside tools, never measured here), perf-endpoints, perf-load, perf-build (start the app or build it), rust-build-release and rust-doc (compile).
 
-Nothing in quick had a median over 8 s except the Rust compile checks, which stay (see above). The learned times for clippy and test on NeuralVault were 113 s and 601 s for one cold run.
+Nothing in quick had a median over 8 s except the compile checks, which no longer run in quick (see above). The learned times for clippy and test on NeuralVault were 113 s and 601 s for one cold run.
+
+## Planted-defect labels (the accuracy corpus)
+
+Not the same thing as the quick and thorough tiers above. The accuracy corpus ([accuracy.md](accuracy.md)) plants defects, and every planted defect carries two labels:
+
+| Label | Values | Question it answers |
+|---|---|---|
+| Impact | critical, high, medium, low | How bad is it if this defect is real? |
+| Difficulty to find | easy, medium, hard, extreme | How hard is it for a check to find? |
+
+The labels live in `tools/accuracy-tier-fragments/*.txt` (one line per planted key: key, impact, difficulty) and are read by `tools/accuracy-labels.mjs`, which throws on an unknown value, a duplicate key or a planted defect with no label. The corpus run prints recall by impact, recall by difficulty and an impact by difficulty table from them.
+
+The older single tier still exists and is what the corpus table and `docs/accuracy-results.md` use: `tools/accuracy-tiers.mjs` gives every planted key exactly one of critical, hard, medium or easy. The rule: critical is a remote exploit, a secret exposure or data destruction with no unusual precondition; hard needs reasoning across lines or files; medium is a real defect a single-file rule finds with some context; easy is a one-line pattern or hygiene item. It does not change which defects exist or how they are detected. The two systems are separate: the single tier has four values (it does not include high or low), and the two labels are the finer, two-axis view.
 
 ## First-run estimates
 

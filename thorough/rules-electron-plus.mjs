@@ -519,7 +519,8 @@ export const EP_FUSES_BUILD = [
   onFile(PLIST, 'Info.plist')('ep-plist-arbitrary-loads', 'Info.plist allows arbitrary network loads (NSAllowsArbitraryLoads true), so the app can fetch over plain http',
     (line, ctx) => keyTrue('NSAllowsArbitraryLoads')(line, ctx),
     '<key>NSAllowsArbitraryLoads</key>\n<true/>', '<key>NSAllowsArbitraryLoads</key>\n<false/>',
-    { test: keyTrue('NSAllowsArbitraryLoads') }),
+    // Not Electron-specific: any iOS or macOS app (React Native, Capacitor, native) has this Info.plist key, so the rule runs in every project.
+    { test: keyTrue('NSAllowsArbitraryLoads'), anyProject: true }),
 ]
 
 // ---------------------------------------------------------------------------------------------------------------------------

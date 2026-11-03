@@ -100,6 +100,6 @@ describe('the live board status line', () => {
 describe('the sample data is labelled', () => {
   test('the note and the project', () => {
     expect(SAMPLE_NOTE).toContain('SAMPLE DATA')
-    expect(sampleData().project).toBe('C:/Users/SamuelNDCE/code/plume')
+    expect(sampleData().project).toBe('C:/Users/me/code/plume')
   })
 })

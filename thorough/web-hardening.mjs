@@ -62,6 +62,8 @@ const HELMET_SETS = new Set(['hsts-missing', 'xfo-missing', 'frame-ancestors-mis
 export function hitsIn(rule, file, text) {
   if (rule.when && !rule.when.test(text)) return null
   if (rule.sample === 'index.html' && !rule.id.startsWith('comment-') && /<!--|\{%-?\s*(comment|doc)|\{#|\{\{!--/.test(text)) text = blank(text)
+  // span: a global regex over the whole text, for a tag that runs over several lines (the hit is the line where it starts)
+  if (rule.span) return [...text.matchAll(rule.span)].map((m) => `${file}:${text.slice(0, m.index).split('\n').length}`)
   if (rule.test || rule.re) {
     const out = []
     const lines = text.split(/\r?\n/)
@@ -132,7 +134,7 @@ export function runTable(name, root, rules, { walk = false } = {}) {
     return 0
   }
   console.log(`${name}: found ${total}`)
-  for (const l of lines.slice(0, 25)) console.log(`  ${l}`)
+  for (const l of lines.slice(0, 200)) console.log(`  ${l}`)
   if (lines.length > 25) console.log(`  ... and ${lines.length - 25} more`)
   return 1
 }

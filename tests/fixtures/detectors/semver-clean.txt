@@ -1,0 +1,12 @@
+    Building semver-demo v0.1.0 (current)
+       Built [   0.673s] (current)
+     Parsing semver-demo v0.1.0 (current)
+      Parsed [   0.001s] (current)
+    Building semver-demo v0.1.0 (baseline)
+       Built [   0.613s] (baseline)
+     Parsing semver-demo v0.1.0 (baseline)
+      Parsed [   0.001s] (baseline)
+    Checking semver-demo v0.1.0 -> v0.1.0 (no change; assume minor)
+     Checked [   0.007s] 202 checks: 202 pass, 58 skip
+     Summary no semver update required
+    Finished [   1.988s] semver-demo
