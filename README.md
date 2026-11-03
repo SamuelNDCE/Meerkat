@@ -2,12 +2,12 @@
 
 # Meerkat
 
-<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <a href="https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md"><img src="docs/images/badges/planted-defect-recall.svg" alt="planted-defect recall"></a> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11"> <a href="https://perpetualtechnologies.co.uk"><img src="docs/images/badges/made-with.svg" alt="made with Perpetual Technologies"></a> <img src="docs/images/badges/works-with.svg" alt="works with NeuralVault and MCP">
+<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <a href="https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md"><img src="docs/images/badges/planted-defect-recall.svg" alt="planted-defect recall"></a> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11"> <img src="docs/images/badges/works-with.svg" alt="works with NeuralVault and MCP">
 
 **One command that checks your whole project before you ship it.**<br>
 Security, correctness, accessibility, performance and code health, for any kind of app, with every result saved and explained.
 
-<a href="https://www.npmjs.com/package/@samuelndce/meerkat"><img src="https://img.shields.io/badge/npm-package-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="npm package"></a> <a href="https://github.com/SamuelNDCE/Meerkat"><img src="https://img.shields.io/badge/GitHub-repository-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub repository"></a> <a href="https://discord.gg/x7yXE3MReT"><img src="https://img.shields.io/badge/Discord-community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord community"></a> <a href="https://perpetualtechnologies.co.uk"><img src="https://img.shields.io/badge/Perpetual_Technologies-website-0A0A0A?style=for-the-badge" alt="Perpetual Technologies website"></a>
+<a href="https://www.npmjs.com/package/@samuelndce/meerkat"><img src="https://img.shields.io/badge/npm-package-CB3837?style=for-the-badge" alt="npm package"></a> <a href="https://github.com/SamuelNDCE/Meerkat"><img src="https://img.shields.io/badge/GitHub-repository-181717?style=for-the-badge" alt="GitHub repository"></a>
 
 <!-- counts:start -->
 **383 checks · 1421 sub-checks · 48 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
@@ -271,7 +271,7 @@ nv mcp test meerkat
 
 The read-only tools can only read results; `meerkat_run` is the one that starts a run, so grant it only to agents you want to run checks. **Claude Code:** `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs`. Other clients: [docs/for-ai-agents.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/for-ai-agents.md).
 
-**About NeuralVault.** NeuralVault is an agent harness you own, from [Perpetual Technologies](https://perpetualtechnologies.co.uk): it remembers how your business works, acts only where you allow it, and keeps a record of everything it does. Meerkat is made with Perpetual Technologies: it started as the verification layer for NeuralVault, is used there, and works on any project on its own. Learn more at [perpetualtechnologies.co.uk](https://perpetualtechnologies.co.uk).
+**About Meerkat.** Meerkat started as the safety check for NeuralVault and grew into a checker for any project. It reads your code, runs every check that fits, and gives you one honest answer before you ship: safe to push, or not yet. Nothing you build is uploaded, and it works on its own too. It also plugs straight into NeuralVault or any MCP client, so your AI can run the checks and read the results.
 
 ## 🧪 Using it in CI
 
