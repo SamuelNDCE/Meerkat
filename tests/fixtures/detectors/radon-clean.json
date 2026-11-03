@@ -1,0 +1,1 @@
+{"clean\\app.py": [{"type": "function", "rank": "A", "lineno": 4, "col_offset": 0, "complexity": 1, "endline": 5, "name": "main", "closures": []}, {"type": "function", "rank": "A", "lineno": 8, "col_offset": 0, "complexity": 1, "endline": 9, "name": "add", "closures": []}]}

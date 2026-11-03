@@ -1,0 +1,2 @@
+broken\app.py:1: unused import 'os' (90% confidence)
+broken\app.py:4: unused function 'classify' (60% confidence)

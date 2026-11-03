@@ -13,6 +13,7 @@ const TEXT = /\.(m?[jt]sx?|cjs|json|md|mdx|html?|css|scss|rs|toml|ya?ml|py|go|sh
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|cs|kt|swift|dart|svelte|vue)$/i
 const TEST_FILE = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[a-z]+$|(^|\/)test_[^/]*\.py$|_test\.go$/i
 const MAKEFILE = /(^|\/)(GNUmakefile|Makefile|makefile)$|\.mk$/
+const MAKE_SKIP = /(^|\/)(node_modules|dist|vendor|target|fixtures?)\//i
 const allowSet = (root) => new Set(readText(root, '.meerkat-quality-allow').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')))
 const allowed = (allow, x, line) => allow.has(x) || allow.has(`${x}:${line}`)
 const lineOf = (text, index) => text.slice(0, index).split('\n').length
@@ -345,7 +346,8 @@ const MAKE_RULE = /^([A-Za-z0-9_./%$()-]+(?:\s+[A-Za-z0-9_./%$()-]+)*)\s*:(?!=)/
 const makefileTabs = (root) => {
   const allow = allowSet(root)
   const f = []
-  for (const x of files(root, MAKEFILE)) {
+  // A tracked Makefile is hand-written even in a build/ folder (the tracked list never holds untracked build output), so only vendored trees are skipped.
+  for (const x of trackedFiles(root).filter((p) => MAKEFILE.test(p) && !MAKE_SKIP.test(p) && !isFixture(p))) {
     if (allow.has(x)) continue
     const defined = new Set()
     const phony = new Set()
@@ -409,6 +411,6 @@ main({
   'duplicate-test-names': { run: duplicateTestNames, ...fx({ 'app.test.js': "test('adds', () => {})\ntest('adds', () => {})\n" }, duplicateTestNames) },
   'semver-valid': { run: semverValid, ...fx({ 'package.json': '{"name":"x","version":"1.0"}\n' }, semverValid) },
   'shell-hygiene': { run: shellHygiene, ...fx({ 'run.sh': 'echo hi\n' }, shellHygiene) },
-  'makefile-tabs': { run: makefileTabs, ...fx({ 'Makefile': 'build:\n  go build\n' }, makefileTabs) },
+  'makefile-tabs': { run: makefileTabs, ...fx({ 'build/Makefile': 'build:\n  go build\n' }, makefileTabs) },
   'todo-hygiene': { run: todoHygiene, ...fx({ '.meerkat-budgets.json': '{"quality":{"todoNeedsOwner":true}}', 'a.js': '// TODO fix this later\n' }, todoHygiene) },
 })

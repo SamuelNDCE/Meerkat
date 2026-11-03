@@ -1,0 +1,24 @@
+    Building semver-demo v0.1.0 (current)
+       Built [   0.931s] (current)
+     Parsing semver-demo v0.1.0 (current)
+      Parsed [   0.002s] (current)
+    Building semver-demo v0.1.0 (baseline)
+       Built [   0.820s] (baseline)
+     Parsing semver-demo v0.1.0 (baseline)
+      Parsed [   0.001s] (baseline)
+    Checking semver-demo v0.1.0 -> v0.1.0 (no change; assume minor)
+     Checked [   0.007s] 202 checks: 201 pass, 1 fail, 0 warn, 58 skip
+
+--- failure function_parameter_count_changed: pub fn parameter count changed ---
+
+Description:
+A publicly-visible function now takes a different number of parameters.
+        ref: https://doc.rust-lang.org/cargo/reference/semver.html#fn-change-arity
+       impl: https://github.com/obi1kenobi/cargo-semver-checks/tree/v0.51.0/src/lints/function_parameter_count_changed.ron
+
+Failed in:
+  semver_demo::add now takes 3 parameters instead of 2, in fixtures\semver-broken\src\lib.rs:1
+
+     Summary semver requires new major version: 1 major and 0 minor checks failed
+    Finished [   2.995s] semver-demo
+

@@ -69,8 +69,8 @@ Pick the smallest one that answers your question. `--list-presets` shows these p
 
 | Preset | Use it for |
 |---|---|
-| `quick` (also `fast`) | Before every push. Every quick check. |
-| `full` (also `thorough`) | Before a release. Every check, the slow ones too. |
+| `quick` (also `fast`) | Before every push. Every short static check: no builds, no compiled tests (cargo, go test, mvn, dotnet, swift, pytest, rspec, build scripts); direct vitest or jest runs stay in. |
+| `full` (also `thorough`) | Before a release. Every check, the slow ones too, including the builds and compiled tests. |
 | `ci` | A build server: quick security and functionality checks, no windows. |
 | `release` | Before shipping: everything plus the AI review (opt-in `ai`, may call a paid model). |
 | `functionality-fast`, `functionality` | Build, type check, lints and tests (quick, or thorough). |

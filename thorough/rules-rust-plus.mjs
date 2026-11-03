@@ -437,7 +437,10 @@ const SECRET_FIELD = /^\s*pub\s+(?:password|passwd|secret|token|api_key|private_
 export const API_FFI_WASM = [
   LIBR('rapi-missing-docs-lint', 'the library has public items but no #![deny(missing_docs)] or #![warn(missing_docs)]', undefined, 'pub fn parse(s: &str) -> u32 {\n    0\n}', '#![deny(missing_docs)]\n\n/// Parses.\npub fn parse(s: &str) -> u32 {\n    0\n}', undefined, {
     sample: 'src/lib.rs',
-    test: (line, ctx) => ctx.index === 0 && /^\s*pub\s+(?:fn|struct|enum|trait|mod|const|static|type)\b/m.test(ctx.text) && !/missing_docs/.test(ctx.text),
+    // The lint is a crate attribute, so it belongs in the crate root only; a module file cannot carry it, and the opinion is info.
+    files: /(^|\/)src\/lib\.rs$/,
+    severity: 'info',
+    test: (line, ctx) => ctx.index === 0 &&/^\s*pub\s+(?:fn|struct|enum|trait|mod|const|static|type)\b/m.test(ctx.text) && !/missing_docs/.test(ctx.text),
   }),
   LIBR('rapi-pub-fn-undocumented', 'a public function has no /// doc comment above it', PUB_FN, 'pub fn parse(s: &str) -> u32 {\n    0\n}', '/// Parses a number.\npub fn parse(s: &str) -> u32 {\n    0\n}', (c) => !hasDocAbove(c)),
   LIBR('rapi-pub-type-undocumented', 'a public struct, enum or trait has no /// doc comment above it', PUB_TYPE, 'pub struct Config {\n    pub depth: u8,\n}', '/// Settings.\npub struct Config {\n    pub depth: u8,\n}', (c) => !hasDocAbove(c)),

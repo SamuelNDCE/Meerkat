@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**368 checks** in 48 suites with 1414 sub-checks (a check that declares no rules counts as one), across 48 packs: 335 quick, 33 thorough, 26 opt-in. [Security 111](#security-checks) · [Functionality 208](#functionality-checks) · [UI 22](#ui-checks) · [Performance 16](#performance-checks) · [Refactor 11](#refactor-checks)
+**383 checks** in 48 suites with 1421 sub-checks (a check that declares no rules counts as one), across 49 packs: 338 quick, 45 thorough, 38 opt-in. [Security 117](#security-checks) · [Functionality 211](#functionality-checks) · [UI 25](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -15,15 +15,15 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `risky-calls` | Risky code | 7 | 95 | Dangerous calls: eval, shell strings, disabled TLS checks, weak hashes, plain http. |
 | `injection-patterns` | Injection patterns | 7 | 71 | Code shapes that lead to SQL injection, path traversal, open redirects, regex DoS and XXE. |
 | `crypto-and-auth` | Crypto and auth | 2 | 2 | Weak JWT settings and weak encryption modes. |
-| `supply-chain` | Supply chain | 8 | 23 | Dependency pinning, lockfile integrity, known-vulnerable packages, install scripts and look-alike names. |
-| `detectors` | Mature detectors | 8 | 8 | Well-known outside tools run on your project: osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint. Opt in with the detectors preset. |
+| `supply-chain` | Supply chain | 8 | 24 | Dependency pinning, lockfile integrity, known-vulnerable packages, install scripts and look-alike names. |
+| `detectors` | Mature detectors | 20 | 20 | Well-known outside tools run on your project: osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck, actionlint, knip, htmlhint, size-limit and Lighthouse (cspell spelling has its own opt-in, spelling). Opt in with the detectors preset. |
 | `ci-workflows` | Workflow security | 3 | 36 | GitHub Actions: pinned actions, limited permissions, no script injection, no secrets echoed. |
-| `web-security` | Web security | 20 | 76 | CORS, cookies, CSP, unsafe links and inline handlers, mixed content and debug modes left on. |
+| `web-security` | Web security | 22 | 85 | CORS, cookies, CSP, unsafe links and inline handlers, mixed content and debug modes left on. |
 | `accessibility` | Accessibility | 10 | 10 | ARIA, link text, focus, zoom, captions, table headers and colour contrast. |
 | `html-and-css` | HTML and CSS | 10 | 35 | Valid markup, duplicate ids, image sizes, stylesheet lint and !important overuse. |
 | `seo-and-meta` | SEO and meta | 2 | 2 | Title, description, robots and sitemap. |
 | `code-quality` | Code quality | 10 | 10 | Whitespace, indentation, leftovers, empty catches, TODO hygiene and broken imports. |
-| `test-hygiene` | Test hygiene | 21 | 88 | Skipped or focused tests, duplicate test names and projects with no tests. |
+| `test-hygiene` | Test hygiene | 21 | 68 | Skipped or focused tests, duplicate test names and projects with no tests. |
 | `refactor` | Refactor | 9 | 9 | Duplicated code, dead code, long files and functions, deep nesting and complexity. |
 | `javascript` | JavaScript and TypeScript | 7 | 7 | Common JS and TS mistakes: loose equality, var, unhandled promises, any, ts-ignore. |
 | `slow-code-patterns` | Slow code patterns | 4 | 4 | Sync file calls in handlers, parsing or regex building inside loops, DOM queries in loops. |
@@ -38,7 +38,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `api-contracts` | API contracts | 4 | 4 | OpenAPI and GraphQL schemas are valid and complete. |
 | `database` | Database | 4 | 4 | SQL migrations order and safety, missing indexes, Prisma schema basics. |
 | `api-resilience` | API resilience | 4 | 4 | Timeouts, rate limits, error leaks and bounded pagination. |
-| `desktop-apps` | Desktop and mobile apps | 19 | 176 | Electron, Tauri, Capacitor, Cordova and Android manifest security settings. |
+| `desktop-apps` | Desktop and mobile apps | 20 | 180 | Electron, Tauri, Capacitor, Cordova and Android manifest security settings. |
 | `git-history` | Git history | 8 | 8 | Commit messages, large commits, binaries and secrets in history, author identity. |
 | `git-workflow` | Git workflow | 3 | 3 | Branch names, long-lived branches and pinned submodules. |
 | `release-versioning` | Release versioning | 15 | 15 | Semantic versions, tags that match the package, changelog kept up to date. |
@@ -54,7 +54,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `ruby` | Ruby | 2 | 2 | RuboCop and RSpec. |
 | `swift` | Swift | 2 | 2 | SwiftLint and swift build. |
 | `dart` | Dart and Flutter | 2 | 2 | dart analyze and dart format. |
-| `terraform` | Terraform | 2 | 38 | terraform fmt. |
+| `terraform` | Terraform | 2 | 39 | terraform fmt. |
 | `kubernetes` | Kubernetes | 3 | 52 | Helm lint and kube-linter. |
 | `docker` | Docker and Compose | 4 | 40 | Dockerfile lint, pinned base images and Compose hygiene. |
 | `shell-scripts` | Shell scripts | 2 | 2 | ShellCheck and shell script hygiene. |
@@ -62,7 +62,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 
 ## Security checks
 
-Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 111 checks.
+Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 117 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -73,6 +73,9 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `azure-pipelines` | fast | tiny | 1 s | Azure Pipelines uses named images, no piped installers and no inline secrets | ci-systems |
 | `bandit` | fast | light | 10 s | Bandit: common Python security mistakes *(needs: bandit)* | python |
 | `capacitor-cordova-cleartext` | fast | tiny | 1 s | Capacitor or Cordova: no mobile shell allows plain http traffic | desktop |
+| `cf-mobile` | fast | tiny | 1 s | Android and React Native: exported components, secrets in AsyncStorage, unchecked links and open WebViews | client-frameworks |
+| `cf-next` | fast | tiny | 1 s | Next.js: secret-named NEXT_PUBLIC_ variables and server actions without a session check or with unchecked file paths | client-frameworks |
+| `cf-react` | fast | tiny | 1 s | React: hooks called in conditions and javascript: links | client-frameworks |
 | `circleci-config` | fast | tiny | 1 s | CircleCI config pins its orbs, avoids deprecated machine images and keeps secrets out | ci-systems |
 | `compose-hygiene` | fast | tiny | 1 s | Docker Compose: pinned images, no privileged containers or host networking, no open database ports, no passwords in the file | config |
 | `cookie-flags` | fast | tiny | 1 s | Cookies are set with HttpOnly, Secure and SameSite | security-plus |
@@ -172,15 +175,18 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `actionlint-workflows` | thorough | light | 10 s | GitHub Actions workflow mistakes from actionlint, when .github/workflows exists *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `ai-diff-review` | thorough | light | 1.0 min | AI security review of the changes against the base branch *(opt-in: `--include ai`)* | ai |
 | `ai-route-audit` | thorough | light | 5.0 min | AI audit of every route, handler and IPC channel *(opt-in: `--include ai`)* | ai |
+| `geiger-unsafe` | thorough | heavy | 1.0 min | Rust unsafe usage counted by cargo-geiger, for the crates of this project (not its dependencies) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `gitleaks-secrets` | thorough | light | 20 s | Secrets in files and git history from gitleaks (values redacted, never shown) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `govulncheck-go` | thorough | light | 1.0 min | Go vulnerabilities in code you actually call (govulncheck, needs the network), when go.mod exists *(opt-in: `--include detectors`)* *(needs: )* | detectors |
+| `miri-ub` | thorough | heavy | 5.0 min | PARTIAL: undefined behaviour found by running the tests under cargo-miri (needs a nightly Rust, slow); opt-in with --include rust-nightly *(opt-in: `--include rust-nightly`)* *(needs: )* | detectors |
 | `npm-audit-all` | thorough | tiny | 30 s | npm audit, high severity, every dependency including dev ones | security |
 | `osv-scan` | thorough | light | 20 s | Dependency advisories from osv-scanner: each vulnerable package with its OSV id and fixed version *(opt-in: `--include detectors`)* *(needs: )* | detectors |
+| `pip-audit-python` | thorough | light | 20 s | Python dependency advisories from pip-audit, for pinned requirements*.txt (contacts PyPI by design; skipped when MEERKAT_DETECTORS_OFFLINE=1) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `semgrep-security` | thorough | medium | 2.0 min | Semgrep security-audit rules (needs the network for the rule set, up to 10 minutes) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 
 ## Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 208 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 211 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -379,23 +385,26 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `flaky-tests` | thorough | alone | 3.0 min | The tests give the same result every time they run *(opt-in: `--include runtime`)* | functionality-run |
 | `idempotent-cli` | thorough | medium | 30 s | Command-line tools answer --help and --version identically, reject bad flags cleanly and never hang *(opt-in: `--include runtime`)* | robustness |
 | `install-reproducible` | thorough | heavy | 1.0 min | The frozen install works and the lockfile matches the manifest *(opt-in: `--include runtime`)* | functionality-run |
+| `knip-unused` | thorough | light | 30 s | Unused files, exports and dependencies from knip (noisy on code loaded by name at run time: review before acting) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `mutation-testing` | thorough | alone | 5.0 min | Mutation testing: the tests notice when the code is changed (works on a temporary copy) *(opt-in: `--include mutation`)* | mutation |
 | `parallel-safety` | thorough | alone | 2.0 min | The tests give the same result one at a time and in parallel (no shared-state races) *(opt-in: `--include runtime`)* | robustness |
 | `readme-commands-work` | thorough | heavy | 1.5 min | The shell commands the README tells people to run work (allowlisted commands only) *(opt-in: `--include runtime`)* | functionality-run |
 | `reproducible-build` | thorough | alone | 2.0 min | Two clean builds of the same source give identical files (no timestamps, paths or random ids) *(opt-in: `--include runtime`)* | robustness |
 | `rust-build-release` | thorough | heavy | 6.7 min | Rust release build (cargo build --release) | rust |
 | `rust-doc` | thorough | heavy | 2.0 min | Rust documentation builds without warnings (cargo doc) | rust |
+| `semver-checks-api` | thorough | heavy | 2.0 min | Rust library API breaks from cargo-semver-checks, compared with the last published version (libraries only; a binary is not applicable) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `slow-test-regression` | thorough | heavy | 2.0 min | No test got more than 3x slower than its recent median (and the five slowest tests are listed) *(opt-in: `--include runtime`)* | robustness |
 | `staticcheck-go` | thorough | light | 30 s | Go staticcheck bugs (SA rules only), when go.mod exists *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `test-order-independence` | thorough | alone | 2.0 min | The tests still pass when run in a different order (no hidden coupling between tests) *(opt-in: `--include runtime`)* | robustness |
 | `tests-fail-without-source` | thorough | alone | 4.0 min | Source files that no test depends on: emptying one file at a time (in a temporary copy) must make a test fail *(opt-in: `--include mutation`)* | mutation |
 | `tsc-strict` | thorough | light | 30 s | TypeScript strict mode diagnostics (tsc --noEmit --strict), only when typescript is already in node_modules *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `tz-locale-matrix` | thorough | alone | 2.0 min | The tests pass in other time zones and locales too (UTC, Los Angeles, Kolkata, Kiritimati; Turkish, German) *(opt-in: `--include runtime`)* | robustness |
+| `udeps-unused` | thorough | heavy | 2.0 min | PARTIAL: unused Rust dependencies from cargo-udeps (needs a nightly Rust, may report false positives); opt-in with --include rust-nightly *(opt-in: `--include rust-nightly`)* *(needs: )* | detectors |
 | `unused-dependency-proof` | thorough | alone | 4.0 min | Production dependencies that are not imported can be removed without breaking tests or build *(opt-in: `--include runtime`)* | robustness |
 
 ## UI checks
 
-Pages and styles: accessibility basics and valid markup. 22 checks.
+Pages and styles: accessibility basics and valid markup. 25 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -421,10 +430,13 @@ Pages and styles: accessibility basics and valid markup. 22 checks.
 | `ui-static` | fast | tiny | 1 s | Pages have alt text, a language, a title and a viewport; no empty buttons | hygiene |
 | `wh-html` | fast | tiny | 1 s | Page markup avoids session ids in URLs, exposed private IPs, unsafe forms, risky iframes and leftover secrets | web-hardening |
 | `zoom-allowed` | fast | tiny | 1 s | The viewport setting allows pinch zoom | a11y |
+| `cspell-spelling` | thorough | light | 30 s | Unknown words in .md and .html files from cspell (very noisy: names, jargon and British spellings; needs --include spelling) *(opt-in: `--include spelling`)* *(needs: )* | detectors |
+| `htmlhint-html` | thorough | light | 10 s | HTML mistakes from htmlhint: missing doctype, duplicate ids, unpaired tags, on tracked .html files *(opt-in: `--include detectors`)* *(needs: )* | detectors |
+| `lighthouse-page` | thorough | medium | 40 s | Accessibility and best-practice failures from Lighthouse on the project's index.html (served on 127.0.0.1, needs Google Chrome) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 
 ## Performance checks
 
-Size, start-up, memory, response time, load and build time, against budgets you set. 16 checks.
+Size, start-up, memory, response time, load and build time, against budgets you set. 17 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -444,10 +456,11 @@ Size, start-up, memory, response time, load and build time, against budgets you 
 | `perf-build` | thorough | alone | 2.0 min | Build time: the build stays inside its time budget | performance |
 | `perf-endpoints` | thorough | light | 20 s | Response time: p95 of each configured endpoint | performance |
 | `perf-load` | thorough | medium | 30 s | Load burst: concurrent requests to a local server, error rate and p95 | performance |
+| `size-limit-budget` | thorough | light | 30 s | Bundle size over the project's own size-limit budget (only when the project already configures size-limit) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 
 ## Refactor checks
 
-Is the code itself in good shape: duplicated code, dead code, files too long, circular imports. 11 checks.
+Is the code itself in good shape: duplicated code, dead code, files too long, circular imports. 13 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -462,4 +475,6 @@ Is the code itself in good shape: duplicated code, dead code, files too long, ci
 | `unused-files` | fast | light | 2 s | JavaScript and TypeScript files nothing imports | refactor |
 | `circular-imports` | thorough | light | 20 s | No circular imports (madge) *(needs: madge)* | node |
 | `dead-python` | thorough | light | 10 s | Dead Python code (vulture) *(needs: vulture)* | python |
+| `radon-complexity` | thorough | light | 10 s | Very complex Python functions from radon: cyclomatic complexity rank D (21) or worse (opt-in) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
+| `vulture-dead-code` | thorough | light | 10 s | Dead Python code from vulture: unused imports and unreachable code at 80 percent confidence or more (opt-in: lower confidence is mostly noise) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 <!-- checks:end -->

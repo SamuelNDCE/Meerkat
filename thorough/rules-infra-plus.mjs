@@ -326,11 +326,14 @@ const TF_RULES = withScope(TF_FILES, TF_COMMENT, [
 // =====================================================================================================================
 // Compose (ip-terraform-compose, the Compose group). config.mjs already covers privileged, host networking and open database ports.
 // =====================================================================================================================
-const COMPOSE_RULES = withScope(COMPOSE_FILES, COMMENT, [
+// The group in infra-plus.mjs picks the Compose files (by name or by content), so the rules read any YAML it hands them.
+const COMPOSE_RULES = withScope(YAML_FILES, COMMENT, [
   T('compose-cap-add-dangerous', 'a service adds a dangerous Linux capability (cap_add)', (l, c) => /^\s*-\s*["']?(ALL|SYS_ADMIN|NET_ADMIN|SYS_PTRACE|SYS_MODULE|SYS_RAWIO)["']?\s*(#.*)?$/.test(l) && parentOf(c) === 'cap_add', 'services:\n  app:\n    cap_add:\n      - SYS_ADMIN\n', 'services:\n  app:\n    cap_drop:\n      - ALL\n'),
-  T('compose-no-new-privileges-missing', 'a service does not set no-new-privileges in security_opt', (l, c) => /^\s*image:/.test(l) && !/no-new-privileges/.test(parentBlock(c)), 'services:\n  app:\n    image: nginx:1.27\n', 'services:\n  app:\n    image: nginx:1.27\n    security_opt:\n      - no-new-privileges:true\n'),
-  T('compose-read-only-missing', 'a service root filesystem is writable (read_only is not true)', (l, c) => /^\s*image:/.test(l) && !/read_only:\s*true/.test(parentBlock(c)), 'services:\n  app:\n    image: nginx:1.27\n', 'services:\n  app:\n    image: nginx:1.27\n    read_only: true\n'),
+  T('compose-no-new-privileges-missing', 'a service does not set no-new-privileges in security_opt', (l, c) => /^\s*image:/.test(l) && !/no-new-privileges/.test(parentBlock(c)), 'services:\n  app:\n    image: nginx:1.27\n', 'services:\n  app:\n    image: nginx:1.27\n    security_opt:\n      - no-new-privileges:true\n', { severity: 'info' }),
+  T('compose-read-only-missing', 'a service root filesystem is writable (read_only is not true)', (l, c) => /^\s*image:/.test(l) && !/read_only:\s*true/.test(parentBlock(c)), 'services:\n  app:\n    image: nginx:1.27\n', 'services:\n  app:\n    image: nginx:1.27\n    read_only: true\n', { severity: 'info' }),
   T('compose-restart-missing', 'a service has no restart policy, so it stays down after a crash', (l, c) => /^\s*image:/.test(l) && !/\brestart:/.test(parentBlock(c)), 'services:\n  app:\n    image: nginx:1.27\n', 'services:\n  app:\n    image: nginx:1.27\n    restart: unless-stopped\n'),
+  // Short syntax ("- /var/run/docker.sock:/var/run/docker.sock", quoted or with :ro) and long syntax (source: or target:) both mount the socket, which gives the container full control of the host.
+  R('compose-docker-socket', 'a service mounts the Docker socket, which gives the container full control of the host', /^\s*(?:-\s*)?(?:(?:source|target)\s*:\s*)?["']?(?:\/|~\/|\.\.?\/|\$\{?[A-Za-z_]+\}?\/)[^\s"']{0,200}docker\.sock\b/, '    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock', '    volumes:\n      - ./data:/data', { severity: 'high' }),
   R('compose-pid-host', 'a service shares the host process namespace (pid: host)', /^\s*pid:\s*["']?host["']?\s*(#.*)?$/, 'pid: host', 'restart: unless-stopped'),
   R('compose-ipc-host', 'a service shares the host IPC namespace (ipc: host)', /^\s*ipc:\s*["']?host["']?\s*(#.*)?$/, 'ipc: host', 'restart: unless-stopped'),
   R('compose-user-root', 'a service runs as root (user: root or 0)', /^\s*user:\s*["']?(root|0)(:[^"'\s]*)?["']?\s*(#.*)?$/, 'user: root', 'user: "1000:1000"'),
@@ -347,7 +350,47 @@ const DISPATCH_INPUT = /\$\{\{[^}]{0,200}\binputs\./
 const inRun = (c) => /^\s*(-\s+)?run:/.test(c.lines[c.index]) || parentOf(c) === 'run'
 const inScript = (c) => /^\s*(-\s+)?script:/.test(c.lines[c.index]) || parentOf(c) === 'script'
 const PR_TRIGGER = /\b(pull_request|pull_request_target|issue_comment|workflow_run)\b/
-const EVENT_LINE = /^(on:\s*\[?\s*|\s{0,8}-?\s*)pull_request_target\s*(:|\]|,|$|#)/
+// The trigger as a list item, a key, or inside an inline list or mapping (on: [push, pull_request_target], on: { pull_request_target: { types: [opened] } })
+const EVENT_LINE = /^(on:\s*[\[{]?\s*|\s{0,8}-?\s*)pull_request_target\s*(:|\]|\}|,|$|#)|^"?on"?:\s*[\[{][^#\n]*[\s,{\[]pull_request_target\s*(:|\]|\}|,)/
+
+// contents: write that a release job needs: the job (or the whole file, when the permission is set at the top and the file has one job) runs `gh release create` or
+// `gh release upload`, and the workflow only reaches it for a tag (a tags: filter on push, a release trigger, or an if: on the tag ref). Publishing a release needs write access.
+// The gate counts only where it really limits the run: a tags: key directly under push: in the on: block, a release trigger in the on: block, or an if: on the job
+// itself that tests the tag ref. A tags: key anywhere else (a different trigger, a matrix, a step input) is not a gate.
+const triggerGate = (lines) => {
+  const on = lines.findIndex((s) => /^on:/.test(s))
+  if (on < 0) return false
+  if (/^on:\s*\[?\s*release\b/.test(lines[on])) return true
+  let end = on + 1
+  while (end < lines.length && (/^\s/.test(lines[end]) || lines[end] === '')) end++
+  const block = lines.slice(on + 1, end)
+  for (const [i, s] of block.entries()) {
+    if (/^ {2}release:/.test(s)) return true
+    if (/^ {2}push:\s*$/.test(s)) {
+      for (let j = i + 1; j < block.length && (/^ {3,}/.test(block[j]) || block[j].trim() === ''); j++) if (/^ {4}tags:/.test(block[j])) return true
+    }
+  }
+  return false
+}
+const jobTagIf = (job) => /^\s*if:.*(?:startsWith\(\s*github\.ref\s*,\s*['"]refs\/tags\/|github\.ref_type\s*==\s*['"]tag['"])/m.test(job)
+const releaseJobNeedsWrite = (c) => {
+  const jobHeader = /^ {2}[A-Za-z_][\w-]*:\s*$/
+  const jobsAt = c.lines.findIndex((s) => /^jobs:\s*$/.test(s))
+  let from = 0
+  let to = c.lines.length
+  if (jobsAt >= 0 && c.index > jobsAt) {
+    from = c.index
+    while (from > jobsAt && !jobHeader.test(c.lines[from])) from--
+    to = c.index + 1
+    while (to < c.lines.length && !jobHeader.test(c.lines[to])) to++
+  } else if (jobsAt >= 0) {
+    // Set at the top of the file: it applies to every job, so only a one-job file is judged by that job.
+    if (c.lines.filter((s) => jobHeader.test(s)).length !== 1) return false
+    from = jobsAt
+  }
+  const job = c.lines.slice(from, to).join('\n')
+  return /\bgh\s+release\s+(?:create|upload)\b/.test(job) && (triggerGate(c.lines) || jobTagIf(job))
+}
 
 const GHA_RULES = withScope(GHA_FILES, COMMENT, [
   T('gha-inject-issue-text-run', 'an issue, PR or comment title or body is put straight into run:', (l, c) => ISSUE_TEXT.test(l) && inRun(c), 'jobs:\n  x:\n    steps:\n      - run: echo "${{ github.event.issue.title }}"\n', 'jobs:\n  x:\n    steps:\n      - env:\n          TITLE: ${{ github.event.issue.title }}\n        run: echo "$TITLE"\n'),
@@ -365,7 +408,7 @@ const GHA_RULES = withScope(GHA_FILES, COMMENT, [
   T('gha-workflow-run-artifact', 'a workflow_run workflow downloads artifacts, which a fork can have written', (l, c) => /uses:\s*["']?actions\/download-artifact/.test(l) && /\bworkflow_run\b/.test(c.text), 'on: workflow_run\njobs:\n  x:\n    steps:\n      - uses: actions/download-artifact@v4\n', 'on: push\njobs:\n  x:\n    steps:\n      - uses: actions/download-artifact@v4\n'),
   T('gha-permissions-absent', 'no top-level permissions block, so the token gets the repository default scope', (l, c) => /^on:/.test(l) && !/^permissions:/m.test(c.text), 'on: push\njobs:\n  b:\n    runs-on: x\n', 'on: push\npermissions:\n  contents: read\njobs:\n  b:\n    runs-on: x\n'),
   R('gha-permissions-write-all', 'permissions: write-all gives the token every write scope', /^\s*permissions:\s*["']?write-all\b/, 'permissions: write-all', 'permissions: read-all'),
-  R('gha-contents-write', 'the token can push to the repository (contents: write), confirm the job needs it', /(?:^\s*|[{,]\s*)contents:\s*write\b/, 'contents: write', 'contents: read'),
+  R('gha-contents-write', 'the token can push to the repository (contents: write), confirm the job needs it', /(?:^\s*|[{,]\s*)contents:\s*write\b/, 'contents: write', 'contents: read', { unless: (l, c) => releaseJobNeedsWrite(c) }),
   T('gha-id-token-write-on-pr', 'an OIDC id-token is requested by a workflow that runs on pull requests or comments', (l, c) => /^\s*id-token:\s*write\b/.test(l) && PR_TRIGGER.test(c.text), 'on: pull_request\npermissions:\n  id-token: write\n', 'on: push\npermissions:\n  id-token: write\n'),
   T('gha-pull-request-target-trigger', 'the pull_request_target trigger runs with secrets for fork pull requests (review it)', (l) => EVENT_LINE.test(l), 'on: pull_request_target\n', 'on: pull_request\n'),
   T('gha-cache-on-pr-target', 'a cache is used in a pull_request_target workflow, where a fork can poison it', (l, c) => /uses:\s*["']?actions\/cache/.test(l) && /\bpull_request_target\b/.test(c.text), 'on: pull_request_target\njobs:\n  x:\n    steps:\n      - uses: actions/cache@v4\n', 'on: pull_request\njobs:\n  x:\n    steps:\n      - uses: actions/cache@v4\n'),

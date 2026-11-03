@@ -3,7 +3,7 @@
 // Limits are set in .meerkat-budgets.json under "static". A finding you accept goes in the check's allow file (named in each message).
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, posix } from 'node:path'
-import { isConstantMarkup } from './guards.mjs'
+import { isConstantMarkup, isStaticMarkupBuilder } from './guards.mjs'
 import { finding, finish, isFixture, isTestFile, isText, main, readBudgets, readText, rustTestLines, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.static ?? {}
@@ -131,7 +131,8 @@ const lockfileIntegrity = (root) => {
 
 // ---- risky-code: calls that are usually a security mistake
 const RISKY = [
-  [/\beval\s*\(/, 'eval() runs text as code', /\.(m?[jt]sx?|cjs|py|php|rb|svelte|vue)$/],
+  // A method named eval on some other object (redis.eval(script), df.eval('a * b')) is not the language's eval; window.eval and globalThis.eval still are.
+  [/(?:(?<![\w$.])|\b(?:window|globalThis|self|global)\.)eval\s*\(/, 'eval() runs text as code', /\.(m?[jt]sx?|cjs|py|php|rb|svelte|vue)$/],
   [/(?<![\w$.:])(?:new\s+)?Function\s*\(\s*(?!\))/, 'new Function() runs text as code', /\.(m?[jt]sx?|cjs|svelte|vue)$/],
   [/document\.write\s*\(/, 'document.write() with page content', /\.(m?[jt]sx?|svelte|vue|html?)$/],
   [/\.(?:inner|outer)HTML\s*(?:=(?!=)|\+=)/, 'innerHTML assignment (script injection unless the value is trusted)', /\.(m?[jt]sx?|svelte|vue)$/],
@@ -139,12 +140,14 @@ const RISKY = [
   [/dangerouslySetInnerHTML/, 'dangerouslySetInnerHTML (script injection unless the value is trusted)', /\.(jsx|tsx)$/],
   [/\bchild_process\b[\s\S]{0,40}\bexec\s*\(\s*(?:`[^`]*\$\{|[^)]*\+)/, 'exec() with a built-up command string (shell injection)', /\.(m?[jt]s|cjs)$/],
   [/\bos\.system\s*\(|subprocess\.[A-Za-z_]+\([^)]*shell\s*=\s*True/, 'a shell command from Python (shell injection if any part is user input)', /\.py$/],
-  [/\bpickle\.loads?\s*\(|\byaml\.load\s*\((?![^)]*Loader\s*=\s*(?:yaml\.)?SafeLoader)/, 'pickle or yaml.load can run code from the data', /\.py$/],
+  [/\bpickle\.loads?\s*\(|\byaml\.load\s*\((?![^)]*Loader\s*=\s*(?:yaml\.)?C?SafeLoader\b)/, 'pickle or yaml.load can run code from the data', /\.py$/],
   [/verify\s*=\s*False|rejectUnauthorized\s*:\s*false|InsecureSkipVerify\s*:\s*true|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['"]?0/, 'TLS certificate checks turned off', SOURCE],
+  // A shared options dict that turns certificate checking off (TLS = {'verify': False}) is only a finding when some file unpacks it into a call (**TLS).
+  [/\b([A-Za-z_]\w*)\s*=\s*\{[^}\n]*['"]verify['"]\s*:\s*False\b/, 'TLS certificate checks turned off in an options dict that is unpacked into calls', /\.py$/],
   [/createHash\(\s*['"](?:md5|sha1)['"]\)|hashlib\.(?:md5|sha1)\(|\bMD5\.|\bSHA1\./, 'MD5 or SHA-1 (broken for security uses)', SOURCE],
   [/Math\.random\(\)[^\n]*(?:token|secret|password|passwd|key|nonce|session)|(?:token|secret|password|passwd|key|nonce|session)[^\n]*Math\.random\(\)/i, 'Math.random() for something secret (not secure random)', /\.(m?[jt]sx?|cjs|svelte|vue)$/],
   [/chmod\s+(?:-R\s+)?0?777|0o777|StrictHostKeyChecking\s*=\s*no/, 'world-writable permissions or SSH host checks off', /\.(sh|bash|py|m?[jt]s|cjs|ya?ml|rs|go)$/],
-  [/['"]http:\/\/(?!localhost|127\.|0\.0\.0\.0|\[::1\]|example\.|www\.w3\.org|schemas\.|json-schema\.org)[a-z0-9.-]+\.[a-z]{2,}/i, 'a plain http:// address (not encrypted)', SOURCE],
+  [/['"]http:\/\/(?!localhost|127\.|0\.0\.0\.0|\[::1\]|example\.|www\.w3\.org|schemas\.|json-schema\.org|host\.docker\.internal|host\.containers\.internal|gateway\.docker\.internal|(?:www\.)?sitemaps\.org\/schemas\/)[a-z0-9.-]+\.[a-z]{2,}/i, 'a plain http:// address (not encrypted)', SOURCE],
 ]
 // `const btn = (icon, label) => { ...innerHTML = icon }` where every call of btn in the file passes a string literal or an ALL_CAPS constant (ICON.up) for that
 // parameter, and btn is not exported or passed around as a value: the markup is always author-written. Not safe when unsure, and nothing is safe with no call.
@@ -233,10 +236,24 @@ const paramOnlyConstants = (t, at, param) => {
 }
 // innerHTML = '' or = '<svg ...>' (a plain string with no ${} and no + joining other text) injects nothing a visitor controls, so it is not a risk.
 const safeLiteralAssign = (t, m, why) => {
-  if (!why.startsWith('innerHTML')) return false
   const from = m.index + m[0].length
   const eol = t.indexOf('\n', from)
-  const rest = t.slice(from, eol < 0 ? t.length : eol).trim()
+  let rest = t.slice(from, eol < 0 ? t.length : eol).trim()
+  // dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}: the value goes through a sanitiser first.
+  if (why.startsWith('dangerouslySetInnerHTML')) {
+    // The WHOLE __html value must be one sanitiser call with balanced parentheses, then }}: a sanitiser followed by + more markup, or a longer expression, is not safe.
+    const head = /^=\s*\{\{\s*__html\s*:\s*(?:DOMPurify\.sanitize|sanitizeHtml|sanitize)\s*\(/.exec(t.slice(from, from + 400))
+    if (!head) return false
+    const args = callText(t, from + head[0].length)
+    return args !== null && /^\s*\}\}/.test(t.slice(from + head[0].length + args.length + 1))
+  }
+  if (!why.startsWith('innerHTML')) return false
+  // el.insertAdjacentHTML('beforeend', ROW): the second argument is judged the same way as the right side of innerHTML =.
+  if (why.includes('insertAdjacentHTML')) {
+    const arg = callText(t, from)
+    if (arg === null) return false
+    rest = arg.trim()
+  }
   // A plain name or dotted path that is a top-level constant holding only text (const ICONS = { save: '<svg ...>' }) is author-written markup too.
   const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*(?:\/\/.*)?$/.exec(rest)
   if (root && isConstantMarkup(t, root[1])) return true
@@ -244,6 +261,16 @@ const safeLiteralAssign = (t, m, why) => {
   // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
   const atom = String.raw`(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\x60[^\x60$\\]*\x60|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)`
   if (new RegExp(String.raw`^${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)) return true
+  // A call of a function declared in this same file: judged by reading that function. A builder whose result is a template of table lookups produces
+  // author-written markup. A renderer that escapes with a local escaper is NOT accepted: reading JavaScript with patterns kept finding bypasses, so it is reported.
+  const localCall = /^([A-Za-z_$][\w$]*)\(/.exec(rest)
+  if (localCall && !why.includes('insertAdjacentHTML')) {
+    const open = t.indexOf(localCall[0], from) + localCall[0].length
+    const args = callText(t, open)
+    const lineEnd = t.indexOf('\n', open)
+    const tail = args === null ? null : t.slice(open + args.length + 1, lineEnd < 0 ? t.length : lineEnd)
+    if (tail !== null && /^\s*;?\s*(?:\/\/.*)?$/.test(tail) && isStaticMarkupBuilder(t, localCall[1])) return true
+  }
   // A value passed through a sanitiser (DOMPurify.sanitize(x), sanitize(x), escapeHtml(x), esc(x)) is cleaned markup, not raw input.
   if (new RegExp(String.raw`^(?:DOMPurify\.sanitize|(?:[A-Za-z_$][\w$.]*\.)?(?:sanitize|escape|esc|purify)\w*)\s*\(`, 'i').test(rest)) return true
   // cond ? CONST : '' picks between constants, so the condition decides which author-written markup is shown, never what it contains.
@@ -258,6 +285,61 @@ const bareValue = (t, m) => {
   if (!/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*"|\d+|[A-Za-z_$][\w$]*)\])*\s*;?\s*(?:\/\/.*)?$/.test(rest)) return false
   return !/^(?:location|document|window|self|top|parent|event|evt|ev|e|req|request|res|params|query|props|searchParams|data|msg|message|input|userInput|body|url|href)\b/i.test(rest)
 }
+// The text of a call's arguments, from just after its opening parenthesis to the matching close; null when it does not close within 600 characters.
+const callText = (t, start) => {
+  let depth = 1
+  let q = ''
+  for (let i = start; i < t.length && i < start + 600; i++) {
+    const c = t[i]
+    if (q) {
+      if (c === '\\') i++
+      else if (c === q) q = ''
+    } else if (c === '"' || c === "'" || c === '`') q = c
+    else if ('([{'.includes(c)) depth++
+    else if (')]}'.includes(c) && --depth === 0) return t.slice(start, i)
+  }
+  return null
+}
+const LITERAL = String.raw`(?:'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")`
+// A call whose text is fixed by the author cannot be steered by input: new Function('a', 'b', 'return a + b'), os.system('clear'), os.system('cls' if os.name == 'nt' else 'clear').
+const fixedText = (t, m, why) => {
+  const fn = why.startsWith('new Function')
+  if (!fn && !why.startsWith('a shell command from Python')) return false
+  // The shell rule also matches subprocess(..., shell=True); only os.system( is judged here.
+  if (!fn && !/os\.system\s*\($/.test(m[0])) return false
+  const args = callText(t, m.index + m[0].length)
+  if (args === null) return false
+  if (fn) return splitArgs(args).every((a) => new RegExp(String.raw`^${LITERAL}$`).test(a))
+  return new RegExp(String.raw`^\s*${LITERAL}(?:\s+if\s+[\w.]+\s*(?:==|!=)\s*${LITERAL}\s+else\s+${LITERAL})?\s*$`).test(args)
+}
+// The name of the call that encloses position `at` (the nearest unclosed parenthesis before it), e.g. 'requests.get' for the verify=False in requests.get(url, verify=False).
+const enclosingCallee = (t, at) => {
+  let depth = 0
+  for (let i = at - 1; i >= 0 && i > at - 600; i--) {
+    if (')]}'.includes(t[i])) depth++
+    else if ('([{'.includes(t[i]) && depth-- === 0) return t[i] === '(' ? (/([\w$.]+)\s*$/.exec(t.slice(Math.max(0, i - 80), i))?.[1] ?? '') : ''
+  }
+  return ''
+}
+// pickle.loads(X) where X is a plain name that an HMAC was computed over (hmac.new(key, X ...) or hmac.digest(key, X ...)) and compared in an
+// `if not ...compare_digest(...):` whose body raises or returns, all in the 14 lines above. The compared bytes must be the unpickled ones, and a failed
+// comparison must stop the function before the load.
+const hmacChecked = (t, m) => {
+  const arg = (callText(t, m.index + m[0].length) ?? '').trim()
+  if (!/^[A-Za-z_]\w*$/.test(arg)) return false
+  const line = lineOf(t, m.index)
+  const above = t.split('\n').slice(Math.max(0, line - 15), line - 1)
+  const macOver = new RegExp(String.raw`\bhmac\.(?:new|digest)\s*\([^\n]*,\s*${arg}\b`)
+  for (let i = 0; i < above.length; i++) {
+    if (!/^\s*if\s+not\s+(?:hmac\.)?compare_digest\s*\(/.test(above[i])) continue
+    const body = above[i + 1] ?? ''
+    if (!/^\s+(?:raise|return)\b/.test(body)) continue
+    if (macOver.test(above.slice(0, i + 1).join('\n'))) return true
+  }
+  return false
+}
+// True when a Python file anywhere unpacks the dict `name` into a call (**name).
+const unpackedSomewhere = (root, name) => trackedFiles(root).some((y) => y.endsWith('.py') && new RegExp(String.raw`\*\*${name}\b`).test(readText(root, y)))
 const riskyCode = (root) => {
   const allow = allowList(root, '.meerkat-risky-allow')
   const structured = []
@@ -272,6 +354,14 @@ const riskyCode = (root) => {
       // Every hit counts, not just the first in a file: a second innerHTML or eval further down is a separate risk.
       for (const m of t.matchAll(new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`))) {
         if (safeLiteralAssign(t, m, why)) continue
+        if (fixedText(t, m, why)) continue
+        // A property or variable named exactly `key` set to Math.random() alone is a React list key or a sort/map key, not a secret (apiKey, secretKey, keyFile are still checked).
+        if (why.startsWith('Math.random()') && /^key\s*[:=]\s*Math\.random\(\)$/i.test(m[0]) && !/[\w$]/.test(t[m.index - 1] ?? '') && !/(?:token|secret|password|passwd|nonce|session)/i.test(t.slice(t.lastIndexOf('\n', m.index) + 1, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index)))) continue
+        // verify=False is only a TLS finding on a call that talks to a server; checker.run(verify=False) is some other option named verify.
+        if (why.startsWith('TLS certificate checks turned off') && m[0].startsWith('verify') && enclosingCallee(t, m.index) !== '' && !/requests|httpx|urllib|session|client|http|fetch|aiohttp|curl|ssl|\b(?:get|post|put|patch|delete|head|request|urlopen|connect)$/i.test(enclosingCallee(t, m.index))) continue
+        // pickle.loads after the data's HMAC was compared (hmac.compare_digest) in the lines just above: the bytes are ones this program signed.
+        if (why.startsWith('pickle or yaml.load') && /pickle\./.test(m[0]) && hmacChecked(t, m)) continue
+        if (why.startsWith('TLS certificate checks turned off in an options dict') && !unpackedSomewhere(root, m[1])) continue
         // Not code that runs: a hit in a Rust unit-test module, in a comment (a note that says the call is banned), or inside a string literal (sample code a detector or a
         // test feeds to itself). The plain-http rule matches the string itself, so it is judged as before.
         if (inRustTest(lineOf(t, m.index))) continue

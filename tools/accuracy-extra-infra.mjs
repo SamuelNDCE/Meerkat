@@ -175,8 +175,8 @@ export function projects(ctx) {
     'apache/tls.conf': ['<VirtualHost *:443>', X('web-apache-sslprotocol', 'wh-headers/tls-protocol-legacy', 'Apache enabling TLS 1.0', '  SSLProtocol +TLSv1 +TLSv1.2'), '</VirtualHost>', ''],
     Caddyfile: ['example.com {', X('web-caddy-csp', 'wh-headers/csp-unsafe-inline-script', 'Caddy CSP with unsafe-inline scripts', `  header Content-Security-Policy "script-src 'self' 'unsafe-inline'"`), '}', ''],
     'src/server-helmet.js': ["const express = require('express')", "const helmet = require('helmet')", 'const app = express()', X('web-helmet-hsts-false', 'wh-headers', 'helmet with HSTS turned off', 'app.use(helmet({ hsts: false }))'), '', X('web-helmet-csp-false', 'wh-headers', 'helmet with the content security policy turned off', 'app.use(helmet({ contentSecurityPolicy: false }))'), 'app.listen(3000)', ''],
-    'src/server-cookie.js': ["const session = require('express-session')", "const express = require('express')", 'const app = express()', 'app.use(session({', "  secret: process.env.SECRET,", '  cookie: {', X('web-cookie-httponly-false', 'wh-headers/session-cookie-no-httponly', 'a session cookie with httpOnly false', '    httpOnly: false,'), '  },', '}))', ''],
-    'src/server-powered.js': ["const express = require('express')", 'const app = express()', X('web-x-powered-by-enable', 'wh-headers/express-x-powered-by-enabled', "app.enable('x-powered-by')", "app.enable('x-powered-by')"), 'app.listen(3000)', ''],
+    'src/server-cookie.js': ["const session = require('express-session')", "const express = require('express')", 'const app = express()', 'app.use(session({', "  secret: process.env.SECRET,", '  cookie: {', X('web-cookie-httponly-false', 'wh-headers/cookie-httponly-false', 'a session cookie with httpOnly false', '    httpOnly: false,'), '  },', '}))', ''],
+    'src/server-powered.js': ["const express = require('express')", 'const app = express()', X('web-x-powered-by-enable', 'wh-headers/express-x-powered-by-enable-call', "app.enable('x-powered-by')", "app.enable('x-powered-by')"), 'app.listen(3000)', ''],
     'src/server-cors.js': ["const express = require('express')", 'const app = express()', "app.use((req, res, next) => {", X('web-cors-reflect', 'wh-headers/cors-reflects-request-origin', 'the request Origin echoed back', "  res.setHeader('Access-Control-Allow-Origin', req.headers.origin)"), "  res.setHeader('Access-Control-Allow-Credentials', 'true')", '  next()', '})', ''],
   }
   const htmlHead = ['<!doctype html>', '<html lang="en">', '<head>', '<meta charset="utf-8">', '<meta name="viewport" content="width=device-width, initial-scale=1">', '<title>Variant</title>', '</head>', '<body>']
@@ -211,7 +211,7 @@ export function projects(ctx) {
   const pub = {
     'public/.env.local': [X('pub-env-local', 'wh-publish-root/env-file-present', 'an env file in the published folder', `TOKEN=${pw}`), ''],
     'public/dump.sql': [X('pub-sql-dump', 'wh-publish-root/database-dump-in-public', 'a SQL dump in the published folder', 'CREATE TABLE users (id int);\nINSERT INTO users VALUES (1);'), ''],
-    'public/app.js.map': [X('pub-sourcemap', 'wh-publish-root/sourcemap-shipped|wh-html/sourcemap-shipped', 'a source map in the published folder', '{"version":3,"sources":["a.js"],"mappings":"AAAA"}'), ''],
+    'public/app.js.map': [X('pub-sourcemap', 'wh-publish-root/sourcemap-in-publish', 'a source map in the published folder', '{"version":3,"sources":["a.js"],"mappings":"AAAA"}'), ''],
     'public/index.html.bak': [X('pub-bak', 'wh-publish-root/backup-file-present', 'a backup file in the published folder', '<html></html>'), ''],
     'public/.htpasswd': [X('pub-htpasswd', 'wh-publish-root/htpasswd-file', 'an .htpasswd file in the published folder', 'admin:$apr1$abc$def'), ''],
     'public/phpinfo.php': [X('pub-phpinfo', 'wh-publish-root/phpinfo-or-test-page', 'a phpinfo page in the published folder', '<?php phpinfo();'), ''],
@@ -318,7 +318,7 @@ export function projects(ctx) {
 
   return {
     projects: {
-      'x-docker': { files: { ...tidy('x-docker'), ...dockerfiles } },
+      'x-docker': { files: { ...tidy('x-docker'), 'docker/.dockerignore': ['node_modules\n.git\n.env\n'], ...dockerfiles } },
       'x-k8s': { files: { ...tidy('x-k8s'), ...k8s } },
       'x-terraform': { files: { ...tidy('x-terraform'), ...tf } },
       'x-compose': { files: { ...tidy('x-compose'), ...compose } },

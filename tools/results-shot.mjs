@@ -1,6 +1,6 @@
 // Draws the results screen (the REAL renderResults) with SAMPLE data to ANSI files for tools/screenshot.py. Nothing reads your files.
 //   node tools/results-shot.mjs <folder>     writes results-preview-{findings,checks,timeline,happy,finding-detail,check-detail}.ansi into the folder
-// Every picture ends with a line saying it is made-up data (SAMPLE_NOTE), and the project is the made-up C:/Users/SamuelNDCE/code/plume.
+// Every picture ends with a line saying it is made-up data (SAMPLE_NOTE), and the project is the made-up C:/Users/me/code/plume.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { initialResultsState, renderResults } from '../lib/tui/results.mjs'

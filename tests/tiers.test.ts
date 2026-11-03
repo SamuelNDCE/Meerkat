@@ -24,8 +24,8 @@ const packsDir = join(__dirname, '..', 'packs')
 const all: any[] = []
 for (const p of readdirSync(packsDir)) all.push(...(await loadChecks(join(packsDir, p))))
 
-// Compile, test and build checks that stay in the quick tier on purpose: the quick preset is "before every push", which
-// includes the build, the type check and the tests. Anything new that compiles must be added here WITH a reason, or go to thorough.
+// Compile, test and build checks that keep the fast tier on purpose (functionality-fast, app-fast and ci run them). The quick and fast
+// presets leave them out (skipCompile, lib/presets.mjs). Anything new that compiles must be added here WITH a reason, or go to thorough.
 const COMPILE_IN_FAST: Record<string, string> = {
   'rust-clippy': 'the quick run type-checks the code; clippy is the Rust build check (estimate 180 s, heavy, cargo lane)',
   'rust-test': 'the quick run runs the tests (estimate 300 s, heavy, cargo lane)',
@@ -243,7 +243,11 @@ describe('the run timeline records time properly', () => {
     const t0 = Date.parse(s.startedAt)
     for (const e of ends as any[]) {
       const a: any = starts.get(e.id)
-      expect(Math.abs(e.t - a.t - e.ms)).toBeLessThanOrEqual(150) // end minus start is the time the check reports
+      // End minus start is the time the check reports. The two are not read at the same instant: the recorder stamps `start` before the other
+      // start hooks run and before the runner takes its own t0, and stamps `end` after the runner's synchronous log() write. Those are tiny
+      // steps, but on a starved CI runner (a Windows run with ~100 vitest workers) the process can be descheduled in any of them, and CI
+      // measured 242ms of skew. 500ms still catches a real bug (a wrong clock, a unit mix-up, an end taken from the wrong event).
+      expect(Math.abs(e.t - a.t - e.ms)).toBeLessThanOrEqual(500)
       expect(Date.parse(a.at)).toBeGreaterThanOrEqual(t0 - 5) // nothing starts before the run does
       expect(e.t).toBeGreaterThanOrEqual(a.t)
     }

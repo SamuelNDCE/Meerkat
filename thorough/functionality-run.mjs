@@ -112,13 +112,15 @@ async function cleanCopyBuilds(root) {
   if (p.reason) return notRun(p.reason)
   try {
     const { cmds } = p
+    const plan = [['install', cmds.install, b.installSeconds], ['build', cmds.build, b.buildSeconds], ['test', cmds.test, b.testSeconds]]
+    // Steps that never ran still print their rule (NA), so the three rules the pack declares always print.
+    const skipRest = (from, why) => plan.slice(from).forEach(([n]) => sub('NA', `clean-copy-${n}`, why))
     if (!cmds.build && !cmds.test) {
-      sub('NA', 'clean-copy', 'no build or test command could be detected')
+      skipRest(0, 'no build or test command could be detected')
       return notRun('no build or test command could be detected (looked for package.json scripts, pytest, go.mod, Cargo.toml, pom.xml, .csproj)')
     }
     console.log(`clean-copy-builds: ${p.copy.copied} tracked file(s) copied (${p.copy.note})`)
-    const plan = [['install', cmds.install, b.installSeconds], ['build', cmds.build, b.buildSeconds], ['test', cmds.test, b.testSeconds]]
-    for (const [name, argv, secs] of plan) {
+    for (const [i, [name, argv, secs]] of plan.entries()) {
       if (!argv) {
         sub('NA', `clean-copy-${name}`, `no ${name} command detected`)
         continue
@@ -131,9 +133,11 @@ async function cleanCopyBuilds(root) {
       }
       if (name === 'install' && NETWORK.test(r.output)) {
         sub('NA', 'clean-copy-install', 'install needs the network and it is not reachable')
+        skipRest(i + 1, 'not run: the install needs the network')
         return notRun(`the install (${show(argv)}) needs the network and failed with a network error: ${safe(lastLines(r.output, 1)[0] ?? '')}`)
       }
       sub('FAIL', `clean-copy-${name}`, `${show(argv)} failed${r.timedOut ? ' (timed out)' : ` (exit ${r.code})`}`)
+      skipRest(i + 1, `not run: the ${name} step failed`)
       explainFailure(name, argv, r, p, root, secs)
       return 1
     }

@@ -105,21 +105,36 @@ const cmpVersion = (a, b) => {
   for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] - b[i]
   return 0
 }
-const changelogFormat = (root) => {
-  const name = rootFiles(trackedFiles(root)).find((f) => /^CHANGELOG\.md$/i.test(f))
-  if (!name) return finish('changelog-format', [], 'skipped: there is no CHANGELOG.md')
-  const heads = [...readText(root, name).matchAll(/^#{2,3}\s+(.+)$/gm)].map((m) => m[1].trim().replace(/[[\]]/g, '').split(/\s+/)[0])
+// A release heading carries its date in any common spelling: 2026-10-01, 2026/10/01, 01.10.2026, "Oct 1, 2026", "1 October 2026", "October 2026".
+const MONTH = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)'
+const HEADING_DATE = new RegExp(String.raw`\b\d{4}[-/.]\d{1,2}(?:[-/.]\d{1,2})?\b|\b\d{1,2}[-/.]\d{1,2}[-/.]\d{4}\b|\b${MONTH}\.?\s+(?:\d{1,2}(?:st|nd|rd|th)?,?\s+)?\d{4}\b|\b\d{1,2}(?:st|nd|rd|th)?\s+${MONTH}\.?,?\s+\d{4}\b`, 'i')
+// Every CHANGELOG.md in the repo (the top one, a CHANGES/ or docs/ folder, a package in a monorepo), not only the one at the top.
+const changelogFiles = (files) => files.filter((f) => /(^|\/)CHANGELOG\.md$/i.test(f) && !isFixture(f) && !/(^|\/)(node_modules|vendor|dist|build|target)\//.test(f))
+const changelogProblems = (name, text) => {
   const f = []
+  const full = [...text.matchAll(/^#{2,3}\s+(.+)$/gm)].map((m) => m[1].trim())
+  const heads = full.map((h) => h.replace(/[[\]]/g, '').split(/\s+/)[0])
   if (!heads.some((h) => /^unreleased$/i.test(h) || /^v?\d+\.\d+/.test(h))) f.push(`${name} has no version heading and no Unreleased heading`)
   const versions = []
-  for (const h of heads) {
+  heads.forEach((h, i) => {
     const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec(h)
-    if (m) versions.push({ label: h, nums: m.slice(1).map(Number) })
-  }
+    if (m) versions.push({ label: h, nums: m.slice(1).map(Number), full: full[i] })
+  })
   for (let i = 1; i < versions.length; i++) {
     if (cmpVersion(versions[i].nums, versions[i - 1].nums) > 0) f.push(`${name}: version ${versions[i].label} is listed below ${versions[i - 1].label}, but newer versions go first`)
   }
-  return finish('changelog-format', f, `${name} has version headings, newest first`)
+  for (const v of versions) {
+    // The version number itself (1.2.0) must not be read as a date.
+    const rest = v.full.replace(/[[\]]/g, '').replace(/^v?\d+\.\d+\.\d+\S*/, '')
+    if (!HEADING_DATE.test(rest)) f.push(`${name}: version ${v.label} has no release date in its heading (for example "## ${v.label} - 2026-01-31")`)
+  }
+  return f
+}
+const changelogFormat = (root) => {
+  const names = changelogFiles(trackedFiles(root))
+  if (!names.length) return finish('changelog-format', [], 'skipped: there is no CHANGELOG.md')
+  const f = names.flatMap((name) => changelogProblems(name, readText(root, name)))
+  return finish('changelog-format', f, `${names.join(', ')} has dated version headings, newest first`)
 }
 
 // ---- license-matches: the LICENSE file's licence agrees with the licence the manifest declares
@@ -209,7 +224,7 @@ main({
   'codeowners-valid': { run: codeownersValid, ...fx({ 'CODEOWNERS': '/src/\n* @team-a\n' }, codeownersValid) },
   'gitignore-essentials': { run: gitignoreEssentials, ...fx({ 'package.json': '{}\n', '.gitignore': '.env\n.DS_Store\n' }, gitignoreEssentials) },
   'editorconfig-present': { run: editorconfigPresent, ...fx({ 'a.js': '1\n', 'b.js': '1\n', 'c.js': '1\n', 'd.js': '1\n', 'e.js': '1\n' }, editorconfigPresent) },
-  'changelog-format': { run: changelogFormat, ...fx({ 'CHANGELOG.md': '# Changelog\n\n## 1.0.0\n\n## 2.0.0\n' }, changelogFormat) },
+  'changelog-format': { run: changelogFormat, ...fx({ 'CHANGELOG.md': '# Changelog\n\n## 2.0.0 - 2026-02-01\n\n## 1.0.0\n' }, changelogFormat) },
   'license-matches': { run: licenseMatches, ...fx({ 'LICENSE': 'MIT License\n\nPermission is hereby granted, free of charge.\n', 'package.json': '{"license":"Apache-2.0"}\n' }, licenseMatches) },
   'ci-present': { run: ciPresent, ...fx({ 'a.js': '1\n', 'b.js': '1\n', 'c.js': '1\n', 'd.js': '1\n' }, ciPresent) },
   'dependency-updates-configured': { run: dependencyUpdatesConfigured, ...fx({ 'package.json': '{}\n' }, dependencyUpdatesConfigured) },

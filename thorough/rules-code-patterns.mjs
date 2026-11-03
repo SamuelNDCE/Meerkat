@@ -5,6 +5,7 @@
 // Known limits: a rule that matches one line cannot see a call that is split over several lines (noted per rule where it matters).
 
 import { requireHelperOnlyFixed } from './guards.mjs'
+import { constString, firstArgIsConst, pyLiteralCommand, pySubprocessStringShell, pyMarkSafeLiteral, pyDefusedMinidom, pyCsrfExemptSigned, pyZipOnlyExtract, goConstFirstArg, goGetFromConfig, goLoopbackListen, goPprofLoopbackOnly, goShellLiteralScript, goSprintfConstArgs, goCookieSecureMultiline, goHtmlLiteral, goBaseWrapped, goZipChecked, javaConstProcess, javaConstSpel, javaConstLookup, javaConstExec, javaStreamModeNoPadding, javaSqlConstTail, javaLdapEscaped, javaFileNameOnly, csProcessLiteralInfo, csSqlConstTail, phpAssertComparison, phpUnserializeNoClasses, phpIncludeFixedVar, rbMarshalOwnFile, rbShellEscaped, rbHtmlSafeFixed, rbNotFoundRoute, jsConstExec, jsSpawnFixedArgs, jsRequireAllowListed } from './guards-code-patterns.mjs'
 import { rustInTest as rustTestAt } from './kit.mjs'
 const PY_SKIP = /^\s*#/
 const SLASH_SKIP = /^\s*(\/\/|\/\*|\*)/
@@ -105,6 +106,30 @@ const joined = (re, base) => (line, ctx) => {
   return Boolean(m) && m.index < line.length && base(w, ctx)
 }
 
+const REQUESTS_NO_TIMEOUT = /\brequests\.(?:get|post|put|delete|patch|head|request)\((?![^\n]{0,400}\btimeout\s*=)/
+// Names bound to a requests.Session() anywhere in the project (name = requests.Session(), self.name = Session(), with Session() as name), cached per project.
+const sessionNames = new WeakMap()
+function sessionNamesOf(ctx) {
+  const key = ctx.project ?? ctx
+  if (sessionNames.has(key)) return sessionNames.get(key)
+  const names = new Set()
+  const scan = (text) => {
+    if (!/Session\s*\(/.test(text)) return
+    for (const m of text.matchAll(/\b(\w+)\s*=\s*(?:requests\.(?:sessions\.)?)?Session\s*\(\s*\)|\bwith\s+(?:requests\.)?Session\s*\(\s*\)\s+as\s+(\w+)/g)) names.add(m[1] || m[2])
+  }
+  scan(ctx.text)
+  for (const f of ctx.project?.files ?? []) if (/\.py$/i.test(f) && f !== ctx.file) scan(ctx.project.read(f) ?? '')
+  sessionNames.set(key, names)
+  return names
+}
+// session.get(url) with no timeout, where session is a requests.Session() (built here or in another file of the project).
+const sessionCallNoTimeout = (line, ctx) => {
+  const names = sessionNamesOf(ctx)
+  if (!names.size) return false
+  const re = new RegExp(String.raw`(?<![\w$])(?:self\.)?(?:${[...names].join('|')})\.(?:get|post|put|delete|patch|head|request)\((?![^\n]{0,400}\btimeout\s*=)`)
+  return joined(re, outsideStrings(re))(line, ctx)
+}
+
 const family = (ext, skipLine) => (id, title, re, bad, good, extra = {}) => ({
   id,
   title,
@@ -156,10 +181,10 @@ const RBF = family(['rb'], RB_SKIP)
 // ---------------------------------------------------------------- Python (cp-python)
 export const PY = [
   PYF('py-popen-variable', 'os.popen runs a command that is built from a variable', /\bos\.popen\(\s*(?!['"])/, 'out = os.popen(cmd)', 'out = os.popen("ls")'),
-  PYF('py-subprocess-string', 'a subprocess call is given one string, not a list of arguments', /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\(\s*f?['"]/, 'subprocess.call("ls -l")', 'subprocess.call(["ls", "-l"])'),
+  PYF('py-subprocess-string', 'a subprocess call is given one string, not a list of arguments', /\bsubprocess\.(?:call|run|Popen|check_output|check_call)\(\s*f?['"]/, 'subprocess.call("ls -l")', 'subprocess.call(["ls", "-l"])', { unless: pySubprocessStringShell }),
   PYF('py-marshal-load', 'marshal, dill or jsonpickle loads data that can build arbitrary objects', /\bmarshal\.loads?\(|\bdill\.loads?\(|\bjsonpickle\.loads?\(|\bjsonpickle\.decode\(/, 'obj = marshal.loads(data)', 'obj = json.loads(data)'),
   PYF('py-shelve-open', 'shelve stores pickled objects, so opening untrusted data runs code', /\bshelve\.open\(/, 'db = shelve.open(path)', 'db = dbm.open(path)'),
-  PYF('py-shell-true', 'a subprocess call runs through a shell (shell=True), so a value in the command can inject more commands', undefined, 'import subprocess\nsubprocess.run(cmd, shell=True)', 'import subprocess\nsubprocess.run(cmd)', { test: (line, ctx) => /\bshell\s*=\s*True\b/.test(line) && /\bsubprocess\b|\bPopen\b|\bcheck_output\b|\bcheck_call\b/.test(ctx.text) }),
+  PYF('py-shell-true', 'a subprocess call runs through a shell (shell=True), so a value in the command can inject more commands', undefined, 'import subprocess\nsubprocess.run(cmd, shell=True)', 'import subprocess\nsubprocess.run(cmd)', { test: (line, ctx) => /\bshell\s*=\s*True\b/.test(line) && /\bsubprocess\b|\bPopen\b|\bcheck_output\b|\bcheck_call\b/.test(ctx.text), unless: pyLiteralCommand }),
   PYF('py-os-system-alias', 'os.system is reached through an import alias (from os import system, import os as x), so a value in the command can inject commands', undefined, 'from os import system\nsystem(cmd)', 'import os\nos.getcwd()', { test: (line, ctx) => {
     if (!/\bsystem\b/.test(line) || !/\bos\b/.test(ctx.text)) return false
     const names = new Set()
@@ -172,22 +197,24 @@ export const PY = [
   PYF('py-compile-exec-mode', 'compile() builds code from text in exec or single mode', /\bcompile\([^\n]{0,200},\s*['"](?:exec|single)['"]/, 'compile(src, "<s>", "exec")', 'compile(src, "<s>", "eval")'),
   PYF('py-hardcoded-password', 'a password, secret or token is typed straight into the code', /(?<![A-Za-z0-9])(?:password|passwd|pwd|secret|api_key|apikey|token)\s*(?::\s*\w+(?:\[[^\]]{0,20}\])?\s*)?=\s*['"][^'"\s]{4,}['"]/i, 'password = "hunter22"', 'password = os.environ["PW"]'),
   PYF('py-hardcoded-password-default', 'a function has a password, secret or token default written in the code', /\bdef\s+\w+\([^)\n]{0,300}\b(?:password|passwd|secret|token)\s*(?::\s*\w+\s*)?=\s*['"][^'"\n]{1,}['"]/, 'def login(user, password="hunter2"):', 'def login(user, password=None):'),
-  PYF('py-requests-no-timeout', 'an HTTP request has no timeout, so it can hang forever (one-line calls only)', /\brequests\.(?:get|post|put|delete|patch|head|request)\((?![^\n]{0,400}\btimeout\s*=)/, 'r = requests.get(url)', 'r = requests.get(url, timeout=5)'),
+  PYF('py-requests-no-timeout', 'an HTTP request has no timeout, so it can hang forever (one-line calls only; a requests.Session() object counts too, even when it is built in another file)', /\brequests\.(?:get|post|put|delete|patch|head|request)\((?![^\n]{0,400}\btimeout\s*=)/, 'r = requests.get(url)', 'r = requests.get(url, timeout=5)', {
+    test: (line, ctx) => joined(REQUESTS_NO_TIMEOUT, outsideStrings(REQUESTS_NO_TIMEOUT))(line, ctx) || sessionCallNoTimeout(line, ctx),
+  }),
   PYF('py-ssl-unverified', 'TLS certificate or hostname checks are turned off', /\b_create_unverified_context\(|\bCERT_NONE\b|\bcheck_hostname\s*=\s*False\b/, 'ctx = ssl._create_unverified_context()', 'ctx = ssl.create_default_context()'),
   PYF('py-ssl-old-protocol', 'an old SSL or TLS 1.0/1.1 protocol is selected', /\bPROTOCOL_(?:SSLv2|SSLv3|TLSv1|TLSv1_1)\b/, 'ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)', 'ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)'),
   PYF('py-ftp-telnet', 'plain FTP or Telnet is used, which sends passwords unencrypted', /\bftplib\.FTP\(|\btelnetlib\.Telnet\(|^\s*(?:import telnetlib|from telnetlib)\b/, 'c = ftplib.FTP(host)', 'c = ftplib.FTP_TLS(host)'),
   PYF('py-plain-http-fetch', 'a request is sent to a plain http:// address', /\b(?:requests\.\w+|urlopen|httpx\.\w+|aiohttp\.ClientSession)\(\s*f?['"]http:\/\/(?!localhost\b|127\.0\.0\.1)/, 'requests.get("http://example.com/api")', 'requests.get("https://example.com/api", timeout=5)'),
-  PYF('py-xml-untrusted', 'XML is parsed by a parser that does not limit entities (use defusedxml)', /(?<![\w.])(?:xml\.dom\.)?minidom\.parse(?:String)?\(|(?<![\w.])xml\.sax\.parse(?:String)?\(|(?<![\w.])expatbuilder\.parse\w*\(/, 'doc = minidom.parseString(data)', 'doc = defusedxml.minidom.parseString(data)'),
-  PYF('py-tar-extractall-unfiltered', 'an archive is extracted with no member filter (a path can escape the folder)', /\.extractall\((?![^\n]{0,200}\bfilter\s*=)/, 'tar.extractall(dest)', 'tar.extractall(dest, filter="data")'),
+  PYF('py-xml-untrusted', 'XML is parsed by a parser that does not limit entities (use defusedxml)', /(?<![\w.])(?:xml\.dom\.)?minidom\.parse(?:String)?\(|(?<![\w.])xml\.sax\.parse(?:String)?\(|(?<![\w.])expatbuilder\.parse\w*\(/, 'doc = minidom.parseString(data)', 'doc = defusedxml.minidom.parseString(data)', { unless: pyDefusedMinidom }),
+  PYF('py-tar-extractall-unfiltered', 'an archive is extracted with no member filter (a path can escape the folder)', /\.extractall\((?![^\n]{0,200}\bfilter\s*=)/, 'tar.extractall(dest)', 'tar.extractall(dest, filter="data")', { unless: pyZipOnlyExtract }),
   PYF('py-torch-load-unsafe', 'torch.load without weights_only=True can run pickled code', /\btorch\.load\((?![^\n]{0,200}\bweights_only\s*=\s*True)/, 'model = torch.load(path)', 'model = torch.load(path, weights_only=True)'),
   PYF('py-trust-remote-code', 'a model loader runs code shipped with the model (trust_remote_code=True)', /\btrust_remote_code\s*=\s*True\b/, 'AutoModel.from_pretrained(name, trust_remote_code=True)', 'AutoModel.from_pretrained(name)'),
   PYF('py-paramiko-autoadd', 'SSH accepts any unknown host key (AutoAddPolicy)', /\bAutoAddPolicy\(\)/, 'c.set_missing_host_key_policy(paramiko.AutoAddPolicy())', 'c.load_system_host_keys()'),
   PYF('py-snmp-community', 'an SNMP v1 or v2c community string is typed into the code', /\bCommunityData\(\s*['"]/, "CommunityData('public')", 'CommunityData(os.environ["SNMP"])'),
   PYF('py-bind-all-interfaces', 'a server listens on every network interface (0.0.0.0)', /\bhost\s*=\s*['"]0\.0\.0\.0['"]|\.bind\(\s*\(\s*['"]0\.0\.0\.0['"]/, 'app.run(host="0.0.0.0")', 'app.run(host="127.0.0.1")'),
   PYF('py-jinja-autoescape-off', 'Jinja2 autoescaping is turned off, so HTML is not escaped', /\bautoescape\s*=\s*False\b/, 'env = Environment(autoescape=False)', 'env = Environment(autoescape=True)'),
-  PYF('py-django-mark-safe', 'output is marked safe, so its HTML is not escaped', /\bmark_safe\s*\(/, 'return mark_safe(html)', 'return escape(html)'),
+  PYF('py-django-mark-safe', 'output is marked safe, so its HTML is not escaped', /\bmark_safe\s*\(/, 'return mark_safe(html)', 'return escape(html)', { unless: pyMarkSafeLiteral }),
   PYF('py-django-allowed-hosts-star', 'Django accepts any Host header (ALLOWED_HOSTS = ["*"])', /\bALLOWED_HOSTS\s*=\s*\[\s*['"]\*['"]/, 'ALLOWED_HOSTS = ["*"]', 'ALLOWED_HOSTS = ["example.com"]'),
-  PYF('py-django-csrf-exempt', 'a view is exempt from CSRF protection', /^\s*@csrf_exempt\b/, '@csrf_exempt', '@require_POST'),
+  PYF('py-django-csrf-exempt', 'a view is exempt from CSRF protection', /^\s*@csrf_exempt\b/, '@csrf_exempt', '@require_POST', { unless: pyCsrfExemptSigned }),
   PYF('py-raw-sql-formatted', 'SQL is built with % or format or an f-string, not parameters', /\.(?:execute|executemany|raw|extra)\(\s*(?:f['"]|['"][^'"\n]{0,300}['"]\s*(?:%|\.format\(|\+))/, 'cursor.execute("SELECT * FROM t WHERE id=%s" % uid)', 'cursor.execute("SELECT * FROM t WHERE id=%s", [uid])'),
   PYF('py-flask-secret-literal', 'the Flask secret key is typed into the code', /\bsecret_key\s*=\s*['"][^'"\n]{1,}['"]/, 'app.secret_key = "dev"', 'app.secret_key = os.environ["SECRET"]'),
   PYF('py-hardcoded-iv', 'a cipher IV or nonce is a fixed literal', /\b(?:iv|nonce)\s*=\s*b?['"][^'"\n]{4,}['"]/i, 'iv = b"0123456789abcdef"', 'iv = os.urandom(16)'),
@@ -198,14 +225,14 @@ export const PY = [
 
 // ---------------------------------------------------------------- JavaScript and TypeScript (cp-js)
 export const JS = [
-  JSF('js-exec-variable', 'child_process exec runs a command string that is not a fixed literal', /(?<![\w$.])(?:(?:child_process|childProcess|cp)\.)?exec(?:Sync)?\(\s*(?!['"][^'"\n]{0,300}['"]\s*[,)])(?!\w+\??\s*:\s*[A-Za-z{\[])/, 'exec(cmd, done)', 'exec("ls -l", done)'),
+  JSF('js-exec-variable', 'child_process exec runs a command string that is not a fixed literal', /(?<![\w$.])(?:(?:child_process|childProcess|cp)\.)?exec(?:Sync)?\(\s*(?!['"][^'"\n]{0,300}['"]\s*[,)])(?!\w+\??\s*:\s*[A-Za-z{\[])/, 'exec(cmd, done)', 'exec("ls -l", done)', { unless: jsConstExec }),
   JSF('js-exec-alias', 'a child_process exec under another name (renamed import, namespace import or promisify) runs a command string that is not a fixed literal', undefined, "import { exec as run } from 'child_process'\nrun(cmd)", "import { exec as run } from 'child_process'\nrun('ls -l')", { test: (line, ctx) => {
     if (!/exec/.test(ctx.text)) return false
     const re = execAliasRe(ctx.text)
     return Boolean(re) && joined(re, (l) => re.test(l))(line, ctx)
   } }),
-  JSF('js-spawn-shell', 'spawn or execFile is given shell: true, so arguments are parsed by a shell', /\bspawn(?:Sync)?\([^\n]{0,300}\bshell\s*:\s*true\b/, 'spawn("ls", [], { shell: true })', 'spawn("ls", [])'),
-  JSF('js-require-variable', 'require is called with a name that is not a fixed string', /(?<![\w$.])require\(\s*(?:(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|path\.|__dirname|process\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,200}\)|`[^`\n]{0,150}\$\{[^`\n]{1,150}\}[^`\n]{0,150}`\s*\)|(['"])[^'"\n]{0,150}\1\s*\+\s*(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|process\.|__dirname|path\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,100}\))/, 'const m = require(name)', 'const m = require("fs")', { unless: requireHelperOnlyFixed }),
+  JSF('js-spawn-shell', 'spawn or execFile is given shell: true, so arguments are parsed by a shell', /\bspawn(?:Sync)?\([^\n]{0,300}\bshell\s*:\s*true\b/, 'spawn("ls", [], { shell: true })', 'spawn("ls", [])', { unless: jsSpawnFixedArgs }),
+  JSF('js-require-variable', 'require is called with a name that is not a fixed string', /(?<![\w$.])require\(\s*(?:(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|path\.|__dirname|process\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,200}\)|`[^`\n]{0,150}\$\{[^`\n]{1,150}\}[^`\n]{0,150}`\s*\)|(['"])[^'"\n]{0,150}\1\s*\+\s*(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|process\.|__dirname|path\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,100}\))/, 'const m = require(name)', 'const m = require("fs")', { unless: (l, c) => requireHelperOnlyFixed(l, c) || jsRequireAllowListed(l, c) }),
   JSF('js-require-url', 'a module is loaded from a web address', /(?<![\w$.])require\(\s*['"]https?:\/\//, 'require("https://x.example/a.js")', 'require("./a.js")'),
   JSF('js-fs-request-path', 'a file system call takes its path straight from the request', /\bfs\.(?:readFile|readFileSync|writeFile|writeFileSync|createReadStream|createWriteStream|unlink|unlinkSync|readdir|readdirSync|stat|statSync|access|appendFile|rm|rmSync)\(\s*(?:req|request|ctx|params|query|body)\b/, 'fs.readFile(req.query.file, cb)', 'fs.readFile(safePath(req.query.file), cb)'),
   JSF('js-new-buffer', 'new Buffer() is unsafe (it can expose old memory); use Buffer.from or Buffer.alloc', /\bnew\s+Buffer\s*\(/, 'const b = new Buffer(10)', 'const b = Buffer.alloc(10)'),
@@ -237,18 +264,18 @@ export const GO = [
   GOF('go-hardcoded-secret', 'a password, secret or token is typed straight into the code', /(?<![A-Za-z0-9])(?:password|passwd|secret|apiKey|token|privateKey)(?!\w*(?:Type|Name|Kind|Path|File|Url|Header|Field|Label)\s*(?::=|=))\w*\s*(?::=|=)\s*"[^"\n]{4,}"/i, 'password := "hunter22"', 'password := os.Getenv("PW")'),
   GOF('go-listen-all-interfaces', 'a server listens on every network interface (empty host or 0.0.0.0)', /\bListen(?:AndServe(?:TLS)?)?\([^\n]{0,80}"(?:0\.0\.0\.0)?:\d{2,5}"/, 'http.ListenAndServe(":8080", nil)', 'ln, err := net.Listen("tcp", "127.0.0.1:8080")'),
   GOF('go-ssh-ignore-hostkey', 'SSH accepts any host key (InsecureIgnoreHostKey)', /\bInsecureIgnoreHostKey\(\)/, 'cfg := &ssh.ClientConfig{HostKeyCallback: ssh.InsecureIgnoreHostKey()}', 'cfg := &ssh.ClientConfig{HostKeyCallback: knownHosts}'),
-  GOF('go-http-get-variable', 'an HTTP call takes a URL from a variable (possible SSRF)', /\bhttp\.(?:Get|Post|Head)\(\s*(?!"[^"\n]*"\s*[,)])/, 'resp, err := http.Get(url)', 'resp, err := http.Get("https://example.com")'),
-  GOF('go-pprof-imported', 'the pprof profiling endpoints are imported (they expose internals)', /^\s*(?:_\s+)?"net\/http\/pprof"/, '_ "net/http/pprof"', '"net/http"'),
+  GOF('go-http-get-variable', 'an HTTP call takes a URL from a variable (possible SSRF)', /\bhttp\.(?:Get|Post|Head)\(\s*(?!"[^"\n]*"\s*[,)])/, 'resp, err := http.Get(url)', 'resp, err := http.Get("https://example.com")', { unless: goGetFromConfig }),
+  GOF('go-pprof-imported', 'the pprof profiling endpoints are imported (they expose internals)', /^\s*(?:_\s+)?"net\/http\/pprof"/, '_ "net/http/pprof"', '"net/http"', { unless: goPprofLoopbackOnly }),
   GOF('go-io-copy-decompressor', 'io.Copy reads a decompressor with no size limit (decompression bomb)', /\bio\.Copy\([^\n]{0,80},\s*\w*(?:gz|gzip|zlib|zr)\w*\)/i, 'io.Copy(dst, gz)', 'io.CopyN(dst, gz, maxBytes)'),
   GOF('go-server-no-header-timeout', 'an http.Server has no ReadHeaderTimeout (slowloris)', /\bhttp\.Server\{(?![^}\n]{0,400}\bReadHeaderTimeout\b)/, 'srv := &http.Server{Addr: ":8080"}', 'srv := &http.Server{Addr: ":8080", ReadHeaderTimeout: 5 * time.Second}'),
-  GOF('go-default-listen-no-timeouts', 'http.ListenAndServe uses the default server, which has no timeouts', /\bhttp\.ListenAndServe(?:TLS)?\(/, 'http.ListenAndServe(":8080", nil)', 'srv.ListenAndServe()'),
-  GOF('go-sql-built-string', 'SQL is built with Sprintf or string concatenation, not parameters', /\.(?:Query|QueryRow|Exec|QueryContext|QueryRowContext|ExecContext)\(\s*(?:fmt\.Sprintf\(|"[^"\n]{0,300}"\s*\+)/, 'db.Query(fmt.Sprintf("SELECT * FROM t WHERE id=%s", id))', 'db.Query("SELECT * FROM t WHERE id=$1", id)'),
-  GOF('go-exec-variable', 'exec.Command gets a program name from a variable', /\bexec\.Command\(\s*(?!"[^"\n]*"\s*[,)])/, 'exec.Command(name)', 'exec.Command("ls", "-l")'),
-  GOF('go-shell-dash-c', 'a shell is started with -c, so the text is parsed by the shell', /"(?:sh|bash|cmd)",\s*"(?:-c|\/c)"/, 'exec.Command("sh", "-c", cmd)', 'exec.Command("ls", "-l")'),
+  GOF('go-default-listen-no-timeouts', 'http.ListenAndServe uses the default server, which has no timeouts', /\bhttp\.ListenAndServe(?:TLS)?\(/, 'http.ListenAndServe(":8080", nil)', 'srv.ListenAndServe()', { unless: goLoopbackListen }),
+  GOF('go-sql-built-string', 'SQL is built with Sprintf or string concatenation, not parameters', /\.(?:Query|QueryRow|Exec|QueryContext|QueryRowContext|ExecContext)\(\s*(?:fmt\.Sprintf\(|"[^"\n]{0,300}"\s*\+)/, 'db.Query(fmt.Sprintf("SELECT * FROM t WHERE id=%s", id))', 'db.Query("SELECT * FROM t WHERE id=$1", id)', { unless: goSprintfConstArgs }),
+  GOF('go-exec-variable', 'exec.Command gets a program name from a variable', /\bexec\.Command\(\s*(?!"[^"\n]*"\s*[,)])/, 'exec.Command(name)', 'exec.Command("ls", "-l")', { unless: goConstFirstArg }),
+  GOF('go-shell-dash-c', 'a shell is started with -c, so the text is parsed by the shell', /"(?:sh|bash|cmd)",\s*"(?:-c|\/c)"/, 'exec.Command("sh", "-c", cmd)', 'exec.Command("ls", "-l")', { unless: goShellLiteralScript }),
   GOF('go-world-writable-mode', 'a file or folder is made writable by everyone (mode ends in 2, 3, 6 or 7)', /\bos\.(?:Chmod|WriteFile|OpenFile|Mkdir|MkdirAll)\([^\n]{0,160}\b0o?[0-7][0-7][2367]\b/, 'os.WriteFile(p, d, 0666)', 'os.WriteFile(p, d, 0600)'),
   GOF('go-tmp-literal', 'a file is created at a fixed /tmp path (predictable name)', /\bos\.(?:Create|OpenFile|WriteFile|Mkdir)\(\s*"\/tmp\//, 'os.Create("/tmp/out.txt")', 'os.CreateTemp("", "out")'),
-  GOF('go-file-from-request', 'a file is opened at a path taken from the request', /\bos\.(?:Open|OpenFile|ReadFile|Create)\([^\n]{0,80}(?:FormValue|PathValue|URL\.Query\(\)|\.Param\(|FormFile)/, 'os.Open(r.FormValue("f"))', 'os.Open(safePath)'),
-  GOF('go-zip-slip-join', 'an archive entry name is joined to a path with no check for ../ (zip slip)', /\bfilepath\.Join\([^\n]{0,80},\s*\w+\.Name\)/, 'path := filepath.Join(dest, f.Name)', 'path := filepath.Join(dest, safeName(f.Name))'),
+  GOF('go-file-from-request', 'a file is opened at a path taken from the request', /\bos\.(?:Open|OpenFile|ReadFile|Create)\([^\n]{0,80}(?:FormValue|PathValue|URL\.Query\(\)|\.Param\(|FormFile)/, 'os.Open(r.FormValue("f"))', 'os.Open(safePath)', { unless: goBaseWrapped }),
+  GOF('go-zip-slip-join', 'an archive entry name is joined to a path with no check for ../ (zip slip)', /\bfilepath\.Join\([^\n]{0,80},\s*\w+\.Name\)/, 'path := filepath.Join(dest, f.Name)', 'path := filepath.Join(dest, safeName(f.Name))', { unless: goZipChecked }),
   GOF('go-md4-md5-sha1', 'MD4, MD5 or SHA-1 is used (broken for security)', /\b(?:md4|md5|sha1)\.(?:New|Sum)\(/, 'h := md5.New()', 'h := sha256.New()'),
   GOF('go-tls-old-minimum', 'TLS allows version 1.0 or 1.1, or SSL 3', /\bMinVersion\s*:\s*tls\.VersionTLS1[01]\b|\bMinVersion\s*:\s*tls\.VersionSSL30\b/, 'MinVersion: tls.VersionTLS10', 'MinVersion: tls.VersionTLS12'),
   GOF('go-rsa-small-key', 'an RSA key shorter than 2048 bits is generated', /\brsa\.GenerateKey\([^\n]{0,80},\s*(?:512|1024)\s*\)/, 'rsa.GenerateKey(rand.Reader, 1024)', 'rsa.GenerateKey(rand.Reader, 3072)'),
@@ -256,9 +283,9 @@ export const GO = [
   GOF('go-tripledes-cipher', 'the 3DES cipher is used (weak and slow)', /\bdes\.NewTripleDESCipher\(/, 'c, _ := des.NewTripleDESCipher(key)', 'c, _ := aes.NewCipher(key)'),
   GOF('go-hardcoded-iv', 'a cipher IV is a fixed literal', /\b(?:iv|nonce|IV|Nonce|initVector)\s*:?=\s*\[\]byte\(\s*"[^"\n]{4,}"/, 'iv := []byte("0123456789abcdef")', 'iv := make([]byte, aes.BlockSize)'),
   GOF('go-weak-crypto-import', 'a weak crypto package is imported (md5, sha1, des, rc4, dsa, ripemd160) or CGI', /^\s*(?:import\s+)?(?:_\s+|\w+\s+)?"(?:crypto\/md5|crypto\/sha1|crypto\/des|crypto\/rc4|crypto\/dsa|net\/http\/cgi|golang\.org\/x\/crypto\/ripemd160)"/, 'import "crypto/md5"', 'import "crypto/sha256"'),
-  GOF('go-cookie-not-secure', 'an http.Cookie literal does not set Secure: true', /\bhttp\.Cookie\{(?![^}\n]{0,300}\bSecure\s*:\s*true\b)/, 'c := http.Cookie{Name: "s", Value: v}', 'c := http.Cookie{Name: "s", Value: v, Secure: true, HttpOnly: true}'),
+  GOF('go-cookie-not-secure', 'an http.Cookie literal does not set Secure: true', /\bhttp\.Cookie\{(?![^}\n]{0,300}\bSecure\s*:\s*true\b)/, 'c := http.Cookie{Name: "s", Value: v}', 'c := http.Cookie{Name: "s", Value: v, Secure: true, HttpOnly: true}', { unless: goCookieSecureMultiline }),
   GOF('go-cors-any-origin', 'CORS allows any origin ("*")', /Access-Control-Allow-Origin["`]?\s*,\s*["`]\*["`]|\bAllowAllOrigins\s*:\s*true\b|\bAllowedOrigins\s*:\s*\[\]string\{\s*"\*"/, 'w.Header().Set("Access-Control-Allow-Origin", "*")', 'w.Header().Set("Access-Control-Allow-Origin", origin)'),
-  GOF('go-template-html-unescaped', 'template.HTML marks a string as safe, so it is not escaped', /\btemplate\.HTML\(/, 'tpl := template.HTML(userInput)', 'tpl := template.HTMLEscapeString(userInput)'),
+  GOF('go-template-html-unescaped', 'template.HTML marks a string as safe, so it is not escaped', /\btemplate\.HTML\(/, 'tpl := template.HTML(userInput)', 'tpl := template.HTMLEscapeString(userInput)', { unless: goHtmlLiteral }),
 ]
 
 // ---------------------------------------------------------------- Rust (cp-rust)
@@ -293,13 +320,13 @@ export const RS = [
 
 // ---------------------------------------------------------------- Java (cp-java)
 export const JAVA = [
-  JVF('java-runtime-exec-variable', 'Runtime.exec runs a command from a variable', /\bRuntime\.getRuntime\(\)\.exec\(\s*(?!"[^"\n]*"\s*\))/, 'Runtime.getRuntime().exec(cmd);', 'Runtime.getRuntime().exec("ls");'),
-  JVF('java-processbuilder-variable', 'ProcessBuilder gets a program name from a variable', /\bnew\s+ProcessBuilder\(\s*(?!"[^"\n]*"\s*[,)])/, 'new ProcessBuilder(cmd)', 'new ProcessBuilder("ls", "-l")'),
+  JVF('java-runtime-exec-variable', 'Runtime.exec runs a command from a variable', /\bRuntime\.getRuntime\(\)\.exec\(\s*(?!"[^"\n]*"\s*\))/, 'Runtime.getRuntime().exec(cmd);', 'Runtime.getRuntime().exec("ls");', { unless: javaConstExec }),
+  JVF('java-processbuilder-variable', 'ProcessBuilder gets a program name from a variable', /\bnew\s+ProcessBuilder\(\s*(?!"[^"\n]*"\s*[,)])/, 'new ProcessBuilder(cmd)', 'new ProcessBuilder("ls", "-l")', { unless: javaConstProcess }),
   JVF('java-object-stream-read', 'Java object deserialization (readObject) or XMLDecoder runs on data that may be untrusted', /\bObjectInputStream\b[^\n]{0,80}\.readObject\(\)|\bnew\s+XMLDecoder\(/, 'new ObjectInputStream(in).readObject()', 'new ObjectOutputStream(out).writeObject(o)'),
   JVF('java-xxe-parser-factory', 'an XML parser factory is created without secure processing or DTD limits', undefined, 'DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();', 'DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();\nf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);', { test: (line, ctx) => /\b(?:DocumentBuilderFactory|SAXParserFactory|XMLInputFactory|TransformerFactory)\.newInstance\(\)/.test(line) && !/FEATURE_SECURE_PROCESSING|setFeature\(|setProperty\(/.test(ctx.text) }),
-  JVF('java-weak-digest', 'MD2, MD5 or SHA-1 is used through MessageDigest (broken for security)', undefined, 'MessageDigest.getInstance("MD5")', 'MessageDigest.getInstance("SHA-256")', { test: (line, ctx) => /\bMessageDigest\s*\.\s*getInstance\(\s*"(?:MD2|MD5|SHA-?1)"/.test(line) || (/^\s*\.getInstance\(\s*"(?:MD2|MD5|SHA-?1)"/.test(line) && /MessageDigest\s*$/.test(ctx.lines[ctx.index - 1] ?? '')) }),
+  JVF('java-weak-digest', 'MD2, MD5 or SHA-1 is used through MessageDigest (broken for security)', undefined, 'MessageDigest.getInstance("MD5")', 'MessageDigest.getInstance("SHA-256")', { test: (line, ctx) => /\bMessageDigest\s*\.\s*getInstance\(\s*"(?:MD2|MD5|SHA-?1)"/.test(line) || (/^\s*\.getInstance\(\s*"(?:MD2|MD5|SHA-?1)"/.test(line) && /MessageDigest\s*$/.test(ctx.lines[ctx.index - 1] ?? ''))  }),
   JVF('java-cipher-default-ecb', 'AES is requested with no mode, so Java uses ECB', /\bCipher\.getInstance\(\s*"AES"\s*\)/, 'Cipher.getInstance("AES")', 'Cipher.getInstance("AES/GCM/PKCS5Padding")'),
-  JVF('java-cipher-no-padding', 'a cipher is set to NoPadding (padding attacks or wrong lengths)', /\bCipher\.getInstance\(\s*"[^"\n]{0,60}\/NoPadding"/, 'Cipher.getInstance("AES/CBC/NoPadding")', 'Cipher.getInstance("AES/CBC/PKCS5Padding")'),
+  JVF('java-cipher-no-padding', 'a cipher is set to NoPadding (padding attacks or wrong lengths)', /\bCipher\.getInstance\(\s*"[^"\n]{0,60}\/NoPadding"/, 'Cipher.getInstance("AES/CBC/NoPadding")', 'Cipher.getInstance("AES/CBC/PKCS5Padding")', { unless: javaStreamModeNoPadding }),
   JVF('java-trust-all-certificates', 'a TrustManager accepts every certificate (empty checkServerTrusted)', undefined, 'public void checkServerTrusted(X509Certificate[] c, String a) throws CertificateException {}', 'public void checkServerTrusted(X509Certificate[] c, String a) throws CertificateException { verify(c, a); }', { test: (line) => /\bcheckServerTrusted\s*\([^)\n]{0,200}\)[^{\n]{0,120}\{\s*\}/.test(line) }),
   JVF('java-hostname-verifier-true', 'a HostnameVerifier always returns true', /\(\s*\w+\s*,\s*\w+\s*\)\s*->\s*true\b|\bverify\s*\([^)\n]{0,120}\)\s*\{\s*return\s+true\s*;/, 'HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);', 'HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> hostname.equals("x.example"));'),
   JVF('java-random-secret', 'a token, nonce or key is made with java.util.Random or Math.random (use SecureRandom)', /\b(?:token|secret|password|nonce|salt|sessionId|apiKey)\w*\s*=\s*[^;\n]{0,80}(?:\bnew\s+Random\(|\bMath\.random\()/i, 'String token = new Random().nextLong() + "";', 'SecureRandom token = new SecureRandom();'),
@@ -307,11 +334,11 @@ export const JAVA = [
     test: (line, ctx) => /\bnew\s+(?:java\.util\.)?Random\s*\(|\bMath\.random\s*\(|\bThreadLocalRandom\.current\(\)/.test(line) && /token|secret|passw|nonce|session|api[_-]?key|\botp\b|csrf|reset|\bsalt\b|\bkey\b|\bpin\b|verif|invite|\bauth|\bcode\b|uuid|captcha|\bsid\b/i.test(ctx.lines.slice(Math.max(0, ctx.index - 3), ctx.index + 3).join('\n')),
   }),
   JVF('java-hardcoded-secret', 'a password, secret or key is typed straight into the code', /(?<![A-Za-z0-9])(?:password|passwd|secret|apiKey|api_key|privateKey)\w*\s*=\s*"[^"\n]{4,}"/i, 'String password = "hunter22";', 'String password = System.getenv("PW");'),
-  JVF('java-statement-concat', 'SQL is built by concatenating a value into the string', /\.(?:executeQuery|executeUpdate|execute)\(\s*"[^"\n]{0,200}"\s*\+\s*\w/, 'stmt.executeQuery("SELECT * FROM u WHERE id=" + id);', 'ps.executeQuery();'),
-  JVF('java-file-from-request', 'a file is opened at a path taken from the request', /\bnew\s+File(?:InputStream|OutputStream)?\(\s*(?:request|req)\.getParameter\(|\bPaths\.get\(\s*(?:request|req)\.getParameter\(/, 'new File(request.getParameter("f"))', 'new File(baseDir, "f.txt")'),
-  JVF('java-spel-variable', 'a Spring expression is parsed from a variable (expression injection)', /\.parseExpression\(\s*(?!"[^"\n]*"\s*\))/, 'parser.parseExpression(input).getValue()', 'parser.parseExpression("1 + 1")'),
+  JVF('java-statement-concat', 'SQL is built by concatenating a value into the string', /\.(?:executeQuery|executeUpdate|execute)\(\s*"[^"\n]{0,200}"\s*\+\s*\w/, 'stmt.executeQuery("SELECT * FROM u WHERE id=" + id);', 'ps.executeQuery();', { unless: javaSqlConstTail }),
+  JVF('java-file-from-request', 'a file is opened at a path taken from the request', /\bnew\s+File(?:InputStream|OutputStream)?\(\s*(?:request|req)\.getParameter\(|\bPaths\.get\(\s*(?:request|req)\.getParameter\(/, 'new File(request.getParameter("f"))', 'new File(baseDir, "f.txt")', { unless: javaFileNameOnly }),
+  JVF('java-spel-variable', 'a Spring expression is parsed from a variable (expression injection)', /\.parseExpression\(\s*(?!"[^"\n]*"\s*\))/, 'parser.parseExpression(input).getValue()', 'parser.parseExpression("1 + 1")', { unless: javaConstSpel }),
   JVF('java-ognl-el-sink', 'an OGNL or EL expression engine is called (expression injection sink)', /\bOgnlUtil\.|\bValueStack\b[^\n]{0,40}\.findValue\(|\bELProcessor\b[^\n]{0,60}\.eval\(/, 'OgnlUtil.getValue(expr, ctx)', 'Util.getValue(x)'),
-  JVF('java-jndi-lookup-variable', 'a JNDI lookup uses a name from a variable', /\b(?:new\s+InitialContext\(\)|ctx|context|jndi)\.lookup\(\s*(?!"[^"\n]*"\s*\))/, 'ctx.lookup(name)', 'ctx.lookup("java:comp/env/jdbc/ds")'),
+  JVF('java-jndi-lookup-variable', 'a JNDI lookup uses a name from a variable', /\b(?:new\s+InitialContext\(\)|ctx|context|jndi)\.lookup\(\s*(?!"[^"\n]*"\s*\))/, 'ctx.lookup(name)', 'ctx.lookup("java:comp/env/jdbc/ds")', { unless: javaConstLookup }),
   JVF('java-log4shell-lookup-string', 'a JNDI lookup string (${jndi:) is written in the code (the Log4Shell pattern)', /\$\{jndi:/i, 'log.info("${jndi:ldap://x.example/a}")', 'log.info("plain text")'),
   JVF('java-static-iv', 'a cipher IV is a fixed literal', /\bnew\s+(?:IvParameterSpec|GCMParameterSpec)\([^\n]{0,40}"[^"\n]*"/, 'new IvParameterSpec("0123456789abcdef".getBytes())', 'new IvParameterSpec(iv)'),
   JVF('java-secret-key-literal', 'a secret key is built from a literal in the code', /\bnew\s+SecretKeySpec\(\s*"/, 'new SecretKeySpec("0123456789abcdef".getBytes(), "AES")', 'new SecretKeySpec(key, "AES")'),
@@ -320,7 +347,7 @@ export const JAVA = [
   JVF('java-regex-from-request', 'a regular expression is compiled from a request value', /\bPattern\.compile\(\s*(?:request|req)\.getParameter\(/, 'Pattern.compile(request.getParameter("q"))', 'Pattern.compile("[a-z]+")'),
   JVF('java-ssl-old-protocol', 'an old SSL or TLS 1.0/1.1 context is requested', /\bSSLContext\.getInstance\(\s*"(?:SSL|SSLv2|SSLv3|TLSv1|TLSv1\.1)"/, 'SSLContext.getInstance("TLSv1")', 'SSLContext.getInstance("TLSv1.3")'),
   JVF('java-xpath-concat', 'an XPath expression is built by concatenating a value (XPath injection)', /\bxpath\w*\.(?:compile|evaluate)\(\s*"[^"\n]{0,200}"\s*\+/, 'xpath.compile("//u[@n=\'" + name + "\']")', 'xpath.compile("//u")'),
-  JVF('java-ldap-filter-concat', 'an LDAP filter is built by concatenating a value (LDAP injection)', /"\(\s*\w+\s*=\s*\*?"\s*\+/, 'String f = "(uid=" + name + ")";', 'String f = "(uid=*)";'),
+  JVF('java-ldap-filter-concat', 'an LDAP filter is built by concatenating a value (LDAP injection)', /"\(\s*\w+\s*=\s*\*?"\s*\+/, 'String f = "(uid=" + name + ")";', 'String f = "(uid=*)";', { unless: javaLdapEscaped }),
 ]
 
 // ---------------------------------------------------------------- C#, PHP and Ruby (cp-dotnet-php-ruby)
@@ -328,23 +355,23 @@ export const DNP = [
   CSF('cs-binary-formatter', 'a .NET formatter that can run code during deserialization is used (BinaryFormatter, LosFormatter, NetDataContractSerializer)', /\b(?:BinaryFormatter|LosFormatter|NetDataContractSerializer|SoapFormatter)\b/, 'new BinaryFormatter().Deserialize(s)', 'JsonSerializer.Deserialize<T>(s)'),
   CSF('cs-typename-handling', 'Json.NET TypeNameHandling is set to read type names from the data', /\bTypeNameHandling\s*=\s*TypeNameHandling\.(?:All|Auto|Objects|Arrays)\b/, 'settings.TypeNameHandling = TypeNameHandling.All;', 'settings.TypeNameHandling = TypeNameHandling.None;'),
   CSF('cs-accept-any-certificate', 'the TLS certificate callback always returns true', /\bServerCertificateCustomValidationCallback\s*=\s*[^\n]{0,80}=>\s*true\b|\(\s*\w+\s*,\s*\w+\s*,\s*\w+\s*,\s*\w+\s*\)\s*=>\s*true\b/, 'h.ServerCertificateCustomValidationCallback = (m, c, ch, e) => true;', 'h.ServerCertificateCustomValidationCallback = (m, c, ch, e) => e == SslPolicyErrors.None;'),
-  CSF('cs-process-variable', 'Process.Start runs a program named by a variable', /\bProcess\.Start\(\s*(?!"[^"\n]*"\s*\))[A-Za-z_$@]|\bProcess\.Start\(\s*@?"[^"\n]{1,100}"\s*,\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|string\.Format\(|[A-Za-z_])|\bArguments\s*=\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|string\.Format\(|[A-Za-z_]\w*\s*[;,)])|\bFileName\s*=\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|[A-Za-z_]\w*\s*[;,)])/, 'Process.Start(cmd)', 'Process.Start("notepad.exe")'),
+  CSF('cs-process-variable', 'Process.Start runs a program named by a variable', /\bProcess\.Start\(\s*(?!"[^"\n]*"\s*\))[A-Za-z_$@]|\bProcess\.Start\(\s*@?"[^"\n]{1,100}"\s*,\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|string\.Format\(|[A-Za-z_])|\bArguments\s*=\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|string\.Format\(|[A-Za-z_]\w*\s*[;,)])|\bFileName\s*=\s*(?:\$@?"[^"\n]*\{|@?"[^"\n]*"\s*\+|[A-Za-z_]\w*\s*[;,)])/, 'Process.Start(cmd)', 'Process.Start("notepad.exe")', { unless: csProcessLiteralInfo }),
   CSF('cs-weak-hash', 'MD5 or SHA-1 is used (broken for security)', /\b(?:MD5|SHA1)\.Create\(|\bMD5CryptoServiceProvider\b|\bSHA1Managed\b/, 'var h = MD5.Create();', 'var h = SHA256.Create();'),
   CSF('cs-weak-cipher', 'DES, RC2 or 3DES is used (weak)', /\b(?:DESCryptoServiceProvider|TripleDESCryptoServiceProvider|RC2CryptoServiceProvider|DES\.Create\(|RC2\.Create\(|TripleDES\.Create\()/, 'var c = DES.Create();', 'var c = Aes.Create();'),
   CSF('cs-ecb-mode', 'ECB cipher mode is selected (identical blocks encrypt identically)', /\bCipherMode\.ECB\b/, 'c.Mode = CipherMode.ECB;', 'c.Mode = CipherMode.CBC;'),
   CSF('cs-random-secret', 'a token, key or nonce is made with System.Random (not cryptographic)', /(?:\b(?:token|key|secret|password|nonce|salt)|\w(?:token|secret|password|nonce))\w*\s*=\s*[^;\n]{0,80}\bnew\s+(?:System\.)?Random\(/i, 'var token = new Random().Next().ToString();', 'var token = RandomNumberGenerator.GetBytes(32);'),
-  CSF('cs-sql-concat', 'SQL is built by concatenating a value into the string', /"(?:SELECT|INSERT|UPDATE|DELETE)\b[^"\n]{0,200}"\s*\+/, 'var q = "SELECT * FROM u WHERE id=" + id;', 'var q = "SELECT * FROM u WHERE id=@id";'),
+  CSF('cs-sql-concat', 'SQL is built by concatenating a value into the string', /"(?:SELECT|INSERT|UPDATE|DELETE)\b[^"\n]{0,200}"\s*\+/, 'var q = "SELECT * FROM u WHERE id=" + id;', 'var q = "SELECT * FROM u WHERE id=@id";', { unless: csSqlConstTail }),
   CSF('cs-xmltextreader', 'XmlTextReader is used, which does not lock down entity resolution', /\bnew\s+XmlTextReader\(/, 'var r = new XmlTextReader(s);', 'var r = XmlReader.Create(s, settings);'),
   CSF('cs-cookie-insecure', 'a cookie is set without HttpOnly or Secure', /\b(?:HttpOnly|Secure)\s*=\s*false\b/, 'new CookieOptions { HttpOnly = false }', 'new CookieOptions { HttpOnly = true }'),
   CSF('cs-hardcoded-secret', 'a password, secret or key is typed straight into the code', /(?<![A-Za-z0-9])(?:password|secret|apiKey)\w*\s*=\s*@?"[^"\n]{4,}"/i, 'var password = "hunter22";', 'var password = config["pw"];'),
   CSF('cs-raw-html', 'Html.Raw outputs a value without escaping', /@Html\.Raw\(/, '@Html.Raw(model.Comment)', '@model.Comment'),
   CSF('cs-jwt-check-off', 'a JWT check (issuer, lifetime, audience or signing key) is turned off', /\b(?:ValidateIssuerSigningKey|ValidateLifetime|ValidateAudience|ValidateIssuer|RequireSignedTokens)\s*=\s*false\b/, 'ValidateIssuerSigningKey = false', 'ValidateIssuerSigningKey = true'),
   CSF('cs-antiforgery-ignored', 'a controller action ignores the anti-forgery token', /\[IgnoreAntiforgeryToken\]/, '[IgnoreAntiforgeryToken]', '[ValidateAntiForgeryToken]'),
-  PHPF('php-eval-assert', 'eval or assert runs text as PHP code', /(?<![\w$>:.])(?:eval|assert)\s*\(/, 'eval($code);', '$n = intval($raw);'),
+  PHPF('php-eval-assert', 'eval or assert runs text as PHP code', /(?<![\w$>:.])(?:eval|assert)\s*\(/, 'eval($code);', '$n = intval($raw);', { unless: phpAssertComparison }),
   PHPF('php-preg-replace-e-modifier', 'preg_replace uses the removed /e modifier (runs the replacement as code)', /\bpreg_replace\s*\(\s*['"][^'"\n]{0,200}\/[a-z]*e[a-z]*['"]/, 'preg_replace("/(x)/e", $r, $s)', 'preg_replace("/(x)/i", $r, $s)'),
-  PHPF('php-unserialize-variable', 'unserialize is given data that is not a fixed string', /\bunserialize\s*\(\s*(?!['"][^'"\n]*['"]\s*\))/, 'unserialize($_COOKIE["d"])', 'json_decode($s, true)'),
+  PHPF('php-unserialize-variable', 'unserialize is given data that is not a fixed string', /\bunserialize\s*\(\s*(?!['"][^'"\n]*['"]\s*\))/, 'unserialize($_COOKIE["d"])', 'json_decode($s, true)', { unless: phpUnserializeNoClasses }),
   PHPF('php-extract-request', 'extract() turns request values into variables', /\bextract\s*\(\s*\$_(?:GET|POST|REQUEST|COOKIE)\b/, 'extract($_GET);', '$id = (int) $_GET["id"];'),
-  PHPF('php-include-variable', 'include or require loads a file named by a variable', /(?<![\w$])(?:include|require)(?:_once)?\s*\(?\s*\$/, 'include $page;', 'include "header.php";'),
+  PHPF('php-include-variable', 'include or require loads a file named by a variable', /(?<![\w$])(?:include|require)(?:_once)?\s*\(?\s*\$/, 'include $page;', 'include "header.php";', { unless: phpIncludeFixedVar }),
   PHPF('php-shell-variable', 'a shell function runs a command from a variable', /(?<![\w>$.:])(?:system|exec|shell_exec|passthru|popen|proc_open)\s*\(\s*(?:\$|"[^"\n]*\$\w|'[^'\n]*'\s*\.)|\x60[^\x60\n]*\$\w[^\x60\n]*\x60/, 'system($cmd);', 'system("ls");'),
   PHPF('php-random-token', 'a token, key or nonce is made with rand, mt_rand or uniqid (not cryptographic)', /\$(?:token|key|secret|password|nonce|salt)\w*\s*=\s*[^;\n]{0,60}\b(?:rand|mt_rand|uniqid)\s*\(/i, '$token = mt_rand();', '$token = bin2hex(random_bytes(16));'),
   PHPF('php-mysql-legacy', 'the removed mysql_* functions are used (no prepared statements)', /\bmysql_(?:query|connect|select_db|real_escape_string|fetch_array|fetch_assoc)\s*\(/, 'mysql_query($sql)', '$pdo->query($sql)'),
@@ -355,16 +382,16 @@ export const DNP = [
   PHPF('php-curl-verify-off', 'cURL does not verify the server certificate or host name', /CURLOPT_SSL_VERIFY(?:PEER|HOST)\s*,\s*(?:false|0)\b/, 'curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);', 'curl_setopt($c, CURLOPT_SSL_VERIFYPEER, true);'),
   RBF('rb-eval-params', 'eval or instance_eval runs text from params or the request', /(?<![\w.:])(?:eval|instance_eval|class_eval|module_eval)\s*\(?\s*(?:params|request|cookies)\b/, 'eval(params[:code])', 'eval("1 + 1")'),
   RBF('rb-send-params', 'send, constantize or find a method or class named by params', /(?:^|[\s.(=,])(?:send|public_send|__send__|try|instance_variable_get|instance_variable_set|const_get|method|define_method)\(?\s*(?:params|request\.|cookies)\b|\b(?:params|request\.\w+|cookies)\b[^\n]{0,60}\.(?:constantize|safe_constantize|to_sym\.to_proc)\b|\.(?:constantize|safe_constantize)\(?\s*params\b/, 'User.send(params[:m])', 'User.where(id: params[:id])'),
-  RBF('rb-marshal-load', 'Marshal.load can build arbitrary objects from data', /\bMarshal\.load\(/, 'obj = Marshal.load(data)', 'obj = JSON.parse(data)'),
+  RBF('rb-marshal-load', 'Marshal.load can build arbitrary objects from data', /\bMarshal\.load\(/, 'obj = Marshal.load(data)', 'obj = JSON.parse(data)', { unless: rbMarshalOwnFile }),
   RBF('rb-weak-digest', 'MD5 or SHA-1 is used through Digest or OpenSSL (broken for security)', /\bDigest::(?:MD5|SHA1)\b|\bOpenSSL::Digest(?:::(?:MD5|SHA1)\b|\.new\(\s*['"](?:MD5|SHA1)['"])|\bOpenSSL::Digest::(?:MD5|SHA1)\b/i, 'Digest::MD5.hexdigest(text)', 'Digest::SHA256.hexdigest(text)'),
   RBF('rb-yaml-unsafe', 'YAML is loaded with the unsafe loader (it can build Ruby objects)', /\bYAML\.unsafe_load(?:_file)?\(/, 'YAML.unsafe_load(s)', 'YAML.safe_load(s)'),
-  RBF('rb-system-interpolation', 'a shell command has a #{} interpolation in its string', /(?<![\w.])(?:system|exec|spawn|IO\.popen|Open3\.\w+)\s*\(?\s*"[^"\n]{0,200}#\{|`[^`\n]{0,200}#\{/, 'system("ls #{dir}")', 'system("ls", dir)'),
+  RBF('rb-system-interpolation', 'a shell command has a #{} interpolation in its string', /(?<![\w.])(?:system|exec|spawn|IO\.popen|Open3\.\w+)\s*\(?\s*"[^"\n]{0,200}#\{|`[^`\n]{0,200}#\{/, 'system("ls #{dir}")', 'system("ls", dir)', { unless: (l) => rbShellEscaped(l, /(?<![\w.])(?:system|exec|spawn|IO\.popen|Open3\.\w+)\s*\(?\s*"[^"\n]{0,200}#\{|`[^`\n]{0,200}#\{/) }),
   RBF('rb-permit-all', 'strong parameters allow every field (permit!)', /\.permit!/, 'params.permit!', 'params.require(:user).permit(:name)'),
-  RBF('rb-html-safe', 'a string is marked html_safe, so it is not escaped', /\.html_safe\b/, 'name.html_safe', 'ERB::Util.html_escape(name)'),
+  RBF('rb-html-safe', 'a string is marked html_safe, so it is not escaped', /\.html_safe\b/, 'name.html_safe', 'ERB::Util.html_escape(name)', { unless: rbHtmlSafeFixed }),
   RBF('rb-csrf-skipped', 'CSRF token checking is skipped for a controller', /\bskip_(?:before_action|before_filter)\s+:verify_authenticity_token\b|\bskip_forgery_protection\b/, 'skip_before_action :verify_authenticity_token', 'before_action :authenticate_user!'),
   RBF('rb-open-params', 'open() is given a request value (a leading | runs a command)', /(?<![\w.:])open\(\s*params\b|\bKernel\.open\(/, 'open(params[:f])', 'File.read(path)'),
   RBF('rb-render-params', 'render takes its template name from params', /\brender\s+(?:params|request)\b|\brender\s*\(\s*(?:file|template)\s*:\s*params\b/, 'render params[:page]', 'render "pages/home"'),
-  RBF('rb-catch-all-route', 'a route catches every path (a wildcard route)', /^\s*(?:match|get|post|put|patch|delete)\s+['"]\*\w*['"]/, 'get "*path", to: "pages#show"', 'get "about", to: "pages#about"'),
+  RBF('rb-catch-all-route', 'a route catches every path (a wildcard route)', /^\s*(?:match|get|post|put|patch|delete)\s+['"]\*\w*['"]/, 'get "*path", to: "pages#show"', 'get "about", to: "pages#about"', { unless: rbNotFoundRoute }),
 ]
 
 // The check name -> its rule table. A table with no matching files in a project reports NA for each rule (see thorough/code-patterns.mjs).

@@ -102,6 +102,63 @@ export const isConstantMarkup = (text, name) => {
   return !new RegExp(String.raw`(?<![\w$.])${n}\s*(?:\.[\w$]+|\[[^\]]{0,80}\])*\s*[-+*/|&]?=[^=]`).test(text.replace(m[0], ''))
 }
 
+// The text of a top-level declaration of `name` (a function or an arrow function bound to a const) up to the next line that starts at column 0 (a closing brace stays).
+const topLevelDecl = (text, name) => {
+  const n = name.replace(/\$/g, '\\$')
+  const all = [...text.matchAll(new RegExp(String.raw`^(?:export\s+)?(?:(?:async\s+)?function\s*\*?\s*${n}\s*\(|(?:const|let|var)\s+${n}\s*=\s*(?:async\s*)?(?:function\b[^(]*)?(?:\([^)]*\)|[\w$]+)\s*(?:=>)?)`, 'gm'))]
+  if (all.length !== 1) return null
+  const from = all[0].index
+  const rest = text.slice(from)
+  const nl = rest.indexOf('\n')
+  const after = nl < 0 ? '' : rest.slice(nl + 1).split('\n')
+  const keep = [rest.slice(0, nl < 0 ? rest.length : nl)]
+  for (const l of after) {
+    if (/^[^\s})\]]/.test(l)) break
+    keep.push(l)
+  }
+  return keep.join('\n')
+}
+const LIT_STR = String.raw`(?:'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")`
+// `const iconSvg = (name) => `<svg ...>${PATHS[name]}</svg>``: a local builder whose whole result is one template literal, and every ${} in it is a lookup in a table of
+// plain strings (isConstantMarkup) or a choice between two string literals made by comparing a name to a literal. The markup is author-written whatever is passed in.
+export const isStaticMarkupBuilder = (text, fn) => {
+  const decl = topLevelDecl(text, fn)
+  if (!decl) return false
+  const open = decl.indexOf('`')
+  if (open < 0 || /\b(?:innerHTML|insertAdjacentHTML|eval|Function)\b/.test(decl)) return false
+  // Only the template is allowed in the body: whatever comes before it is the signature, and only a return or an arrow may sit between.
+  const head = decl.slice(0, open).replace(/\s+/g, ' ').trim()
+  const n = fn.replace(/\$/g, '\\$')
+  if (!new RegExp(String.raw`^(?:export )?(?:const|let|var) ${n} = (?:async )?(?:\([^)]*\)|[\w$]+) =>$|^(?:export )?function ${n} ?\([^)]*\) ?\{ ?return$`).test(head)) return false
+  const exprs = []
+  let i = open + 1
+  for (; i < decl.length; i++) {
+    const c = decl[i]
+    if (c === '\\') i++
+    else if (c === '`') break
+    else if (c === '$' && decl[i + 1] === '{') {
+      let depth = 1
+      let j = i + 2
+      for (; j < decl.length && depth > 0; j++) {
+        if (decl[j] === '`') return false
+        if (decl[j] === '{') depth++
+        else if (decl[j] === '}') depth--
+      }
+      if (depth) return false
+      exprs.push(decl.slice(i + 2, j - 1).trim())
+      i = j - 1
+    }
+  }
+  if (i >= decl.length) return false
+  // After the closing backtick only the end of the statement may follow (a `}` of a function body, a `;`).
+  if (!/^[\s;}]*$/.test(decl.slice(i + 1))) return false
+  const table = new RegExp(String.raw`^([A-Za-z_$][\w$]*)\s*\[\s*(?:[A-Za-z_$][\w$]*|${LIT_STR})\s*\]$`)
+  const choice = new RegExp(String.raw`^[A-Za-z_$][\w$.]*\s*(?:===|!==)\s*${LIT_STR}\s*\?\s*${LIT_STR}\s*:\s*${LIT_STR}$`)
+  return exprs.every((e) => {
+    const t = table.exec(e)
+    return t ? isConstantMarkup(text, t[1]) : choice.test(e)
+  })
+}
 // `ipcMain.handle(...)` in a file that never imports ipcMain from electron: the name is a parameter, such as `function register({ ipcMain })`. When another
 // file of the project passes `ipcMain: guarded` and `guarded` is an object defined there whose every method this file uses stops a message from the wrong
 // sender, every handler registered here is checked. Fails closed: a call site written any other way (shorthand `{ ipcMain }`, a member or call expression, the

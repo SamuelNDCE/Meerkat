@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { finish, isFixture, main, notRun, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { envFileHoldsSecret, finding, finish, isFixture, keyFileHasContent, main, notRun, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 import { redact } from './redact.mjs'
 
 const cfg = (root) => readBudgets(root)?.security ?? {}
@@ -150,6 +150,29 @@ const gitHistorySecrets = (root) => {
 
 // ---- env-files-in-history: key and environment files that were ever committed
 const SECRET_FILE_NAME = /(^|\/)(\.env(\..+)?|[^/]+\.(pem|key|p12|pfx)|id_rsa)$/i
+// Whether any committed version of an environment or key file held a secret. A file that only ever listed placeholders (${VAR}) or comments
+// leaked nothing. A version that cannot be read counts as a secret, so a doubt never hides a real leak.
+const everHeldSecret = (root, file) => {
+  const isEnv = /(^|\/)\.env(\..+)?$/i.test(file)
+  const textKey = /\.(pem|key)$/i.test(file)
+  if (!isEnv && !textKey) return true
+  let hashes
+  try {
+    hashes = git(root, ['log', '--all', '--format=%H', '--', file]).split('\n').filter(Boolean).slice(0, 50)
+  } catch {
+    return true
+  }
+  for (const h of hashes) {
+    let body
+    try {
+      body = git(root, ['show', `${h}:${file}`])
+    } catch {
+      continue
+    }
+    if (isEnv ? envFileHoldsSecret(body) : keyFileHasContent(body)) return true
+  }
+  return false
+}
 const envFilesInHistory = (root) => {
   const name = 'env-files-in-history'
   const gate = needsRepo(root, name)
@@ -171,7 +194,7 @@ const envFilesInHistory = (root) => {
     }
     const f = line.trim()
     if (!f || first.has(f)) continue
-    if (SECRET_FILE_NAME.test(f) && !/example|sample|template/i.test(f) && !allow.has(f)) first.set(f, commit)
+    if (SECRET_FILE_NAME.test(f) && !/example|sample|template/i.test(f) && !allow.has(f) && everHeldSecret(root, f)) first.set(f, commit)
   }
   const findings = [...first].map(([f, c]) => `${f}: added in commit ${c} and still in the history. Remove it from the history and rotate anything it held`)
   return finish(name, findings, 'no key or environment files were ever committed')
@@ -182,6 +205,7 @@ const installScripts = (root) => {
   const name = 'install-scripts'
   const allow = allowList(root)
   const f = []
+  const devOnly = []
   for (const x of trackedFiles(root)) {
     if (/(^|\/)node_modules\//.test(x) || isFixture(x)) continue
     const base = x.split('/').pop()
@@ -200,11 +224,20 @@ const installScripts = (root) => {
         if (allow.has(pkg)) continue
         // An optional dependency that is tied to one operating system (fsevents on macOS) installs only there, as a prebuilt helper: not a risk on other machines.
         if (p.optional === true && Array.isArray(p.os) && p.os.length) continue
-        f.push(`${x}: ${pkg} ${p.version ?? ''} runs an install script when it is installed`.replace(/ {2,}/g, ' '))
+        const msg = `${x}: ${pkg} ${p.version ?? ''} runs an install script when it is installed`.replace(/ {2,}/g, ' ')
+        // The lockfile marks a package that only a development dependency pulls in with dev: true. It is installed to build or test, never shipped to users, so its install
+        // script is not a shipped-risk bug: it is reported as info (still visible). A runtime dependency (no dev flag) keeps failing.
+        if (p.dev === true) {
+          devOnly.push(`${pkg} ${p.version ?? ''}`.trim())
+          continue
+        }
+        f.push(msg)
       }
     }
   }
-  return finish(name, f, 'no install scripts run on install (or each one is accepted)')
+  const r = finish(name, f, 'no install scripts run on install (or each one is accepted)')
+  for (const d of devOnly) finding('info', 'install-script-dev', 'package-lock.json', 0, `${d} runs an install script, but only a development dependency installs it (it is not shipped)`)
+  return r
 }
 
 // ---- typosquat-names: a dependency name one letter away from a very popular package

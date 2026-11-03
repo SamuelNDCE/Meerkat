@@ -269,10 +269,71 @@ function statementText(t, start) {
   }
   return t.slice(start, k)
 }
+// Names of functions the project declares async (in any file) and never declares as a plain function: a call to one that is neither awaited,
+// returned nor given a .catch leaves its rejection unhandled (the helper hop for the floating promise).
+const FN_DECL = [
+  /^[ \t]*(?:export\s+)?(async\s+)?function\s*\*?\s*([\w$]+)\s*\(/,
+  /(?:^|[\s;(])(?:exports\.|module\.exports\.)?(?:(?:const|let|var)\s+)?([\w$]+)\s*=\s*(async\s+)?(?:function\b|\([^)]*\)\s*=>|[\w$]+\s*=>)/,
+  // A class or object method: `save(x) {` or `async save(x) {`. A synchronous method of the same name anywhere in the project means a call by that name proves nothing.
+  /^[ \t]*(?:static\s+|public\s+|private\s+|protected\s+)*(async\s+)?\*?\s*(?!(?:if|for|while|switch|catch|function|return|with)\b)([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*(?::\s*[\w<>\[\]| ]+)?\s*\{/,
+]
+function asyncFunctionNames(root, list) {
+  const isAsync = new Set()
+  const plain = new Set()
+  for (const x of list) {
+    for (const line of codeOnly(sourceOf(root, x), JS_OPTS).split('\n')) {
+      const a = FN_DECL[0].exec(line)
+      const b = a ? null : FN_DECL[1].exec(line)
+      const c = a || b ? null : FN_DECL[2].exec(line)
+      if (a) (a[1] ? isAsync : plain).add(a[2])
+      else if (b) (b[2] ? isAsync : plain).add(b[1])
+      else if (c && !c[1]) plain.add(c[2]) // only a synchronous method can cancel an async function's name; async methods are not collected, as before
+    }
+  }
+  return new Set([...isAsync].filter((n) => !plain.has(n)))
+}
+// Names of async functions every one of whose awaits sits inside a try block with a catch that does not throw again (or carries its own .catch), in every file that
+// declares the name: nothing in the body can reject, so a call that is not awaited leaves nothing unhandled. A function with an await outside any try stays flagged.
+function shieldedAsyncNames(root, list) {
+  const verdict = new Map()
+  const DECL = /\basync\s+function\s*\*?\s*([\w$]+)\s*\([^)]*\)\s*\{|(?:const|let|var)\s+([\w$]+)\s*=\s*async\s*(?:function\b[^(]*)?(?:\([^)]*\)|[\w$]+)\s*(?:=>)?\s*\{/g
+  for (const x of list) {
+    const code = codeOnly(sourceOf(root, x), JS_OPTS)
+    for (const m of code.matchAll(DECL)) {
+      const name = m[1] ?? m[2]
+      const open = m.index + m[0].length - 1
+      const close = matchClose(code, open)
+      const body = code.slice(open + 1, close)
+      const guarded = []
+      for (const t of body.matchAll(/\btry\s*\{/g)) {
+        const tOpen = t.index + t[0].length - 1
+        const tClose = matchClose(body, tOpen)
+        const c = /^\s*catch\s*(?:\([^)]*\))?\s*\{/.exec(body.slice(tClose + 1))
+        if (!c) continue
+        const cOpen = tClose + 1 + c[0].length - 1
+        if (!/\bthrow\b/.test(body.slice(cOpen, matchClose(body, cOpen)))) guarded.push([tOpen, tClose])
+      }
+      const awaits = [...body.matchAll(/\bawait\b/g)]
+      const ok = awaits.length > 0 && awaits.every((a) => guarded.some(([a0, a1]) => a.index > a0 && a.index < a1) || /\.catch\s*\(/.test(body.slice(a.index, endOfLine(body, a.index))))
+      verdict.set(name, (verdict.get(name) ?? true) && ok)
+    }
+  }
+  return new Set([...verdict].filter(([, v]) => v).map(([k]) => k))
+}
+// "known.then(...)" where known was declared in this file from an expression that already ends in .catch(...): the promise it holds cannot reject.
+const thenOnCaughtPromise = (code, top) => {
+  const recv = /^\s*([A-Za-z_$][\w$]*)\s*\.\s*then\s*\(/.exec(top)?.[1]
+  if (!recv) return false
+  const decls = [...code.matchAll(new RegExp(String.raw`(?:const|let|var)\s+${recv.replace(/\$/g, "\\$")}\s*=`, 'g'))]
+  return decls.length === 1 && /\.catch[ \t]*\(/.test(topLevel(statementText(code, decls[0].index)))
+}
 const unhandledPromise = (root) => {
   const allow = allowSet(root)
   const f = []
-  for (const x of files(root, JS, true)) {
+  const list = files(root, JS, true)
+  const shielded = shieldedAsyncNames(root, list)
+  const asyncNames = new Set([...asyncFunctionNames(root, list)].filter((n) => !shielded.has(n)))
+  for (const x of list) {
     if (allowed(allow, 'js-unhandled-promise', x)) continue
     const t = codeOnly(sourceOf(root, x), JS_OPTS)
     let at = 0
@@ -282,7 +343,13 @@ const unhandledPromise = (root) => {
       if (!STMT_START.test(line) || KEYWORDS.test(line) || !startsStatement(t, start)) continue
       const chunk = statementText(t, start)
       const top = topLevel(chunk)
-      if (/\.then[ \t]*\(/.test(top) && !/\.catch[ \t]*\(/.test(top) && !hasRejectionArg(chunk) && !(/^[ \t]*app\.whenReady\(\)\.then\b/.test(chunk) && /\.catch[ \t]*\(/.test(chunk))) f.push(`${x}:${lineOf(t, start)} starts a promise chain with .then and never handles a rejection (add .catch, or await it)`)
+      if (/\.then[ \t]*\(/.test(top) && !/\.catch[ \t]*\(/.test(top) && !hasRejectionArg(chunk) && !thenOnCaughtPromise(t, top) && !(/^[ \t]*app\.whenReady\(\)\.then\b/.test(chunk) && /\.catch[ \t]*\(/.test(chunk))) f.push(`${x}:${lineOf(t, start)} starts a promise chain with .then and never handles a rejection (add .catch, or await it)`)
+      else if (!/\.(?:then|catch|finally)[ \t]*\(/.test(top)) {
+        const callee = /^[ \t]*(?:[A-Za-z_$][\w$]*[ \t]*\.[ \t]*)*([A-Za-z_$][\w$]*)[ \t]*\(/.exec(line)?.[1]
+        // ipcMain.handle('channel', fn) and ipcRenderer.on(...) register a handler; the call itself returns nothing to await.
+        const registers = /^[ \t]*(?:ipcMain|ipcRenderer)[ \t]*\./.test(line)
+        if (callee && asyncNames.has(callee) && !registers) f.push(`${x}:${lineOf(t, start)} calls the async function ${callee} without await or .catch, so a rejection goes unhandled (await it, or add .catch)`)
+      }
     }
   }
   return finish('js-unhandled-promise', f, 'promise chains handle their rejections')
@@ -299,7 +366,7 @@ const POLLUTION = [
 // A recursive merge / assign helper: a loop over the keys of an object that writes target[key] = ... with no check for __proto__,
 // constructor or prototype in the loop. Looked for in the loop head and the next 8 lines; the loop must sit in (or right under) a
 // function whose name or body says merge, extend, assign, clone, defaults, mixin or set. Linear: bounded windows, one pass.
-const KEY_LOOP = /\bfor\s*\(\s*(?:const|let|var)?\s*(\w+)\s+in\s+[^)\n]{1,80}\)|\bfor\s*\(\s*(?:const|let|var)\s*\[\s*(\w+)\s*(?:,\s*\w+\s*)?\]\s+of\s+Object\.(?:keys|entries)\([^)\n]{1,80}\)|\bObject\.(?:keys|entries)\([^)\n]{1,80}\)\.forEach\(\s*\(?\s*(?:\[\s*)?(\w+)/g
+const KEY_LOOP = /\bfor\s*\(\s*(?:const|let|var)?\s*(\w+)\s+in\s+[^)\n]{1,80}\)|\bfor\s*\(\s*(?:const|let|var)\s*(?:\[\s*)?(\w+)\s*(?:,\s*\w+\s*\]|\])?\s+of\s+Object\.(?:keys|entries)\([^)\n]{1,80}\)|\bObject\.(?:keys|entries)\([^)\n]{1,80}\)\.forEach\(\s*\(?\s*(?:\[\s*)?(\w+)/g
 const MERGEISH = /\b(?:merge|extend|assign|deep\w*|clone|mixin|defaults|set\w*|copy\w*|combine|patch|update\w*)\b/i
 const POLLUTION_GUARD = /__proto__|\bconstructor\b|\bprototype\b|hasOwn(?:Property)?\b|\bsafeKey|\bisSafe|\bforbidden|\bblocklist|\bdenylist/i
 function* recursiveMergeHits(t, raw = t) {
@@ -309,7 +376,8 @@ function* recursiveMergeHits(t, raw = t) {
     const before = t.slice(Math.max(0, m.index - 300), m.index)
     const win = t.slice(m.index, m.index + 700).split('\n').slice(0, 9).join('\n')
     if (!MERGEISH.test(before.split('\n').slice(-6).join('\n')) && !MERGEISH.test(win)) continue
-    if (POLLUTION_GUARD.test(win)) continue
+    // (The scanned text has its string contents blanked, so a guard written as key === '__proto__' is only visible in the same span of the original source.)
+    if (POLLUTION_GUARD.test(win) || POLLUTION_GUARD.test(raw.length === t.length ? raw.slice(m.index, m.index + 700).split('\n').slice(0, 9).join('\n') : win)) continue
     const hit = new RegExp(`[\\w$.]{1,60}\\[\\s*${key}\\s*\\]\\s*=(?!=)\\s*([\\w$.]+)?`).exec(win)
     // Only a primitive can reach the target (the value is checked with typeof): assigning a boolean, number or string to __proto__ changes nothing.
     // (The scanned text has its string contents blanked, so the check reads the same span of the original source.)
@@ -424,6 +492,8 @@ const goIgnoredErrors = (root) => {
     if (allowed(allow, 'go-ignored-errors', x)) continue
     const t = codeOnly(sourceOf(root, x), GO_OPTS)
     for (const m of t.matchAll(/^[ \t]*_[ \t]*=[ \t]*err\b/gm)) f.push(`${x}:${lineOf(t, m.index)} throws away an error value (_ = err), so a failure goes unnoticed`)
+    // _ = os.Rename(a, b): the call's only result is its error, thrown away. Listed by name, because _ = x.Close() style calls are often deliberate.
+    for (const m of t.matchAll(/^[ \t]*_[ \t]*=[ \t]*(?:os\.(?:Rename|Remove|RemoveAll|Mkdir|MkdirAll|Chmod|Chown|Truncate|WriteFile|Setenv|Unsetenv|Symlink|Link)|io\.WriteString|json\.Unmarshal|json\.NewEncoder\([^)]*\)\.Encode)\(/gm)) f.push(`${x}:${lineOf(t, m.index)} assigns the only result of a call to _, so its error is ignored`)
     for (const m of t.matchAll(/^[ \t]*[\w, \t]*?,[ \t]*_[ \t]*:?=[ \t]*[\w.]+[ \t]*\(/gm)) f.push(`${x}:${lineOf(t, m.index)} assigns the last result of a call to _, so its error (if it returns one) is ignored`)
   }
   return finish('go-ignored-errors', f, 'no error is thrown away with _')

@@ -20,6 +20,8 @@ A private placeholder created 2026-10-30 under the `perpetual-technologies-offic
 - **Pushing.** Commit as yourself, no AI co-author line, stage files by name, and open a pull request for anything beyond README and PROJECT.md edits.
 - **Licence.** None chosen yet. Do not add one without Samuel. \* The code carries no copyright or proprietary headers (removed 2026-10-31 at Samuel's instruction, because it will probably be open source); do not add them back.
 
+> \*Corrected 2026-11-03: wrong. The licence is the Perpetual Community Licence 1.0 (`PCL-1.0`) in `LICENSE`, and `package.json` says `SEE LICENSE IN LICENSE` (see also the 2026-10-31 correction below). Do not change its text without Samuel.
+
 ## Where things are
 
 | Need | Where |

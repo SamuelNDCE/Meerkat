@@ -45,9 +45,14 @@ const checks = {}
 for (const [id, table] of Object.entries(CHECK_TABLES)) {
   const run = (root) => {
     if (GATED.has(id) && !isElectronProject(root)) {
-      for (const r of table) console.log(`MEERKAT-SUB NA ${r.id} ${String(r.title).slice(0, 120)}`)
-      console.log(`${id}: not an Electron project, so there is nothing to check`)
-      return 0
+      // Rules marked anyProject (an iOS Info.plist setting, for example) are not about Electron, so they still run.
+      const open = table.filter((r) => r.anyProject)
+      for (const r of table.filter((x) => !x.anyProject)) console.log(`MEERKAT-SUB NA ${r.id} ${String(r.title).slice(0, 120)}`)
+      if (!open.length) {
+        console.log(`${id}: not an Electron project, so there is nothing to check`)
+        return 0
+      }
+      return scanRules(id, root, open, { allowFile: ALLOW, okNote: 'not an Electron project, so only the rules that apply to any project ran, and nothing was found' })
     }
     return scanRules(id, root, table, { allowFile: ALLOW, okNote: 'no risky Electron or desktop setting found' })
   }

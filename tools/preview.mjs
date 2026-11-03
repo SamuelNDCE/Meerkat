@@ -41,22 +41,16 @@ const ESC = '\x1b['
 // Everything this file draws is made up; every frame says so, so no picture of it can pass for a real run.
 const withNote = (lines) => [...lines, '', color ? `${ESC}1;33m  ${SAMPLE_NOTE}${ESC}0m` : `  ${SAMPLE_NOTE}`]
 
-// Real names, lanes and dependencies of the fast tier; durations are the cold-run numbers (seconds).
+// Real names, lanes and dependencies of the quick preset (no compile-heavy check: no build, no clippy, no test run, so none of the window checks that wait on a build); durations are the cold-run numbers (seconds).
 const KIND = { 'rule-scan': 'security', 'npm-audit': 'security', 'cargo-audit': 'security', 'ui-screens': 'ui', 'click-through': 'ui' }
 const spec = [
   ['rule-scan', 'free', 1, [], ['reading 1,204 files', '5 rules, clean']],
   ['npm-audit', 'free', 2, [], ['asking the registry', 'found 0 vulnerabilities']],
   ['cargo-audit', 'free', 3, [], ['fetching advisory database', 'checking 560 crates']],
   ['type-check', 'free', 10, [], ['tsc -p tsconfig.json', 'tsc -p tsconfig.electron.json']],
-  ['build-all', 'free', 10, [], ['vite build', 'transforming 1,840 modules', 'tsc -p tsconfig.electron.json']],
-  ['unit-tests', 'free', 131, [], ['vitest: 40 / 530 files', 'vitest: 210 / 530 files', 'vitest: 480 / 530 files']],
+  ['eslint', 'free', 20, [], ['linting src/', 'linting scripts/']],
+  ['prettier-check', 'free', 6, [], ['checking formatting']],
   ['cargo-fmt', 'cargo', 3, [], ['cargo fmt --check']],
-  ['build-tauri', 'cargo', 378, [], ['Compiling plume-core v1.4.2', 'Compiling plume-db v1.4.2', 'Compiling plume-sync v1.4.2', 'Compiling plume-ipc v1.4.2', 'Compiling plume-app v1.4.2', 'Linking plume-app.exe']],
-  ['proptest-db', 'cargo', 90, [], ['Compiling proptest', 'running 10 tests', 'test round_trips ... ok']],
-  ['clippy', 'cargo', 189, [], ['Checking plume-core', 'Checking plume-sync', 'Checking plume-app (all targets)']],
-  ['test-sandbox', 'electron', 3, ['build-all'], ['opening a hidden window', '5 native calls blocked']],
-  ['ui-screens', 'electron', 13, ['build-tauri'], ['Dashboard', 'Library', 'Settings']],
-  ['click-through', 'electron', 112, ['build-tauri'], ['6 windows open', 'pressing controls: 120 / 362', 'pressing controls: 300 / 362']],
 ]
 
 // About fifty more quick checks, so the board has a realistic number of rows to fold: [group, pack, names].
@@ -137,34 +131,32 @@ const frame = (tick) => {
   const remaining = estimateRemaining(rows, t, { freeSlots: 11 })
   const target = allDone ? 1 : (t - base) / Math.max(1, t - base + remaining)
   shown = allDone ? 1 : Math.max(shown, shown + (target - shown) * 0.3)
-  return withNote(renderLive({ title: 'MEERKAT v' + VERSION + ' . fast', folder: 'C:/Users/SamuelNDCE/code/plume', preset: 'fast', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: HEIGHT, color, theme, grouped: GROUPED, statusState }))
+  return withNote(renderLive({ title: 'MEERKAT v' + VERSION + ' . quick', folder: 'C:/Users/me/code/plume', preset: 'quick', rows, events, started: base, now: t, tick, fraction: shown, etaMs: allDone ? null : remaining, width: Math.min(process.stdout.columns || 110, 120), height: HEIGHT, color, theme, grouped: GROUPED, statusState }))
 }
 
 if (has('--once')) {
   // A still frame, taken part way through: some done, the cargo build and a unit-test run going, windows waiting.
   const t0 = base
   const fakeNow = t0 + 140_000
-  const early = { 'rule-scan': 2, 'npm-audit': 3, 'cargo-audit': 4, 'type-check': 10, 'build-all': 10, 'cargo-fmt': 4, 'test-sandbox': 15 }
+  const early = { 'rule-scan': 2, 'npm-audit': 3, 'cargo-audit': 4, 'type-check': 10, 'cargo-fmt': 4, 'prettier-check': 8 }
   for (const [id, at] of Object.entries(early)) {
     const c = checks.find((x) => x.id === id)
     model.start(c, t0 + at * 1000 - 2000)
-    model.settle(c, id === 'cargo-audit' && FAIL ? { status: 'FAIL', detail: '4 known advisories (RUSTSEC)' } : { status: 'PASS' }, 2000 + (id === 'type-check' || id === 'build-all' ? 8000 : 0))
+    model.settle(c, id === 'cargo-audit' && FAIL ? { status: 'FAIL', detail: '4 known advisories (RUSTSEC)' } : { status: 'PASS' }, 2000 + (id === 'type-check' ? 8000 : 0))
   }
   // The extra quick checks: nearly all done by now, a few still running or waiting.
-  const extra = checks.filter((c) => !Object.hasOwn(early, c.id) && !['build-tauri', 'unit-tests', 'ui-screens', 'click-through', 'proptest-db', 'clippy'].includes(c.id))
+  const extra = checks.filter((c) => !Object.hasOwn(early, c.id))
   for (const [i, c] of extra.entries()) {
     if (i % 17 === 16) continue
     model.start(c, i % 17 === 15 ? fakeNow - 1000 : t0 + 20_000 + i * 1500)
     if (i % 17 === 15) continue
     model.settle(c, { status: 'PASS' }, 1000 + (i % 3) * 1000)
   }
-  for (const id of ['build-tauri', 'unit-tests']) model.start(checks.find((c) => c.id === id), fakeNow - 120_000)
-  model.queue([{ id: 'ui-screens', reason: 'after build-tauri' }, { id: 'click-through', reason: 'after build-tauri' }, { id: 'proptest-db', reason: 'the cargo lane is busy' }, { id: 'clippy', reason: 'the cargo lane is busy' }])
-  events.push({ at: t0 + 120_000, text: 'started build-tauri: cargo build -p plume-app' }, { at: t0 + 125_000, text: 'PASS test-sandbox: 5 native calls blocked' }, { at: t0 + 130_000, text: 'started unit-tests' })
-  note.set('build-tauri', 'Compiling plume-sync v1.4.2')
-  note.set('unit-tests', 'vitest: 210 / 530 files')
-  const rows = model.snapshot(fakeNow).map((r) => (r.id === 'unit-tests' ? { ...r, note: note.get(r.id), lastOutputAt: fakeNow - 1500, currentFile: fakeFile('unit-tests', 210), filesDone: 210, filesTotal: 530 } : { ...r, note: note.get(r.id), lastOutputAt: r.status === 'RUNNING' ? fakeNow - 2500 : r.lastOutputAt }))
-  console.log(withNote(renderLive({ title: 'MEERKAT v' + VERSION + ' . fast', folder: 'C:/Users/SamuelNDCE/code/plume', preset: 'fast', rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, height: HEIGHT, color, theme, statusState })).join('\n'))
+  model.start(checks.find((c) => c.id === 'eslint'), fakeNow - 12_000)
+  events.push({ at: t0 + 120_000, text: 'started eslint' }, { at: t0 + 125_000, text: 'PASS type-check' })
+  note.set('eslint', 'linting src/')
+  const rows = model.snapshot(fakeNow).map((r) => (r.id === 'eslint' ? { ...r, note: note.get(r.id), lastOutputAt: fakeNow - 1500 } : { ...r, note: note.get(r.id), lastOutputAt: r.status === 'RUNNING' ? fakeNow - 2500 : r.lastOutputAt }))
+  console.log(withNote(renderLive({ title: 'MEERKAT v' + VERSION + ' . quick', folder: 'C:/Users/me/code/plume', preset: 'quick', rows, events, started: t0, now: fakeNow, tick: 22, fraction: 0.38, etaMs: 215_000, width: 110, height: HEIGHT, color, theme, statusState })).join('\n'))
   process.exit(0)
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The detectors pack: run a mature tool when it is installed, turn its JSON into Meerkat findings with the tool's own rule ids.
-//   node thorough/detectors.mjs <osv-scan|semgrep-security|clippy-correctness|tsc-strict|gitleaks-secrets|staticcheck-go|govulncheck-go|actionlint-workflows> [--root <dir>] [--sample <file>]
+//   node thorough/detectors.mjs <osv-scan|semgrep-security|clippy-correctness|tsc-strict|gitleaks-secrets|staticcheck-go|govulncheck-go|actionlint-workflows|knip-unused|cspell-spelling|htmlhint-html|size-limit-budget|lighthouse-page|pip-audit-python|vulture-dead-code|radon-complexity> [--root <dir>] [--sample <file>]
 // --sample <file> reads a recorded copy of the tool's output instead of running the tool (the tests and self-tests use it, so no tool
 // has to be installed). Nothing is ever installed here, and no project code runs beyond the tool itself.
 // Exit: 0 clean (or not applicable), 1 findings, 75 NOT RUN (tool missing, hint printed).
@@ -241,7 +241,193 @@ export function parseActionlint(json, root = '') {
   }))
 }
 
+// ---- knip ------------------------------------------------------------------------------------------------------------------------
+// `knip --reporter json --no-progress` prints { issues: [{ file, files: [{name}], dependencies: [{name}], exports: [{name, line}], ... }] }. Exit 1 = issues found.
+const KNIP_RULES = {
+  files: ['unused-file', 'low'],
+  dependencies: ['unused-dependency', 'low'],
+  devDependencies: ['unused-devdependency', 'low'],
+  optionalPeerDependencies: ['unused-optional-peer', 'low'],
+  unlisted: ['unlisted-dependency', 'medium'],
+  unresolved: ['unresolved-import', 'medium'],
+  binaries: ['unlisted-binary', 'medium'],
+  exports: ['unused-export', 'low'],
+  types: ['unused-type', 'low'],
+  enumMembers: ['unused-enum-member', 'low'],
+  namespaceMembers: ['unused-namespace-member', 'low'],
+  duplicates: ['duplicate-export', 'low'],
+  catalog: ['unused-catalog-entry', 'low'],
+  catalogReferences: ['unresolved-catalog-reference', 'medium'],
+}
+export function parseKnip(json, root = '') {
+  const out = []
+  for (const issue of json?.issues ?? []) {
+    const file = relTo(issue?.file, root) || '-'
+    for (const [key, [rule, severity]] of Object.entries(KNIP_RULES)) {
+      const v = issue?.[key]
+      const items = Array.isArray(v) ? v : v && typeof v === 'object' ? Object.values(v).flat() : []
+      for (const it of items) {
+        const name = Array.isArray(it) ? it.map((x) => x?.name).join(', ') : String(it?.name ?? '?')
+        const line = Number(Array.isArray(it) ? it[0]?.line : it?.line) || 0
+        out.push({ severity, rule: `knip-${rule}`, file, line, message: `[confidence high] knip ${rule}: ${name.slice(0, 200)}` })
+      }
+    }
+  }
+  return out
+}
+
+// ---- cspell ----------------------------------------------------------------------------------------------------------------------
+// `cspell lint --reporter @cspell/cspell-json-reporter` prints { issues: [{ text, row, uri, suggestions }], result: { errors } }. Exit 1 = unknown words.
+// One finding per (file, word): the first place the word appears. Spelling is advisory, so always low severity.
+export const CSPELL_CAP = 100
+export function parseCspell(json, root = '') {
+  const seen = new Set()
+  const out = []
+  for (const i of json?.issues ?? []) {
+    let file = String(i?.uri ?? '')
+    try {
+      if (file.startsWith('file:')) file = fileURLToPath(file)
+    } catch {
+      file = file.replace(/^file:\/\/\/?/, '/')
+    }
+    file = relTo(file, root) || '-'
+    const key = `${file}|${String(i?.text).toLowerCase()}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    const sug = (i?.suggestions ?? []).slice(0, 3).join(', ')
+    out.push({ severity: 'low', rule: 'cspell-unknown-word', file, line: Number(i?.row) || 0, message: `unknown word '${String(i?.text).slice(0, 60)}'${sug ? ` (maybe: ${sug.slice(0, 80)})` : ''}` })
+  }
+  return out
+}
+
+// ---- htmlhint --------------------------------------------------------------------------------------------------------------------
+// `htmlhint --format json` prints [{ file, messages: [{ type: error|warning, message, line, col, rule: { id } }] }]. Exit 1 = problems.
+export function parseHtmlhint(json, root = '') {
+  const out = []
+  for (const f of Array.isArray(json) ? json : []) {
+    for (const m of f?.messages ?? []) {
+      out.push({ severity: m?.type === 'error' ? 'medium' : 'low', rule: ruleId(m?.rule?.id ?? 'rule', 'htmlhint'), file: relTo(f?.file, root) || '-', line: Number(m?.line) || 0, message: `[confidence high] ${m?.rule?.id}: ${String(m?.message ?? '').replace(/\s+/g, ' ').slice(0, 250)}` })
+    }
+  }
+  return out
+}
+
+// ---- size-limit ------------------------------------------------------------------------------------------------------------------
+// `size-limit --json` prints [{ name, passed, size, sizeLimit }] in bytes. Exit 1 = a limit of the project's own configuration is exceeded.
+export function parseSizeLimit(json) {
+  return (Array.isArray(json) ? json : []).filter((r) => r && r.passed === false).map((r) => ({
+    severity: 'medium',
+    rule: 'size-limit-exceeded',
+    file: posix(r.name) || 'package.json',
+    line: 0,
+    message: `[confidence high] ${r.name} is ${r.size ?? '?'} B${r.sizeLimit ? `, over its limit of ${r.sizeLimit} B` : ''} (your own size-limit configuration)`,
+  }))
+}
+
+// ---- Lighthouse ------------------------------------------------------------------------------------------------------------------
+// Only the accessibility and best-practices categories, and only audits that FAIL outright (score 0, pass/fail kind). Performance is left out on
+// purpose: its numbers change from run to run on the same page. Fields used: categories[x].auditRefs[{id}], audits[id].{score, scoreDisplayMode, title}.
+export const LIGHTHOUSE_CATEGORIES = ['accessibility', 'best-practices']
+export function parseLighthouse(json, page = 'index.html') {
+  const out = []
+  const seen = new Set()
+  for (const cat of LIGHTHOUSE_CATEGORIES) {
+    for (const ref of json?.categories?.[cat]?.auditRefs ?? []) {
+      const a = json?.audits?.[ref?.id]
+      if (!a || a.score !== 0 || a.scoreDisplayMode !== 'binary' || seen.has(a.id)) continue
+      seen.add(a.id)
+      out.push({ severity: cat === 'accessibility' ? 'medium' : 'low', rule: ruleId(a.id, 'lighthouse'), file: page, line: 0, message: `[confidence high] ${cat}: ${String(a.title).slice(0, 160)}` })
+    }
+  }
+  return out
+}
+// The page Lighthouse is pointed at: the project's own built or source index.html. Nothing is built here.
+export const LIGHTHOUSE_PAGES = ['dist/index.html', 'build/index.html', 'public/index.html', 'index.html']
+
 // PATH entries that are not inside `root` (a relative entry such as . counts as inside).
+// ---- pip-audit (Python advisories) -----------------------------------------------------------------------------------------------
+// `pip-audit -r <file> --no-deps --disable-pip -f json` (2.10.1) prints { dependencies: [{ name, version, vulns: [{ id, fix_versions, aliases, description }] }
+// or { name, skip_reason }], fixes }. It exits 1 when it found something. The same id can be listed twice for one package (real output), so it is folded.
+export function parsePipAudit(json, file = 'requirements.txt') {
+  const out = []
+  for (const dep of json?.dependencies ?? []) {
+    const seen = new Set()
+    for (const v of dep?.vulns ?? []) {
+      if (!v?.id || seen.has(v.id)) continue
+      seen.add(v.id)
+      const fixed = (v.fix_versions ?? []).map(String)
+      const aliases = (v.aliases ?? []).map(String).slice(0, 4)
+      const summary = String(v.description ?? '').split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('#'))?.slice(0, 160) ?? ''
+      out.push({
+        severity: fixed.length ? 'high' : 'medium',
+        rule: ruleId(v.id),
+        file,
+        line: 0,
+        message: `${dep.name}@${dep.version} (PyPI) is vulnerable: ${v.id}${aliases.length ? ` (${aliases.join(', ')})` : ''}${summary ? ` ${summary}` : ''}; ${fixed.length ? `fixed in ${fixed.join(', ')}` : 'no fixed version yet'}`,
+      })
+    }
+  }
+  return out
+}
+export const pipAuditSkipped = (json) => (json?.dependencies ?? []).filter((d) => d?.skip_reason).map((d) => `${d.name}: ${String(d.skip_reason).slice(0, 120)}`)
+
+// Only requirements files can be audited without installing anything (--no-deps --disable-pip needs exact ==pins).
+export const requirementsOf = (files) => files.filter((f) => /(^|\/)requirements[^/]*\.txt$/i.test(f)).slice(0, 50)
+
+// ---- vulture (dead Python code) --------------------------------------------------------------------------------------------------
+// Text only (vulture has no JSON): `path:line: unused import 'os' (90% confidence)`. Exit 3 when it reports. At 60% every function not called inside
+// the project is reported (entry points, framework hooks, public API), so the check keeps 80% and above by default (imports, unreachable code).
+export const VULTURE_DEFAULT_CONFIDENCE = 80
+export const vultureConfidence = (env = process.env) => {
+  const n = Number(env.MEERKAT_VULTURE_MIN_CONFIDENCE)
+  return Number.isInteger(n) && n >= 1 && n <= 100 ? n : VULTURE_DEFAULT_CONFIDENCE
+}
+export function parseVulture(text, root = '', min = VULTURE_DEFAULT_CONFIDENCE) {
+  const out = []
+  for (const line of String(text).split(/\r?\n/)) {
+    const m = /^(.+?):(\d+): (.+) \((\d+)% confidence\)$/.exec(line)
+    if (!m) continue
+    const confidence = Number(m[4])
+    if (confidence < min) continue
+    const kind = m[3].replace(/\s*'.*$/, '').trim()
+    out.push({ severity: 'low', rule: ruleId(kind, 'vulture'), file: relTo(m[1], root) || '-', line: Number(m[2]), message: `[confidence ${confidence >= 90 ? 'high' : 'medium'}] ${m[3]} (vulture ${confidence}%)` })
+  }
+  return out
+}
+
+// ---- radon (cyclomatic complexity) -----------------------------------------------------------------------------------------------
+// `radon cc <dir> -j`: { "<file>": [{ type, rank A-F, complexity, lineno, name, classname?, methods?, closures? }] or { error } }. Ranks: A 1-5, B 6-10,
+// C 11-20, D 21-30, E 31-40, F 41+. Default report is D and worse (opt-in; C is common in ordinary code).
+const RANKS = 'ABCDEF'
+export const radonMinRank = (env = process.env) => (/^[A-F]$/.test(String(env.MEERKAT_RADON_MIN_RANK ?? '')) ? env.MEERKAT_RADON_MIN_RANK : 'D')
+export function parseRadon(json, root = '', minRank = 'D') {
+  const out = []
+  const seen = new Set()
+  let errors = 0
+  const visit = (file, it) => {
+    if (!it || typeof it !== 'object') return
+    const rank = String(it.rank ?? 'A')
+    const key = `${file}|${it.lineno}|${it.name}`
+    if (RANKS.indexOf(rank) >= RANKS.indexOf(minRank) && !seen.has(key)) {
+      seen.add(key)
+      const name = it.classname ? `${it.classname}.${it.name}` : it.name
+      out.push({ severity: rank === 'D' ? 'low' : 'medium', rule: ruleId(`cc-${rank}`, 'radon'), file, line: Number(it.lineno) || 0, message: `${it.type} ${name} has cyclomatic complexity ${it.complexity} (rank ${rank}); split it into smaller functions (radon)` })
+    }
+    for (const m of it.methods ?? []) visit(file, m)
+    for (const c of it.closures ?? []) visit(file, c)
+  }
+  for (const [path, items] of Object.entries(json ?? {})) {
+    const file = relTo(path, root) || '-'
+    if (!Array.isArray(items)) {
+      errors++
+      continue
+    }
+    for (const it of items) visit(file, it)
+  }
+  out.errors = errors
+  return out
+}
+
 export function pathOutside(pathVar, root) {
   const base = resolve(root)
   const inside = (d) => {
@@ -368,7 +554,7 @@ export function main(argv, env = process.env) {
   const sample = get('--sample')
   // PATH first, then the private tool folders (~/.meerkat-tools/bin and the Semgrep virtualenv). Nothing is ever installed.
   const home = env.MEERKAT_TOOLS_HOME || join(homedir(), '.meerkat-tools')
-  const extra = [join(home, 'bin'), join(home, 'semgrep-venv', 'Scripts'), join(home, 'semgrep-venv', 'bin')].join(delimiter)
+  const extra = [join(home, 'bin'), join(home, 'js', 'node_modules', '.bin'), join(home, 'semgrep-venv', 'Scripts'), join(home, 'semgrep-venv', 'bin'), join(home, 'python', 'Scripts'), join(home, 'python', 'bin')].join(delimiter)
   // The private tool folders come first; the original PATH follows with every entry inside the scanned project removed, so a scanner binary
   // planted in the repository (or in a PATH folder under it) can never be the one that runs.
   const lookup = (bin) => {
@@ -527,6 +713,83 @@ export function main(argv, env = process.env) {
     return report(name, parseGovulncheck(text, root))
   }
 
+  if (name === 'pip-audit-python') {
+    const jsons = []
+    const skipped = []
+    if (sample) {
+      try {
+        jsons.push({ file: 'requirements.txt', json: JSON.parse(sampleOf(sample)) })
+      } catch {
+        return nr('pip-audit printed output that is not JSON')
+      }
+    } else {
+      const files = requirementsOf(trackedFiles(root))
+      if (!files.length) {
+        console.log('pip-audit-python: not applicable, no tracked requirements*.txt')
+        return 0
+      }
+      // pip-audit asks PyPI about every package name and version: that is its job, so offline mode skips it with a note.
+      if (env.MEERKAT_DETECTORS_OFFLINE === '1') return nr('offline mode (MEERKAT_DETECTORS_OFFLINE=1): pip-audit sends package names and versions to PyPI, so it is skipped')
+      const bin = lookup('pip-audit')
+      if (!bin) return missing('pip-audit', 'install with: pip install pip-audit (it contacts PyPI when it runs)')
+      for (const f of files) {
+        const r = spawn(bin, ['-r', f, '--no-deps', '--disable-pip', '-f', 'json', '--progress-spinner', 'off'], root, 300_000)
+        let json = null
+        try {
+          json = JSON.parse(String(r.stdout ?? '').trim())
+        } catch {
+          // not JSON: the file could not be audited (for example a requirement that is not pinned with ==)
+        }
+        if (!json || r.error || (r.status !== 0 && r.status !== 1)) {
+          const why = String(r.stderr ?? r.error?.message ?? '').trim().split('\n').filter((l) => /^ERROR/.test(l)).pop()?.replace(/^ERROR:[\w.]+:/, '').slice(0, 160)
+          skipped.push(`${f}: ${why || `exit ${r.status}`}`)
+          continue
+        }
+        jsons.push({ file: f, json })
+      }
+      if (!jsons.length) return nr(`pip-audit could not audit any requirements file (${skipped.join('; ')})`)
+    }
+    const items = jsons.flatMap((j) => parsePipAudit(j.json, j.file))
+    const notes = [...skipped, ...jsons.flatMap((j) => pipAuditSkipped(j.json))]
+    const code = report('pip-audit-python', items)
+    if (notes.length) console.log(cleanMessage(`pip-audit-python: not audited: ${notes.join('; ')}`).slice(0, 400))
+    return code
+  }
+
+  if (name === 'vulture-dead-code' || name === 'radon-complexity') {
+    const tool = name === 'vulture-dead-code' ? 'vulture' : 'radon'
+    let text
+    if (sample) text = sampleOf(sample)
+    else {
+      if (!trackedFiles(root).some((f) => /\.py$/i.test(f))) {
+        console.log(`${name}: not applicable, no tracked .py files`)
+        return 0
+      }
+      const bin = lookup(tool)
+      if (!bin) return missing(tool, `install with: pip install ${tool}`)
+      const skip = ['.venv', 'venv', 'node_modules', 'site-packages', '__pycache__', '.tox', '.git']
+      const args = tool === 'vulture'
+        ? ['.', '--min-confidence', String(vultureConfidence(env)), '--exclude', skip.map((d) => `*/${d}/*`).join(',')]
+        : ['cc', '.', '-j', '-n', radonMinRank(env), '-i', skip.join(',')]
+      const r = spawn(bin, args, root, 300_000)
+      // vulture exits 3 when it reports and 0 when it does not; radon exits 0 either way.
+      const okStatus = tool === 'vulture' ? r.status === 0 || r.status === 3 : r.status === 0
+      if (r.error || !okStatus) return nr(`${tool} failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr ?? '').trim().split('\n').pop()?.slice(0, 200)}`)
+      text = r.stdout ?? ''
+    }
+    if (tool === 'vulture') return report(name, parseVulture(text, root, vultureConfidence(env)), 100)
+    let json
+    try {
+      json = JSON.parse(String(text).trim() || '{}')
+    } catch {
+      return nr('radon printed output that is not JSON')
+    }
+    const items = parseRadon(json, root, radonMinRank(env))
+    const code = report(name, items, 100)
+    if (items.errors) console.log(`${name}: ${items.errors} file(s) radon could not parse were not measured`)
+    return code
+  }
+
   if (name === 'actionlint-workflows') {
     let text
     if (sample) text = sampleOf(sample)
@@ -550,7 +813,139 @@ export function main(argv, env = process.env) {
     return report('actionlint-workflows', parseActionlint(json ?? [], root))
   }
 
-  console.log('usage: node detectors.mjs <osv-scan|semgrep-security|clippy-correctness|tsc-strict|gitleaks-secrets|staticcheck-go|govulncheck-go|actionlint-workflows> [--root <dir>] [--sample <file>]')
+  if (name === 'knip-unused') {
+    let text
+    if (sample) text = sampleOf(sample)
+    else {
+      if (!existsSync(join(root, 'package.json'))) {
+        console.log('knip-unused: not applicable, no package.json')
+        return 0
+      }
+      const bin = lookup('knip')
+      if (!bin) return missing('knip', 'install with: npm install --prefix ~/.meerkat-tools/js knip (Meerkat never installs it). Note: knip loads the config files of the tools it knows (vite, jest, ...), which is like running them')
+      const r = spawn(bin, ['--reporter', 'json', '--no-progress'], root, 600_000)
+      if (r.error || (r.status !== 0 && r.status !== 1) || !String(r.stdout).trim().startsWith('{')) return nr(`knip failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr || r.stdout).trim().split('\n').pop()?.slice(0, 200)}`)
+      text = r.stdout
+    }
+    let json
+    try {
+      json = JSON.parse(text)
+    } catch {
+      return nr('knip printed output that is not JSON')
+    }
+    if (!Array.isArray(json?.issues)) return nr('knip output has no issues list')
+    return report('knip-unused', parseKnip(json, root), 300)
+  }
+
+  if (name === 'cspell-spelling') {
+    let text
+    if (sample) text = sampleOf(sample)
+    else {
+      const bin = lookup('cspell')
+      if (!bin) return missing('cspell', 'install with: npm install --prefix ~/.meerkat-tools/js cspell')
+      // Only the project's JSON or YAML cspell config is used (a .js config would run code); without one the built-in dictionaries apply.
+      const cfg = ['cspell.json', '.cspell.json', 'cspell.jsonc', '.cspell.jsonc', 'cspell.config.yaml', 'cspell.config.yml'].find((f) => existsSync(join(root, f)))
+      const args = ['lint', '--no-progress', '--no-color', '--no-summary', '--no-config-search', '--relative', '--reporter', '@cspell/cspell-json-reporter', ...(cfg ? ['--config', cfg] : []), '**/*.{md,html}']
+      const r = spawn(bin, args, root, 600_000)
+      if (r.error || (r.status !== 0 && r.status !== 1) || !String(r.stdout).trim().startsWith('{')) return nr(`cspell failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr || r.stdout).trim().split('\n').pop()?.slice(0, 200)}`)
+      text = r.stdout
+    }
+    let json
+    try {
+      json = JSON.parse(text)
+    } catch {
+      return nr('cspell printed output that is not JSON')
+    }
+    if (!Array.isArray(json?.issues)) return nr('cspell output has no issues list')
+    if (Number(json?.result?.errors) > 0) return nr(`cspell could not read ${json.result.errors} file(s)`)
+    return report('cspell-spelling', parseCspell(json, root), CSPELL_CAP)
+  }
+
+  if (name === 'htmlhint-html') {
+    let text
+    if (sample) text = sampleOf(sample)
+    else {
+      const bin = lookup('htmlhint')
+      if (!bin) return missing('htmlhint', 'install with: npm install --prefix ~/.meerkat-tools/js htmlhint')
+      const files = trackedFiles(root).filter((f) => /\.html?$/i.test(f) && !/(^|\/)(node_modules|dist|build|vendor)\//.test(f)).slice(0, 500)
+      if (!files.length) {
+        console.log('htmlhint-html: not applicable, no tracked .html files')
+        return 0
+      }
+      const r = spawn(bin, ['--format', 'json', '--nocolor', ...files], root, 300_000)
+      if (r.error || (r.status !== 0 && r.status !== 1) || !String(r.stdout).trim().startsWith('[')) return nr(`htmlhint failed (exit ${r.status ?? r.error?.code}): ${String(r.stderr || r.stdout).trim().split('\n').pop()?.slice(0, 200)}`)
+      text = r.stdout
+    }
+    let json
+    try {
+      json = JSON.parse(text)
+    } catch {
+      return nr('htmlhint printed output that is not JSON')
+    }
+    return report('htmlhint-html', parseHtmlhint(json, root), 300)
+  }
+
+  if (name === 'size-limit-budget') {
+    let text
+    if (sample) text = sampleOf(sample)
+    else {
+      // Only a project that already configures size-limit is checked: the limits are the project's own, never invented here.
+      let pkg = {}
+      try {
+        pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+      } catch {
+        // no readable package.json
+      }
+      if (!pkg['size-limit'] && !['.size-limit.json', '.size-limit.js', '.size-limit.cjs', '.size-limit.mjs'].some((f) => existsSync(join(root, f)))) {
+        console.log('size-limit-budget: not applicable, the project has no size-limit configuration')
+        return 0
+      }
+      const bin = lookup('size-limit')
+      if (!bin) return missing('size-limit', 'install with: npm install --prefix ~/.meerkat-tools/js size-limit @size-limit/file (the project lists its @size-limit plugin in its own package.json)')
+      const r = spawn(bin, ['--json'], root, 600_000)
+      if (r.error || (r.status !== 0 && r.status !== 1) || !String(r.stdout).trim().startsWith('[')) return nr(`size-limit could not run (exit ${r.status ?? r.error?.code}): ${String(r.stderr || r.stdout).trim().split('\n').filter(Boolean)[0]?.slice(0, 200)}`)
+      text = r.stdout
+    }
+    let json
+    try {
+      json = JSON.parse(text)
+    } catch {
+      return nr('size-limit printed output that is not JSON')
+    }
+    return report('size-limit-budget', parseSizeLimit(json))
+  }
+
+  if (name === 'lighthouse-page') {
+    let text
+    let page = 'index.html'
+    if (sample) text = sampleOf(sample)
+    else {
+      page = LIGHTHOUSE_PAGES.find((p) => existsSync(join(root, p)))
+      if (!page) {
+        console.log('lighthouse-page: not applicable, no index.html (looked in dist, build, public and the root)')
+        return 0
+      }
+      const bin = lookup('lighthouse')
+      if (!bin) return missing('lighthouse', 'install with: npm install --prefix ~/.meerkat-tools/js lighthouse (it also needs Google Chrome installed)')
+      // The .bin shim is a .cmd on Windows: run the real script with node instead, so no shell is involved.
+      const cli = join(bin, '..', '..', 'lighthouse', 'cli', 'index.js')
+      if (!existsSync(cli)) return nr(`lighthouse command line not found next to ${bin}`)
+      const r = spawn(process.execPath, [fileURLToPath(new URL('./lh-run.mjs', import.meta.url)), root, page, cli], root, 300_000)
+      if (r.error || r.status !== 0 || !String(r.stdout).trim().startsWith('{')) return nr(`lighthouse could not run, is Google Chrome installed (set CHROME_PATH if it is somewhere unusual)? ${String(r.stderr ?? '').trim().slice(0, 200)}`)
+      text = r.stdout
+    }
+    let json
+    try {
+      json = JSON.parse(text)
+    } catch {
+      return nr('lighthouse printed output that is not JSON')
+    }
+    if (json?.runtimeError || !json?.categories) return nr(`lighthouse reported an error: ${String(json?.runtimeError?.message ?? 'no categories').slice(0, 200)}`)
+    return report('lighthouse-page', parseLighthouse(json, page))
+  }
+
+
+  console.log('usage: node detectors.mjs <osv-scan|semgrep-security|clippy-correctness|tsc-strict|gitleaks-secrets|staticcheck-go|govulncheck-go|actionlint-workflows|knip-unused|cspell-spelling|htmlhint-html|size-limit-budget|lighthouse-page|pip-audit-python|vulture-dead-code|radon-complexity> [--root <dir>] [--sample <file>]')
   return 2
 }
 

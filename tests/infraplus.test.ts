@@ -242,6 +242,16 @@ describe('the checks', () => {
     expect(run('ip-k8s', ['--root', dir]).stdout).toMatch(/MEERKAT-SUB FAIL k8s-networkpolicy-missing/)
   })
 
+  test('pull_request_target is flagged in an inline mapping or list, and plain pull_request is not', () => {
+    const body = ['jobs:', '  b:', '    runs-on: ubuntu-24.04', '    steps:', '      - run: echo hi']
+    const flagged = (on: string) => /MEERKAT-SUB FAIL gha-pull-request-target-trigger/.test(run('ip-gha', ['--root', writeTree({ '.github/workflows/w.yml': lines(on, ...body) })]).stdout)
+    expect(flagged('on: { pull_request_target: { types: [opened] } }')).toBe(true)
+    expect(flagged('on: { push: { branches: [main] }, pull_request_target: {} }')).toBe(true)
+    expect(flagged('on: [push, pull_request_target]')).toBe(true)
+    expect(flagged('on: { pull_request: { types: [opened] } }')).toBe(false)
+    expect(flagged('on: pull_request')).toBe(false)
+  })
+
   test('a pull_request_target workflow that checks out the PR head is flagged', () => {
     const dir = writeTree({
       '.github/workflows/review.yml': lines(

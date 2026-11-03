@@ -7,7 +7,7 @@
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { evaluate, readAllow } from './rules.mjs'
-import { finding, isFixture, main, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finding, isComposeText, isFixture, main, readText, trackedFiles, withFixture } from './kit.mjs'
 import { COMPOSE_RULES, COMPOSE_FILES, DOCKER_FILES, DOCKER_RULES, GHA_FILES, GHA_RULES, K8S_RULES, TF_FILES, TF_RULES, YAML_FILES } from './rules-infra-plus.mjs'
 
 const ALLOW_FILE = '.meerkat-infraplus-allow'
@@ -54,7 +54,8 @@ const FAMILIES = {
     title: 'Terraform and Compose files',
     groups: [
       { label: 'Terraform file', path: TF_FILES, rules: TF_RULES },
-      { label: 'Compose file', path: COMPOSE_FILES, rules: COMPOSE_RULES },
+      // A Compose file is known by its name (compose.yaml, docker-compose.prod.yml) or, whatever it is called, by its content (a services: map of images or builds).
+      { label: 'Compose file', path: YAML_FILES, content: (t, f) => COMPOSE_FILES.test(f) || isComposeText(t), rules: COMPOSE_RULES },
     ],
   },
   'ip-gha': { title: 'GitHub Actions workflows', groups: [{ label: 'GitHub Actions workflow', path: GHA_FILES, rules: GHA_RULES }] },
@@ -106,7 +107,7 @@ function runFamily(name, root) {
     for (const f of listed) {
       if (!g.path.test(f) || isFixture(f)) continue
       let t = readText(root, f)
-      if (g.content && !g.content(t)) continue
+      if (g.content && !g.content(t, f)) continue
       if (g.label === 'Dockerfile') t = joinContinuations(t)
       if (g.label === 'Terraform file' && /\.tf\.json$/i.test(f)) t = tfJsonAsHcl(t)
       texts.set(f, t)

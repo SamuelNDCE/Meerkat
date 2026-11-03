@@ -63,4 +63,6 @@ Windows 11, Node 24. Tools that are not installed on that machine (typos, shellc
 | empty-git-repo | 233 | 4 | 9 |
 | not-a-git-folder | 215 | 0 | 31 |
 
+This table is a dated record. It was not run again for 0.4.0 and the check list has grown since (the current count is in [checks.md](checks.md)).
+
 The 4 FAILs on empty-git-repo are true: a repository with nothing in it has no README, licence, security policy or .gitignore. The 31 NOT RUN on not-a-git-folder are the checks that read git history.

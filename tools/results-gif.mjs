@@ -1,6 +1,7 @@
 // Records the results screen being used, as frames for tools/make_gif.py: the findings list scrolling, Tab to the checks, Tab to the
 // timeline, scrolling down through everything. The REAL renderResults and resultsStep, SAMPLE data. Frames are split by a form-feed line.
-//   node tools/results-gif.mjs frames.txt && python tools/make_gif.py frames.txt docs/images/results-scroll.gif
+//   node tools/results-gif.mjs frames.txt && python tools/make_gif.py frames.txt docs/images/results-scroll.gif --delay 100 --hold 2500
+// Each frame shows for 100 ms, so a pause is a run of identical frames (the encoder merges them into one long frame).
 import { writeFileSync } from 'node:fs'
 import { initialResultsState, renderResults, resultsStep } from '../lib/tui/results.mjs'
 import { sampleData, SAMPLE_NOTE } from '../lib/tui/resultssample.mjs'
@@ -28,16 +29,16 @@ const scrollToEnd = () => {
     if (state.cursor[tab] === before) break
     snap()
   }
-  hold(4)
+  hold(8)
 }
-hold(6)
+hold(20)
 scrollToEnd()
 press('tab')
-hold(6)
+hold(10)
 scrollToEnd()
 press('tab')
-hold(6)
+hold(10)
 scrollToEnd()
-hold(4)
+hold(8)
 writeFileSync(process.argv[2] ?? 'frames.txt', frames.join('\n\f\n'))
 console.log(`${frames.length} frames`)

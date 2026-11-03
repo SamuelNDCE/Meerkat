@@ -3,14 +3,17 @@
 //   node tools/accuracy-corpus.mjs --out <dir>            write the projects and <dir>/planted.json
 //   node tools/accuracy-corpus.mjs --run [--out <dir>]    also run every pack on every project, print the recall table, and
 //                                                         refresh the generated block in docs/accuracy.md (--no-docs to skip that)
-//   node tools/accuracy-corpus.mjs --run --discover       also print, for each planted defect, what the run reported at its place
+//   node tools/accuracy-corpus.mjs --sync-readme          rewrite only the README accuracy paragraph from docs/accuracy.md
+//   node tools/accuracy-corpus.mjs --run --discover      also print, for each planted defect, what the run reported at its place
 // Each defect sits on its own line of otherwise clean code; the manifest says suite, check, rule, file and line. Secrets are built at
 // runtime from random parts, so this source never contains a real-looking secret.
 import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, posix, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { TIER_NAMES, tierOf } from './accuracy-tiers.mjs'
+import { labelReport, loadLabels } from './accuracy-labels.mjs'
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
 
@@ -88,7 +91,72 @@ Start the service and open the local address it prints.
 MIT, see LICENSE.
 `
 const SECURITY = '# Security policy\n\nPlease report a security problem privately by email to security@example.com. Do not open a public issue.\n'
-const tidy = (name, gi = 'node_modules\n.env\ndist\ncoverage\n') => ({ LICENSE: [MIT], 'README.md': [readme(name)], '.gitignore': [gi], 'SECURITY.md': [SECURITY], '.editorconfig': ['root = true\n\n[*]\nindent_style = space\nindent_size = 2\nend_of_line = lf\ninsert_final_newline = true\n'] })
+const CONTRIBUTING = '# Contributing\n\nOpen an issue to discuss a change, then send a pull request with a test. Run the tests before you push.\n'
+const CI_WORKFLOW = 'name: ci\non:\n  push:\n    branches: [main]\n  pull_request:\npermissions:\n  contents: read\njobs:\n  test:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 15\n    steps:\n      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332\n      - run: node --test\n'
+const DEPENDABOT = 'version: 2\nupdates:\n  - package-ecosystem: npm\n    directory: /\n    schedule:\n      interval: weekly\n'
+// The smoke test imports a real module of the project (SMOKE_SRC), so test-quality-static sees a test that exercises code it covers.
+const SMOKE_SRC = 'export const sum = (a, b) => a + b\n'
+const SMOKE_TEST = "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { sum } from '../src/sum.js'\n\ntest('sum adds two numbers', () => {\n  assert.equal(sum(2, 3), 5)\n})\n"
+// A well-kept repository: the ignore file covers OS junk, and a contributing guide, CI (with a job timeout and a read-only token), an update bot and a test exist.
+const tidy = (name, gi = 'node_modules\n.env\ndist\ncoverage\n') => ({ LICENSE: [MIT], 'README.md': [readme(name)], '.gitignore': [`${gi}.DS_Store\nThumbs.db\n__pycache__/\n*.pyc\n`], 'SECURITY.md': [SECURITY], 'CONTRIBUTING.md': [CONTRIBUTING], '.github/workflows/ci.yml': [CI_WORKFLOW], '.github/dependabot.yml': [DEPENDABOT], 'tests/smoke.test.js': [SMOKE_TEST], 'src/sum.js': [SMOKE_SRC], '.editorconfig': ['root = true\n\n[*]\nindent_style = space\nindent_size = 2\nend_of_line = lf\ninsert_final_newline = true\n'] })
+// What a tidy project documents and tests about the code it holds: a .env.example naming every environment variable the code reads (so the
+// env-example check has nothing to ask for), and a test named after a source file in each folder of more than ten source files (test-presence).
+export const wellKeptExtras = (files) => {
+  const text = (v) => (v ?? []).map((it) => (typeof it === 'string' ? it : it?.text ?? '')).join('\n')
+  const extra = {}
+  const names = new Set()
+  const re = /(?:process\.env\.([A-Z][A-Z0-9_]{2,})|process\.env\[['"]([A-Z][A-Z0-9_]{2,})['"]\]|os\.environ(?:\.get)?\(?\[?['"]([A-Z][A-Z0-9_]{2,})['"]|os\.getenv\(['"]([A-Z][A-Z0-9_]{2,})['"]|env::var\("([A-Z][A-Z0-9_]{2,})"\)|os\.Getenv\("([A-Z][A-Z0-9_]{2,})"\))/g
+  const SRC = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|cs|kt|swift|dart|svelte|vue)$/i
+  const TESTISH = /(^|\/)(tests?|__tests__)\/|\.(test|spec)\.[a-z]+$|(^|\/)test_[^/]*\.py$|_test\.go$/i
+  const dirs = new Map()
+  for (const [path, items] of Object.entries(files)) {
+    if (!SRC.test(path) || TESTISH.test(path)) continue
+    for (const m of text(items).matchAll(re)) names.add(m.slice(1).find(Boolean))
+    const d = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '.'
+    if (!dirs.has(d)) dirs.set(d, [])
+    dirs.get(d).push(path)
+  }
+  if (names.size && !files['.env.example']) extra['.env.example'] = [`${[...names].sort().map((n) => `${n}=`).join('\n')}\n`]
+  for (const list of dirs.values()) {
+    if (list.length <= 10) continue
+    const stem = list[0].replace(/^.*\//, '').replace(/\.[^.]+$/, '')
+    extra[`tests/${stem}.test.js`] ??= [SMOKE_TEST.replace('sum adds two numbers', `${stem} is covered`)]
+  }
+  return extra
+}
+// A manifest with no lockfile makes installs and npm audit unreproducible: a tidy project that has a package.json gets an empty lockfile.
+export const lockFor = (files) => {
+  try {
+    const n = JSON.parse(files['package.json'].join('\n'))
+    const deps = n.dependencies ?? {}
+    const dev = n.devDependencies ?? {}
+    const opt = n.optionalDependencies ?? {}
+    const packages = { '': { name: n.name, version: n.version, license: n.license, engines: n.engines, ...(Object.keys(deps).length ? { dependencies: deps } : {}), ...(Object.keys(dev).length ? { devDependencies: dev } : {}), ...(Object.keys(opt).length ? { optionalDependencies: opt } : {}) } }
+    // The lock records each direct dependency too (as npm install writes it), so a tidy twin is in step with its manifest.
+    for (const [name, range] of Object.entries({ ...deps, ...dev, ...opt })) packages[`node_modules/${name}`] = { version: String(range).replace(/^\D*/, '') || '1.0.0', license: 'MIT' }
+    return JSON.stringify({ name: n.name, version: n.version, lockfileVersion: 3, requires: true, packages }, null, 2)
+  } catch {
+    return null
+  }
+}
+// A clean twin must not import a file that is not there: the samples import a helper (../db, ./pool) they never show. Each missing relative
+// import of a script gets a small module of its own, so the twin resolves every import the way a real project does.
+export const importStubs = (files) => {
+  const text = (items) => items.map((it) => (typeof it === 'string' ? it : it.text)).join('\n')
+  const known = new Set(Object.keys(files))
+  const has = (p) => ['', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.json', '.d.ts', '/index.js', '/index.ts'].some((e) => known.has(p + e)) || known.has(p.replace(/\.(m?js|cjs|jsx)$/, '') + '.ts') || known.has(p.replace(/\.(m?js|cjs|jsx)$/, '') + '.tsx')
+  const stubs = {}
+  for (const [path, items] of Object.entries(files)) {
+    if (!/\.(m?[jt]sx?|cjs)$/i.test(path)) continue
+    const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''
+    for (const m of text(items).matchAll(/(?:from\s+|import\s+|import\(\s*|require\(\s*)['"](\.{1,2}\/[^'"?#]*)['"]/g)) {
+      const target = posix.normalize(dir ? `${dir}/${m[1]}` : m[1])
+      if (target.startsWith('..') || has(target) || stubs[target] || stubs[`${target}.js`]) continue
+      stubs[/\.[a-z]+$/i.test(target) ? target : `${target}.js`] = ['module.exports = {}', '']
+    }
+  }
+  return stubs
+}
 const pkg = (name, extra = {}) => [JSON.stringify({ name, version: '1.2.0', description: `${name} service`, license: 'MIT', private: true, engines: { node: '>=20' }, ...extra }, null, 2)]
 
 // ---------- the projects ----------
@@ -741,6 +809,7 @@ PROJECTS['native-langs'] = {
 
 PROJECTS['infra-stack'] = {
   files: {
+    '.dockerignore': ['node_modules\n.git\n.env\n'],
     ...tidy('infra-stack', '.terraform/\n*.tfstate\n.env\n'),
     Dockerfile: [
       d('docker-latest-tag', 'the base image is the moving latest tag', 'FROM node:latest'),
@@ -1182,7 +1251,7 @@ for (const f of readdirSync(join(ROOT, 'tools')).filter((n) => /^accuracy-extra-
 }
 
 // ---------- writing the projects ----------
-const git = (dir, ...args) => execFileSync('git', ['-c', 'user.email=corpus@example.com', '-c', 'user.name=Corpus', '-c', 'core.autocrlf=false', '-c', 'core.excludesFile=', '-c', 'commit.gpgsign=false', ...args], { cwd: dir, stdio: 'pipe', windowsHide: true })
+const git = (dir, ...args) => execFileSync('git', ['-c', 'user.email=corpus@meerkat-corpus.dev', '-c', 'user.name=Corpus', '-c', 'core.autocrlf=false', '-c', 'core.excludesFile=', '-c', 'commit.gpgsign=false', ...args], { cwd: dir, stdio: 'pipe', windowsHide: true })
 
 function lineCount(text) {
   return text.split('\n').length
@@ -1199,7 +1268,14 @@ function writeProject(root, name, def) {
     const [check = '', rule = ''] = first.split('/')
     planted.push({ id: `${name}:${key}`, key, project: name, suite: '', check, alt, rule, file, line, description: desc })
   }
-  for (const [path, items] of Object.entries(def.files)) {
+  const all = { ...def.files }
+  if (all['package.json'] && all['.github/dependabot.yml'] && !['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'].some((l) => all[l])) {
+    const lock = lockFor(all)
+    if (lock) all['package-lock.json'] = [lock, '']
+  }
+  if (/-clean$/.test(name)) Object.assign(all, importStubs(all))
+  if (all['.github/dependabot.yml']) Object.assign(all, wellKeptExtras(all))
+  for (const [path, items] of Object.entries(all)) {
     const out = []
     let line = 1
     for (const it of items) {
@@ -1254,7 +1330,9 @@ export async function withSuites(planted) {
     } catch {
       /* keep other */
     }
-    return { ...p, suite }
+    const tier = tierOf(p.key)
+    if (!tier) throw new Error(`planted defect ${p.key} has no tier in tools/accuracy-tiers.mjs`)
+    return { ...p, suite, tier }
   })
 }
 
@@ -1320,6 +1398,58 @@ export async function runCorpus({ projects, work, concurrency = 4, overallSecond
   return results
 }
 
+// ---------- false alarms on the clean twins ----------
+// A "-clean" twin is the same code written safely, so a finding of bug severity (critical, high, medium: what the results screen counts
+// as bugs) on one is a false alarm. low and info are notes, counted separately. findings.json of each twin is kept in <work>/twin-findings.
+export const BUG_SEVERITIES = new Set(['critical', 'high', 'medium'])
+export function falseAlarmReport(results, work) {
+  const lines = []
+  let total = 0
+  let twins = 0
+  let notes = 0
+  for (const name of Object.keys(results).filter((n) => n.endsWith('-clean')).sort()) {
+    const r = results[name]
+    twins++
+    if (work && r?.runDir) {
+      try {
+        mkdirSync(join(work, 'twin-findings'), { recursive: true })
+        copyFileSync(join(r.runDir, 'findings.json'), join(work, 'twin-findings', `${name}.json`))
+      } catch {
+        /* the copy is a convenience; the findings are already in memory */
+      }
+    }
+    for (const f of r?.findings?.findings ?? []) {
+      if (BUG_SEVERITIES.has(String(f.severity ?? '').toLowerCase())) {
+        total++
+        lines.push(`FALSE-ALARM ${name} ${f.check}/${f.rule || '-'} ${f.file || '-'}:${f.line || 0}`)
+      } else notes++
+    }
+  }
+  lines.push(`FALSE-ALARM-TOTAL ${total} across ${twins} twins`)
+  return { lines, total, twins, notes }
+}
+
+// ---------- noise on the planted projects ----------
+// A finding of bug severity on a planted project that matches no planted defect on that line (3 lines of slack, as in isDetected) is noise.
+// Needs a findings.json; a project without one is skipped, and when none has one nothing is printed.
+export function noiseReport(planted, results) {
+  const lines = []
+  let projects = 0
+  for (const name of [...new Set(planted.map((p) => p.project))].sort()) {
+    const r = results[name]
+    if (!r?.findings || name.endsWith('-clean')) continue
+    projects++
+    const mine = planted.filter((p) => p.project === name)
+    for (const f of r.findings.findings ?? []) {
+      if (!BUG_SEVERITIES.has(String(f.severity ?? '').toLowerCase())) continue
+      if (mine.some((p) => isDetected(p, [f]))) continue
+      lines.push(`NOISE ${name} ${f.check}/${f.rule || '-'} ${f.file || '-'}:${f.line || 0}`)
+    }
+  }
+  if (!projects) return { lines: [], total: 0, projects: 0 }
+  return { lines: [`NOISE-TOTAL ${lines.length} across ${projects} planted projects`, ...lines], total: lines.length, projects }
+}
+
 // ---------- judging ----------
 const norm = (p) => String(p ?? '').split('\\').join('/')
 
@@ -1373,7 +1503,8 @@ export function seenInCheckOutput(p, runDir) {
     for (const line of out.split('\n')) {
       if (!line.includes(p.file)) continue
       const nums = [...line.matchAll(/(?:\bline |:)(\d+)\b/g)].map((m) => Number(m[1]))
-      if (p.line > 0 && nums.length) {
+      // A file-only line may credit only a defect with no line of its own; a defect with a line must match on the line.
+      if (p.line > 0) {
         if (nums.some((n) => Math.abs(n - p.line) <= 3)) return true
       } else return true
     }
@@ -1415,6 +1546,13 @@ export function recallTable(ev) {
   return lines.join('\n')
 }
 
+export function tierTable(planted) {
+  const lines = ['| Tier | Planted |', '| --- | ---: |']
+  for (const t of TIER_NAMES) lines.push(`| ${t} | ${planted.filter((p) => p.tier === t).length} |`)
+  lines.push(`| **all** | ${planted.length} |`)
+  return lines.join('\n')
+}
+
 export function gapList(ev) {
   if (!ev.gaps.length) return '_No gaps: every planted defect is detected._'
   return ev.gaps.map((g) => `- \`${g.project}\` ${g.file ? `\`${g.file}${g.line ? `:${g.line}` : ''}\`` : '(whole repository)'}: ${g.description} (expected \`${g.check || 'unassigned'}${g.rule ? `/${g.rule}` : ''}\`)`).join('\n')
@@ -1435,8 +1573,28 @@ export function thresholdsFrom(ev) {
 export const BEGIN = '<!-- accuracy:begin -->'
 export const END = '<!-- accuracy:end -->'
 
+// The README's accuracy paragraph is written here too, from the same numbers as the table in docs/accuracy.md, so the two cannot disagree.
+export const README_BEGIN = '<!-- accuracy-readme:begin -->'
+export const README_END = '<!-- accuracy-readme:end -->'
+export function readmeBlock({ total, detected, inFindings }) {
+  const p = (n) => percent(total ? n / total : 1)
+  return `${README_BEGIN}\nMeerkat is tested against a corpus of ${total} deliberately planted defects. Two measures are reported: ${detected} (${p(detected)}) were detected by a check (the check's own verdict), and ${inFindings} (${p(inFindings)}) appear in \`findings.json\` (what a person or an AI reading the findings file sees).\n${README_END}`
+}
+export function syncReadme(counts, file = join(ROOT, 'README.md')) {
+  if (!existsSync(file)) return false
+  const text = readFileSync(file, 'utf8')
+  const i = text.indexOf(README_BEGIN)
+  const j = text.indexOf(README_END)
+  if (i < 0 || j < i) return false
+  const eol = text.includes(String.fromCharCode(13, 10)) ? String.fromCharCode(13, 10) : String.fromCharCode(10)
+  const block = readmeBlock(counts).split(String.fromCharCode(10)).join(eol)
+  writeFileSync(file, text.slice(0, i) + block + text.slice(j + README_END.length))
+  return true
+}
+
 export function updateDocs(ev, file = join(ROOT, 'docs', 'accuracy.md')) {
   if (!existsSync(file)) return false
+  if (file === join(ROOT, 'docs', 'accuracy.md')) syncReadme({ total: ev.total, detected: ev.detected, inFindings: ev.inFindings })
   const text = readFileSync(file, 'utf8')
   const i = text.indexOf(BEGIN)
   const j = text.indexOf(END)
@@ -1455,15 +1613,32 @@ async function main() {
     const i = argv.indexOf(n)
     return i >= 0 ? argv[i + 1] : undefined
   }
+  if (argv.includes('--sync-readme')) {
+    // Rewrites only the README paragraph, from the "all" row of the generated table in docs/accuracy.md (no corpus run).
+    const row = /\| \*\*all\*\* \| (\d+) \| (\d+) \| [\d.]+% \| (\d+) \|/.exec(readFileSync(join(ROOT, 'docs', 'accuracy.md'), 'utf8'))
+    if (!row) throw new Error('no "all" row in the generated table of docs/accuracy.md')
+    console.log(syncReadme({ total: Number(row[1]), detected: Number(row[2]), inFindings: Number(row[3]) }) ? 'updated README.md accuracy paragraph' : 'README.md has no accuracy-readme markers')
+    return
+  }
   const out = resolve(opt('--out') ?? mkdtempSync(join(tmpdir(), 'meerkat-accuracy-')))
   const corpus = generateCorpus(out)
   corpus.planted = await withSuites(corpus.planted)
   writeFileSync(join(out, 'planted.json'), JSON.stringify(corpus.planted, null, 2))
   console.log(`wrote ${Object.keys(corpus.projects).length} projects and ${corpus.planted.length} planted defects to ${out}`)
-  if (!argv.includes('--run')) return
+  console.log(`\n${tierTable(corpus.planted)}\n`)
+  const labels = loadLabels()
+  if (!argv.includes('--run')) {
+    console.log(labelReport(corpus.planted, labels, true))
+    return
+  }
   const results = await runCorpus({ projects: corpus.projects, work: join(out, '.work'), say: (m) => console.log(m) })
   const ev = evaluate(corpus.planted, results)
   console.log(`\n${recallTable(ev)}\n\nGaps:\n${gapList(ev)}`)
+  console.log(labelReport(ev.rows, labels))
+  const fa = falseAlarmReport(results, join(out, '.work'))
+  for (const l of fa.lines) console.log(l)
+  console.log(`CLEAN-TWIN-NOTES ${fa.notes} low/info findings across ${fa.twins} twins (not counted as false alarms)`)
+  for (const l of noiseReport(corpus.planted, results).lines) console.log(l)
   if (argv.includes('--discover')) {
     for (const p of ev.rows) {
       const fs = (results[p.project]?.findings?.findings ?? []).filter((f) => (p.file ? norm(f.file) === p.file : true) && (p.line > 0 ? Math.abs(f.line - p.line) <= 1 : true))
