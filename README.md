@@ -7,7 +7,7 @@
 **One command that checks your whole project before you ship it.**<br>
 Security, correctness, accessibility, performance and code health, for any kind of app, with every result saved and explained.
 
-[npm package](https://www.npmjs.com/package/@samuelndce/meerkat) · [GitHub repository](https://github.com/SamuelNDCE/Meerkat)
+<a href="https://www.npmjs.com/package/@samuelndce/meerkat"><img src="https://img.shields.io/badge/npm-package-CB3837?style=for-the-badge&logo=npm&logoColor=white" alt="npm package"></a> <a href="https://github.com/SamuelNDCE/Meerkat"><img src="https://img.shields.io/badge/GitHub-repository-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub repository"></a> <a href="https://discord.gg/x7yXE3MReT"><img src="https://img.shields.io/badge/Discord-community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord community"></a> <a href="https://perpetualtechnologies.co.uk"><img src="https://img.shields.io/badge/Perpetual_Technologies-website-0A0A0A?style=for-the-badge" alt="Perpetual Technologies website"></a>
 
 <!-- counts:start -->
 **383 checks · 1421 sub-checks · 48 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
@@ -17,11 +17,11 @@ Security, correctness, accessibility, performance and code health, for any kind 
 
 <sub>Sample data: a made-up project, drawn by Meerkat's real screens.</sub>
 
-**[Why](#why-meerkat) · [Features](#what-you-get) · [Quick start](#quick-start) · [What it looks like](#what-it-looks-like) · [Make it yours](#make-it-yours) · [Commands](#commands) · [Reference](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/reference.md) · [Licence](#licence)**
+**[🧭 Why](#-why-meerkat) · [🧰 Features](#-what-you-get) · [🚀 Quick start](#-quick-start) · [📸 Pictures](#-what-it-looks-like) · [🔧 Make it yours](#-make-it-yours) · [💻 Commands](#-commands) · [📚 Reference](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/reference.md) · [📜 Licence](#-licence)**
 
 </div>
 
-## Why Meerkat
+## 🧭 Why Meerkat
 
 "Is this safe to push?" usually means running ten commands in the right order, remembering which tool needs which flag, and reading ten different kinds of output. Most projects never get further than a linter and a few tests, so whole classes of problem (a leaked key, an unescaped query, a button a screen reader cannot reach, a build that only works on your machine) ship unseen.
 
@@ -48,7 +48,7 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 - **Yours.** Add a command as a check in one line, write a check in JavaScript, make your own presets, silence a known finding with a reason.
 - **Readable by people and machines.** A live board and a results screen for you; JSON, SARIF, Markdown and an MCP server for scripts, CI and AI agents.
 
-## What you get
+## 🧰 What you get
 
 | Feature | In one line |
 |---|---|
@@ -71,7 +71,7 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 
 Every check, with what it needs and how long it takes, is listed in [docs/checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/checks.md). It is generated from the checks themselves, so it cannot drift from the code.
 
-## Verification
+## ✅ Verification
 
 How well Meerkat was tested before this release, with the full details in two documents.
 
@@ -90,7 +90,7 @@ Recall on planted bugs measures what was planted, not real-world accuracy.
 
 Every planted defect, its tier, suite and result is listed in [docs/accuracy-results.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy-results.md).
 
-## Quick start
+## 🚀 Quick start
 
 You need [Node.js](https://nodejs.org) 20 or newer. There is nothing else to install.
 
@@ -128,7 +128,7 @@ Run `meerkat` on its own for the menu: pick the project (the folder you are in, 
 
 Without `npm link`: `node path/to/Meerkat/run.mjs --app <folder> --preset quick`.
 
-## Connect it to your project
+## 🔌 Connect it to your project
 
 Meerkat reads your project from the outside: it never edits it, and its own files stay in `~/.meerkat` (or the folder in `MEERKAT_LOG_DIR`). To use it on a project:
 
@@ -142,7 +142,7 @@ Meerkat reads your project from the outside: it never edits it, and its own file
 
 Meerkat only checks real projects: a git repository, or a folder with a recognised marker such as `package.json`, `Cargo.toml` or `pyproject.toml`. Anything else is refused with a clear message (`--force` overrides it).
 
-## What a first scan reports
+## 🔍 What a first scan reports
 
 A project that has never been scanned should not be judged by Meerkat's opinions. On a first scan:
 
@@ -154,11 +154,11 @@ A project that has never been scanned should not be judged by Meerkat's opinions
 
 Every skipped, covered or turned-off check is listed in the results with what it is, so nothing is hidden. Security findings, secrets and real defects are never made advisory.
 
-## Gentle on your PC
+## 🔋 Gentle on your PC
 
 Meerkat is a background job and runs like one. At start it lowers its own priority to below normal, and every check it starts inherits that, so the programs you are working in keep getting the processor first. By default it runs about half as many checks at once as your PC has cores (at least 2, at most 8), and it never starts a heavy build or window check without room for it. Antivirus (Windows Defender, for example) scans the files and programs a scan touches; in a 22-minute full scan of a large project (about 2,500 files, with builds and window checks), Windows Defender averaged 1.7 percent of the whole CPU. To change it: `--priority normal` (or `MEERKAT_PRIORITY=normal`) runs at normal priority, `--priority idle` goes lower still, and `MEERKAT_PARALLEL=<n>` sets how many checks run at once. On a CI runner (`CI` set) Meerkat uses all but one core as before.
 
-## What it looks like
+## 📸 What it looks like
 
 Every picture here is **sample data**: a made-up project, not a real run.
 
@@ -176,7 +176,7 @@ Every picture here is **sample data**: a made-up project, not a real run.
 
 ![Results screen after a clean run: a happy meerkat and a green ALL CLEAR](docs/images/results-happy.png)
 
-## What it works on
+## 📁 What it works on
 
 Meerkat looks at what is in your folder and runs what fits. Checks that need an outside tool you have not installed say **NOT RUN** and how to install it.
 
@@ -195,7 +195,7 @@ Meerkat looks at what is in your folder and runs what fits. Checks that need an 
 
 Meerkat was developed and tested on Windows 11 and runs its own test suite in CI on Windows, macOS and Linux (see [CI](#using-it-in-ci)).
 
-## Make it yours
+## 🔧 Make it yours
 
 Meerkat is built to be extended without touching its code.
 
@@ -215,7 +215,7 @@ Meerkat is built to be extended without touching its code.
 
 Your settings for every project live in `~/.meerkat.json`; settings for one project live in its `meerkat.config.json`. A five-minute walk-through: [docs/customizing.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/customizing.md). Writing a check: [docs/writing-checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/writing-checks.md).
 
-## Commands
+## 💻 Commands
 
 Everything the menu does is also a command, so scripts, CI and AI agents never need the screen. Add `--plain` for plain lines and `--json` where a script needs data.
 
@@ -237,7 +237,7 @@ Everything the menu does is also a command, so scripts, CI and AI agents never n
 
 The exit code is 0 when everything passed, 1 when something failed and 75 when something could not run. Every command and flag: [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) and the full [reference](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/reference.md).
 
-## For AI agents and scripts
+## 🤖 For AI agents and scripts
 
 Meerkat is built to be driven by tools as well as people: plain output, `--json`, SARIF for code-scanning, an MCP server (`bin/meerkat-mcp.mjs`) with `meerkat_run`, `meerkat_last`, `meerkat_why` and more, and a stable findings protocol (`MEERKAT-FINDING` lines). Start at [docs/for-ai-agents.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/for-ai-agents.md).
 
@@ -273,7 +273,7 @@ The read-only tools can only read results; `meerkat_run` is the one that starts 
 
 **About NeuralVault.** NeuralVault is an agent harness you own, from [Perpetual Technologies](https://perpetualtechnologies.co.uk): it remembers how your business works, acts only where you allow it, and keeps a record of everything it does. Meerkat is made with Perpetual Technologies: it started as the verification layer for NeuralVault, is used there, and works on any project on its own. Learn more at [perpetualtechnologies.co.uk](https://perpetualtechnologies.co.uk).
 
-## Using it in CI
+## 🧪 Using it in CI
 
 Meerkat exits non-zero on any failure or NOT RUN and writes `summary.json` for every run. A minimal GitHub Actions job:
 
@@ -286,17 +286,17 @@ Meerkat exits non-zero on any failure or NOT RUN and writes `summary.json` for e
 
 Meerkat's own repository runs its test suite on Windows, macOS and Linux with Node 20 and 22 in [.github/workflows/ci.yml](.github/workflows/ci.yml).
 
-## Versions and updates
+## 🔖 Versions and updates
 
 Meerkat uses [semantic versioning](https://semver.org): the last number is the fix number (0.3.1 is the first fix to 0.3.0), the middle number adds features (0.4.0), and the first changes how you use it (1.0.0). Every fix release bumps the last number, so you can always tell which fixes you have. The version lives in `package.json`, and everything that shows it (menu, results screen, board, badge) reads it from there. [CHANGELOG.md](CHANGELOG.md) says what changed in each version.
 
 When a newer version is published here, the menu, the results screen and the live board show a yellow line with your version and the new one. Every kind of update shows: a new feature version, a fix number, and even a fix published without a new number (it shows as the version plus the number of new changes, for example 1.2.3+3). `meerkat update` installs it after you say yes. Meerkat looks once a day, read-only, and never installs without your yes (`meerkat update off` turns the look-up off). Maintainers cut a version with `node tools/release.mjs minor "what changed"`.
 
-## Privacy
+## 🔒 Privacy
 
 Meerkat has no telemetry and never uploads your code or your results. Its one network call of its own is the update look-up. The tools it runs may use the network (`npm audit` asks its registry; performance checks call only the URLs you give). The AI checks are opt-in and say what they will send before they send it.
 
-## Share what you build
+## 🤝 Share what you build
 
 If you wrote a check, a pack or a preset that other people would find useful, please share it: open an issue or a pull request at [github.com/SamuelNDCE/Meerkat](https://github.com/SamuelNDCE/Meerkat) (see [CONTRIBUTING.md](CONTRIBUTING.md)), or publish your pack folder and tell us. Checks that find real problems on real projects without false alarms are the most valuable. To report a security problem, see [SECURITY.md](SECURITY.md).
 
@@ -306,7 +306,7 @@ Rules change as new bugs are found. If Meerkat reports something that is fine, o
 
 **On the roadmap:** syncing rules and advisories automatically from trusted vulnerability sources, so Meerkat also works as a vulnerability checker ([issue 26](https://github.com/SamuelNDCE/Meerkat/issues/26)).
 
-## Licence
+## 📜 Licence
 
 Meerkat is under the [Perpetual Community Licence 1.0](LICENSE), written for this project:
 
@@ -317,7 +317,7 @@ Meerkat is under the [Perpetual Community Licence 1.0](LICENSE), written for thi
 
 The numbered terms in [`LICENSE`](LICENSE) are what counts; this summary is a guide. It is not an OSI open-source licence (it restricts selling) and has not been reviewed by a solicitor. See [docs/licence-notes.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/licence-notes.md).
 
-## More documentation
+## 📚 More documentation
 
 | Read | For |
 |---|---|
