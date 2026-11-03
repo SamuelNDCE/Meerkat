@@ -243,7 +243,11 @@ describe('the run timeline records time properly', () => {
     const t0 = Date.parse(s.startedAt)
     for (const e of ends as any[]) {
       const a: any = starts.get(e.id)
-      expect(Math.abs(e.t - a.t - e.ms)).toBeLessThanOrEqual(150) // end minus start is the time the check reports
+      // End minus start is the time the check reports. The two are not read at the same instant: the recorder stamps `start` before the other
+      // start hooks run and before the runner takes its own t0, and stamps `end` after the runner's synchronous log() write. Those are tiny
+      // steps, but on a starved CI runner (a Windows run with ~100 vitest workers) the process can be descheduled in any of them, and CI
+      // measured 242ms of skew. 500ms still catches a real bug (a wrong clock, a unit mix-up, an end taken from the wrong event).
+      expect(Math.abs(e.t - a.t - e.ms)).toBeLessThanOrEqual(500)
       expect(Date.parse(a.at)).toBeGreaterThanOrEqual(t0 - 5) // nothing starts before the run does
       expect(e.t).toBeGreaterThanOrEqual(a.t)
     }
