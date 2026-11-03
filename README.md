@@ -71,7 +71,16 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 
 Every check, with what it needs and how long it takes, is listed in [docs/checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/checks.md). It is generated from the checks themselves, so it cannot drift from the code.
 
-## Planted-bug accuracy
+## Verification
+
+How well Meerkat was tested before this release, with the full details in two documents.
+
+- **Unit tests:** 2,657 of 2,657 tests that ran passed (100%), 0 failed, and 11 skipped. The suite has 133 test files, run on 2026-11-03.
+- **Planted bugs:** Meerkat is also tested against a corpus of deliberately planted bugs. The figures are below, and they are generated from the final run.
+- **Safe projects:** a separate set of clean projects checks that Meerkat stays quiet on safe code. Its false-alarm rate was measured before the last fixes and has not been re-measured, so the figure is stated as such in the details.
+- **Full details:** [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) has the final run, its tables and its caveats. [docs/accuracy-results.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy-results.md) lists every planted bug and its result.
+
+### Planted-bug accuracy
 
 <!-- accuracy-readme:begin -->
 Meerkat is tested against a corpus of 1540 deliberately planted defects. Two measures are reported: 1533 (99.5%) were detected by a check (the check's own verdict), and 1532 (99.5%) appear in `findings.json` (what a person or an AI reading the findings file sees).
