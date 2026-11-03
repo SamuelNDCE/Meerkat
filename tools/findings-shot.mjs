@@ -1,6 +1,7 @@
 // Draws the findings screen (the REAL renderFindingsScreen) with a sample run, to ANSI text for tools/screenshot.py. Nothing reads your files.
 //   node tools/findings-shot.mjs > findings.ansi ; python tools/screenshot.py findings.ansi findings.png
 //   add "detail" to draw the full detail of the first finding instead, "plain" for no colour and no art, "narrow" for 60 columns
+import { VERSION } from '../lib/version.mjs'
 import { renderFindingDetail, renderFindingsScreen } from '../lib/findingsscreen.mjs'
 
 const args = process.argv.slice(2)
@@ -19,10 +20,10 @@ const findings = [
 ]
 const count = (k, v) => findings.filter((x) => x[k] === v).length
 const doc = {
-  meerkat: { version: '1.3.2' },
+  meerkat: { version: VERSION },
   run: { id: '20261031-142305-fast', project: { name: 'plume', path: 'C:/Users/me/code/plume' } },
   counts: { total: findings.length, bySeverity: { critical: count('severity', 'critical'), high: count('severity', 'high'), medium: count('severity', 'medium'), low: count('severity', 'low'), info: count('severity', 'info') }, new: count('status', 'new') },
   findings,
 }
-const lines = args.includes('detail') ? renderFindingDetail(findings[1], { width, color }) : renderFindingsScreen(doc, { cursor: 3, width, rows: 30, color, level: color ? 'truecolor' : false, env: color ? {} : { NO_COLOR: '1' }, version: '1.3.2' }).map((l) => l.text)
+const lines = args.includes('detail') ? renderFindingDetail(findings[1], { width, color }) : renderFindingsScreen(doc, { cursor: 3, width, rows: 30, color, level: color ? 'truecolor' : false, env: color ? {} : { NO_COLOR: '1' }, version: VERSION }).map((l) => l.text)
 process.stdout.write(`${lines.join('\n')}\n`)

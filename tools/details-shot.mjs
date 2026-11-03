@@ -1,6 +1,7 @@
 // Draws the preset details screen (the REAL renderDetails) with a sample project, to an .ansi file you can turn into a PNG.
 //   node tools/details-shot.mjs > details.ansi ; python tools/screenshot.py details.ansi details.png
 //   add "plain" for no colour and no art, "narrow" for 60 columns, "short" for a small window (shows the scroll note), "scroll" to scroll down 6 rows
+import { VERSION } from '../lib/version.mjs'
 import { renderDetails } from '../lib/presetdetails.mjs'
 import { PRESETS } from '../lib/presets.mjs'
 
@@ -32,5 +33,5 @@ const data = {
   checks,
   estimateSeconds: 63,
 }
-const view = renderDetails(data, { offset: args.includes('scroll') ? 6 : 0, project: 'C:/Users/me/code/plume', version: '1.3.2', width, rows, color, level: color ? 'truecolor' : false, env: color ? {} : { NO_COLOR: '1' }, isTTY: true })
+const view = renderDetails(data, { offset: args.includes('scroll') ? 6 : 0, project: 'C:/Users/me/code/plume', version: VERSION, width, rows, color, level: color ? 'truecolor' : false, env: color ? {} : { NO_COLOR: '1' }, isTTY: true })
 process.stdout.write(`${view.lines.map((l) => l.text).join('\n')}\n`)

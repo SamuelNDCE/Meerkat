@@ -42,15 +42,13 @@ const ESC = '\x1b['
 const withNote = (lines) => [...lines, '', color ? `${ESC}1;33m  ${SAMPLE_NOTE}${ESC}0m` : `  ${SAMPLE_NOTE}`]
 
 // Real names, lanes and dependencies of the quick preset (no compile-heavy check: no build, no clippy, no test run, so none of the window checks that wait on a build); durations are the cold-run numbers (seconds).
-const KIND = { 'rule-scan': 'security', 'npm-audit': 'security', 'cargo-audit': 'security', 'ui-screens': 'ui', 'click-through': 'ui' }
+const KIND = { 'rule-scan': 'security', 'npm-audit': 'security', 'ui-screens': 'ui', 'click-through': 'ui' }
 const spec = [
   ['rule-scan', 'free', 1, [], ['reading 1,204 files', '5 rules, clean']],
   ['npm-audit', 'free', 2, [], ['asking the registry', 'found 0 vulnerabilities']],
-  ['cargo-audit', 'free', 3, [], ['fetching advisory database', 'checking 560 crates']],
-  ['type-check', 'free', 10, [], ['tsc -p tsconfig.json', 'tsc -p tsconfig.electron.json']],
+  ['type-check', 'free', 10, [], ['tsc -p tsconfig.json', 'tsc -p tsconfig.node.json']],
   ['eslint', 'free', 20, [], ['linting src/', 'linting scripts/']],
   ['prettier-check', 'free', 6, [], ['checking formatting']],
-  ['cargo-fmt', 'cargo', 3, [], ['cargo fmt --check']],
 ]
 
 // About fifty more quick checks, so the board has a realistic number of rows to fold: [group, pack, names].
@@ -67,7 +65,7 @@ for (const [group, pack, names] of MORE) for (const [i, name] of names.entries()
 // Files the made-up checks "look at", so the board shows names moving past and a count rising (the real run reads them from the
 // MEERKAT-FILE and MEERKAT-FILES lines a check prints, lib/progress-files.mjs). Which checks read files, and how many.
 const FILE_TOTALS = { 'rule-scan': 1204, 'type-check': 940, 'build-all': 1840, 'unit-tests': 530, 'ui-screens': 24 }
-const DIRS = ['src/auth', 'src/api', 'src/ui/components', 'src/sync', 'src/util', 'src-tauri/src', 'scripts', 'docs']
+const DIRS = ['src/auth', 'src/api', 'src/ui/components', 'src/sync', 'src/util', 'scripts', 'docs']
 const STEMS = ['session', 'orders', 'Sidebar', 'queue', 'settings', 'index', 'db', 'hash', 'router', 'Comment', 'search', 'Header']
 const EXTS = ['ts', 'tsx', 'ts', 'mjs', 'ts', 'css', 'ts', 'md']
 export const fakeFile = (id, i) => {
@@ -86,7 +84,7 @@ const checks = spec.map(([id, lane, secs, after, notes, group, pack]) => ({
   notes,
   run: async () => {
     await sleep((secs * 1000) / SPEED)
-    return FAIL && id === 'cargo-audit' ? { ok: false, detail: '4 known advisories (RUSTSEC)' } : { ok: true, detail: '' }
+    return FAIL && id === 'npm-audit' ? { ok: false, detail: '4 known advisories (npm audit)' } : { ok: true, detail: '' }
   },
 }))
 const timings = { checks: Object.fromEntries(spec.map(([id, , secs]) => [id, { fast: [secs * 1000] }])) }
@@ -135,14 +133,14 @@ const frame = (tick) => {
 }
 
 if (has('--once')) {
-  // A still frame, taken part way through: some done, the cargo build and a unit-test run going, windows waiting.
+  // A still frame, taken part way through: some done, the type check and a lint going.
   const t0 = base
   const fakeNow = t0 + 140_000
-  const early = { 'rule-scan': 2, 'npm-audit': 3, 'cargo-audit': 4, 'type-check': 10, 'cargo-fmt': 4, 'prettier-check': 8 }
+  const early = { 'rule-scan': 2, 'npm-audit': 3, 'type-check': 10, 'prettier-check': 8 }
   for (const [id, at] of Object.entries(early)) {
     const c = checks.find((x) => x.id === id)
     model.start(c, t0 + at * 1000 - 2000)
-    model.settle(c, id === 'cargo-audit' && FAIL ? { status: 'FAIL', detail: '4 known advisories (RUSTSEC)' } : { status: 'PASS' }, 2000 + (id === 'type-check' ? 8000 : 0))
+    model.settle(c, id === 'npm-audit' && FAIL ? { status: 'FAIL', detail: '4 known advisories (npm audit)' } : { status: 'PASS' }, 2000 + (id === 'type-check' ? 8000 : 0))
   }
   // The extra quick checks: nearly all done by now, a few still running or waiting.
   const extra = checks.filter((c) => !Object.hasOwn(early, c.id))

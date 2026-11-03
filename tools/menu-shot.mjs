@@ -1,8 +1,9 @@
 // Prints a Meerkat menu screen as ANSI text, drawn by the REAL functions with sample data (a made-up project path, and a made-up
-// update 1.4.0 against 1.3.2), for tools/screenshot.py. Nothing here reads your files or the network.
+// update one minor version ahead of the current one), for tools/screenshot.py. Nothing here reads your files or the network.
 //   node tools/menu-shot.mjs > menu.ansi ; python tools/screenshot.py menu.ansi menu.png        the home screen (preset menu)
 //   node tools/menu-shot.mjs after-run > after.ansi ; python tools/screenshot.py after.ansi after-run.png   the screen after a run
 //   add "plain" for the no-colour, no-art version; "narrow" for 60 columns
+import { VERSION } from '../lib/version.mjs'
 import { SAMPLE_NOTE } from '../lib/tui/resultssample.mjs'
 import { initialState, menuItems, menuStep, renderPicker, renderScreen, withUpdateBar } from '../lib/menu.mjs'
 
@@ -11,7 +12,8 @@ const ESC = String.fromCharCode(27) + '['
 const args = process.argv.slice(2)
 const color = !args.includes('plain')
 const width = args.includes('narrow') ? 60 : 100
-const update = args.includes('noupdate') ? null : { latest: '1.4.0', current: '1.3.2' }
+const nextMinor = (v) => { const [a, b] = v.split('.'); return `${a}.${Number(b) + 1}.0` }
+const update = args.includes('noupdate') ? null : { latest: nextMinor(VERSION), current: VERSION }
 const CODES = { title: '\x1b[1m', heading: '\x1b[1;36m', cursor: '\x1b[7m', about: '\x1b[33m', hint: '\x1b[2m', plain: '' }
 
 let lines
@@ -34,7 +36,7 @@ if (args.includes('after-run')) {
   state = menuStep(state, 'down').state // the highlight on the second item, as a person would see it
   lines = renderScreen(state, {
     project: 'C:\\Users\\me\\code\\plume',
-    version: '1.3.2',
+    version: VERSION,
     question: 'What would you like to run?',
     hint: '  Up/Down move   Enter choose   1-9 jump   u update   q quit',
     update,

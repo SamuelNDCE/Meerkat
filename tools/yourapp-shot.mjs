@@ -2,6 +2,7 @@
 // made-up checks), for tools/screenshot.py. Nothing here reads your files, runs a check or touches the network.
 //   node tools/yourapp-shot.mjs > yourapp-menu.ansi ; python tools/screenshot.py yourapp-menu.ansi yourapp-menu-preview.png
 //   add "plain" for the no-colour version, "narrow" for 60 columns
+import { VERSION } from '../lib/version.mjs'
 import { initialState, menuItems, menuStep, renderScreen, suitePickerItems } from '../lib/menu.mjs'
 import { checkDetailLines, checkItems, checksHint, ideaDetailLines, ideaItems, ideasHint, renderDetailScreen } from '../lib/yourappscreen.mjs'
 
@@ -9,7 +10,7 @@ const args = process.argv.slice(2)
 const color = !args.includes('plain')
 const width = args.includes('narrow') ? 60 : 100
 const project = 'C:\\Users\\sam\\code\\shop-app'
-const common = { project, version: '1.3.2', width, color, level: color ? 'truecolor' : false, env: color ? {} : { NO_COLOR: '1' }, isTTY: true }
+const common = { project, version: VERSION, width, color, level: color ? 'truecolor' : false, env: color ? {} : { NO_COLOR: '1' }, isTTY: true }
 
 const rows = [
   { id: 'e2e', title: 'End-to-end tests', origin: 'project', label: 'project', suite: 'shop-app', group: 'functionality', tier: 'thorough', where: 'meerkat.config.json (customChecks)', editable: true, command: 'npm run test:e2e', installed: true, missing: [] },
