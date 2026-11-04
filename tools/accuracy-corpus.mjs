@@ -1306,11 +1306,13 @@ function writeProject(root, name, def) {
   return { dir, planted }
 }
 
-export function generateCorpus(out) {
+// `only` (optional): build just these project names, for a test that needs a few projects and not the whole corpus.
+export function generateCorpus(out, { only = null } = {}) {
   mkdirSync(out, { recursive: true })
   const projects = {}
   const planted = []
   for (const [name, def] of Object.entries(PROJECTS)) {
+    if (only && !only.includes(name)) continue
     const r = writeProject(out, name, def)
     projects[name] = r.dir
     planted.push(...r.planted)

@@ -177,7 +177,8 @@ describe('the corpus twins', () => {
     const { generateCorpus } = await import(pathToFileURL(join(root, 'tools', 'accuracy-corpus.mjs')).href)
     const out = mkdtempSync(join(tmpdir(), 'meerkat-farc-corpus-'))
     try {
-      const r = generateCorpus(out)
+      // Only the two static-site projects: building the whole corpus here took over two minutes on a busy PC.
+      const r = generateCorpus(out, { only: ['client-static-site', 'client-static-site-clean'] })
       expect(run('hygiene.mjs', 'ui-static', r.projects['client-static-site-clean']).stdout).not.toContain('about.html')
       expect(run('hygiene.mjs', 'ui-static', r.projects['client-static-site']).stdout).toContain('public/about.html: <html> has no lang attribute')
       const planted = r.planted.find((p: any) => p.key === 'client-site-nolang')
