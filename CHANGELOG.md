@@ -4,6 +4,11 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- updates: `U` now starts the update from the project picker too (only while no filter text is typed, so letters still filter); the menu hint says so
+- updates: a Meerkat folder that is on a branch with commits GitHub does not have no longer shows the misleading "has changes of its own" error. Those commits stay on their branch, the folder moves onto the default branch, and the result says which branch was left. A detached HEAD with its own commits is still refused, and so is a local default branch with commits of its own
+- updates: a spinner shows while the menu checks GitHub (it no longer looks frozen), and a line says the update is being installed
+- docs: docs/developers.md for people changing Meerkat: folder map, generated files to regenerate, and what an update does and never touches
+
 ## 0.4.0 (2026-11-03)
 
 - Accuracy, measured on the final corpus: 1540 planted defects; 1533 detected by a check (99.5%) and 1532 found in the findings file (99.5%). By impact: critical 484 of 484, high 465 of 466, medium 349 of 352, low 235 of 238. By difficulty to find: easy 1021 of 1021, medium 323 of 324, hard 118 of 120, extreme 71 of 75. Seven planted defects are known gaps, listed in docs/accuracy.md. Clean and trap twins: that run reported 601 false alarms across 166 twins, **before** the test-quality fix and the later guard changes listed below; the final false-alarm rate was not re-measured, because the corpus was not re-run for this release. Recall on planted bugs measures what was planted, not real-world accuracy.

@@ -1,5 +1,7 @@
 # Contributing to Meerkat
 
+New here? [docs/developers.md](docs/developers.md) maps the folders, lists the generated files to regenerate and explains why an update never overwrites your changes.
+
 ## Run the tests
 
 ```

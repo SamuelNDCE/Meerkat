@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { findProject, helpText, listPresets, packAdd, packList, packRemove, planCommand, presetsText } from './cli.mjs'
 import { buildBugReport } from './bugreport.mjs'
 import { initialState, lineStep, listRunChecks, menuItems, menuStep, parseCheckList, parseKeys, renderPicker, saveProjectPreset, savePersonalPreset } from './menu.mjs'
-import { applyUpdate, checkForUpdate, maybeAutoUpdate, runUpdateCommand } from './update.mjs'
+import { applyUpdate, checkForUpdate, maybeAutoUpdate, runUpdateCommand, updatedText } from './update.mjs'
 import { readUserConfig, writeUserConfig } from './userconfig.mjs'
 
 const cwd = resolve('/work/app')
@@ -330,11 +330,33 @@ describe('update', () => {
     expect((r as { reason: string }).reason).toContain('changes')
   })
 
-  test('a non-fast-forward is refused and nothing is merged', () => {
+  test('a detached HEAD with commits GitHub does not have is refused and nothing is moved', () => {
     const calls: Call[] = []
-    const exec = fakeExec({ ...clone, 'status --porcelain': '', 'merge-base --is-ancestor': new Error('exit 1') }, calls)
+    const exec = fakeExec({ ...clone, 'status --porcelain': '', 'merge-base --is-ancestor': new Error('exit 1'), 'rev-parse --abbrev-ref HEAD': 'HEAD\n' }, calls)
+    const r = applyUpdate({ repoDir: repo, exec })
+    expect(r.ok).toBe(false)
+    expect(calls.some(([, a]) => a[0] === 'merge' || a[0] === 'checkout')).toBe(false)
+  })
+
+  test('a branch with its own unpushed commit moves the folder to the default branch and keeps the branch', () => {
+    const calls: Call[] = []
+    const exec = fakeExec({ ...clone, 'status --porcelain': '', 'merge-base --is-ancestor HEAD': new Error('exit 1'), 'merge-base --is-ancestor abc123': '', 'checkout --quiet -B': '', 'rev-parse --abbrev-ref HEAD': 'fix/tiers\n', 'rev-parse --verify --quiet': 'abc123\n', 'show HEAD:package.json': '{"version":"0.4.0"}', 'show origin/main:package.json': '{"version":"0.4.1"}' }, calls)
+    const r = applyUpdate({ repoDir: repo, exec })
+    expect(r).toMatchObject({ ok: true, switchedFrom: 'fix/tiers' })
+    expect(calls.some(([, a]) => a.join(' ') === 'checkout --quiet -B main origin/main')).toBe(true)
+    expect(calls.some(([, a]) => a[0] === 'branch' || a[0] === 'reset')).toBe(false)
+  })
+
+  test('a local main with commits of its own is refused and nothing is reset', () => {
+    const calls: Call[] = []
+    const exec = fakeExec({ ...clone, 'status --porcelain': '', 'merge-base --is-ancestor HEAD': new Error('exit 1'), 'rev-parse --abbrev-ref HEAD': 'fix/tiers\n', 'rev-parse --verify --quiet': 'abc123\n', 'merge-base --is-ancestor abc123': new Error('exit 1') }, calls)
     expect(applyUpdate({ repoDir: repo, exec }).ok).toBe(false)
-    expect(calls.some(([, a]) => a[0] === 'merge')).toBe(false)
+    expect(calls.some(([, a]) => a[0] === 'checkout')).toBe(false)
+  })
+
+  test('the success message names the branch the folder left', () => {
+    expect(updatedText({ ok: true, from: '0.4.0', to: '0.4.1', switchedFrom: 'fix/tiers' })).toContain('fix/tiers')
+    expect(updatedText({ ok: true, from: '0.4.0', to: '0.4.1' })).toBe('Updated from 0.4.0 to 0.4.1.')
   })
 
   test('a clean fast-forward is applied with --ff-only', () => {

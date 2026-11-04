@@ -12,7 +12,14 @@
     "ai-agents",
     "developer-tools",
     "sarif",
-    "devsecops"
+    "devsecops",
+    "pre-push",
+    "ci",
+    "sast",
+    "secrets-detection",
+    "accessibility",
+    "linter",
+    "project-health"
   ],
   "license": "SEE LICENSE IN LICENSE",
   "author": "SamuelNDCE",
