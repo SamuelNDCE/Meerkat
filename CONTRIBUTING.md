@@ -20,11 +20,21 @@ npm test
 
 Run `npm ci` once first: vitest is the only dev dependency.
 
-Before you open a pull request, run Meerkat on itself:
+## Check your change
+
+Meerkat checks itself. While you work, a quick build-and-test check (build, type check, lints and the quick tests):
+
+```
+node run.mjs --app . --preset smoke --plain
+```
+
+Before you open a pull request, the quick preset:
 
 ```
 node run.mjs --app . --preset quick --plain
 ```
+
+To focus a run on part of the project, add `--scope <folder>` (repeat it, or separate folders with commas), for example `--scope lib`. Only checks that read files in that folder run, and only findings inside it are kept. Repo-wide checks (git history, commit messages, dependency counts) are not limited by it. `--changed` instead limits a run to files changed against the base branch; the two cannot be combined. More in [docs/reference.md](docs/reference.md#focused-runs).
 
 ## Add a check
 

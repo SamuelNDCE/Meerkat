@@ -228,8 +228,8 @@ Options that go with any run:
 |---|---|
 | `--group security,ui` | any mix of `security`, `functionality`, `ui`, `performance`, `refactor` |
 | `--only eslint,tsc` | just those checks (and what they need): for re-running a failure |
-| `--scope <folder>` | only the checks that read files in that folder, and only the findings inside it. Repeat it or separate folders with commas. A check that scans the whole project still runs, and a check that fails only on findings outside the folder passes for that run. Repo-wide checks (git history, commit messages, dependency counts) are not limited by it |
-| `--changed` | only the checks that read files changed against the base branch (`MEERKAT_BASE` or the default branch) |
+| `--scope <folder>` | only the checks that read files in that folder, and only the findings inside it. Repeat it or separate folders with commas. A check that scans the whole project still runs, and a check that fails only on findings outside the folder passes for that run. Repo-wide checks (git history, commit messages, dependency counts) are not limited by it. Cannot be combined with `--changed` or `--all` |
+| `--changed` | only the checks that read files changed against the base branch (`MEERKAT_BASE` or the default branch). Cannot be combined with `--scope` or `--all` |
 | `--include ai` | also run the opt-in checks of that name |
 | `--fail-fast` | stop at the first failure (the default is to run everything) |
 | `--timeout-scale <n>` | multiply every check's time limit by n (1 to 10, default 1) |
@@ -239,6 +239,22 @@ Options that go with any run:
 | `--list-presets` | every preset: bundled, personal and the project's |
 
 A focused run brings what its checks need (a UI check pulls in the build it waits for). Make your own presets from the menu, or in `meerkat.config.json` (this project) or `~/.meerkat.json` (every project, just for you); each can also name `packs` to switch on.
+
+#### Focused runs
+
+A big project does not need every check on every edit. Two options narrow a run, and both work with any preset:
+
+```
+meerkat smoke
+meerkat smoke --scope apps/web
+meerkat smoke --changed
+```
+
+- `meerkat smoke` runs the build, type check, lints and quick tests on the whole project. Without the command: `node run.mjs --app <folder> --preset smoke`.
+- `meerkat smoke --scope apps/web` runs only the checks that read files in `apps/web`, and keeps only findings inside it. For several folders repeat the option or use commas: `--scope apps/web,apps/api`.
+- `meerkat smoke --changed` runs only the checks that read files changed against the base branch (`MEERKAT_BASE` or the default branch).
+
+What `--scope` limits: which checks run (those with no file in the folder are skipped) and which findings count. A check that scans the whole project still runs, and if it fails only on findings outside the folder it passes for that run. What it does not limit: repo-wide checks (git history, commit messages, dependency counts) look at the whole repository regardless. `--scope` and `--changed` cannot be used together.
 
 #### What a preset is for: press `d`
 

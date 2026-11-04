@@ -73,6 +73,7 @@ Pick the smallest one that answers your question. `--list-presets` shows these p
 | `full` (also `thorough`) | Before a release. Every check, the slow ones too, including the builds and compiled tests. |
 | `ci` | A build server: quick security and functionality checks, no windows. |
 | `release` | Before shipping: everything plus the AI review (opt-in `ai`, may call a paid model). |
+| `smoke` | Does my change break anything: build, type check, lints and quick tests. Add `--changed` or `--scope <folder>` (repeat it or use commas) to focus it; repo-wide checks are not limited by scope. |
 | `functionality-fast`, `functionality` | Build, type check, lints and tests (quick, or thorough). |
 | `security-fast`, `security`, `security-ai` | Secret scan, advisories, source rules (quick), plus fuzzing and mutation testing (thorough), plus the AI audit. |
 | `ui-fast`, `ui` | Real-window checks (quick, or every control and look). |

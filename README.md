@@ -54,7 +54,7 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 
 | Feature | In one line |
 |---|---|
-| **Presets** | `quick` before every push, `full` before a release (it leaves out your project's own window checks; `MEERKAT_WINDOWS=1` or `release` runs them), plus security, ui, performance, refactor, ci, `detectors` and more |
+| **Presets** | `smoke` after a change (build, type check, lints, quick tests; add `--changed` or `--scope <folder>` to focus it), `quick` before every push, `full` before a release (it leaves out your project's own window checks; `MEERKAT_WINDOWS=1` or `release` runs them), plus security, ui, performance, refactor, ci, `detectors` and more |
 | **Mature detectors (opt-in)** | `--preset detectors` runs osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint if installed, keeping their rule ids; a missing tool is NOT RUN with an install hint. Some need the network or have their own licence: see [docs/credits.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/credits.md) |
 | **Cross-tool confirmation** | When two checks report the same problem it is one finding, marked "confirmed by N checks" and sorted first ([docs/findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md)) |
 | **Quiet by default** | Pedantic quality rules (`lib/quarantine.mjs`) and the Rust style family are hidden and counted ("hidden by default"); `MEERKAT_FINDINGS=all` lists every one |
