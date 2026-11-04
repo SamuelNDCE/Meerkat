@@ -2,7 +2,16 @@
 
 New here? [docs/developers.md](docs/developers.md) maps the folders, lists the generated files to regenerate and explains why an update never overwrites your changes.
 
+## Good first contributions
+
+- **Write a check for a tool you already use.** Find a rule your team argues about and turn it into a check with a bad and a good fixture. [writing-checks.md](docs/writing-checks.md) walks through it.
+- **Fix a false alarm.** Run `meerkat verify` on a project you know well, and open a "False alarm" issue for anything that is not a real problem.
+- **Improve a doc.** Anything in `docs/` that a newcomer found confusing is a fair change.
+
 ## Run the tests
+
+- `npm test` runs everything except the slow accuracy corpus (a few minutes).
+- `npm run test:accuracy` runs the accuracy corpus on its own (around 15 minutes). CI runs it on every change.
 
 ```
 npm ci

@@ -1,7 +1,8 @@
 // The false-negative guard: known-bad projects with every planted defect written down (tools/accuracy-corpus.mjs). Every pack runs on
 // every project through the real runner, and each planted defect must be reported by the check that owns it. Recall per suite may not fall
 // under docs/accuracy-thresholds.json. Defects that are not detected today are printed as KNOWN GAPS (and listed in docs/accuracy.md).
-// Skip it with MEERKAT_SKIP_ACCURACY=1. The false-positive side is lib/compat.test.ts.
+// It is slow (around 15 minutes), so a normal `npm test` skips it. Run it with `npm run test:accuracy` (or MEERKAT_ACCURACY=1). CI always runs it.
+// The false-positive side is lib/compat.test.ts.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -11,8 +12,9 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { evaluate, gapList, generateCorpus, isDetected, percent, recallTable, runCorpus, withSuites } from '../tools/accuracy-corpus.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const skip = process.env.MEERKAT_SKIP_ACCURACY === '1'
 const onCi = Boolean(process.env.CI)
+// Off unless asked for (or on CI): the normal test run stays under a few minutes.
+const skip = !(process.env.MEERKAT_ACCURACY === '1' || onCi) || process.env.MEERKAT_SKIP_ACCURACY === '1'
 const thresholds = JSON.parse(readFileSync(join(ROOT, 'docs', 'accuracy-thresholds.json'), 'utf8'))
 
 type Planted = { id: string; key: string; project: string; suite: string; check: string; alt: string[]; rule: string; file: string; line: number; description: string; detected?: boolean; inFindings?: boolean }
@@ -35,7 +37,8 @@ beforeAll(async () => {
 }, onCi ? 1_200_000 : 500_000)
 
 afterAll(() => {
-  if (out) rmSync(out, { recursive: true, force: true })
+  // Windows can still hold a file from a finished check for a moment: retry instead of failing the whole suite on cleanup.
+  if (out) rmSync(out, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
 })
 
 describe.skipIf(skip)('the accuracy corpus', () => {

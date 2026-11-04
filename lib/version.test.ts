@@ -117,8 +117,25 @@ describe('every place that shows a version reports VERSION', () => {
   })
 })
 
+// Files that name a version on purpose: dated records of a run or a measurement, and a fixture that is a sample Cargo.toml.
+// Each entry must still contain the version it names, so a stale entry fails the test instead of hiding a real hard-code.
+const RECORDED_VERSIONS: Record<string, string> = {
+  'docs/accuracy.md': 'the final corpus run before the release (a dated record)',
+  'docs/accuracy-results.md': 'the final corpus run before the release (a dated record)',
+  'docs/readme-accuracy-section.md': 'the final corpus run before the release (a dated record)',
+  'docs/reference.md': 'a timing snapshot, measured on a named date',
+  'docs/compatibility.md': 'a dated compatibility table, not re-run for each release',
+  'tools/accuracy-corpus.mjs': 'a fixture: a sample Cargo.toml inside the corpus',
+}
+
 describe('no file under lib, bin, tools or docs hard-codes the current version', () => {
-  test('the current version string appears only in package.json, tests and the CHANGELOG', () => {
+  test('the recorded exceptions still contain a version string, so none is stale', () => {
+    for (const file of Object.keys(RECORDED_VERSIONS)) {
+      expect(readFileSync(join(root, file), 'utf8'), `${file} no longer names a version: remove it from RECORDED_VERSIONS`).toMatch(/\d+\.\d+\.\d+/)
+    }
+  })
+
+  test('the current version string appears only in package.json, tests, the CHANGELOG and the recorded exceptions', () => {
     const esc = VERSION.replace(/\./g, '\\.')
     const pattern = new RegExp(`(?<![\\d.])${esc}(?!\\.?\\d)`)
     const text = /\.(mjs|cjs|js|json|md|txt|ts)$/
@@ -134,6 +151,7 @@ describe('no file under lib, bin, tools or docs hard-codes the current version',
       }
     }
     for (const d of ['lib', 'bin', 'tools', 'docs']) walk(join(root, d))
-    expect(offenders).toEqual([])
+    const unexpected = offenders.filter((f) => !RECORDED_VERSIONS[f.replace(/\\/g, '/')])
+    expect(unexpected).toEqual([])
   })
 })

@@ -8,6 +8,10 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - updates: a Meerkat folder that is on a branch with commits GitHub does not have no longer shows the misleading "has changes of its own" error. Those commits stay on their branch, the folder moves onto the default branch, and the result says which branch was left. A detached HEAD with its own commits is still refused, and so is a local default branch with commits of its own
 - updates: a spinner shows while the menu checks GitHub (it no longer looks frozen), and a line says the update is being installed
 - docs: docs/developers.md for people changing Meerkat: folder map, generated files to regenerate, and what an update does and never touches
+- tests: the slow accuracy corpus no longer runs in a normal `npm test` (it timed out there). Run it with `npm run test:accuracy`; CI still runs it on every change
+- tests: the compatibility matrix gets 150 seconds locally (it was 55, too tight on a busy machine), and its temp folder is cleaned up with retries on Windows
+- tests: the version test names its recorded exceptions (dated accuracy records, a fixture), and fails if one of them stops naming a version
+- updates: after a folder moves off its branch, the result prints the exact command to push that branch
 
 ## 0.4.0 (2026-11-03)
 
