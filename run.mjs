@@ -5,7 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { cpus, freemem } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { changedFiles as gitChangedFiles } from './lib/changed.mjs'
+import { changedFiles as gitChangedFiles, inScopeFile, scopedFiles } from './lib/changed.mjs'
 import { appDirOf, appProblem, repoRootOf } from './lib/paths.mjs'
 import { applyProfile } from './lib/profiles.mjs'
 import { defaultParallel, lowerPriority, priorityProblem } from './lib/priority.mjs'
@@ -77,13 +77,18 @@ async function askYes(text) {
 }
 
 export function parseArgs(argv) {
-  const o = { progress: null, profile: null, thorough: false, changed: false, all: false, only: [], suites: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, listPresets: false, errors: [] }
+  const o = { progress: null, profile: null, thorough: false, changed: false, scope: [], all: false, only: [], suites: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, listPresets: false, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     const next = () => argv[++i]
     if (a === '--thorough') o.thorough = true
     else if (a === '--changed') o.changed = true
+    else if (a === '--scope') {
+      const v = next()
+      if (v === undefined || v.startsWith('--')) o.errors.push('--scope needs a folder, for example --scope apps/web')
+      else o.scope.push(...v.split(',').map((x) => x.trim()).filter(Boolean))
+    }
     else if (a === '--all') o.all = true
     else if (a === '--list') o.list = true
     else if (a === '--self-test') o.selfTest = true
@@ -127,6 +132,8 @@ export function parseArgs(argv) {
     else o.errors.push(`unknown argument: ${a}`)
   }
   if (o.changed && o.all) o.errors.push('--changed and --all cannot be used together')
+  if (o.scope.length && o.all) o.errors.push('--scope and --all cannot be used together')
+  if (o.scope.length && o.changed) o.errors.push("--scope and --changed cannot be used together (--scope already picks the folder's files)")
   return o
 }
 
@@ -331,7 +338,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
 
-  const ctx = { timeoutScale: opts.timeoutScale ?? 1, control: createControl(), noIdleKill: opts.noIdleKill === true, repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, disabledSubs: subsOffMap(applied.disabledSubs), findingsSink: new Map(), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier, new Date(), undefined, appDir) }
+  const ctx = { timeoutScale: opts.timeoutScale ?? 1, control: createControl(), noIdleKill: opts.noIdleKill === true, repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, scope: opts.scope ?? [], disabledSubs: subsOffMap(applied.disabledSubs), findingsSink: new Map(), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier, new Date(), undefined, appDir) }
   onControl?.(ctx.control)
   let mode = opts.all || (tier === 'thorough' && !opts.changed) ? 'all' : 'changed'
   if (mode === 'changed') splash.step('Finding what changed against the base branch')
@@ -339,7 +346,17 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (mode === 'changed' && ctx.changedFiles === null) log('note: git could not find a base branch to compare with (set MEERKAT_BASE), running every check')
   // Nothing differs from the base branch on a clean checkout or a release branch
   // checkout. "Nothing changed" must never mean "nothing to check", so every check of the tier runs.
-  if (mode === 'changed' && Array.isArray(ctx.changedFiles) && ctx.changedFiles.length === 0) {
+  if (opts.scope?.length) {
+    // --scope: the files of the given folders decide which checks run. An empty folder runs nothing, and says so.
+    ctx.changedFiles = scopedFiles(repoRoot, opts.scope)
+    mode = 'changed'
+    if (ctx.changedFiles === null) {
+      log(`note: git could not list the files in ${opts.scope.join(', ')}, running every check`)
+      mode = 'all'
+    } else if (ctx.changedFiles.length === 0) log(`note: no files found in ${opts.scope.join(', ')}: no check has anything to read`)
+    else log(`scope: ${ctx.changedFiles.length} file(s) in ${opts.scope.join(', ')}`)
+  }
+  if (mode === 'changed' && !opts.scope?.length && Array.isArray(ctx.changedFiles) && ctx.changedFiles.length === 0) {
     log('note: nothing differs from the base branch (a clean checkout or a release branch), running every check of the tier')
     mode = 'all'
   }
@@ -443,6 +460,9 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   }
   // Every check's log, a summary and a plain-text report are saved for this run (lib/runlog.mjs).
   // The detection files (lib/findingsdoc.mjs): findings.json, findings.md, findings.sarif and detections.jsonl, then the cross-run history.
+  // --scope: only findings inside the scoped folders are kept. A check that scans the whole project still runs, but its findings
+  // outside the folder are dropped here, so the scoped report and the findings file agree with what was asked.
+  if (opts.scope?.length) for (const entry of ctx.findingsSink.values()) entry.findings = (entry.findings ?? []).filter((f) => inScopeFile(f.file, opts.scope))
   const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
   if (findingsInfo && !opts.selfTest && !hush && !boardShown) log(findingsInfo.line)
   const report = writeRunReport({ checks: ranChecks.length ? ranChecks : checks, interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs })
