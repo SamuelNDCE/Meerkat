@@ -4,6 +4,11 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- smoke: a new preset, `meerkat smoke`, that answers "does my change break anything": the build, the type check, the lints and the quick tests, for any project. It is the same checks as `functionality-fast` under a clearer name; use it after changing code, with `--changed` or `--scope` to narrow it
+- scope: `--scope <folder>` works with any preset (repeatable, or comma separated). It runs only the checks that read files in that folder and keeps only the findings inside it. A failing check whose findings are all outside the folder passes for that run. Repo-wide checks (git history, commit messages, dependency counts) still run and are not limited by it. `--changed` and `--scope` cannot be combined
+- scope: the verdict of a check is taken from its findings inside the scope, read from the structured findings or the file paths in its saved output, so the scoped verdict and the findings file agree
+- tests: unit tests for the scope helpers (tests/scope.test.ts) and for the regex escaping (tests/project-ctx.test.ts)
+- docs: README and the reference name `smoke` and `--scope`; CONTRIBUTING gains a "Check your change" section; developers.md explains how a check should respect a scope
 - scope: `--scope <folder>` (repeatable, or comma separated) runs only the checks that read that folder, and keeps only the findings inside it; a failing check whose every finding is outside the scope passes for that scope. A repo-wide check (git history, commit messages, dependency counts) still runs and is not limited by the scope
 - fix: the path-traversal check crashed on a parameter name with a `(`, and the crash was reported as a FAIL (found on NeuralVault); the name is now escaped
 - updates: `U` now starts the update from the project picker too (only while no filter text is typed, so letters still filter); the menu hint says so

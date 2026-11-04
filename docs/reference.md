@@ -202,6 +202,7 @@ Measured on 2026-11-01 on Meerkat's own repository, a small project, on one PC (
 |---|---|---|---|
 | `meerkat security-fast` | the quick security checks: secrets, risky code, advisories, workflows | 8 | <1 s |
 | `meerkat security` | every security check, the slow ones too | 9 | 1.4 s |
+| `meerkat smoke` | does my change break anything: build, type check, lints and quick tests, for any project (the same checks as `functionality-fast`, with a clearer name) | 10 | not measured |
 | `meerkat functionality-fast` | build, type check, lints and tests, quick | 10 | <1 s |
 | `meerkat functionality` | every functionality check, the slow ones too | 10 | <1 s |
 | `meerkat ui-fast` | the quick UI checks: pages, styles, accessibility basics | 4 | <1 s |
@@ -227,6 +228,8 @@ Options that go with any run:
 |---|---|
 | `--group security,ui` | any mix of `security`, `functionality`, `ui`, `performance`, `refactor` |
 | `--only eslint,tsc` | just those checks (and what they need): for re-running a failure |
+| `--scope <folder>` | only the checks that read files in that folder, and only the findings inside it. Repeat it or separate folders with commas. A check that scans the whole project still runs, and a check that fails only on findings outside the folder passes for that run. Repo-wide checks (git history, commit messages, dependency counts) are not limited by it |
+| `--changed` | only the checks that read files changed against the base branch (`MEERKAT_BASE` or the default branch) |
 | `--include ai` | also run the opt-in checks of that name |
 | `--fail-fast` | stop at the first failure (the default is to run everything) |
 | `--timeout-scale <n>` | multiply every check's time limit by n (1 to 10, default 1) |

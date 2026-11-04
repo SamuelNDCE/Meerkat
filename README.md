@@ -243,6 +243,9 @@ Everything the menu does is also a command, so scripts, CI and AI agents never n
 | run a few named checks | `meerkat check clippy rust-tests eslint` |
 | see what would run and what could not | `meerkat doctor` and `meerkat check list` |
 | see the presets and their estimates | `meerkat presets` |
+| check that a change did not break the project (build, type check, lints, quick tests) | `meerkat smoke` |
+| check only one folder of a big project | `meerkat smoke --scope apps/web` (repeat `--scope`, or separate folders with commas) |
+| check only the files changed against the main branch | `meerkat smoke --changed` |
 | include the slow extras | `meerkat full --include runtime --include mutation` |
 | give slow machines or big projects more time | `meerkat full --timeout-scale 2` |
 | stop a run that goes on too long | `meerkat full --max-run-minutes 30` |
