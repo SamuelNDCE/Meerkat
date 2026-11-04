@@ -2,6 +2,10 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## 0.4.1 (2026-11-04)
+
+- Updates: U works from the project picker, updates survive a folder on another branch, a spinner while checking. New smoke preset and --scope to check one folder. Accuracy corpus is opt-in.
+
 ## Unreleased
 
 - smoke: a new preset, `meerkat smoke`, that answers "does my change break anything": the build, the type check, the lints and the quick tests, for any project. It is the same checks as `functionality-fast` under a clearer name; use it after changing code, with `--changed` or `--scope` to narrow it
