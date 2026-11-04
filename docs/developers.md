@@ -34,8 +34,9 @@ Before a pull request, run Meerkat on itself: `node run.mjs --app . --preset qui
 
 When you write a check that respects scope:
 
-- Read only the files you are given (the context's file list), not a fresh walk of the whole project, so the check can be skipped when the folder holds nothing it reads.
-- Give every finding a repo-relative `file`, with forward slashes. A finding with no `file` is never inside a folder, so scope drops it.
+- Which checks run is decided by the file list and the paths the check declares, so declare the paths the check reads (see [writing-checks.md](writing-checks.md)) and read only those. A check with no file in the folders is skipped.
+- Give every finding a repo-relative `file`, with forward slashes. After the run, findings whose `file` is outside the folders are dropped, and a finding with no `file` is never inside a folder. A check that prints only file paths in its output is matched by those paths instead.
+- A check that fails only on findings outside the folders passes for that run. A check that fails with no findings at all (a crash, a missing tool) still fails.
 - Repo-wide checks (git history, commit messages, dependency counts) are not limited by scope. That is expected: do not try to make them folder-aware.
 
 Try it with `node run.mjs --app . --preset smoke --scope lib --plain`.
