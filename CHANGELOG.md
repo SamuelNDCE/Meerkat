@@ -12,6 +12,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - tests: the compatibility matrix gets 150 seconds locally (it was 55, too tight on a busy machine), and its temp folder is cleaned up with retries on Windows
 - tests: the version test names its recorded exceptions (dated accuracy records, a fixture), and fails if one of them stops naming a version
 - updates: after a folder moves off its branch, the result prints the exact command to push that branch
+- docs: README has a one-line try-it under the tagline, separate clone and `cd` steps, a version check after install, and macOS/Linux path examples; CONTRIBUTING runs `npm test` and the self-check with `node run.mjs`, and sends changelog entries to `## Unreleased`; developers.md states the Node requirement and spells the update key `u`
 
 ## 0.4.0 (2026-11-03)
 
