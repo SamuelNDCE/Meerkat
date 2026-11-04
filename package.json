@@ -12,7 +12,14 @@
     "ai-agents",
     "developer-tools",
     "sarif",
-    "devsecops"
+    "devsecops",
+    "pre-push",
+    "ci",
+    "sast",
+    "secrets-detection",
+    "accessibility",
+    "linter",
+    "project-health"
   ],
   "license": "SEE LICENSE IN LICENSE",
   "author": "SamuelNDCE",
@@ -54,7 +61,8 @@
     "meerkat:thorough": "node run.mjs --thorough",
     "meerkat:watch": "node tools/watch.mjs",
     "preview": "node tools/preview.mjs --speed 6",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:accuracy": "node tools/test-accuracy.mjs"
   },
   "devDependencies": {
     "vitest": "^5.0.2"

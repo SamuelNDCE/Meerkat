@@ -7,6 +7,8 @@
 **One command that checks your whole project before you ship it.**<br>
 Security, correctness, accessibility, performance and code health, for any kind of app, with every result saved and explained.
 
+**Try it:** `npm install -g @samuelndce/meerkat`, then run `meerkat verify` in your project folder. Details in [Quick start](#quick-start).
+
 <a href="https://www.npmjs.com/package/@samuelndce/meerkat"><img src="https://img.shields.io/badge/npm-package-CB3837?style=for-the-badge" alt="npm package"></a> <a href="https://github.com/SamuelNDCE/Meerkat"><img src="https://img.shields.io/badge/GitHub-repository-181717?style=for-the-badge" alt="GitHub repository"></a>
 
 <!-- counts:start -->
@@ -52,7 +54,7 @@ Meerkat is one command that runs all of it, works out what applies to your proje
 
 | Feature | In one line |
 |---|---|
-| **Presets** | `quick` before every push, `full` before a release (it leaves out your project's own window checks; `MEERKAT_WINDOWS=1` or `release` runs them), plus security, ui, performance, refactor, ci, `detectors` and more |
+| **Presets** | `smoke` after a change (build, type check, lints, quick tests; add `--changed` or `--scope <folder>` to focus it), `quick` before every push, `full` before a release (it leaves out your project's own window checks; `MEERKAT_WINDOWS=1` or `release` runs them), plus security, ui, performance, refactor, ci, `detectors` and more |
 | **Mature detectors (opt-in)** | `--preset detectors` runs osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck and actionlint if installed, keeping their rule ids; a missing tool is NOT RUN with an install hint. Some need the network or have their own licence: see [docs/credits.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/credits.md) |
 | **Cross-tool confirmation** | When two checks report the same problem it is one finding, marked "confirmed by N checks" and sorted first ([docs/findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md)) |
 | **Quiet by default** | Pedantic quality rules (`lib/quarantine.mjs`) and the Rust style family are hidden and counted ("hidden by default"); `MEERKAT_FINDINGS=all` lists every one |
@@ -100,13 +102,23 @@ You need [Node.js](https://nodejs.org) 20 or newer. There is nothing else to ins
 npm install -g @samuelndce/meerkat
 ```
 
+Check it worked:
+
+```
+meerkat --version
+```
+
 **Or from the repository:**
 
 ```
 git clone https://github.com/SamuelNDCE/Meerkat.git
 ```
 
-Install the `meerkat` command once, from the folder you cloned:
+```
+cd Meerkat
+```
+
+Install the `meerkat` command once, from inside the folder you cloned:
 
 ```
 npm link
@@ -118,10 +130,14 @@ Then, in any project folder:
 meerkat verify
 ```
 
-Or point it at a folder by path or by name:
+Or point it at a folder by path (Windows and macOS/Linux forms). By name works after you run `meerkat root add <folder>` once:
 
 ```
 meerkat verify C:\code\my-app
+```
+
+```
+meerkat verify ~/code/my-app
 ```
 
 Run `meerkat` on its own for the menu: pick the project (the folder you are in, projects you used lately, or any git repository it finds), then pick a preset. Each row shows an estimate for that project. Press `d` to see what a preset runs, `u` to update Meerkat, Esc to go back.
@@ -227,6 +243,9 @@ Everything the menu does is also a command, so scripts, CI and AI agents never n
 | run a few named checks | `meerkat check clippy rust-tests eslint` |
 | see what would run and what could not | `meerkat doctor` and `meerkat check list` |
 | see the presets and their estimates | `meerkat presets` |
+| check that a change did not break the project (build, type check, lints, quick tests) | `meerkat smoke` |
+| check only one folder of a big project | `meerkat smoke --scope apps/web` (repeat `--scope`, or separate folders with commas) |
+| check only the files changed against the main branch | `meerkat smoke --changed` |
 | include the slow extras | `meerkat full --include runtime --include mutation` |
 | give slow machines or big projects more time | `meerkat full --timeout-scale 2` |
 | stop a run that goes on too long | `meerkat full --max-run-minutes 30` |

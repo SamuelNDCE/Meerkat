@@ -4,6 +4,23 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- smoke: a new preset, `meerkat smoke`, that answers "does my change break anything": the build, the type check, the lints and the quick tests, for any project. It is the same checks as `functionality-fast` under a clearer name; use it after changing code, with `--changed` or `--scope` to narrow it
+- scope: `--scope <folder>` works with any preset (repeatable, or comma separated). It runs only the checks that read files in that folder and keeps only the findings inside it. A failing check whose findings are all outside the folder passes for that run. Repo-wide checks (git history, commit messages, dependency counts) still run and are not limited by it. `--changed` and `--scope` cannot be combined
+- scope: the verdict of a check is taken from its findings inside the scope, read from the structured findings or the file paths in its saved output, so the scoped verdict and the findings file agree
+- tests: unit tests for the scope helpers (tests/scope.test.ts) and for the regex escaping (tests/project-ctx.test.ts)
+- docs: README and the reference name `smoke` and `--scope`; CONTRIBUTING gains a "Check your change" section; developers.md explains how a check should respect a scope
+- scope: `--scope <folder>` (repeatable, or comma separated) runs only the checks that read that folder, and keeps only the findings inside it; a failing check whose every finding is outside the scope passes for that scope. A repo-wide check (git history, commit messages, dependency counts) still runs and is not limited by the scope
+- fix: the path-traversal check crashed on a parameter name with a `(`, and the crash was reported as a FAIL (found on NeuralVault); the name is now escaped
+- updates: `U` now starts the update from the project picker too (only while no filter text is typed, so letters still filter); the menu hint says so
+- updates: a Meerkat folder that is on a branch with commits GitHub does not have no longer shows the misleading "has changes of its own" error. Those commits stay on their branch, the folder moves onto the default branch, and the result says which branch was left. A detached HEAD with its own commits is still refused, and so is a local default branch with commits of its own
+- updates: a spinner shows while the menu checks GitHub (it no longer looks frozen), and a line says the update is being installed
+- docs: docs/developers.md for people changing Meerkat: folder map, generated files to regenerate, and what an update does and never touches
+- tests: the slow accuracy corpus no longer runs in a normal `npm test` (it timed out there). Run it with `npm run test:accuracy`; CI still runs it on every change
+- tests: the compatibility matrix gets 150 seconds locally (it was 55, too tight on a busy machine), and its temp folder is cleaned up with retries on Windows
+- tests: the version test names its recorded exceptions (dated accuracy records, a fixture), and fails if one of them stops naming a version
+- updates: after a folder moves off its branch, the result prints the exact command to push that branch
+- docs: README has a one-line try-it under the tagline, separate clone and `cd` steps, a version check after install, and macOS/Linux path examples; CONTRIBUTING runs `npm test` and the self-check with `node run.mjs`, and sends changelog entries to `## Unreleased`; developers.md states the Node requirement and spells the update key `u`
+
 ## 0.4.0 (2026-11-03)
 
 - Accuracy, measured on the final corpus: 1540 planted defects; 1533 detected by a check (99.5%) and 1532 found in the findings file (99.5%). By impact: critical 484 of 484, high 465 of 466, medium 349 of 352, low 235 of 238. By difficulty to find: easy 1021 of 1021, medium 323 of 324, hard 118 of 120, extreme 71 of 75. Seven planted defects are known gaps, listed in docs/accuracy.md. Clean and trap twins: that run reported 601 false alarms across 166 twins, **before** the test-quality fix and the later guard changes listed below; the final false-alarm rate was not re-measured, because the corpus was not re-run for this release. Recall on planted bugs measures what was planted, not real-world accuracy.
