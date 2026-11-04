@@ -15,13 +15,15 @@ New here? [docs/developers.md](docs/developers.md) maps the folders, lists the g
 
 ```
 npm ci
-npx vitest run
+npm test
 ```
+
+Run `npm ci` once first: vitest is the only dev dependency.
 
 Before you open a pull request, run Meerkat on itself:
 
 ```
-meerkat verify
+node run.mjs --app . --preset quick --plain
 ```
 
 ## Add a check
@@ -37,7 +39,7 @@ The rules are the heart of Meerkat, and they are meant to change.
 - **A rule that reports a problem where there is none** (a false alarm) is a bug. Open a "False alarm" issue with the smallest code that triggers it. The fix goes in the rule, together with the code added as a good sample, so it cannot come back. `tests/falsepositives.test.ts` holds these.
 - **A real problem nothing caught** is a "Missed problem" issue. The fix is a new or widened rule with a bad sample that proves it.
 - Every rule has a bad and a good sample, and `meerkat self-test` proves each one. `docs/accuracy.md` explains the planted-defect corpus that measures misses and false alarms, and the thresholds that must not drop.
-- Every change to the rules goes in CHANGELOG.md under the version that ships it, so people can see what became stricter or looser.
+- Every change to the rules goes in CHANGELOG.md under `## Unreleased`; the release script moves it under the new version, so people can see what became stricter or looser.
 
 ## Licence
 

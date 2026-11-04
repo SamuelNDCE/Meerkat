@@ -7,6 +7,8 @@
 **One command that checks your whole project before you ship it.**<br>
 Security, correctness, accessibility, performance and code health, for any kind of app, with every result saved and explained.
 
+**Try it:** `npm install -g @samuelndce/meerkat`, then run `meerkat verify` in your project folder. Details in [Quick start](#quick-start).
+
 <a href="https://www.npmjs.com/package/@samuelndce/meerkat"><img src="https://img.shields.io/badge/npm-package-CB3837?style=for-the-badge" alt="npm package"></a> <a href="https://github.com/SamuelNDCE/Meerkat"><img src="https://img.shields.io/badge/GitHub-repository-181717?style=for-the-badge" alt="GitHub repository"></a>
 
 <!-- counts:start -->
@@ -100,13 +102,23 @@ You need [Node.js](https://nodejs.org) 20 or newer. There is nothing else to ins
 npm install -g @samuelndce/meerkat
 ```
 
+Check it worked:
+
+```
+meerkat --version
+```
+
 **Or from the repository:**
 
 ```
 git clone https://github.com/SamuelNDCE/Meerkat.git
 ```
 
-Install the `meerkat` command once, from the folder you cloned:
+```
+cd Meerkat
+```
+
+Install the `meerkat` command once, from inside the folder you cloned:
 
 ```
 npm link
@@ -118,10 +130,14 @@ Then, in any project folder:
 meerkat verify
 ```
 
-Or point it at a folder by path or by name:
+Or point it at a folder by path (Windows and macOS/Linux forms). By name works after you run `meerkat root add <folder>` once:
 
 ```
 meerkat verify C:\code\my-app
+```
+
+```
+meerkat verify ~/code/my-app
 ```
 
 Run `meerkat` on its own for the menu: pick the project (the folder you are in, projects you used lately, or any git repository it finds), then pick a preset. Each row shows an estimate for that project. Press `d` to see what a preset runs, `u` to update Meerkat, Esc to go back.

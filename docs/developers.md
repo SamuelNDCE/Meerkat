@@ -17,6 +17,8 @@ This page is for people who want to change Meerkat itself, or add their own chec
 
 ## Set up
 
+Needs Node 20 or newer. From a clone of the repository (`cd Meerkat`):
+
 ```
 npm ci
 npm test
@@ -46,7 +48,7 @@ Checks you write for your own project never need a change here: put them in your
 
 ## Update safety: why an update cannot break your setup
 
-Meerkat's update (`U` in the menu, or `meerkat update`) changes only Meerkat's own folder. It is built to be safe to run at any time:
+Meerkat's update (`u` in the menu, or `meerkat update`) changes only Meerkat's own folder. It is built to be safe to run at any time:
 
 - **A folder with changes of its own is never overwritten.** Any modified or new file in Meerkat's folder stops the update with a message, and nothing is changed.
 - **Commits you have made are kept.** If the folder is on another branch with commits GitHub does not have, the update moves the folder onto the default branch and leaves those commits on their branch. The result names that branch.
