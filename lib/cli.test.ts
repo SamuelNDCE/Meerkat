@@ -2,6 +2,8 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { findProject, helpText, listPresets, packAdd, packList, packRemove, planCommand, presetsText } from './cli.mjs'
 import { buildBugReport } from './bugreport.mjs'
@@ -517,5 +519,29 @@ describe('the folder word: a pasted path or the name of a project', () => {
   test('root commands and the help lead with commands', () => {
     expect(planCommand(['root', 'add', './dev'], { cwd: cwd2, presets: {} })).toMatchObject({ kind: 'root', action: 'add', folder: resolve(cwd2, 'dev') })
     expect(helpText({})).toContain('meerkat verify')
+  })
+})
+
+// The real binary: meerkat gate and meerkat smoke are routed through lib/extras-cli.mjs, and --help is answered from the registry.
+describe('meerkat gate and meerkat smoke (the binary)', () => {
+  const bin = fileURLToPath(new URL('../bin/meerkat.mjs', import.meta.url))
+  const run = (args: string[]) => spawnSync(process.execPath, [bin, ...args], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1', CI: '1' } })
+  test.each(['gate', 'smoke'])('%s --help prints its help and exits 0', (word) => {
+    const r = run([word, '--help'])
+    expect(r.status).toBe(0)
+    expect(r.stdout).toContain(`meerkat ${word} [`)
+    expect(r.stdout).toContain('75')
+  })
+  test.each(['gate', 'smoke'])('%s with a bad flag exits 2', (word) => {
+    const r = run([word, '--no-such-flag'])
+    expect(r.status).toBe(2)
+    expect(r.stderr).toContain('unknown option --no-such-flag')
+  })
+  test('help and describe list both', () => {
+    const h = run(['help']).stdout
+    expect(h).toContain('meerkat gate')
+    expect(h).toContain('meerkat smoke')
+    const names = JSON.parse(run(['describe']).stdout).commands.map((c: { name: string }) => c.name)
+    expect(names).toEqual(expect.arrayContaining(['gate', 'smoke']))
   })
 })

@@ -33,8 +33,9 @@ const version = () => VERSION // lib/version.mjs: package.json, read once
 
 async function main() {
   // The accepted-findings, history, suggestion and CI commands (lib/extras-cli.mjs) are handled before the older parser sees them.
-  if (EXTRA_WORDS.includes(argv[0])) {
-    const code = runExtra(argv, { env, cwd, out, err })
+  // `meerkat <word> --help` is answered from the command registry (planCommand), not by the command.
+  if (EXTRA_WORDS.includes(argv[0]) && !argv.includes('--help') && !argv.includes('-h')) {
+    const code = await runExtra(argv, { env, cwd, out, err })
     if (code !== null) return code
   }
   const presets = loadPresets({ cwd, env })
