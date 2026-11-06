@@ -9,11 +9,11 @@ In short: Meerkat reads files as text and applies rules. It is a fast first line
 ## 1. What Meerkat scans
 
 <!-- coverage:start -->
-Counted from all 51 packs under `packs/`: **383 checks** in **48 suites** with **1421 rules** (sub-checks).
+Counted from all 51 packs under `packs/`: **395 checks** in **50 suites** with **1433 rules** (sub-checks).
 
-Run by default: 337 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
+Run by default: 349 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
 
-Checks that need an outside tool (NOT RUN without it): 39 of 383. The other 344 need only Node.
+Checks that need an outside tool (NOT RUN without it): 39 of 395. The other 356 need only Node.
 
 Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results inside them. **Runs by default**: quick = in `meerkat verify`; full = only in `meerkat full`; both = a mix; opt-in = only when you ask. **Tool**: yes means at least one check in the suite is NOT RUN without that outside tool; the others still work.
 
@@ -60,6 +60,8 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `dotnet` | .NET projects (sln, csproj) | 2 | 2 | quick | yes: dotnet |
 | `php` | PHP projects (composer.json) | 2 | 2 | quick | yes: composer, phpstan |
 | `ruby` | Ruby projects | 2 | 2 | quick | yes: rspec, rubocop |
+| `c-cpp` | C and C++ source files | 7 | 7 | quick | no |
+| `doc-drift` | README.md and docs/*.md, compared with the code | 5 | 5 | quick | no |
 | `swift` | Swift packages | 2 | 2 | quick | yes: swift, swiftlint |
 | `dart` | Dart and Flutter projects | 2 | 2 | quick | yes: dart |
 | `terraform` | Terraform files (.tf); its check also holds the Compose rules | 2 | 39 | quick | yes: terraform |

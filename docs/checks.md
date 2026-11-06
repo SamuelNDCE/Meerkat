@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**383 checks** in 48 suites with 1421 sub-checks (a check that declares no rules counts as one), across 49 packs: 338 quick, 45 thorough, 38 opt-in. [Security 117](#security-checks) · [Functionality 211](#functionality-checks) · [UI 25](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
+**395 checks** in 50 suites with 1433 sub-checks (a check that declares no rules counts as one), across 51 packs: 350 quick, 45 thorough, 38 opt-in. [Security 123](#security-checks) · [Functionality 217](#functionality-checks) · [UI 25](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -52,6 +52,8 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `dotnet` | .NET | 2 | 2 | dotnet format and dotnet build. |
 | `php` | PHP | 2 | 2 | composer validate and phpstan. |
 | `ruby` | Ruby | 2 | 2 | RuboCop and RSpec. |
+| `c-cpp` | C and C++ | 7 | 7 | Unsafe C library calls: gets, strcpy, strcat, sprintf, system, unbounded scanf and rand. |
+| `doc-drift` | Doc drift | 5 | 5 | README and docs compared with the code: flags, environment variables, paths, counts and command examples (opt-in pack). |
 | `swift` | Swift | 2 | 2 | SwiftLint and swift build. |
 | `dart` | Dart and Flutter | 2 | 2 | dart analyze and dart format. |
 | `terraform` | Terraform | 2 | 39 | terraform fmt. |
@@ -62,7 +64,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 
 ## Security checks
 
-Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 117 checks.
+Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 123 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -72,6 +74,12 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `android-manifest-flags` | fast | tiny | 1 s | Android: the manifest is not debuggable and does not allow backups | desktop |
 | `azure-pipelines` | fast | tiny | 1 s | Azure Pipelines uses named images, no piped installers and no inline secrets | ci-systems |
 | `bandit` | fast | light | 10 s | Bandit: common Python security mistakes *(needs: bandit)* | python |
+| `c-gets` | fast | tiny | 1 s | C: gets() has no bounds check | c-cpp |
+| `c-scanf-string` | fast | tiny | 1 s | C: scanf with an unbounded %s | c-cpp |
+| `c-sprintf` | fast | tiny | 1 s | C: sprintf() has no bounds check | c-cpp |
+| `c-strcat` | fast | tiny | 1 s | C: strcat() has no bounds check | c-cpp |
+| `c-strcpy` | fast | tiny | 1 s | C: strcpy() has no bounds check | c-cpp |
+| `c-system` | fast | tiny | 1 s | C: system() runs a shell command | c-cpp |
 | `capacitor-cordova-cleartext` | fast | tiny | 1 s | Capacitor or Cordova: no mobile shell allows plain http traffic | desktop |
 | `cf-mobile` | fast | tiny | 1 s | Android and React Native: exported components, secrets in AsyncStorage, unchecked links and open WebViews | client-frameworks |
 | `cf-next` | fast | tiny | 1 s | Next.js: secret-named NEXT_PUBLIC_ variables and server actions without a session check or with unchecked file paths | client-frameworks |
@@ -186,7 +194,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 
 ## Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 211 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 217 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -196,6 +204,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `binary-in-history` | fast | tiny | 1 s | No file over the size budget was added in the recent history | git |
 | `branch-names` | fast | tiny | 1 s | Local branch names are lowercase kebab-case with / separators | git |
 | `broken-imports` | fast | tiny | 1 s | Every relative import points at a file that exists | hygiene |
+| `c-rand` | fast | tiny | 1 s | C: rand() is not secure | c-cpp |
 | `case-conflicts` | fast | tiny | 1 s | No two file names differ only by upper and lower case (they clash on Windows and macOS) | repo |
 | `changelog-format` | fast | tiny | 1 s | CHANGELOG.md has version headings, newest first | repo |
 | `changelog-updated` | fast | tiny | 1 s | CHANGELOG.md changes when the source changes after the latest tag | git |
@@ -220,6 +229,11 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `dependency-count` | fast | tiny | 1 s | Direct dependency count stays within its budget (default 150) | health |
 | `deprecated-apis` | fast | tiny | 1 s | No deprecated or removed Node API is called | health |
 | `dev-deps-in-prod` | fast | tiny | 1 s | No build or test tool is listed under dependencies in an application | health |
+| `doc-drift-commands` | fast | tiny | 1 s | Command examples in the docs parse, and the npm scripts and node files they run exist | doc-drift |
+| `doc-drift-counts` | fast | tiny | 1 s | Counts the docs state about a list or a folder match it | doc-drift |
+| `doc-drift-env` | fast | tiny | 1 s | Environment variables the docs name appear in the code | doc-drift |
+| `doc-drift-flags` | fast | tiny | 1 s | Flags the docs show for the project's own commands are defined in the code | doc-drift |
+| `doc-drift-paths` | fast | tiny | 1 s | File paths the docs name under the project's folders exist | doc-drift |
 | `dotnet-build` | fast | heavy | 1.5 min | .NET: the build, with warnings treated as errors *(needs: dotnet)* | dotnet |
 | `dotnet-format` | fast | light | 30 s | .NET: code formatting (dotnet format) *(needs: dotnet)* | dotnet |
 | `duplicate-dependencies` | fast | tiny | 1 s | No package is listed twice in package.json | health |
