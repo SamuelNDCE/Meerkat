@@ -66,7 +66,8 @@ async function main() {
       color,
       isTTY: Boolean(process.stdout.isTTY),
       holdMs: inMenu ? 1000 : 0,
-      run: async ({ onCheck }) => outcomeOf(await maybeAutoUpdateAsync({ repoDir: MEERKAT_DIR, env, exec: asyncTimedExec(3000), print: inMenu ? () => {} : out, onCheck })),
+      timeoutMs: inMenu ? 20000 : 3000, // the menu never waits, so a slow fetch may take its time; a plain run waits 3 seconds at most
+      run: async ({ onCheck }) => ({ outcome: outcomeOf(await maybeAutoUpdateAsync({ repoDir: MEERKAT_DIR, env, exec: asyncTimedExec(inMenu ? 20000 : 3000), print: inMenu ? () => {} : out, onCheck })) }),
     })
     if (!inMenu) {
       const draw = () => {

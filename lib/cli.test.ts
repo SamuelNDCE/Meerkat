@@ -325,11 +325,12 @@ describe('update', () => {
     expect(calls.some(([, a]) => a.includes('HEAD..origin/main'))).toBe(true)
   })
 
-  test('a dirty tree is refused', () => {
-    const exec = fakeExec({ ...clone, 'status --porcelain': ' M run.mjs\n' })
+  test('a dirty file that the update also changes is refused, and named', () => {
+    const exec = fakeExec({ ...clone, 'status --porcelain': ' M run.mjs\n M other.mjs\n', 'diff --name-only': 'run.mjs\nlib/x.mjs\n' })
     const r = applyUpdate({ repoDir: repo, exec })
     expect(r.ok).toBe(false)
-    expect((r as { reason: string }).reason).toContain('changes')
+    expect((r as { reason: string }).reason).toContain('  run.mjs')
+    expect((r as { reason: string }).reason).not.toContain('other.mjs')
   })
 
   test('a detached HEAD with commits GitHub does not have is refused and nothing is moved', () => {
