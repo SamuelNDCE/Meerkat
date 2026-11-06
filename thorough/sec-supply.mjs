@@ -378,6 +378,35 @@ const dockerBasePinning = (root) => {
   return finish(name, f, 'base images are pinned, nothing is piped into a shell, and the final stage has a USER')
 }
 
+// Drops a YAML comment: a whole-line comment, or the text after a # that starts one (a # preceded by whitespace, outside quotes).
+const stripYamlComment = (line) => {
+  let quote = ''
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (quote) {
+      if (ch === quote) quote = ''
+    } else if (ch === '"' || ch === "'") quote = ch
+    else if (ch === '#' && (i === 0 || /\s/.test(line[i - 1]))) return line.slice(0, i)
+  }
+  return line
+}
+// True when the workflow uploads artifacts and some actions/checkout step does not set persist-credentials: false in its own with: block.
+// Comments are ignored, and each checkout is judged by its own step (from its "- " line to the next step), not by text elsewhere in the file.
+const checkoutKeepsCredentials = (text) => {
+  const lines = text.split('\n').map(stripYamlComment)
+  if (!lines.some((l) => /uses:\s*["']?actions\/upload-artifact/.test(l))) return false
+  for (let i = 0; i < lines.length; i++) {
+    if (!/uses:\s*["']?actions\/checkout/.test(lines[i])) continue
+    let start = i
+    while (start > 0 && !/^\s*-\s/.test(lines[start])) start--
+    const stepIndent = /^\s*/.exec(lines[start])[0].length
+    let end = i + 1
+    while (end < lines.length && !(lines[end].trim() && /^\s*/.exec(lines[end])[0].length <= stepIndent)) end++
+    if (!lines.slice(start, end).some((l) => /^\s*(?:-\s+)?persist-credentials:\s*["']?false["']?\s*$/.test(l))) return true
+  }
+  return false
+}
+
 // ---- actions-secrets-echo: workflow habits that print or leak secrets. workflow-security (static.mjs) already reports pull_request_target
 // with the head sha or ref; this check adds the refs/pull/ form it does not look for, and the others below.
 const WORKFLOW = /^\.github\/workflows\/[^/]+\.ya?ml$/
@@ -405,7 +434,7 @@ const actionsSecretsEcho = (root) => {
       if (/::set-output|set-output name=/.test(line)) f.push(`${at} uses set-output, which GitHub has deprecated (write to the GITHUB_OUTPUT file)`)
     })
     if (/permissions:\s*write-all/.test(t)) f.push(`${x}: "permissions: write-all" gives the token every permission (name only the ones needed)`)
-    if (/uses:\s*actions\/checkout/.test(t) && /uses:\s*actions\/upload-artifact/.test(t) && !/persist-credentials:\s*false/.test(t)) f.push(`${x}: a checkout leaves its git credentials on disk and the workflow uploads artifacts (set persist-credentials: false)`)
+    if (checkoutKeepsCredentials(t)) f.push(`${x}: a checkout leaves its git credentials on disk and the workflow uploads artifacts (set persist-credentials: false)`)
     if (/pull_request_target/.test(t) && /refs\/pull\//.test(t)) f.push(`${x}: pull_request_target checks out a pull request ref, so untrusted code runs with the repository secrets`)
   }
   return finish(name, f, 'no workflow echoes or leaks secrets, or keeps git credentials it does not need')
