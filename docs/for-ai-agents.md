@@ -56,6 +56,8 @@ All of these print results on stdout and progress or errors on stderr. Add `--js
 | `meerkat findings [folder\|run-id] --json` | JSON: every finding of a run (severity, file, line, rule, check, fix, new or known). Filters: `--severity`, `--suite`, `--check`, `--new`, `--fixed`, `--limit`. `--fail-on <severity>` exits 1 when one at or above it exists. `--export sarif\|md\|json`. | 0, 1, 2 |
 | `meerkat finding <id> [run-id]` | One finding in full: evidence, who detected it, the log and how to fix it. | 0, 2 |
 | `meerkat prompt [folder\|run-id]` | A ready-made prompt for an AI from a run's findings. | 0, 2 |
+| `meerkat blast <file>[#symbol] [--app <folder>] [--json]` | The blast radius of a file or symbol: importer count, modules touched, tests that reach it, and unresolved imports that could be importers (listed, never counted as safe), plus a one-line summary. The code map is cached per git commit (reused only when no source file has changed), so a repeat run is fast. `--json` adds `map.source` (`cache`, `built` or `built-uncached`). | 0, 2 (usage), 75 (file not in the map) |
+| `meerkat map [--app <folder>] [--json]` | Writes `codemap.json` and `codemap.md` (entry points, module edges, most imported files, unresolved imports, blast radius of the top five) into a new run folder. | 0, 2 |
 | `meerkat last` | The newest run's `report.md`. | 0, 2 |
 | `meerkat why <check> [run-id]` | One check's log header and the end of its output. | 0, 2 |
 | `meerkat run list\|show <id>\|log <check>` | Past runs (JSON with `--json`), one run, or one check's log from a run. | 0, 2 |
