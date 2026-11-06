@@ -63,7 +63,7 @@ All of these print results on stdout and progress or errors on stderr. Add `--js
 | `meerkat run list\|show <id>\|log <check>` | Past runs (JSON with `--json`), one run, or one check's log from a run. | 0, 2 |
 | `meerkat logs` | The folder where logs are kept. | 0 |
 | `meerkat recommend [folder]` | Tests the project could run that no check covers yet. Writes nothing. | 0, 2 |
-| `meerkat mcp serve` | Starts the MCP server (16 tools, below). | 0 |
+| `meerkat mcp serve` | Starts the MCP server (28 tools, below). | 0 |
 
 Commands that change files exist too (`check new\|edit\|remove`, `preset new\|edit\|delete`, `pack enable\|disable`, `init`, `mcp install`, `update`). They need `--yes` when there is no terminal, `--dry-run` shows what they would do, and an agent should not use them to turn a check off to make a run pass (see the rules at the end).
 
@@ -152,7 +152,7 @@ Pick the smallest one that answers your question. `--list-presets` shows these p
 
 ## MCP server
 
-`bin/meerkat-mcp.mjs` lets an MCP client run Meerkat as tools over stdio. It needs only Node 20 or newer, sends nothing over the network, and can run only the 16 tools below. It cannot run any other command.
+`bin/meerkat-mcp.mjs` lets an MCP client run Meerkat as tools over stdio. It needs only Node 20 or newer, sends nothing over the network, and can run only the 28 tools below. It cannot run any other command.
 
 Claude Code:
 
@@ -193,8 +193,22 @@ The server's working folder is the default `folder` for the tools. Replace `<pat
 | `meerkat_redtest` | `kind`: `mutation`, `faults`, `adversarial`, `regression` (default), `cleantwin`, or `all` | Run Meerkat's own red tests (deliberate attacks on its checks) to prove they still catch defects. |
 | `meerkat_dismiss` | `folder`, `id`, `reason` (all required) | WRITES: record one finding as "not a problem" with a reason. Saved in the home folder, not the project. Only with the person's agreement. |
 | `meerkat_baseline` | `folder` (required), `clear` | WRITES: accept every open finding of the newest run as the baseline for ratchet runs, or clear it. Only when the person asks. |
+| `meerkat_doctor` | `folder` | What would run here, which outside tools are missing and how to install them. Changes nothing. |
+| `meerkat_discover` | `folder` | The project's own tests and scripts that the full, thorough and release presets would run too. Nothing is run. |
+| `meerkat_recommend` | `folder` | Tests the project could run that no check covers yet. Never adds one (adding is `meerkat recommend --add`, a person's step). |
+| `meerkat_tools` | `folder` | Optional outside tools that are found or missing, with how to install each. Does not install (that is `meerkat tools install`, a person's step). |
+| `meerkat_trend` | `folder` | One line per recent run: findings by severity, new and fixed. Reads the run history. |
+| `meerkat_suggest` | none | Suggested commands for the newest run's findings, as markdown. Nothing is run for you. |
+| `meerkat_pr_comment` | `run_url` (an https link) | Markdown for a pull request comment from the newest run. Posts nothing. |
+| `meerkat_dismissals` | `folder`, `stats` | The findings dismissed in a project with their reasons; `stats: true` counts them per rule across projects. |
+| `meerkat_hook_status` | `folder` | Whether the Meerkat pre-push hook is installed in a git project and whether an install would be allowed. |
+| `meerkat_describe` | none | Every command, option, output field and exit code as one JSON object. |
+| `meerkat_undismiss` | `folder`, `id` (both required) | WRITES: take a dismissal back, so the finding fails checks again. Saved in the home folder. Only when the person asks. |
+| `meerkat_hook` | `folder`, `action` (`install` or `remove`, both required) | WRITES: install or remove the git pre-push hook that runs the quick preset with `--ratchet`. Only when the person asks. |
 
 The gate is `meerkat_gate` (changed files only) or `meerkat_run` with `preset: "full"` (everything). The catalog is `meerkat_tests`; blast and map are `meerkat_blast` and `meerkat_map`. `meerkat_dismiss` and `meerkat_baseline` write to the home folder: keep the client's approval step on for them.
+
+`meerkat_undismiss` and `meerkat_hook` write too (the home folder and `.git/hooks/pre-push`). Not offered as tools on purpose: `root add` and `root remove` (they would widen the folders the server may touch), `update`, `init`, check, preset and pack edits, `recommend --add`, `tools install`, `ai`, `rules test` (reads any file), `logs`, `repos` and `recent` (they list the person's projects). Those stay a person's step.
 
 Running a check runs the project's own commands: its `meerkat.config.json` can add checks that run any command. Only point the tools at projects the person trusts.
 

@@ -21,7 +21,7 @@ suite('help', () => {
   })
   // The registry test: a command that bin/meerkat.mjs dispatches (COMMAND_LIST in lib/cli.mjs, EXTRA_WORDS in lib/extras-cli.mjs) but the registry lacks is invisible to help and describe.
   test('meerkat help and meerkat describe list every command the binary dispatches', () => {
-    const dispatched = [...new Set([...COMMAND_LIST, ...EXTRA_WORDS, 'version'])].filter((w) => w !== 'list') // 'list' is the old word for 'check'
+    const dispatched = [...new Set([...COMMAND_LIST, ...EXTRA_WORDS, 'version'])]
     const unlisted = dispatched.filter((w) => nameOf(w) === null)
     expect(unlisted).toEqual([])
     const overview = overviewHelp([])
@@ -31,6 +31,14 @@ suite('help', () => {
       expect(described).toContain(name)
       if (!['menu', 'version', 'help', 'last', 'why', 'logs'].includes(name)) expect(overview).toContain(`meerkat ${name}`)
     }
+  })
+  test('every word the binary dispatches is a command or alias in the registry, and every command word is reachable from help <word>', () => {
+    const dispatched = [...new Set([...COMMAND_LIST, ...EXTRA_WORDS, 'version', 'full', 'thorough', 'runs', 'log', 'list'])]
+    expect(dispatched.filter((w) => !allWords().includes(w))).toEqual([])
+    for (const w of dispatched) expect(commandHelp(nameOf(w) as string)).toContain('Usage:')
+  })
+  test('hook help names all three actions', () => {
+    for (const a of ['install', 'remove', 'status']) expect(commandHelp('hook')).toContain(`meerkat hook ${a}`)
   })
   test('the exit codes are listed once, and gate and smoke never claim exit 3 (only run and the presets return it)', () => {
     expect(EXIT_CODES.map((e: { code: number }) => e.code)).toEqual([0, 1, 2, 3, 75, 130])
