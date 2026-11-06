@@ -36,7 +36,7 @@ describe('updating a folder that has local changes', () => {
   test('changes to files the update does not touch stay exactly as they are and the update proceeds', () => {
     const clone = setup()
     writeFileSync(join(clone, 'a.txt'), 'my edit\n')
-    const r = applyUpdate({ repoDir: clone })
+    const r = applyUpdate({ repoDir: clone, logDir: join(root, 'logs') })
     expect(r).toMatchObject({ ok: true, from: '0.4.0', to: '0.5.0' })
     expect(readFileSync(join(clone, 'a.txt'), 'utf8')).toBe('my edit\n')
     expect(readFileSync(join(clone, 'b.txt'), 'utf8').trim()).toBe('b2')
@@ -46,7 +46,7 @@ describe('updating a folder that has local changes', () => {
     const clone = setup()
     writeFileSync(join(clone, 'a.txt'), 'my edit\n')
     writeFileSync(join(clone, 'b.txt'), 'my other edit\n')
-    const r = applyUpdate({ repoDir: clone }) as { ok: boolean; reason: string; files: string[] }
+    const r = applyUpdate({ repoDir: clone, logDir: join(root, 'logs') }) as { ok: boolean; reason: string; files: string[] }
     expect(r.ok).toBe(false)
     expect(r.files).toEqual(['b.txt'])
     expect(r.reason).toContain('  b.txt')
