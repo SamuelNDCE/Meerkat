@@ -2,7 +2,8 @@
 import { describe as suite, expect, test } from 'vitest'
 import { COMMANDS, EXIT_CODES, allWords, commandHelp, describe, editDistance, nameOf, overviewHelp, suggest } from './help.mjs'
 import { completionScript } from './completion.mjs'
-import { planCommand } from './cli.mjs'
+import { COMMAND_LIST, planCommand } from './cli.mjs'
+import { EXTRA_WORDS } from './extras-cli.mjs'
 
 const none = { user: {}, project: {} }
 const plan = (argv: string[]) => planCommand(argv, { cwd: '/work/app', env: {}, interactive: false, presets: none })
@@ -17,6 +18,23 @@ suite('help', () => {
       expect(h).not.toContain('—')
       expect(h.indexOf('Examples:')).toBeLessThan(h.indexOf('Usage:'))
     }
+  })
+  // The registry test: a command that bin/meerkat.mjs dispatches (COMMAND_LIST in lib/cli.mjs, EXTRA_WORDS in lib/extras-cli.mjs) but the registry lacks is invisible to help and describe.
+  test('meerkat help and meerkat describe list every command the binary dispatches', () => {
+    const dispatched = [...new Set([...COMMAND_LIST, ...EXTRA_WORDS, 'version'])].filter((w) => w !== 'list') // 'list' is the old word for 'check'
+    const unlisted = dispatched.filter((w) => nameOf(w) === null)
+    expect(unlisted).toEqual([])
+    const overview = overviewHelp([])
+    const described = describe({ version: '1', presetNames: [] }).commands.map((c: { name: string }) => c.name)
+    for (const w of dispatched) {
+      const name = nameOf(w) as string
+      expect(described).toContain(name)
+      if (!['menu', 'version', 'help', 'last', 'why', 'logs'].includes(name)) expect(overview).toContain(`meerkat ${name}`)
+    }
+  })
+  test('the exit codes are listed once, and gate and smoke never claim exit 3 (only run and the presets return it)', () => {
+    expect(EXIT_CODES.map((e: { code: number }) => e.code)).toEqual([0, 1, 2, 3, 75, 130])
+    for (const c of ['gate', 'smoke']) expect(commandHelp(c)).not.toMatch(/3 /)
   })
   test('aliases resolve to their command', () => {
     expect(nameOf('quick')).toBe('verify')

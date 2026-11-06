@@ -30,7 +30,7 @@ Before a pull request, run Meerkat on itself: `node run.mjs --app . --preset qui
 
 ### Scoped and smoke runs
 
-`--preset smoke` is the build, type check, lints and quick tests (the same checks as `functionality-fast`), and `--scope <folder>` (or `--changed`) narrows any preset to part of a project. Scope works in two steps in `run.mjs`: `scopedFiles` in `lib/changed.mjs` lists the files under the folders, and that list picks which checks run, the same way the changed-files list does for `--changed`. Afterwards `inScopeFile` drops every finding whose `file` is outside the folders.
+`--preset project-smoke` is the build, type check, lints and quick tests (the same checks as `functionality-fast`), and `--scope <folder>` (or `--changed`) narrows any preset to part of a project. Scope works in two steps in `run.mjs`: `scopedFiles` in `lib/changed.mjs` lists the files under the folders, and that list picks which checks run, the same way the changed-files list does for `--changed`. Afterwards `inScopeFile` drops every finding whose `file` is outside the folders.
 
 When you write a check that respects scope:
 
@@ -39,7 +39,7 @@ When you write a check that respects scope:
 - A check that fails only on findings outside the folders passes for that run. A check that fails with no findings at all (a crash, a missing tool) still fails.
 - Repo-wide checks (git history, commit messages, dependency counts) are not limited by scope. That is expected: do not try to make them folder-aware.
 
-Try it with `node run.mjs --app . --preset smoke --scope lib --plain`.
+Try it with `node run.mjs --app . --preset project-smoke --scope lib --plain`.
 
 ## Generated files: change the source, then regenerate
 

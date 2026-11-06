@@ -20,6 +20,8 @@ meerkat <command> --help                help for any command (also: meerkat help
 | `meerkat full [folder]` | every check | alias of `meerkat thorough` |
 | `meerkat <preset> [folder]` | any preset: `security`, `ui`, `functionality`, `performance`, `refactor`, `ci`, `release`, and your own | `meerkat preset list` shows them |
 | `meerkat check <id>... [folder]` | only these checks | same as `--only` |
+| `meerkat gate [--staged or --base <ref> or --against <ref>]` | only the checks that cover the files you changed (for a pre-commit hook or a pull request) | exit 75 when it could not start |
+| `meerkat smoke [--timeout <seconds>]` | prove that the checks selected for your changes start, finish and are not broken (it tests Meerkat, not your project) | the preset that asks whether a change breaks your project is `project-smoke` |
 | `meerkat repos [--scan <folder>]` | the git repositories Meerkat can find: name, path, branch (`--json` for scripts) | `--scan` looks in that folder too, once |
 | `meerkat recent` / `recent clear` | the last 12 projects you used, newest first (`--json`); `clear` empties the list | stored as paths only in `~/.meerkat.json` |
 
@@ -49,6 +51,12 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat prompt [folder\|run-id] [--last] [--no-copy] [--print]` | write `meerkat-prompt-<date>-<time>-<preset>.md` into the run folder (every finding in full, plus what to do) and copy a short line to the clipboard that tells an AI to read it. The results screen does the same with `p` | `meerkat prompt --help` |
 | `meerkat verify --ai-verify [--ai-verify-max N] [--yes]` | after the run, ask your configured model to double-check each medium, high and critical finding (off by default; asks first unless `--yes`; see `meerkat ai use`) | `v` on the results screen |
 | `meerkat finding <id> [run-id]` | one finding in full: what, evidence, who detected it (check, rule, pack, script, tool), the log, how to fix it, first seen | |
+| `meerkat dismiss <id> --reason "..."` / `undismiss <id>` / `dismissals [--stats]` | accept a finding as not a problem, take it back, or list the dismissals | kept in your home folder |
+| `meerkat baseline [--clear]` | accept the newest run's findings as they are; `meerkat run --ratchet` then fails only on new ones | |
+| `meerkat trend` | one line per recent run: findings by severity, new and fixed | |
+| `meerkat suggest` | suggested commands for the newest run's findings (never run for you) | |
+| `meerkat pr-comment [--run-url <url>]` | markdown for a pull request comment | pipe it to `gh pr comment` |
+| `meerkat map` / `meerkat blast <file>[#symbol]` | a map of the codebase, and the blast radius of a file or symbol | blast: exit 75 when the file is not in the map |
 
 ## Checks, presets, packs
 
@@ -74,6 +82,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat pack enable <name> [folder]` / `disable` | switch a pack on or off for a project (edits `meerkat.config.json`) |
 | `meerkat pack add <folder>` / `remove` | add or remove a folder of your own packs |
 | `meerkat root list` / `add <folder>` / `remove <folder>` | where project names are looked up |
+| `meerkat rules test <file.json>` | test a file of data rules: every bad sample is caught and every good one passes |
 
 ## Set up and look after
 
@@ -84,6 +93,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat tools [folder]` | every optional outside tool, whether it is found, and one install command per ecosystem (npm, pip, cargo, system); `--json` |
 | `meerkat tools install [folder]` | put the missing npm-based tools in `~/.meerkat/tools` (never in the project, never global, `--ignore-scripts`); shows the list first and asks, or use `--yes`; `--dry-run` only shows the list |
 | `meerkat self-test [folder]` | prove every check fails on its broken case |
+| `meerkat hook install` / `hook remove` [folder] | install or remove a git pre-push hook that runs the quick preset with `--ratchet` |
 | `meerkat ai status` / `use <provider> [model]` / `test` | choose the model for the AI checks; `use claude haiku`, `use openrouter deepseek/deepseek-chat` |
 | `meerkat update [check\|apply\|auto\|notify\|off\|status]` | updating Meerkat; looks up the latest version once a day (turn off with `meerkat update off`), never installs without you |
 | `meerkat mcp install [claude]` / `serve` / `status` | register or run the tool server for AI agents |
@@ -99,7 +109,8 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | 0 | everything passed |
 | 1 | a check failed or could not run |
 | 2 | a usage or configuration error (the message says what to change) |
-| 3 | nothing to run (the preset selected no checks here) |
+| 3 | meerkat run and the presets: nothing to run (the preset selected no checks here). Not a pass |
+| 75 | meerkat gate and meerkat smoke: the run could not start (no base found, not a git repo, no checks loaded); meerkat blast: the target file is not in the code map. Not a pass |
 | 130 | interrupted |
 
 ## Output and machine use
