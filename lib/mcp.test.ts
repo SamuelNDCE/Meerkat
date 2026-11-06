@@ -52,7 +52,7 @@ describe('protocol', () => {
   test('initialize echoes the version and names the server', async () => {
     const { ctx } = makeCtx()
     const r = await handleMessage({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26' } }, ctx)
-    expect(r).toEqual({ jsonrpc: '2.0', id: 1, result: { protocolVersion: '2025-03-26', capabilities: { tools: {} }, serverInfo: { name: 'meerkat', version: '9.9.9' } } })
+    expect(r).toEqual({ jsonrpc: '2.0', id: 1, result: { protocolVersion: '2025-03-26', capabilities: { tools: {}, resources: {}, prompts: {} }, serverInfo: { name: 'meerkat', version: '9.9.9' } } })
     const d = await handleMessage({ jsonrpc: '2.0', id: 2, method: 'initialize' }, ctx)
     expect(d.result.protocolVersion).toBe('2024-11-05')
   })
