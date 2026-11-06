@@ -1,0 +1,8 @@
+{
+  "rule": "js-exec-variable",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-js",
+  "why": "Passing a program and its arguments separately removes the shell, and with it the whole class of command injection.",
+  "bad": "bad/list.js",
+  "good": "good/list.js"
+}

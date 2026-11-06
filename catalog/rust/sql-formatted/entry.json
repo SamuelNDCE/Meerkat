@@ -1,0 +1,8 @@
+{
+  "rule": "rs-sql-formatted",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-rust",
+  "why": "A bound parameter keeps the value out of the SQL text, so it cannot rewrite the query.",
+  "bad": "bad/src/db.rs",
+  "good": "good/src/db.rs"
+}

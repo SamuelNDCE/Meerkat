@@ -1,0 +1,8 @@
+{
+  "rule": "py-requests-no-timeout",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-python",
+  "why": "A request with no timeout can wait forever, so a number of seconds turns a hang into an error you can handle.",
+  "bad": "bad/fetch.py",
+  "good": "good/fetch.py"
+}

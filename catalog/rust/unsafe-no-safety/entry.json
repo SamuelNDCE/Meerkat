@@ -1,0 +1,8 @@
+{
+  "rule": "rs-unsafe-no-safety",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-rust",
+  "why": "A SAFETY comment states why the unsafe block is sound, which is what a reviewer must otherwise work out alone.",
+  "bad": "bad/src/read.rs",
+  "good": "good/src/read.rs"
+}

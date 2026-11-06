@@ -1,0 +1,8 @@
+{
+  "rule": "many-parameters",
+  "runner": "thorough/refactor.mjs",
+  "check": "many-parameters",
+  "why": "A small dataclass groups values that travel together, so callers name them instead of counting positions.",
+  "bad": "bad/invoice.py",
+  "good": "good/invoice.py"
+}
