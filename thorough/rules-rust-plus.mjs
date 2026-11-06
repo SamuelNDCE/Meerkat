@@ -129,8 +129,10 @@ export const testModuleFile = (project, file, depth = 0) => {
       const decl = new RegExp(`#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]\\n]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+${esc}\\s*;`)
       const any = new RegExp(`\\bmod\\s+${esc}\\s*;`)
       for (const p of [`${pre}mod.rs`, `${pre}lib.rs`, `${pre}main.rs`, ...(dir ? [`${dir}.rs`] : [])]) {
-        if (p === file || !project.files.includes(p)) continue
-        const text = project.read(p) ?? ''
+        if (p === file) continue
+        // Read the parent even when the project listing leaves it out (a file named *_tests.rs is not in the listing).
+        const text = project.read(p)
+        if (typeof text !== 'string') continue
         if (decl.test(text) || (any.test(text) && testModuleFile(project, p, depth + 1))) {
           result = true
           break
@@ -339,7 +341,7 @@ const macroSaysHandled = (ctx) => {
 
 // The statement that ends on this line starts with `let` or is an assignment (looks back at most four lines to the previous `;`).
 const statementBinds = (ctx) => {
-  const prev = ctx.lines.slice(Math.max(0, ctx.index - 4), ctx.index).join('\n')
+  const prev = ctx.lines.slice(Math.max(0, ctx.index - 12), ctx.index).filter((l) => !/^\s*\/\//.test(l)).slice(-4).join('\n')
   const stmt = `${prev.slice(Math.max(prev.lastIndexOf(';'), prev.lastIndexOf('{'), prev.lastIndexOf('}')) + 1)}\n${ctx.lines[ctx.index]}`
   return /^\s*(?:let\b|\*?[\w.]+\s*=(?!=))/.test(stmt)
 }
@@ -358,7 +360,7 @@ const errArmIntended = (ctx) => {
   if (/\|\s*Err\(\s*_\s*\)|Err\(\s*_\s*\)\s*\|/.test(line)) return true
   const head = before(ctx, 12)
   if (/\bErr\([^)\n]*\)\s+if\b/.test(head)) return true
-  return /\bmatch\b[^\n]*\bmetadata\(/.test(head)
+  return /\bmatch\b[^\n]*\b(?:symlink_)?metadata\(/.test(head)
 }
 // The function the line belongs to is public (pub, pub(crate)) and the line is its return type, not a closure or fn-pointer type in a parameter.
 const publicFnReturn = (ctx) => {
@@ -370,6 +372,9 @@ const publicFnReturn = (ctx) => {
 }
 // The Vec named `name` is the value of its block (a line with just the name, or Ok(name) / Some(name)) or is returned, within the next 40 lines.
 const vecIsBlockValue = (ctx, name) => new RegExp(`^\\s*(?:(?:Ok|Some)\\(\\s*)?${name}\\s*\\)?\\s*$|\\breturn\\s+(?:(?:Ok|Some)\\(\\s*)?${name}\\b`, 'm').test(ctx.lines.slice(ctx.index + 1, ctx.index + 41).join('\n'))
+
+// The Vec named `name` becomes a field of a struct or enum value built later (`Block { lines: name }`, `Op::Remove { name }`, or the bare field on its own line), within 60 lines.
+const vecMovedIntoValue = (ctx, name) => new RegExp(`\\b\\w+\\s*:\\s*${name}\\s*[,}]|\\{\\s*(?:\\w+\\s*,\\s*)*${name}\\s*(?:,\\s*\\w+\\s*)*\\}|^\\s*${name}\\s*,\\s*$`, 'm').test(ctx.lines.slice(ctx.index + 1, ctx.index + 61).join('\n'))
 
 // TOML: the table a line belongs to, and the body of a named table in a whole file.
 const HEADER = /^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*$/
@@ -546,7 +551,7 @@ export const ERRORS = [
   R('rerr-lock-unwrap-poison', 'a lock is unwrapped, so one panic while it was held makes every later call panic', /\.(?:lock|read|write)\(\)\.unwrap\(\)/, 'let g = state.lock().unwrap();', 'let g = state.lock().unwrap_or_else(PoisonError::into_inner);'),
   R('rerr-parse-unwrap', 'parse().unwrap() panics on input the user typed', /\.parse(?:::<[^>\n]{1,40}>)?\(\)\.unwrap\(\)/, 'let n: u32 = arg.parse().unwrap();', 'let n: u32 = arg.parse().map_err(|_| Error::BadNumber)?;'),
   R('rerr-env-var-unwrap', 'an environment variable is read with unwrap or expect (panics when it is not set)', /\benv::var\(\s*"[^"\n]{1,80}"\s*\)\.(?:unwrap|expect)\(/, 'let home = env::var("HOME").unwrap();', 'let home = env::var("HOME").ok();'),
-  LIBR('rerr-anyhow-in-library', 'a library exposes anyhow types, so callers cannot match its errors', /\banyhow::(?:Result|Error|anyhow|bail|ensure)\b/, 'pub fn load() -> anyhow::Result<Config> {', 'pub fn load() -> Result<Config, LoadError> {', notBinary),
+  LIBR('rerr-anyhow-in-library', 'a library exposes anyhow types, so callers cannot match its errors', /\banyhow::(?:Result|Error|anyhow|bail|ensure)\b/, 'pub fn load() -> anyhow::Result<Config> {', 'pub fn load() -> Result<Config, LoadError> {', (c) => notBinary(c) && !/\bOther\(\s*anyhow::anyhow!/.test(c.lines[c.index])),
   R('rerr-match-err-swallowed', 'an Err arm is matched with _ and an empty body, so the error disappears', /\bErr\(\s*_\s*\)\s*=>\s*(?:\{\s*\}|\(\))/, 'match read() { Ok(v) => v, Err(_) => {} }', 'match read() { Ok(v) => v, Err(e) => return Err(e.into()) }', {
     // In exists/is_/try_/has_ functions a failed call means "not there", so ignoring the error is the answer.
     // An or-pattern with Ok, a catch-all after an earlier guarded Err arm, or a metadata probe ("not there") also mean the error is handled.
@@ -605,7 +610,7 @@ export const ASYNC = [
   LIBR('rasync-main-in-library', 'a library defines a #[tokio::main] entry point, which takes over its callers runtime', /#\[(?:tokio|async_std)::main\]/, '#[tokio::main]\nasync fn serve() {}', 'pub async fn serve() {}'),
   R('rasync-thread-spawn-discarded', 'thread::spawn is called as a statement, so the thread is never joined', /^\s*(?:std::)?thread::spawn\(/, 'thread::spawn(move || worker(job));', 'let h = thread::spawn(move || worker(job));', {
     // A background thread started once from fn main (a startup ping, a scratch sweep) lives as long as the process by design.
-    test: T(/^\s*(?:std::)?thread::spawn\(/, (c) => !threadUsesChannel(c) && fnNameOf(c) !== 'main'),
+    test: T(/^\s*(?:std::)?thread::spawn\(/, (c) => !threadUsesChannel(c) && fnNameOf(c) !== 'main' && !/\.store\(\s*false\b/.test(after(c, 6))),
   }),
   R('rasync-global-mutable-state', 'a global lazy lock holds mutable state shared by every caller (review the scope)', /\bstatic\s+\w+\s*:\s*(?:Lazy|LazyLock|OnceLock|once_cell::sync::Lazy)<\s*(?:std::sync::)?(?:Mutex|RwLock)</, 'static CACHE: Lazy<Mutex<HashMap<String, u32>>> = Lazy::new(|| Mutex::new(HashMap::new()));', 'static LIMIT: u32 = 64;'),
   R('rasync-reqwest-no-timeout', 'a reqwest client is built with no timeout, so a stalled server hangs the caller forever', /\breqwest::Client::new\(\)|\bClient::builder\(\)\.build\(\)/, 'let http = reqwest::Client::new();', 'let http = reqwest::Client::builder().timeout(Duration::from_secs(10)).build()?;', {
@@ -689,7 +694,7 @@ export const PERF_STYLE = [
     // Test code is skipped (RUNTIME_RULES). A Vec that is the value of its block or is returned is the result of the iteration, not scratch space.
     test: (line, ctx) => {
       const m = /let\s+mut\s+(\w+)\s*(?::\s*Vec<[^>\n]{0,60}>)?\s*=\s*Vec::new\(\)\s*;/.exec(line)
-      return !!m && inLoopBody(ctx) && !/with_capacity/.test(line) && !testCode(ctx) && !vecIsBlockValue(ctx, m[1])
+      return !!m && inLoopBody(ctx) && !/with_capacity/.test(line) && !testCode(ctx) && !vecIsBlockValue(ctx, m[1]) && !vecMovedIntoValue(ctx, m[1])
     },
   }),
 ]
