@@ -11,6 +11,8 @@ const trackedFiles = (root) => allTracked(root).filter((f) => !isFixture(f))
 const everyFile = allTracked
 
 const limits = (root) => readBudgets(root)?.hygiene ?? {}
+// A path glob: ** crosses folders (and may match none), * stays inside one folder.
+const globToRe = (g) => new RegExp('^' + g.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\/\*\*$/, '\u0001').replace(/\*\*\/?/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '(?:.*/)?').replace(/\u0001/g, '(?:/.*)?') + '$')
 const BINARY = /\.(exe|dll|so|dylib|zip|7z|rar|tar|gz|iso|dmg|msi|jar|class|pdb|node|wasm)$/i
 
 const license = (root) => {
@@ -73,7 +75,13 @@ const largeFiles = (root) => {
 
 const markers = (root) => {
   const bad = limits(root).markers ?? ['FIXME', 'XXX']
-  const re = new RegExp(`\\b(${bad.join('|')})\\b`)
+  // A marker is a whole word that is not part of a code such as NV-XXX-000 or XXX_ID (no - _ or letter/digit on either side).
+  const re = new RegExp(`(?<![\\w-])(${bad.join('|')})(?![\\w-])`)
+  // The start of a comment on a line: // , # , /* , <!-- or a leading * , outside a string literal (an even number of quotes before it).
+  const commentAt = (l) => {
+    for (const m of l.matchAll(/\/\/|#|\/\*|<!--|^\s*\*/g)) if (((l.slice(0, m.index).match(/(?<!\\)["'`]/g) ?? []).length % 2) === 0) return m.index
+    return -1
+  }
   const f = []
   let todo = 0
   for (const x of trackedFiles(root)) {
@@ -81,7 +89,9 @@ const markers = (root) => {
     const lines = readText(root, x).split('\n')
     lines.forEach((l, i) => {
       if (/\bTODO\b/.test(l)) todo++
-      if (re.test(l) && /(\/\/|#|\/\*|<!--|\*)/.test(l)) f.push(`${x}:${i + 1} ${l.trim().slice(0, 90)}`)
+      // Only the comment text counts: a marker in code or in a string literal is a value, not a note.
+      const at = commentAt(l)
+      if (at >= 0 && re.test(l.slice(at))) f.push(`${x}:${i + 1} ${l.trim().slice(0, 90)}`)
     })
   }
   console.log(`(${todo} TODO notes counted; they do not fail the check)`)
@@ -133,17 +143,22 @@ const uiStatic = (root) => {
   const f = []
   const files = trackedFiles(root)
   const desktop = isDesktopApp(root, files)
+  // Paths the project says are not pages: hygiene.uiStaticSkip in .meerkat-budgets.json, globs such as "tools/gen-og-card.html" or "**/emails/**".
+  const skip = (limits(root).uiStaticSkip ?? []).filter((g) => typeof g === 'string').map(globToRe)
   for (const x of files) {
+    if (skip.some((re) => re.test(x))) continue
     if (!/\.(html?|tsx|jsx|vue|svelte)$/i.test(x) || /(^|\/)(node_modules|dist|build)\//.test(x)) continue
     // Tests and design mockups/prototypes are not shipped pages: their markup is sample input or a sketch.
     if (isTestFile(x) || /(^|\/)(mockups?|prototypes?|wireframes?)\//i.test(x)) continue
     const t = readText(root, x)
     for (const m of t.matchAll(/<img\b[^>]*>/gi)) if (!/\balt\s*=/.test(m[0])) f.push(`${x}: an <img> with no alt text`)
     for (const m of t.matchAll(/<a\b[^>]*target\s*=\s*["']_blank["'][^>]*>/gi)) if (!/rel\s*=\s*["'][^"']*no(?:opener|referrer)/.test(m[0])) f.push(`${x}: a link that opens a new tab without rel="noopener"`)
+    // An HTML email template (an emails/ folder) is mail-client markup, not a page: it has no tab title and no viewport of its own.
+    const emailTemplate = /(^|\/)(emails?|email-templates?|mail-templates?)\//i.test(x)
     if (/\.html?$/i.test(x) && /<html\b/i.test(t)) {
       if (!/<html\b[^>]*\blang\s*=/i.test(t)) f.push(`${x}: <html> has no lang attribute`)
-      if (!desktop && !/<meta[^>]+viewport/i.test(t)) f.push(`${x}: no viewport meta tag (breaks on phones)`)
-      if (!/<title>\s*\S/i.test(t)) f.push(`${x}: no page <title>`)
+      if (!desktop && !emailTemplate && !/<meta[^>]+viewport/i.test(t)) f.push(`${x}: no viewport meta tag (breaks on phones)`)
+      if (!emailTemplate && !/<title>\s*\S/i.test(t)) f.push(`${x}: no page <title>`)
     }
     for (const m of t.matchAll(/<[a-z][\w-]*\b[^>]*\btabindex\s*=\s*["']?\s*([1-9]\d*)/gi)) f.push(`${x}:${t.slice(0, m.index).split('\n').length} a positive tabindex (${m[1]}) breaks the natural tab order`)
     for (const m of t.matchAll(/<button\b[^>]*>\s*<\/button>/gi)) f.push(`${x}: an empty <button> (no name for a screen reader) ${m[0].slice(0, 40)}`)
