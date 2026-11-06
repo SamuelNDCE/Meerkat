@@ -212,6 +212,25 @@ describe('the detection files of a run', () => {
     expect(findingsLine(two.doc, 'x/findings.md')).toBe('findings: 2 high (1 new)  details: x/findings.md')
     expect(findingsMarkdown(two.doc)).toContain('Fixed since the last run')
   })
+  test('a first run with findings and no previous run does not report them all as new', () => {
+    const logs = tmp()
+    const d = project({ 'src/a.js': 'a\nb\n' })
+    const env = { ...process.env, MEERKAT_LOG_DIR: logs }
+    const first = saveRun(env, d, '20261031-100000-fast', [failing()], finds(['bad one', 1], ['bad two', 2]))
+    expect(first.doc.run.comparedWith).toBeNull()
+    expect(findingsLine(first.doc)).toBe('findings: 2 high')
+    expect(findingsLine(first.doc)).not.toContain('new')
+  })
+  test('a finding present in the previous comparable run is not counted as new', () => {
+    const logs = tmp()
+    const d = project({ 'src/a.js': 'a\nb\n' })
+    const env = { ...process.env, MEERKAT_LOG_DIR: logs }
+    saveRun(env, d, '20261031-100000-fast', [failing()], finds(['stays', 1]))
+    const two = saveRun(env, d, '20261031-110000-fast', [failing()], finds(['stays', 1]), { start: '2026-10-31T11:00:00Z' })
+    expect(two.doc.run.comparedWith).toBe('20261031-100000-fast')
+    expect(two.doc.counts).toMatchObject({ total: 1, new: 0, known: 1 })
+    expect(findingsLine(two.doc)).toBe('findings: 1 high (0 new)')
+  })
   test('history survives the pruning of run folders', () => {
     const logs = tmp()
     const d = project({ 'src/a.js': 'a\n' })
@@ -339,7 +358,8 @@ describe('a real run', () => {
     const code = await main(['--app', d, '--all', '--plain', '--only', 'secrets-plus'], { log: (l: string) => lines.push(l), env })
     expect(code).toBe(1)
     const run = join(logs, 'runs', readdirSync(join(logs, 'runs'))[0])
-    expect(lines.some((l) => /^findings: 1 critical \(1 new\)  details: .*findings\.md$/.test(l))).toBe(true)
+    // The first run has no previous run to compare with, so the line carries no "new" count.
+    expect(lines.some((l) => /^findings: 1 critical  details: .*findings\.md$/.test(l))).toBe(true)
     for (const name of ['findings.json', 'findings.md', 'findings.sarif', 'detections.jsonl', 'summary.json']) expect(existsSync(join(run, name)), name).toBe(true)
     for (const name of ['findings.json', 'findings.md', 'findings.sarif', 'detections.jsonl']) expect(readFileSync(join(run, name), 'utf8'), name).not.toContain(fake)
     expect(readFileSync(join(run, 'findings.json'), 'utf8')).not.toContain('AKIA]')
