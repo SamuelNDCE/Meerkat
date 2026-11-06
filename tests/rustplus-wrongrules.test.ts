@@ -109,6 +109,9 @@ describe('rasync-spawn-handle-dropped and rasync-thread-spawn-discarded', () => 
     quiet('rasync-thread-spawn-discarded', 'fn start(rx: Receiver<Job>) {\n    thread::spawn(move || {\n        for job in rx {\n            job.run();\n        }\n    });\n}\n')
     quiet('rasync-thread-spawn-discarded', 'fn start(tx: Sender<Job>) {\n    std::thread::spawn(move || {\n        tx.send(Job::new()).ok();\n    });\n}\n')
   })
+  test('a thread that is only handed the receiver as an argument is still flagged', () => {
+    fires('rasync-thread-spawn-discarded', 'fn begin(session_id: String, paths: Paths) -> Result<(), Error> {\n    let (tx, rx) = mpsc::channel::<DictationMsg>();\n    register_session(&session_id, tx)?;\n\n    std::thread::spawn(move || run_session(session_id, rx, paths));\n\n    Ok(())\n}\n')
+  })
   test('a plain fire-and-forget spawn is still flagged', () => {
     fires('rasync-spawn-handle-dropped', bad('rasync-spawn-handle-dropped'))
     fires('rasync-thread-spawn-discarded', bad('rasync-thread-spawn-discarded'))
@@ -167,6 +170,9 @@ describe('rerr-unwrap-or-builds-value', () => {
     quiet(id, 'fn h(o: Option<Kind>) -> Kind {\n    o.unwrap_or(Kind::Plain(3))\n}\n')
   })
   test('an eagerly built String is still flagged', () => fires(id, bad(id)))
+  test('a variant that carries a built String is still flagged', () => {
+    fires(id, 'pub fn status() -> Value {\n    let phase = phase_slot()\n        .lock()\n        .map(|p| p.clone())\n        .unwrap_or(Phase::Failed(\n            "the fleet status lock was poisoned by a panic on the fleet thread".to_string(),\n        ));\n    json!(phase)\n}\n')
+  })
 })
 
 describe('rperf-regex-compiled-per-call', () => {

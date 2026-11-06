@@ -177,10 +177,27 @@ const metadataLen = (ctx) => {
 }
 // An unwrap_or argument that allocates nothing: Path::new, Duration::from_*, enum variants (Type::Variant(..)), primitive conversions.
 const CHEAP_TYPE = /^(?:Path|OsStr|Duration|Cow|Some|Ok|Err|Instant|SystemTime|u8|u16|u32|u64|u128|usize|i8|i16|i32|i64|i128|isize|f32|f64|char|bool|Ordering|NonZero\w*)$/
-const unwrapOrBuilds = (line) => {
+// The text of the call that opens at `at` in `text` (up to its matching close parenthesis).
+const parenSpan = (text, at) => {
+  let depth = 0
+  for (let i = text.indexOf('(', at); i >= 0 && i < text.length; i++) {
+    if (text[i] === '(') depth++
+    else if (text[i] === ')' && --depth === 0) return text.slice(at, i + 1)
+  }
+  return text.slice(at)
+}
+const ALLOCATES = /\.to_string\(\)|\.to_owned\(\)|\.to_vec\(\)|String::from\(|String::new\(|format!\(|vec!\[|Vec::(?:new|from|with_capacity)\(|Box::new\(|\.clone\(\)/
+const unwrapOrBuilds = (ctx) => {
+  const line = ctx.lines[ctx.index]
+  const text = ctx.lines.slice(ctx.index, ctx.index + 12).join('\n')
   for (const m of line.matchAll(/\.unwrap_or\(\s*(?:([\w:]+)::(\w+)\(|(format!\(|vec!\[|\w+\.to_(?:string|owned)\(\)))/g)) {
     if (m[3]) return true
-    if (CHEAP_TYPE.test(m[1].split('::').pop()) || /^[A-Z]/.test(m[2])) continue
+    if (CHEAP_TYPE.test(m[1].split('::').pop())) continue
+    // An enum variant (Type::Variant(..)) is cheap unless its payload is built with an allocation.
+    if (/^[A-Z]/.test(m[2])) {
+      if (ALLOCATES.test(parenSpan(text, m.index))) return true
+      continue
+    }
     return true
   }
   return false
@@ -198,6 +215,9 @@ const regexCached = (ctx) => {
 // A spawned body that sends on or owns a channel end reports through it, so dropping the handle is deliberate.
 const CHAN_END = /\b(?:rx|tx|\w+_rx|\w+_tx|\w*receiver|\w*sender)\b|\.(?:recv|try_recv|blocking_recv)\(/
 const spawnUsesChannel = (ctx) => CHAN_END.test(callSpan(ctx, /\bspawn\(/))
+// A thread that is only handed a channel end as an argument (`run_session(id, rx, paths)`) is not shown to report through it: only a send, a receive or a loop over the receiver counts.
+const CHAN_USE = /\b\w*(?:tx|sender)\w*\s*\.\s*(?:send|try_send|blocking_send)\(|\b\w*(?:rx|receiver)\w*\s*\.\s*(?:recv|try_recv|blocking_recv|recv_timeout|iter|try_iter)\(|\bin\s+&?(?:mut\s+)?\w*(?:rx|receiver)\b/
+const threadUsesChannel = (ctx) => CHAN_USE.test(callSpan(ctx, /\bspawn\(/))
 // The macro call on this line says its case was handled elsewhere (a dispatch invariant): "handled above", "already printed".
 const macroSaysHandled = (ctx) => {
   const l = ctx.lines[ctx.index]
@@ -331,7 +351,7 @@ export const ERRORS = [
   LIBR('rerr-string-error-result', 'a library function returns Result with a String error', /->\s*(?:std::result::)?Result<[^\n{;]{0,120},\s*String\s*>/, 'fn parse(s: &str) -> Result<u32, String> {', 'fn parse(s: &str) -> Result<u32, ParseError> {', (c) => !/#\[(?:tauri::)?command\b/.test(attrsAboveFn(c))),
   LIBR('rerr-unit-error-type', 'a library function returns Result with the unit type () as its error', /->\s*(?:std::result::)?Result<[^\n{;]{0,120},\s*\(\s*\)\s*>/, 'fn read(&self) -> Result<Vec<u8>, ()> {', 'fn read(&self) -> Result<Vec<u8>, ReadError> {'),
   R('rerr-unwrap-or-builds-value', 'unwrap_or is given a value that is built eagerly (use unwrap_or_else or unwrap_or_default)', /\.unwrap_or\(\s*(?:[\w:]+::\w+\(|format!\(|vec!\[|\w+\.to_(?:string|owned)\(\))/, 'let s = opt.unwrap_or(String::from("none"));', 'let s = opt.unwrap_or_else(|| String::from("none"));', {
-    test: T(/\.unwrap_or\(\s*(?:[\w:]+::\w+\(|format!\(|vec!\[|\w+\.to_(?:string|owned)\(\))/, (c) => unwrapOrBuilds(c.lines[c.index])),
+    test: T(/\.unwrap_or\(\s*(?:[\w:]+::\w+\(|format!\(|vec!\[|\w+\.to_(?:string|owned)\(\))/, (c) => unwrapOrBuilds(c)),
   }),
   R('rerr-error-no-display', 'an error enum has no Display impl, so it cannot be shown to a user', undefined, 'pub enum ParseError {\n    Empty,\n    Bad,\n}', 'pub enum ParseError {\n    Empty,\n}\n\nimpl std::fmt::Display for ParseError {\n    fn fmt(&self, f: &mut std::fmt::Formatter<\'_>) -> std::fmt::Result {\n        write!(f, "parse error")\n    }\n}', {
     test: (line, ctx) => /^\s*(?:pub\s+)?enum\s+\w*Error\b/.test(line) && !/impl(?:<[^>]*>)?\s+(?:std::fmt::|fmt::)?Display\s+for\b/.test(ctx.text) && !/#\[derive\([^\]\n]*\bError\b/.test(attrsAbove(ctx)),
@@ -401,7 +421,7 @@ export const ASYNC = [
   }),
   LIBR('rasync-main-in-library', 'a library defines a #[tokio::main] entry point, which takes over its callers runtime', /#\[(?:tokio|async_std)::main\]/, '#[tokio::main]\nasync fn serve() {}', 'pub async fn serve() {}'),
   R('rasync-thread-spawn-discarded', 'thread::spawn is called as a statement, so the thread is never joined', /^\s*(?:std::)?thread::spawn\(/, 'thread::spawn(move || worker(job));', 'let h = thread::spawn(move || worker(job));', {
-    test: T(/^\s*(?:std::)?thread::spawn\(/, (c) => !spawnUsesChannel(c)),
+    test: T(/^\s*(?:std::)?thread::spawn\(/, (c) => !threadUsesChannel(c)),
   }),
   R('rasync-global-mutable-state', 'a global lazy lock holds mutable state shared by every caller (review the scope)', /\bstatic\s+\w+\s*:\s*(?:Lazy|LazyLock|OnceLock|once_cell::sync::Lazy)<\s*(?:std::sync::)?(?:Mutex|RwLock)</, 'static CACHE: Lazy<Mutex<HashMap<String, u32>>> = Lazy::new(|| Mutex::new(HashMap::new()));', 'static LIMIT: u32 = 64;'),
   R('rasync-reqwest-no-timeout', 'a reqwest client is built with no timeout, so a stalled server hangs the caller forever', /\breqwest::Client::new\(\)|\bClient::builder\(\)\.build\(\)/, 'let http = reqwest::Client::new();', 'let http = reqwest::Client::builder().timeout(Duration::from_secs(10)).build()?;', {
