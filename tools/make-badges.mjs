@@ -22,7 +22,7 @@ const accuracy = /## Current figures \([^)]*measured (\d{4}-\d{2}-\d{2})\)[\s\S]
 // label, value, colour of the value half
 const BADGES = [
   ['licence', 'PCL 1.0', '#8a5cf5'],
-  ['planted-defect recall', accuracy ? `${accuracy[2]}% (${accuracy[1]})` : '?', '#2ea44f'],
+  ['planted-defect recall', accuracy ? `${accuracy[2]}%` : '?', '#2ea44f'],
   ['version', `v${VERSION}`, '#7d5bd6'], // from package.json, so it follows every bump when this is run again
   ['telemetry', 'none', '#2ea44f'],
   ['dependencies', 'zero', '#2ea44f'],
