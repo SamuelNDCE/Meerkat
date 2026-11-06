@@ -127,6 +127,15 @@ describe('pull request comment', () => {
     expect(r).toEqual({ ok: true, detail: 'updated the existing comment' })
     expect(calls).toEqual(['GET /repos/o/r/issues/5/comments?per_page=100&page=1', 'PATCH /repos/o/r/issues/comments/42'])
   })
+  test('postComment ignores a human comment that contains the marker and creates a new one', async () => {
+    const calls: string[] = []
+    const fake = async (url: string, init: { method: string }) => {
+      calls.push(init.method)
+      return { ok: true, status: 200, json: async () => (init.method === 'GET' ? [{ id: 3, body: `${COMMENT_MARKER} hi`, user: { type: 'User', login: 'bob' } }] : {}) }
+    }
+    expect((await postComment({ body: 'b', repo: 'o/r', pr: 5, token: 't', fetchImpl: fake as never })).detail).toBe('posted a new comment')
+    expect(calls).toEqual(['GET', 'POST'])
+  })
   test('postComment creates when there is no marked comment, and refuses without a token', async () => {
     const calls: string[] = []
     const fake = async (url: string, init: { method: string }) => {
