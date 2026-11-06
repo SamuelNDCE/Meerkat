@@ -274,3 +274,101 @@ describe('the scan window is measured on code, not on blanked text', () => {
     expect(js(`el.innerHTML = ${parts}\nnext()`).code).toBe(1)
   })
 })
+
+// Fail-closed policy: when the scanner cannot be certain how to read a region, the assignment is REPORTED, never skipped.
+describe('fail closed: unreadable regions report the assignment', () => {
+  test('an unterminated block comment later in the file reports an otherwise safe assignment', () => {
+    expect(js('el.innerHTML = esc(a)\n/* never closed\nmore').code).toBe(1)
+  })
+  test('a hit inside an unterminated block comment is reported, not skipped as a comment', () => {
+    expect(js('/* never closed\nel.innerHTML = raw').code).toBe(1)
+  })
+  test('an unterminated template reports', () => {
+    expect(js('const a = `abc\nel.innerHTML = esc(a)').code).toBe(1)
+    expect(js('el.innerHTML = `<b>${esc(a)}</b>').code).toBe(1)
+  })
+  test('a quote string that reaches a line end reports', () => {
+    expect(js("const s = 'abc\nel.innerHTML = esc(a)").code).toBe(1)
+    expect(js('const s = "abc\nel.innerHTML = esc(a)').code).toBe(1)
+  })
+  test('a comment decision from an unconfirmed string state is not trusted', () => {
+    expect(js("const s = 'abc\n// el.innerHTML = raw").code).toBe(1)
+  })
+  test('a / after ) that could be a regex or a division reports', () => {
+    expect(js('if (x) /re/.test(y)\nel.innerHTML = esc(a)').code).toBe(1)
+    expect(js('const n = (a + b) / 2 / 3\nel.innerHTML = esc(a)').code).toBe(1)
+  })
+  test('a / at a line start after a name, ) or ] (no automatic semicolon) reports', () => {
+    expect(js('const q = a\n/b/g\nel.innerHTML = esc(x)').code).toBe(1)
+    expect(js('const q = f(a)\n/b/g\nel.innerHTML = esc(x)').code).toBe(1)
+  })
+  test('a regex that does not close on its line still reports', () => {
+    expect(js('x = /abc\nel.innerHTML = esc(a)').code).toBe(1)
+  })
+  test('a comment that closes on the same line does not hide the call that follows', () => {
+    expect(js('/* c */ el.innerHTML = raw').code).toBe(1)
+  })
+  test('a nested template inside a ${} is read as JavaScript reads it, and a quote in it cannot hide a raw part', () => {
+    expect(js("el.innerHTML = `<b>${'`'}</b>` + raw").code).toBe(1)
+  })
+  test('a backtick in the middle of template text (tagged or odd) is not a recognised shape', () => {
+    expect(js('el.innerHTML = `<b>`x`</b>`').code).toBe(1)
+  })
+})
+
+describe('fail closed: a statement that does not clearly end is reported', () => {
+  test('a next line that starts with a continuation token continues the statement', () => {
+    expect(js('el.innerHTML = esc(a)\n[raw]').code).toBe(1)
+    expect(js('el.innerHTML = esc(a)\n(raw)').code).toBe(1)
+    expect(js('el.innerHTML = esc(a)\n- raw').code).toBe(1)
+    expect(js('el.innerHTML = esc(a)\n* raw').code).toBe(1)
+    expect(js('el.innerHTML = esc(a)\n`x`').code).toBe(1)
+    expect(js('el.innerHTML = esc(a)\n/ raw').code).toBe(1)
+    expect(js('el.innerHTML = esc(a)\ninstanceof raw').code).toBe(1)
+  })
+  test('an unclosed bracket at the end of the file reports', () => {
+    expect(js('el.innerHTML = esc(a').code).toBe(1)
+    expect(js('el.innerHTML = [esc(a)').code).toBe(1)
+  })
+  test('a statement over the line bound reports', () => {
+    expect(js(`el.innerHTML = esc(a${'\n'.repeat(2500)})`).code).toBe(1)
+  })
+  test('a statement over the character bound reports', () => {
+    expect(js(`el.innerHTML = esc(a${' '.repeat(250000)})`).code).toBe(1)
+    expect(js(`el.innerHTML = esc(a)${' '.repeat(250000)}\n  + raw`).code).toBe(1)
+  })
+  test('a long run of blank lines after a statement that clearly ends is accepted, and fast', () => {
+    const t0 = Date.now()
+    expect(js(`el.innerHTML = esc(a)${'\n'.repeat(40000)}next()`).code).toBe(0)
+    expect(Date.now() - t0).toBeLessThan(20000)
+  })
+  test('a run of blank lines that then continues the statement counts its lines', () => {
+    expect(js(`el.innerHTML = esc(a)${'\n'.repeat(2500)}+ raw`).code).toBe(1)
+  })
+})
+
+describe('fail closed: the plain safe shapes are still NOT reported (false-positive rate)', () => {
+  const safe: Record<string, string> = {
+    'constant table key': TABLE + 'el.innerHTML = ICON.close',
+    'constant table, string key': TABLE + "el.innerHTML = ICON['open']",
+    'esc of a literal': "el.innerHTML = esc('x')",
+    'esc of a name': 'el.innerHTML = esc(name)',
+    'empty string': "el.innerHTML = ''",
+    'literal markup': "el.innerHTML = '<svg></svg>'",
+    'join of literals and esc': "el.innerHTML = '<b>' + esc(a) + '</b>'",
+    'template of table keys and esc': TABLE + 'el.innerHTML = `<i>${ICON.close}</i>${esc(a)}`',
+    'multi-line join': "el.innerHTML = '<b>' +\n  esc(a) +\n  '</b>'",
+    'safe value, then a normal next statement': 'el.innerHTML = esc(a)\nnext()',
+    'safe value, then a semicolon-led statement': 'el.innerHTML = esc(a)\n;[a, b] = [b, a]',
+    'division by an identifier before the call': 'const r = a / b / c\nel.innerHTML = esc(x)',
+    'regex after ( before the call': "const s = t.replace(/a/g, '')\nel.innerHTML = esc(x)",
+    'real comments': "// note\n/* more */\nel.innerHTML = esc(a) // tail",
+    'a template with a ${} string inside': 'const l = `a${"b"}c`\nel.innerHTML = esc(l)',
+    'a safe value that ends the file': 'el.innerHTML = esc(a)',
+  }
+  for (const [name, code] of Object.entries(safe)) {
+    test(`${name} is not reported`, () => {
+      expect(js(code).code).toBe(0)
+    })
+  }
+})

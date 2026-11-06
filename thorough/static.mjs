@@ -239,23 +239,49 @@ const paramOnlyConstants = (t, at, param) => {
 // .meerkat-xss-safe instead (one name per line, the reason after #).
 const XSS_SAFE_CALLS = ['esc', 'escape', 'escapeHtml', 'sanitize', 'sanitizeHtml', 'purify', 'DOMPurify']
 const xssSafeNames = (root) => new Set(readText(root, '.meerkat-xss-safe').split('\n').map((l) => l.split('#')[0].trim().toLowerCase()).filter(Boolean))
+// THE RULE (fail closed). An innerHTML assignment is accepted as safe only through a recognised shape:
+//   1. a string literal;
+//   2. a reference into a constant table with plain keys (ICON.close, ICONS['x'], a top-level const holding only strings);
+//   3. a call of a cleaner (XSS_SAFE_CALLS or a name vouched in .meerkat-xss-safe, never a decoder) that is read to its end: the callee, the whole argument
+//      text and whatever follows it are all recognised, and the cleaner's output is safe whatever it is given;
+//   4. a join (+) or a template of those, or the older shapes below (a helper called only with constants, a static builder, cond ? CONST : CONST).
+// Everything else is reported. So is every case where the scanner cannot be certain how to read a region: an unterminated string, template, comment or regex,
+// a / that may be a division or a regex, a statement that does not clearly end, or a window or budget that ran out. A "skip" never means "safe".
+//
 // The right side of an assignment, read the way JavaScript reads it: from just after the operator to the end of the statement (a ; or a line end outside
 // brackets and strings). Comments are removed first. A // comment ends only the line it is on: the expression goes on when the next line that holds code
 // starts with a continuation token, exactly as for a plain line end, so a comment cannot hide a raw value on the next line.
 let blankedFor = ''
 let blankedText = ''
 let blankedFailed = false
-// Set by the last blankComments call: true when a regex literal could not be read to its end, so the text cannot be trusted and the value is reported.
+// Set by the last blankComments call: true when some region of the file could not be read with certainty (see blankComments), so the blanked text cannot be
+// trusted and every hit in the file is reported.
 let blankFailed = false
-// A / starts a regex (not a division) when the code before it cannot end an expression: nothing, a line start, one of ( , = : [ ! & | ? { } ; or one of these words.
+// Bounds. One assignment scan reads at most MAX_SCAN_CHARS characters and MAX_SCAN_LINES lines; one file may spend FILE_SCAN_BUDGET characters in all.
+// Running out of any of them reports the assignment.
+const MAX_SCAN_CHARS = 200_000
+const MAX_SCAN_LINES = 2000
+const FILE_SCAN_BUDGET = 4_000_000
+let fileBudget = FILE_SCAN_BUDGET
+// A / starts a regex (not a division) when the code before it cannot end an expression: nothing, a line start, one of ( , = : [ ! & | ? { ; or one of these words.
 const REGEX_AFTER_WORD = new Set(['return', 'typeof', 'case', 'void', 'delete', 'throw', 'yield', 'await', 'in', 'of', 'else', 'do'])
-const regexAllowed = (out) => {
+// What the / at the end of `out` is: 'regex' (certain), 'division' (certain) or 'maybe' (JavaScript itself needs the whole program to say: `if (x) /re/.test(y)` and
+// `(a + b) / 2 / 3`, `}` followed by a regex or a division, and a line that starts with / after a name, `)` or `]`, where there is no automatic semicolon).
+const slashKind = (out) => {
   let k = out.length
   while (k > 0 && (out[k - 1] === ' ' || out[k - 1] === '\t' || out[k - 1] === '\r')) k--
-  if (k === 0) return true
-  if ('(,=:[!&|?{};\n'.includes(out[k - 1])) return true
+  if (k === 0) return 'regex'
+  const broke = out[k - 1] === '\n'
+  while (k > 0 && /\s/.test(out[k - 1])) k--
+  if (k === 0) return 'regex'
+  const ch = out[k - 1]
+  if (ch === ')' || ch === '}') return 'maybe'
+  if (ch === ']') return broke ? 'maybe' : 'division'
+  if ('(,=:[!&|?{;'.includes(ch)) return 'regex'
   const w = /[A-Za-z]+$/.exec(out.slice(Math.max(0, k - 12), k))?.[0]
-  return w !== undefined && REGEX_AFTER_WORD.has(w) && !/[\w$.]/.test(out[k - w.length - 1] ?? '')
+  if (w !== undefined && REGEX_AFTER_WORD.has(w) && !/[\w$.]/.test(out[k - w.length - 1] ?? '')) return 'regex'
+  if (/[\w$'"`]/.test(ch)) return broke ? 'maybe' : 'division'
+  return 'division'
 }
 // The end (exclusive, flags included) of the regex literal that opens at t[at], or -1 when it is not closed on its line. Honours \ escapes and [...] classes.
 const regexEnd = (t, at) => {
@@ -278,6 +304,9 @@ const regexEnd = (t, at) => {
 }
 // Blanks // and /* */ comments with spaces (line breaks kept, so every index stays the same) outside strings, template literals and regex literals. A regex literal is
 // replaced by 0 characters: it is never a safe part, and its quotes or slashes can no longer confuse the later steps. Every later step reads this copy.
+// Template literals are read with a stack, so a ${} holding a string, a comment or another template is read as JavaScript reads it.
+// It sets blankFailed (and every hit of the file is then reported) whenever a region cannot be read with certainty: a ' or " string that reaches a line end, a
+// string, template or block comment still open at the end of the file, a regex literal that does not close on its line, and a / that may be a division or a regex.
 const blankComments = (t) => {
   if (t === blankedFor) {
     blankFailed = blankedFailed
@@ -285,86 +314,132 @@ const blankComments = (t) => {
   }
   let out = ''
   let q = ''
+  // One entry per open template literal: -1 while its text is being read, otherwise the brace depth inside the ${} being read.
+  const stack = []
   let failed = false
   for (let i = 0; i < t.length; i++) {
     const c = t[i]
+    const top = stack.length - 1
     if (q) {
       out += c
       if (c === '\\') out += t[++i] ?? ''
       else if (c === q) q = ''
-    } else if (c === '"' || c === "'" || c === '`') {
+      else if (c === '\n') {
+        failed = true
+        q = ''
+      }
+    } else if (top >= 0 && stack[top] < 0) {
+      out += c
+      if (c === '\\') out += t[++i] ?? ''
+      else if (c === '`') stack.pop()
+      else if (c === '$' && t[i + 1] === '{') {
+        out += '{'
+        i++
+        stack[top] = 0
+      }
+    } else if (c === '"' || c === "'") {
       q = c
+      out += c
+    } else if (c === '`') {
+      stack.push(-1)
+      out += c
+    } else if (c === '{' && top >= 0) {
+      stack[top]++
+      out += c
+    } else if (c === '}' && top >= 0) {
+      if (stack[top] === 0) stack[top] = -1
+      else stack[top]--
       out += c
     } else if (c === '/' && t[i + 1] === '/') {
       while (i < t.length && t[i] !== '\n') (out += ' '), i++
       i--
     } else if (c === '/' && t[i + 1] === '*') {
       const end = t.indexOf('*/', i + 2)
+      if (end < 0) failed = true
       const stop = end < 0 ? t.length : end + 2
       for (; i < stop; i++) out += t[i] === '\n' ? '\n' : ' '
       i--
-    } else if (c === '/' && regexAllowed(out)) {
-      const e = regexEnd(t, i)
-      if (e < 0) {
+    } else if (c === '/') {
+      const kind = slashKind(out)
+      const e = kind === 'division' ? -1 : regexEnd(t, i)
+      if (kind === 'regex' && e < 0) {
         failed = true
         out += c
-      } else {
+      } else if (kind === 'regex') {
         out += '0'.repeat(e - i)
         i = e - 1
+      } else {
+        // 'maybe' with a closing / on the same line could be a regex or a division: unconfirmed. Without one it can only be a division.
+        if (kind === 'maybe' && e >= 0) failed = true
+        out += c
       }
     } else out += c
   }
+  if (q || stack.length) failed = true
   blankedFor = t
   blankedText = out
   blankedFailed = failed
   blankFailed = failed
   return out
 }
-// The scan is bounded by 2000 characters of CODE (blanked comments and white space do not count); when that runs out before the statement clearly ends, it returns
-// null and the caller treats the value as unsafe.
+// After a line end outside brackets: does the statement go on? Yes when what came before cannot end an expression (an operator, an opening bracket, nothing)
+// or what comes next continues one. JavaScript has no automatic semicolon before + - * / % < > = ! & | ^ ? : , . ( [ a template or in / instanceof, so all of
+// those continue the statement; anything the scanner then cannot recognise is reported.
+const LAST_CONTINUES = '+-*/%<>=!&|^~?:,.(['
+const NEXT_CONTINUES = '+-*/%<>=!&|^?:,.([`'
+const continuesAfter = (last, t, k) => last === '' || LAST_CONTINUES.includes(last) || (k < t.length && NEXT_CONTINUES.includes(t[k])) || /^(?:in|instanceof)(?![\w$])/.test(t.slice(k, k + 11))
+// The scan is bounded by 2000 characters of CODE (blanked comments and white space do not count), MAX_SCAN_CHARS characters and MAX_SCAN_LINES lines in all; when
+// that runs out, or the statement does not clearly end (an open string, template or bracket at the end of the file), it returns null and the caller treats the
+// value as unsafe. The next code position is found once per run of white space, not once per line break.
 const rhsText = (t, from) => {
+  if (fileBudget < 0) return null
   let depth = 0
   let q = ''
   let out = ''
   let code = 0
-  let ended = false
-  // The first character of the next line that holds code (blank lines and blanked comments are skipped, however long they are).
-  const nextCode = (at) => {
-    let k = at
-    while (k < t.length && /\s/.test(t[k])) k++
-    return t[k] ?? ''
+  let lines = 0
+  let last = ''
+  const done = (v, at) => {
+    fileBudget -= at - from
+    return v
   }
-  const continues = (before, at) => before === '' || /[+,(?:&|=]$/.test(before) || /[+.?:&|]/.test(nextCode(at))
   for (let i = from; ; i++) {
-    if (i >= t.length) {
-      ended = true
-      break
-    }
+    if (i >= t.length) return done(q === '' && depth <= 0 ? out.trim() : null, i)
+    if (i - from > MAX_SCAN_CHARS) return done(null, i)
     const c = t[i]
-    if (!/\s/.test(c) && ++code > 2000) break
+    if (c === '\n' && ++lines > MAX_SCAN_LINES) return done(null, i)
+    if (!/\s/.test(c)) {
+      if (++code > 2000) return done(null, i)
+      last = c
+    }
     if (q) {
+      // A ' or " string that reaches a line end is not a string JavaScript accepts: unterminated.
+      if (c === '\n' && q !== '`') return done(null, i)
       out += c
-      if (c === '\\') out += t[++i] ?? ''
-      else if (c === q) q = ''
+      if (c === '\\') {
+        const next = t[++i] ?? ''
+        if (next === '\n') lines++
+        out += next
+      } else if (c === q) q = ''
       continue
     }
     if (c === '"' || c === "'" || c === '`') q = c
     else if ('([{'.includes(c)) depth++
     else if (')]}'.includes(c)) depth--
-    else if (depth <= 0 && c === ';') {
-      ended = true
-      break
-    } else if (depth <= 0 && c === '\n') {
-      if (continues(out.trimEnd(), i + 1)) {
-        out += c
-        continue
-      }
-      ended = true
-      break
+    else if (depth <= 0 && c === ';') return done(out.trim(), i)
+    else if (depth <= 0 && c === '\n') {
+      let k = i
+      while (k < t.length && /\s/.test(t[k])) k++
+      if (!continuesAfter(last, t, k)) return done(out.trim(), i)
+      // The statement goes on: the white space run is part of it, so count it.
+      if (k - from > MAX_SCAN_CHARS) return done(null, k)
+      for (let j = i + 1; j < k; j++) if (t[j] === '\n' && ++lines > MAX_SCAN_LINES) return done(null, k)
+      out += t.slice(i, k)
+      i = k - 1
+      continue
     }
     out += c
   }
-  return ended ? out.trim() : null
 }
 // Splits on a separator at the top level only (not inside strings, template literals or brackets).
 const splitTop = (s, sep) => {
@@ -424,6 +499,8 @@ const safeTerm = (t, raw, vouched) => {
     const exprs = []
     for (let i = 1; i < term.length - 1; i++) {
       if (term[i] === '\\') i++
+      // A backtick in the middle of the text is not one template (an unterminated, nested or tagged one): not a recognised shape.
+      else if (term[i] === '`') return false
       else if (term[i] === '$' && term[i + 1] === '{') {
         let d = 0
         let j = i + 1
@@ -455,7 +532,7 @@ const safeExpr = (t, expr, vouched) => {
 // innerHTML = '' or = '<svg ...>' (a plain string with no ${} and no + joining other text) injects nothing a visitor controls, so it is not a risk.
 const safeLiteralAssign = (t0, m, why, vouched = new Set()) => {
   const t = blankComments(t0)
-  if (blankFailed) return false
+  if (blankFailed || fileBudget < 0) return false
   const from = m.index + m[0].length
   const eol = t.indexOf('\n', from)
   let rest = t.slice(from, eol < 0 ? t.length : eol).trim()
@@ -512,20 +589,37 @@ const bareValue = (t, m) => {
 }
 // The text of a call's arguments, from just after its opening parenthesis to the matching close; null when it does not close within 600 characters of code (white space and blanked comments do not count).
 const callText = (t, start) => {
+  if (fileBudget < 0) return null
   let depth = 1
   let q = ''
   let code = 0
+  let lines = 0
+  let end = t.length
+  let result = null
   for (let i = start; i < t.length; i++) {
     const c = t[i]
-    if (!/\s/.test(c) && ++code > 600) return null
+    if (i - start > MAX_SCAN_CHARS || (c === '\n' && ++lines > MAX_SCAN_LINES) || (!/\s/.test(c) && ++code > 600)) {
+      end = i
+      break
+    }
     if (q) {
+      // A ' or " string that reaches a line end is unterminated.
+      if (c === '\n' && q !== '`') {
+        end = i
+        break
+      }
       if (c === '\\') i++
       else if (c === q) q = ''
     } else if (c === '"' || c === "'" || c === '`') q = c
     else if ('([{'.includes(c)) depth++
-    else if (')]}'.includes(c) && --depth === 0) return t.slice(start, i)
+    else if (')]}'.includes(c) && --depth === 0) {
+      end = i
+      result = t.slice(start, i)
+      break
+    }
   }
-  return null
+  fileBudget -= end - start
+  return result
 }
 const LITERAL = String.raw`(?:'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")`
 // A call whose text is fixed by the author cannot be steered by input: new Function('a', 'b', 'return a + b'), os.system('clear'), os.system('cls' if os.name == 'nt' else 'clear').
@@ -576,6 +670,7 @@ const riskyCode = (root) => {
   for (const x of trackedFiles(root)) {
     if (!isText(x) || TESTISH.test(x) || isTestFile(x) || /(^|\/)(node_modules|dist|build|vendor)\//.test(x) || x.endsWith('static.mjs') || allow.has(x)) continue
     const t = readText(root, x)
+    fileBudget = FILE_SCAN_BUDGET
     const inRustTest = rustTestLines(x, t)
     for (const [re, why, only] of RISKY) {
       if (!only.test(x)) continue
@@ -595,9 +690,12 @@ const riskyCode = (root) => {
         if (inRustTest(lineOf(t, m.index))) continue
         const ls = t.lastIndexOf('\n', m.index - 1) + 1
         const before = t.slice(ls, m.index)
-        if (/^\s*(?:\/\/|\/\*|\*|#)/.test(before) || (!why.startsWith('a plain http') && /\.(rs|py|go)$/.test(x) && (before.match(/(?<!\\)"/g) ?? []).length % 2 === 1)) continue
+        // In JavaScript-family files a comment is decided only by the blanked copy below (a line that starts with /* and closes before the call is code, not a comment).
+        const jsLike = /\.([cm]?[jt]sx?|svelte|vue)$/.test(x)
+        if (!jsLike && (/^\s*(?:\/\/|\/\*|\*|#)/.test(before) || (!why.startsWith('a plain http') && /\.(rs|py|go)$/.test(x) && (before.match(/(?<!\\)"/g) ?? []).length % 2 === 1))) continue
         // Inside a comment: the scanner's own blanked copy has a space where the code has a character (a regex literal becomes 0, so a // inside one is not a comment).
-        if (/\.[cm]?[jt]sx?$/.test(x)) {
+        // Only when the file was read with certainty (blankFailed is false): a comment decision made from an unconfirmed string, template or regex state is not trusted.
+        if (jsLike) {
           const b = blankComments(t)
           if (!blankFailed && b[m.index] === ' ' && t[m.index] !== ' ') continue
         }
