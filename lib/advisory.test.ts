@@ -35,6 +35,12 @@ describe('versions', () => {
     expect(compareVersions('2.9.3', '3.0.0')).toBe(-1)
     expect(compareVersions('1.0', '1.0.0')).toBe(0)
   })
+  test('a missing part is not enough to call versions equal: 1 is below 1.0.5, 1.0 equals 1', () => {
+    expect(compareVersions('1', '1.0.5')).toBe(-1)
+    expect(compareVersions('1.0.5', '1')).toBe(1)
+    expect(compareVersions('1.0', '1')).toBe(0)
+    expect(compareVersions('1', '1.0.0.0')).toBe(0)
+  })
 })
 
 describe('detectStack', () => {
@@ -132,7 +138,18 @@ describe('matching rules', () => {
     expect(severityOf({ database_specific: { severity: 'MODERATE' } })).toBe('MODERATE')
     expect(severityOf({ severity: [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H' }] })).toBe('CRITICAL')
     expect(cvss3Score('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H')).toBe(9.8)
-    expect(severityOf({})).toBe('UNKNOWN')
+    expect(severityOf({})).toBe('UNRATED')
+  })
+  test('an unparseable severity (CVSS v4) is UNRATED, listed first with a plain note, and counted as serious', () => {
+    const v4 = rec({ id: 'V4-1', database_specific: {}, severity: [{ type: 'CVSS_V4', score: 'CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N' }] })
+    expect(severityOf(v4)).toBe('UNRATED')
+    const low = rec({ id: 'LOW-1', database_specific: { severity: 'LOW' } })
+    const f = matchAdvisories([p('1.2.9')], snap(low, v4))
+    expect(f.map((x) => x.id)).toEqual(['V4-1', 'LOW-1'])
+    expect(f[0]).toMatchObject({ severity: 'UNRATED', serious: true })
+    const text = renderReport({ stack: { languages: [], packages: [p('1.2.9')], notes: [] }, findings: f, snapshot: snap(low, v4), now: NOW })
+    expect(text).toMatch(/^SERIOUS SECURITY ALERT: 1 known vulnerability/)
+    expect(text).toContain('severity not determined, check the advisory at osv.dev')
   })
 })
 
@@ -170,6 +187,23 @@ describe('refreshSnapshot (fake feed, no network)', () => {
     expect(s.advisories[0]).not.toHaveProperty('details')
     expect(s.advisories[0].affected[0].ranges).toHaveLength(1)
     expect(s.queried).toHaveLength(1)
+  })
+  test('a cached record is reused when its modified time is unchanged and replaced when OSV reports a newer one', async () => {
+    const calls: string[] = []
+    const modifiedNow: Record<string, string> = { 'SAME-1': '2026-01-01T00:00:00Z', 'NEW-2': '2026-06-01T00:00:00Z', 'NOMOD-3': '' }
+    const fakeFetch = async (url: string) => {
+      calls.push(url.replace('https://api.osv.dev', ''))
+      const ok = (j: unknown) => ({ ok: true, status: 200, json: async () => j })
+      if (url.endsWith('/v1/querybatch')) return ok({ results: [{ vulns: Object.entries(modifiedNow).map(([id, modified]) => (modified ? { id, modified } : { id })) }] })
+      const id = url.split('/').pop()!
+      return ok({ id, summary: 'refreshed', modified: modifiedNow[id], affected: [] })
+    }
+    const old = (id: string, modified: string) => ({ id, summary: 'cached', modified, aliases: [], severity: [], database_specific: {}, affected: [], references: [] })
+    const previous = { advisories: [old('SAME-1', '2026-01-01T00:00:00Z'), old('NEW-2', '2025-01-01T00:00:00Z'), old('NOMOD-3', '2026-01-01T00:00:00Z')] } as never
+    const s = await refreshSnapshot([{ ecosystem: 'npm', name: 'x' }], { fetch: fakeFetch as never, now: NOW, previous })
+    expect(calls).toEqual(['/v1/querybatch', '/v1/vulns/NEW-2', '/v1/vulns/NOMOD-3'])
+    const by = Object.fromEntries(s.advisories.map((a: { id: string; summary: string }) => [a.id, a.summary]))
+    expect(by).toEqual({ 'SAME-1': 'cached', 'NEW-2': 'refreshed', 'NOMOD-3': 'refreshed' })
   })
   test('a server error is thrown, not swallowed', async () => {
     const bad = async () => ({ ok: false, status: 503, json: async () => ({}) })
