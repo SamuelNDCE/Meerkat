@@ -57,8 +57,98 @@ const before = (ctx, n) => ctx.lines.slice(Math.max(0, ctx.index - n), ctx.index
 const after = (ctx, n) => ctx.lines.slice(ctx.index + 1, ctx.index + 1 + n).join('\n')
 
 // True when the line sits after a #[cfg(test)] line in the same file (test modules sit at the bottom of a file). The index is cached per lines array.
-import { rustInTest } from './kit.mjs'
-const inTestBlock = (ctx) => rustInTest(ctx)
+import { rustInTest, rustBlank } from './kit.mjs'
+
+// Test code beyond what rustInTest sees: any item or bare block under a #[cfg(test)] attribute (a fn, an impl, a `{ .. }` block, with comments between),
+// a file that a parent module declares as a test module (also through an intermediate module), and test-support files (stubs, fakes, mocks).
+const cfgItemCache = new WeakMap()
+const cfgTestItems = (ctx) => {
+  let ranges = cfgItemCache.get(ctx.lines)
+  if (ranges) return ranges
+  ranges = []
+  const text = ctx.text ?? ctx.lines.join('\n')
+  if (text.includes('cfg(test)')) {
+    const blanked = rustBlank(text)
+    for (const m of blanked.matchAll(/^[ \t]*#\[cfg\(test\)\][ \t]*\r?\n(?:[ \t]*(?:#\[[^\]\n]*\])?[ \t]*\r?\n)*[^\n;{]*\{/gm)) {
+      let depth = 0
+      for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
+        if (blanked[i] === '{') depth++
+        else if (blanked[i] === '}' && --depth === 0) {
+          ranges.push([blanked.slice(0, m.index).split('\n').length, blanked.slice(0, i).split('\n').length])
+          break
+        }
+      }
+    }
+  }
+  cfgItemCache.set(ctx.lines, ranges)
+  return ranges
+}
+const TEST_SUPPORT_FILE = /(^|\/)(?:stub|fake|mock|testing|test_support)\.rs$|(^|\/)[^/]*_(?:fake|mock|stub)s?\.rs$|(^|\/)(?:fake|mock|stub)_[^/]*\.rs$/
+const testModuleCache = new WeakMap()
+// Is `file` a module that its parent declares under #[cfg(test)], or whose parent is itself such a module (at most four levels up)?
+const testModuleFile = (project, file, depth = 0) => {
+  if (!project?.read || !project.files || depth > 4) return false
+  let memo = testModuleCache.get(project)
+  if (!memo) testModuleCache.set(project, (memo = new Map()))
+  if (memo.has(file)) return memo.get(file)
+  memo.set(file, false)
+  const f = /^(.*?)\/?([^/]+)\.rs$/.exec(file)
+  let result = false
+  if (f) {
+    const own = project.read(file) ?? ''
+    let name = f[2]
+    let dir = f[1]
+    if (name === 'mod') {
+      const cut = dir.lastIndexOf('/')
+      name = dir.slice(cut + 1)
+      dir = cut < 0 ? '' : dir.slice(0, cut)
+    }
+    const pre = dir ? `${dir}/` : ''
+    if (/^\s*#!\[cfg\(test\)\]/m.test(own)) result = true
+    else if (name && !/^(?:lib|main)$/.test(name)) {
+      const decl = new RegExp(`#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]\\n]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+${name}\\s*;`)
+      const any = new RegExp(`\\bmod\\s+${name}\\s*;`)
+      for (const p of [`${pre}mod.rs`, `${pre}lib.rs`, `${pre}main.rs`, ...(dir ? [`${dir}.rs`] : [])]) {
+        if (p === file || !project.files.includes(p)) continue
+        const text = project.read(p) ?? ''
+        if (decl.test(text) || (any.test(text) && testModuleFile(project, p, depth + 1))) {
+          result = true
+          break
+        }
+      }
+    }
+  }
+  memo.set(file, result)
+  return result
+}
+const testCode = (ctx) => rustInTest(ctx) || cfgTestItems(ctx).some(([a, b]) => ctx.index + 1 >= a && ctx.index + 1 <= b) || TEST_SUPPORT_FILE.test(ctx.file ?? '') || testModuleFile(ctx.project, ctx.file ?? '')
+const inTestBlock = (ctx) => testCode(ctx)
+
+// A binary crate: the crate has src/main.rs and no src/lib.rs (or declares [[bin]] and no [lib]), or the file sits under src/bin/. Printing, exiting, asserting and
+// panicking are how a binary works, so the library-only rules do not apply to it.
+const binaryCache = new WeakMap()
+const binaryCrate = (ctx) => {
+  const file = ctx.file ?? ''
+  if (/(^|\/)src\/bin\//.test(file)) return true
+  const files = ctx.project?.files
+  if (!files) return false
+  const at = file.startsWith('src/') ? 0 : file.indexOf('/src/') + 1
+  if (at < 0 || (at === 0 && !file.startsWith('src/'))) return false
+  const prefix = file.slice(0, at)
+  let memo = binaryCache.get(ctx.project)
+  if (!memo) binaryCache.set(ctx.project, (memo = new Map()))
+  if (memo.has(prefix)) return memo.get(prefix)
+  let result = false
+  if (files.includes(`${prefix}src/lib.rs`)) result = false
+  else if (files.includes(`${prefix}src/main.rs`)) result = true
+  else if (files.includes(`${prefix}Cargo.toml`)) {
+    const toml = ctx.project.read?.(`${prefix}Cargo.toml`) ?? ''
+    result = /^\s*\[\[bin\]\]/m.test(toml) && !/^\s*\[lib\]/m.test(toml)
+  }
+  memo.set(prefix, result)
+  return result
+}
+const notBinary = (ctx) => !binaryCrate(ctx)
 
 // `.set_len(` on a std::fs::File (or OpenOptions result): the receiver is named like a file, was opened with File:: / OpenOptions just above, or the chain says so.
 const fileSetLen = (line, ctx) => {
@@ -101,8 +191,8 @@ const hasDocAbove = (ctx) => {
 const fnNameOf = (ctx) => /\bfn\s+(\w+)/.exec(enclosingFn(ctx))?.[1] ?? ''
 
 // The text of a call, from the match of `re` (which must end at the opening paren) on this line to its closing paren (at most 60 lines).
-const callSpan = (ctx, re) => {
-  const text = ctx.lines.slice(ctx.index, ctx.index + 60).join('\n')
+const callSpan = (ctx, re, max = 60) => {
+  const text = ctx.lines.slice(ctx.index, ctx.index + max).join('\n')
   const m = re.exec(text)
   if (!m) return ''
   let depth = 0
@@ -170,6 +260,9 @@ const boolEqPlain = (line) => {
 const metadataLen = (ctx) => {
   const line = ctx.lines[ctx.index]
   if (/\bmetadata\b[^\n]*\.len\(\)/.test(line)) return true
+  // `match fs::metadata(p) { Ok(m) if m.len() > 0 => ..`: the receiver is bound by the arm of a metadata call just above.
+  const bound = /\b(?:Ok|Some)\(\s*(\w+)\s*\)[^\n]*\1\.len\(\)/.exec(line)
+  if (bound && /\bmetadata\(/.test(before(ctx, 3))) return true
   const recv = /(\w+)\s*\.len\(\)\s*(?:==|!=|>)\s*0\b/.exec(line)?.[1]
   if (!recv) return false
   if (/^(?:meta|metadata|md|stat|\w+_meta|\w+_metadata|\w+_md)$/.test(recv)) return true
@@ -214,7 +307,7 @@ const regexCached = (ctx) => {
 }
 // A spawned body that sends on or owns a channel end reports through it, so dropping the handle is deliberate.
 const CHAN_END = /\b(?:rx|tx|\w+_rx|\w+_tx|\w*receiver|\w*sender)\b|\.(?:recv|try_recv|blocking_recv)\(/
-const spawnUsesChannel = (ctx) => CHAN_END.test(callSpan(ctx, /\bspawn\(/))
+const spawnUsesChannel = (ctx) => CHAN_END.test(callSpan(ctx, /\bspawn\(/, 160))
 // A thread that is only handed a channel end as an argument (`run_session(id, rx, paths)`) is not shown to report through it: only a send, a receive or a loop over the receiver counts.
 const CHAN_USE = /\b\w*(?:tx|sender)\w*\s*\.\s*(?:send|try_send|blocking_send)\(|\b\w*(?:rx|receiver)\w*\s*\.\s*(?:recv|try_recv|blocking_recv|recv_timeout|iter|try_iter)\(|\bin\s+&?(?:mut\s+)?\w*(?:rx|receiver)\b/
 const threadUsesChannel = (ctx) => CHAN_USE.test(callSpan(ctx, /\bspawn\(/))
@@ -223,6 +316,40 @@ const macroSaysHandled = (ctx) => {
   const l = ctx.lines[ctx.index]
   return /handled|already/i.test(l + (l.includes(')') ? '' : (ctx.lines[ctx.index + 1] ?? '')))
 }
+
+// The statement that ends on this line starts with `let` or is an assignment (looks back at most four lines to the previous `;`).
+const statementBinds = (ctx) => {
+  const prev = ctx.lines.slice(Math.max(0, ctx.index - 4), ctx.index).join('\n')
+  const stmt = `${prev.slice(Math.max(prev.lastIndexOf(';'), prev.lastIndexOf('{'), prev.lastIndexOf('}')) + 1)}\n${ctx.lines[ctx.index]}`
+  return /^\s*(?:let\b|\*?[\w.]+\s*=(?!=))/.test(stmt)
+}
+// A map_err(|_| ..) on a call whose error carries information: io, serde, database, decode. Not a channel, a parse, a UTF-8 or prefix check, a lock.
+const MAP_ERR_PLAIN = /\.(?:send|try_send|recv|try_recv|await|parse|lock|try_lock|join|strip_prefix|try_into|try_from|get|pop|first|last)\b|::(?:parse|from_utf8|try_from|from_str_radix)\b/
+const MAP_ERR_RICH = /\b(?:read|write|open|create|fs|File|io|serde|serde_json|toml|yaml|json|from_str|from_slice|from_reader|query|execute|connect|load|save|flush|copy|rename|remove|metadata|decode|deserialize|serialize|encode|canonicalize|read_dir|set_len|sync_all)\w*/i
+const mapErrDropsInformation = (ctx) => {
+  const line = ctx.lines[ctx.index]
+  const head = `${ctx.lines[ctx.index - 2] ?? ''}\n${ctx.lines[ctx.index - 1] ?? ''}\n${line.slice(0, Math.max(0, line.indexOf('.map_err(')))}`
+  const call = head.slice(head.lastIndexOf(';') + 1)
+  return MAP_ERR_RICH.test(call) && !MAP_ERR_PLAIN.test(call)
+}
+// An `Err(_) => {}` arm that is not a swallowed error: explained by an or-pattern with Ok, the catch-all after a guarded Err arm, or the arm of a metadata probe.
+const errArmIntended = (ctx) => {
+  const line = ctx.lines[ctx.index]
+  if (/\|\s*Err\(\s*_\s*\)|Err\(\s*_\s*\)\s*\|/.test(line)) return true
+  const head = before(ctx, 12)
+  if (/\bErr\([^)\n]*\)\s+if\b/.test(head)) return true
+  return /\bmatch\b[^\n]*\bmetadata\(/.test(head)
+}
+// The function the line belongs to is public (pub, pub(crate)) and the line is its return type, not a closure or fn-pointer type in a parameter.
+const publicFnReturn = (ctx) => {
+  if (/\b(?:dyn\s+)?Fn(?:Mut|Once)?\s*\(|\bimpl\s+Fn/.test(ctx.lines[ctx.index])) return false
+  for (let i = ctx.index; i >= 0 && i >= ctx.index - 12; i--) {
+    if (/\bfn\s+\w+/.test(ctx.lines[i])) return /^\s*pub\b/.test(ctx.lines[i])
+  }
+  return false
+}
+// The Vec named `name` is the value of its block (a line with just the name, or Ok(name) / Some(name)) or is returned, within the next 40 lines.
+const vecIsBlockValue = (ctx, name) => new RegExp(`^\\s*(?:(?:Ok|Some)\\(\\s*)?${name}\\s*\\)?\\s*$|\\breturn\\s+(?:(?:Ok|Some)\\(\\s*)?${name}\\b`, 'm').test(ctx.lines.slice(ctx.index + 1, ctx.index + 41).join('\n'))
 
 // TOML: the table a line belongs to, and the body of a named table in a whole file.
 const HEADER = /^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*$/
@@ -258,7 +385,7 @@ export const RUNTIME_RULES = new Set([
   'rasync-spawn-handle-dropped', 'rasync-spawn-blocking-awaits', 'rasync-block-on-in-async', 'rasync-unbounded-channel', 'rasync-zero-sleep-busy-loop',
   'rasync-std-mpsc-in-async-file', 'rasync-future-call-discarded', 'rasync-thread-spawn-discarded', 'rasync-global-mutable-state', 'rasync-reqwest-no-timeout',
   'rasync-runtime-built-per-call', 'rasync-std-command-in-async', 'rasync-blocking-lock-in-async', 'rasync-sync-recv-in-async', 'rasync-stdin-read-in-async',
-  'rperf-sort-float-partial-unwrap', 'rperf-is-some-then-unwrap', 'rperf-regex-compiled-per-call',
+  'rperf-sort-float-partial-unwrap', 'rperf-is-some-then-unwrap', 'rperf-regex-compiled-per-call', 'rperf-vec-new-in-loop', 'rerr-len-narrowing-cast',
   'rapi-cstring-unwrap', 'rapi-serde-json-unwrap',
   // The library rules (LIBR) already skip test code on their own: rerr-panic-in-library, rerr-unreachable-in-library, rerr-assert-in-library,
   // rerr-process-exit-in-library, rerr-catch-unwind-in-library, rerr-anyhow-in-library, rasync-main-in-library, rsafe-env-set-var.
@@ -280,7 +407,7 @@ const R = (id, title, re, bad, good, extra = {}) => {
   }
   if (RUNTIME_RULES.has(id) && rule.test) {
     const base = rule.test
-    rule.test = (line, ctx) => !rustInTest(ctx) && base(line, ctx)
+    rule.test = (line, ctx) => !testCode(ctx) && base(line, ctx)
   }
   return rule
 }
@@ -357,10 +484,13 @@ export const SAFETY = [
 export const ERRORS = [
   R('rerr-expect-empty-message', 'expect is called with an empty message, so a panic says nothing', /\.expect\(\s*""\s*\)/, 'let cfg = load().expect("");', 'let cfg = load().expect("config file is required");'),
   R('rerr-expect-generic-message', 'expect is called with a generic word ("failed", "error") instead of what failed', /\.expect\(\s*"(?:failed|error|oops|should work|unwrap|panic|todo|msg|unexpected)"\s*\)/i, 'let p = open().expect("failed");', 'let p = open().expect("config file opens");'),
-  LIBR('rerr-panic-in-library', 'a library path calls panic!, so the caller cannot recover', /(?<![\w:])panic!\s*[([{]/, 'panic!("bad state");', 'return Err(Error::BadState);', (c) => !macroSaysHandled(c)),
-  LIBR('rerr-unreachable-in-library', 'a library path calls unreachable!, which panics if the assumption is ever wrong', /(?<![\w:])unreachable!\s*[([{]/, 'unreachable!("tag {}", tag);', 'return Err(Error::UnknownTag(tag));', (c) => !macroSaysHandled(c)),
-  LIBR('rerr-assert-in-library', 'a library path uses assert! (it stays in release builds and panics on bad input)', /(?<![\w:])(?:assert|assert_eq|assert_ne)!\s*\(/, 'assert!(len <= MAX);', 'if len > MAX { return Err(Error::TooLong); }', (c) => !/\bconst\s+fn\b/.test(enclosingFn(c)) && !/^\s*(?:pub(?:\([^)]*\))?\s+)?(?:const|static)\s/.test(c.lines[c.index])),
-  R('rerr-len-narrowing-cast', 'a length is cast to a smaller integer with as, which can silently truncate', /\.(?:len|count)\(\)\s+as\s+(?:u8|u16|u32|i8|i16|i32)\b/, 'let n = items.len() as u16;', 'let n = u16::try_from(items.len())?;'),
+  LIBR('rerr-panic-in-library', 'a library path calls panic!, so the caller cannot recover', /(?<![\w:])panic!\s*[([{]/, 'panic!("bad state");', 'return Err(Error::BadState);', (c) => !macroSaysHandled(c) && notBinary(c) && !/\.unwrap_or_else\(\s*\|[^|\n]*\|\s*panic!/.test(c.lines[c.index])),
+  LIBR('rerr-unreachable-in-library', 'a library path calls unreachable!, which panics if the assumption is ever wrong', /(?<![\w:])unreachable!\s*[([{]/, 'unreachable!("tag {}", tag);', 'return Err(Error::UnknownTag(tag));', (c) => !macroSaysHandled(c) && notBinary(c)),
+  LIBR('rerr-assert-in-library', 'a library path uses assert! (it stays in release builds and panics on bad input)', /(?<![\w:])(?:assert|assert_eq|assert_ne)!\s*\(/, 'assert!(len <= MAX);', 'if len > MAX { return Err(Error::TooLong); }', (c) => notBinary(c) && !/\bconst\s+fn\b/.test(enclosingFn(c)) && !/^\s*(?:pub(?:\([^)]*\))?\s+)?(?:const|static)\s/.test(c.lines[c.index])),
+  R('rerr-len-narrowing-cast', 'a length is cast to a smaller integer with as, which can silently truncate', /\.(?:len|count)\(\)\s+as\s+(?:u8|u16|u32|i8|i16|i32)\b/, 'let n = items.len() as u16;', 'let n = u16::try_from(items.len())?;', {
+    // The length of a string literal is a constant that cannot truncate.
+    test: T(/\.(?:len|count)\(\)\s+as\s+(?:u8|u16|u32|i8|i16|i32)\b/, (c) => !/"\s*\.len\(\)\s+as\b/.test(c.lines[c.index])),
+  }),
   R('rerr-let-underscore-result', 'a Result from send, write, flush or remove is dropped with let _ =', /\blet\s+_\s*=\s*[\w.:]*\.(?:send|write|write_all|flush|sync_all|remove_file|create_dir_all|read_to_string|write_str|set_len)\(/, 'let _ = file.write_all(buf);', 'file.write_all(buf).map_err(|_| Error::Closed)?;', {
     // A channel send fails only when the receiver is gone, which is the normal way a task is told to stop; sockets and sinks still count.
     test: T(/\blet\s+_\s*=\s*[\w.:]*\.(?:send|write|write_all|flush|sync_all|remove_file|create_dir_all|read_to_string|write_str|set_len)\(/, (c) => {
@@ -368,11 +498,17 @@ export const ERRORS = [
       return !m || /socket|sock|stream|udp|client|conn|http|session|writer/i.test(m[1])
     }),
   }),
-  R('rerr-ok-discards-error', 'a Result is turned into an Option with .ok() and the error is thrown away', /\.ok\(\);\s*(?:\/\/.*)?$/, 'remove_cache(path).ok();', 'remove_cache(path).or_else(ignore_missing)?;'),
-  R('rerr-map-err-discards-source', 'map_err(|_| ...) drops the original error, so its cause is lost', /\.map_err\(\s*\|\s*_\s*\|/, 'read(path).map_err(|_| Error::Read)?;', 'read(path).map_err(|e| Error::Read(e))?;'),
+  R('rerr-ok-discards-error', 'a Result is turned into an Option with .ok() and the error is thrown away', /\.ok\(\);\s*(?:\/\/.*)?$/, 'remove_cache(path).ok();', 'remove_cache(path).or_else(ignore_missing)?;', {
+    // `let x = call().ok();` keeps the Option on purpose (the caller reads absence as a normal outcome); a bare `call().ok();` statement throws the whole result away.
+    test: T(/\.ok\(\);\s*(?:\/\/.*)?$/, (c) => !statementBinds(c)),
+  }),
+  R('rerr-map-err-discards-source', 'map_err(|_| ...) drops the original error, so its cause is lost', /\.map_err\(\s*\|\s*_\s*\|/, 'read(path).map_err(|_| Error::Read)?;', 'read(path).map_err(|e| Error::Read(e))?;', {
+    // Only an error that carries information: io, serde, database and decode errors. A channel send or receive, a parse, a UTF-8 or prefix check has nothing more to say than the message that replaces it.
+    test: T(/\.map_err\(\s*\|\s*_\s*\|/, (c) => mapErrDropsInformation(c)),
+  }),
   R('rerr-map-err-to-string', 'map_err turns the error into a String, which loses its type', /\.map_err\(\s*\|\s*(\w+)\s*\|\s*\1\.to_string\(\)\s*\)/, 'parse(s).map_err(|e| e.to_string())?;', 'parse(s).map_err(Error::Parse)?;'),
   LIBR('rerr-box-dyn-error-public', 'a public library function returns Box<dyn Error> (callers cannot match on it)', /\bpub\s+(?:async\s+)?fn\s+\w+[^{;\n]{0,200}->\s*(?:std::result::)?Result<[^\n]{0,200}Box<dyn\s+(?:std::error::)?Error\b/, 'pub fn load(p: &Path) -> Result<Config, Box<dyn Error>> {', 'pub fn load(p: &Path) -> Result<Config, LoadError> {'),
-  LIBR('rerr-string-error-result', 'a library function returns Result with a String error', /->\s*(?:std::result::)?Result<[^\n{;]{0,120},\s*String\s*>/, 'fn parse(s: &str) -> Result<u32, String> {', 'fn parse(s: &str) -> Result<u32, ParseError> {', (c) => !/#\[(?:tauri::)?command\b/.test(attrsAboveFn(c))),
+  LIBR('rerr-string-error-result', 'a library function returns Result with a String error', /->\s*(?:std::result::)?Result<[^\n{;]{0,120},\s*String\s*>/, 'pub fn parse(s: &str) -> Result<u32, String> {', 'pub fn parse(s: &str) -> Result<u32, ParseError> {', (c) => !/#\[(?:tauri::)?command\b/.test(attrsAboveFn(c)) && publicFnReturn(c)),
   LIBR('rerr-unit-error-type', 'a library function returns Result with the unit type () as its error', /->\s*(?:std::result::)?Result<[^\n{;]{0,120},\s*\(\s*\)\s*>/, 'fn read(&self) -> Result<Vec<u8>, ()> {', 'fn read(&self) -> Result<Vec<u8>, ReadError> {'),
   R('rerr-unwrap-or-builds-value', 'unwrap_or is given a value that is built eagerly (use unwrap_or_else or unwrap_or_default)', /\.unwrap_or\(\s*(?:[\w:]+::\w+\(|format!\(|vec!\[|\w+\.to_(?:string|owned)\(\))/, 'let s = opt.unwrap_or(String::from("none"));', 'let s = opt.unwrap_or_else(|| String::from("none"));', {
     test: T(/\.unwrap_or\(\s*(?:[\w:]+::\w+\(|format!\(|vec!\[|\w+\.to_(?:string|owned)\(\))/, (c) => unwrapOrBuilds(c)),
@@ -385,15 +521,16 @@ export const ERRORS = [
     sample: 'src/main.rs',
     test: (line, ctx) => /^\s*fn\s+main\s*\(\s*\)\s*\{/.test(line) && /\?;/.test(ctx.text) && !/->\s*(?:Result|ExitCode)/.test(ctx.text),
   }),
-  LIBR('rerr-process-exit-in-library', 'a library calls process::exit, which skips every caller and every destructor', /(?<![\w:])(?:std::)?process::exit\(/, 'std::process::exit(2);', 'return Err(Error::Fatal);'),
-  LIBR('rerr-catch-unwind-in-library', 'a library turns panics into values with catch_unwind (hides bugs from the caller)', /(?<![\w:])(?:std::panic::)?catch_unwind\(/, 'let r = std::panic::catch_unwind(|| work());', 'let r = work().map_err(Error::Work)?;'),
+  LIBR('rerr-process-exit-in-library', 'a library calls process::exit, which skips every caller and every destructor', /(?<![\w:])(?:std::)?process::exit\(/, 'std::process::exit(2);', 'return Err(Error::Fatal);', notBinary),
+  LIBR('rerr-catch-unwind-in-library', 'a library turns panics into values with catch_unwind (hides bugs from the caller)', /(?<![\w:])(?:std::panic::)?catch_unwind\(/, 'let r = std::panic::catch_unwind(|| work());', 'let r = work().map_err(Error::Work)?;', (c) => notBinary(c) && !/AssertUnwindSafe|\.catch_unwind\(\)/.test(c.lines[c.index])),
   R('rerr-lock-unwrap-poison', 'a lock is unwrapped, so one panic while it was held makes every later call panic', /\.(?:lock|read|write)\(\)\.unwrap\(\)/, 'let g = state.lock().unwrap();', 'let g = state.lock().unwrap_or_else(PoisonError::into_inner);'),
   R('rerr-parse-unwrap', 'parse().unwrap() panics on input the user typed', /\.parse(?:::<[^>\n]{1,40}>)?\(\)\.unwrap\(\)/, 'let n: u32 = arg.parse().unwrap();', 'let n: u32 = arg.parse().map_err(|_| Error::BadNumber)?;'),
   R('rerr-env-var-unwrap', 'an environment variable is read with unwrap or expect (panics when it is not set)', /\benv::var\(\s*"[^"\n]{1,80}"\s*\)\.(?:unwrap|expect)\(/, 'let home = env::var("HOME").unwrap();', 'let home = env::var("HOME").ok();'),
-  LIBR('rerr-anyhow-in-library', 'a library exposes anyhow types, so callers cannot match its errors', /\banyhow::(?:Result|Error|anyhow|bail|ensure)\b/, 'pub fn load() -> anyhow::Result<Config> {', 'pub fn load() -> Result<Config, LoadError> {'),
+  LIBR('rerr-anyhow-in-library', 'a library exposes anyhow types, so callers cannot match its errors', /\banyhow::(?:Result|Error|anyhow|bail|ensure)\b/, 'pub fn load() -> anyhow::Result<Config> {', 'pub fn load() -> Result<Config, LoadError> {', notBinary),
   R('rerr-match-err-swallowed', 'an Err arm is matched with _ and an empty body, so the error disappears', /\bErr\(\s*_\s*\)\s*=>\s*(?:\{\s*\}|\(\))/, 'match read() { Ok(v) => v, Err(_) => {} }', 'match read() { Ok(v) => v, Err(e) => return Err(e.into()) }', {
     // In exists/is_/try_/has_ functions a failed call means "not there", so ignoring the error is the answer.
-    test: T(/\bErr\(\s*_\s*\)\s*=>\s*(?:\{\s*\}|\(\))/, (c) => !/^(?:exists|is_|try_|has_)|_exists$/.test(fnNameOf(c))),
+    // An or-pattern with Ok, a catch-all after an earlier guarded Err arm, or a metadata probe ("not there") also mean the error is handled.
+    test: T(/\bErr\(\s*_\s*\)\s*=>\s*(?:\{\s*\}|\(\))/, (c) => !/^(?:exists|is_|try_|has_)|_exists$/.test(fnNameOf(c)) && !errArmIntended(c)),
   }),
   R('rerr-unwrap-in-drop', 'a Drop impl calls unwrap or expect, so a panic can happen during unwinding', /^\s*impl(?:<[^>]*>)?\s+Drop\s+for\b/, 'impl Drop for Conn {\n    fn drop(&mut self) {\n        self.flush().unwrap();\n    }\n}', 'impl Drop for Conn {\n    fn drop(&mut self) {\n        let _ = self.close();\n    }\n}', {
     test: (line, ctx) => /^\s*impl(?:<[^>]*>)?\s+Drop\s+for\b/.test(line) && /\.(?:unwrap|expect)\(/.test(after(ctx, 12)),
@@ -409,7 +546,8 @@ export const ASYNC = [
     test: (line, ctx) => /(?<![\w:])(?:std::)?fs::(?:read|read_to_string|write|create_dir_all|remove_file|copy|rename|metadata|read_dir)\(/.test(line) && inAsyncFn(ctx),
   }),
   R('rasync-blocking-net', 'a blocking std::net connect or bind runs inside an async fn', /(?<![\w:])(?:std::)?net::(?:TcpStream|TcpListener|UdpSocket)::(?:connect|bind)\(/, 'async fn ping() {\n    let s = std::net::TcpStream::connect("10.0.0.1:80");\n}', 'async fn ping() {\n    let s = tokio::net::TcpStream::connect("10.0.0.1:80").await;\n}', {
-    test: (line, ctx) => /(?<![\w:])(?:std::)?net::(?:TcpStream|TcpListener|UdpSocket)::(?:connect|bind)\(/.test(line) && inAsyncFn(ctx),
+    // Binding an ephemeral loopback port (":0") to find a free one is a one-shot local call, not a wait on the network.
+    test: (line, ctx) => /(?<![\w:])(?:std::)?net::(?:TcpStream|TcpListener|UdpSocket)::(?:connect|bind)\(/.test(line) && !/::bind\(\s*"[^"\n]*:0"/.test(line) && inAsyncFn(ctx),
   }),
   R('rasync-reqwest-blocking', 'the reqwest blocking client is used, which blocks the calling thread', /\breqwest::blocking\b/, 'let body = reqwest::blocking::get(url)?.text()?;', 'let body = reqwest::get(url).await?.text().await?;'),
   R('rasync-std-mutex-across-await', 'a std Mutex guard is held across an .await in an async fn', /\blet\s+(?:mut\s+)?\w+\s*=\s*[\w.]+\.lock\(\)\.unwrap\(\);/, 'async fn save(&self) {\n    let g = self.state.lock().unwrap();\n    self.disk.write(&g).await;\n}', 'fn snapshot(&self) -> State {\n    let g = self.state.lock().unwrap();\n    g.clone()\n}\n\nasync fn save(&self) {\n    let s = self.snapshot();\n    self.disk.write(&s).await;\n}', {
@@ -417,7 +555,8 @@ export const ASYNC = [
   }),
   R('rasync-spawn-handle-dropped', 'tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped', /^\s*(?:tokio::)?(?:task::)?spawn\(/, 'tokio::spawn(run_worker(config));', 'let worker = tokio::spawn(run_worker(config));', {
     // A body that owns or sends on a channel end reports through it, so the dropped handle is deliberate.
-    test: T(/^\s*(?:tokio::)?(?:task::)?spawn\(/, (c) => !spawnUsesChannel(c)),
+    // A per-connection spawn inside an accept loop is the server pattern: every connection owns its task.
+    test: T(/^\s*(?:tokio::)?(?:task::)?spawn\(/, (c) => !spawnUsesChannel(c) && !(inLoopBody(c) && /\.accept\(\)/.test(before(c, 12)))),
   }),
   R('rasync-spawn-blocking-awaits', 'spawn_blocking contains an .await, which cannot run on a blocking thread', /\bspawn_blocking\(/, 'let v = tokio::task::spawn_blocking(move || {\n    cache.lock().await.get(k)\n});', 'let v = tokio::task::spawn_blocking(move || compute(k)).await?;', {
     // Only an .await INSIDE the closure is wrong; spawn_blocking(..).await after it is the correct use.
@@ -445,7 +584,8 @@ export const ASYNC = [
   }),
   LIBR('rasync-main-in-library', 'a library defines a #[tokio::main] entry point, which takes over its callers runtime', /#\[(?:tokio|async_std)::main\]/, '#[tokio::main]\nasync fn serve() {}', 'pub async fn serve() {}'),
   R('rasync-thread-spawn-discarded', 'thread::spawn is called as a statement, so the thread is never joined', /^\s*(?:std::)?thread::spawn\(/, 'thread::spawn(move || worker(job));', 'let h = thread::spawn(move || worker(job));', {
-    test: T(/^\s*(?:std::)?thread::spawn\(/, (c) => !threadUsesChannel(c)),
+    // A background thread started once from fn main (a startup ping, a scratch sweep) lives as long as the process by design.
+    test: T(/^\s*(?:std::)?thread::spawn\(/, (c) => !threadUsesChannel(c) && fnNameOf(c) !== 'main'),
   }),
   R('rasync-global-mutable-state', 'a global lazy lock holds mutable state shared by every caller (review the scope)', /\bstatic\s+\w+\s*:\s*(?:Lazy|LazyLock|OnceLock|once_cell::sync::Lazy)<\s*(?:std::sync::)?(?:Mutex|RwLock)</, 'static CACHE: Lazy<Mutex<HashMap<String, u32>>> = Lazy::new(|| Mutex::new(HashMap::new()));', 'static LIMIT: u32 = 64;'),
   R('rasync-reqwest-no-timeout', 'a reqwest client is built with no timeout, so a stalled server hangs the caller forever', /\breqwest::Client::new\(\)|\bClient::builder\(\)\.build\(\)/, 'let http = reqwest::Client::new();', 'let http = reqwest::Client::builder().timeout(Duration::from_secs(10)).build()?;', {
@@ -454,7 +594,8 @@ export const ASYNC = [
   R('rasync-runtime-built-per-call', 'a tokio runtime is built where it is used (build it once and share it; informational)', /\bRuntime::new\(\)|\bBuilder::new_(?:multi|current)_thread\(\)/, 'fn handle(req: Req) -> Resp {\n    let rt = tokio::runtime::Runtime::new().unwrap();\n    rt.block_on(run(req))\n}', 'static RUNTIME: OnceLock<Runtime> = OnceLock::new();', {
     severity: 'info',
     // A one-time entry point (fn main, run_cli) builds its runtime once by design.
-    test: T(/\bRuntime::new\(\)|\bBuilder::new_(?:multi|current)_thread\(\)/, (c) => !/^(?:main|run_cli)$/.test(fnNameOf(c))),
+    // Also a command or thread entry point (execute, run, run_*, serve): it builds its runtime once for the life of the command.
+    test: T(/\bRuntime::new\(\)|\bBuilder::new_(?:multi|current)_thread\(\)/, (c) => !/^(?:main|run_cli|execute|run|run_\w+|serve|serve_\w+)$/.test(fnNameOf(c))),
   }),
   R('rasync-std-command-in-async', 'std::process::Command runs inside an async fn, so it blocks the runtime thread', /(?<![\w:])(?:std::process::|process::)?Command::new\(/, 'async fn version() -> String {\n    let out = std::process::Command::new("git").arg("-V").output().unwrap();\n}', 'async fn version() -> String {\n    let out = tokio::process::Command::new("git").arg("-V").output().await;\n}', {
     test: (line, ctx) => /(?<![\w:])(?:std::process::|process::)?Command::new\(/.test(line) && inAsyncFn(ctx) && !/tokio::process/.test(ctx.text),
@@ -464,7 +605,7 @@ export const ASYNC = [
   }),
   R('rasync-sync-recv-in-async', 'a recv() with no .await runs inside an async fn (a std receiver blocks the thread)', /\b\w+\.recv\(\)/, 'async fn drain(rx: Receiver<u32>) {\n    while let Ok(v) = rx.recv() {\n        sink(v);\n    }\n}', 'async fn drain(mut rx: Receiver<u32>) {\n    while let Some(v) = rx.recv().await {\n        sink(v);\n    }\n}', {
     // A select! branch (pattern = rx.recv(), if guard =>) is awaited by the macro.
-    test: (line, ctx) => /\b\w+\.recv\(\)/.test(line) && !/\.await\b/.test(line) && !/^\s*(?:Some\(\w+\)|Ok\(\w+\)|\w+|_)\s*=\s*[\w.]+\.recv\(\)\s*(?:,.*)?=>/.test(line) && inAsyncFn(ctx),
+    test: (line, ctx) => /\b\w+\.recv\(\)/.test(line) && !/\.await\b/.test(line) && !/^\s*(?:Some\((?:\(\)|\w+)\)|Ok\((?:\(\)|\w+)\)|\w+|_)\s*=\s*[\w.]+\.recv\(\)\s*(?:,.*)?=>/.test(line) && inAsyncFn(ctx),
   }),
   R('rasync-stdin-read-in-async', 'stdin is read with the blocking std API inside an async fn', /\bstdin\(\)\.(?:read_line|read_to_string|lines)\(/, 'async fn prompt() -> String {\n    let mut s = String::new();\n    std::io::stdin().read_line(&mut s).unwrap();\n    s\n}', 'async fn prompt() -> String {\n    let mut line = String::new();\n    BufReader::new(tokio::io::stdin()).read_line(&mut line).await.ok();\n    line\n}', {
     test: (line, ctx) => /\bstdin\(\)\.(?:read_line|read_to_string|lines)\(/.test(line) && inAsyncFn(ctx),
@@ -491,7 +632,9 @@ export const PERF_STYLE = [
       const body = loopBody(ctx)
       const slice = new RegExp(`\\[[^\\]\\n]*\\b${i}\\b[^\\]\\n]*\\.\\.|\\[[^\\]\\n]*\\.\\.[^\\]\\n]*\\b${i}\\b`)
       const mutated = new RegExp(`\\b${v}\\[${i}\\]\\s*(?:[-+*/%|&^]|<<|>>)?=(?!=)|&mut\\s+${v}\\[${i}\\]|\\b${v}\\[${i}\\]\\.(?:push|push_str|insert|clear|extend|sort\\w*|remove|retain|truncate|swap|iter_mut|as_mut|get_mut)\\(`)
-      return !slice.test(body) && !mutated.test(body)
+      if (slice.test(body) || mutated.test(body)) return false
+      // The index is also used as a value (a neighbour v[i - 1], a second vector, a comparison, a push of i): then it is needed.
+      return !new RegExp(`\\b${i}\\b`).test(body.replace(new RegExp(`\\b${v}\\[${i}\\]`, 'g'), ''))
     },
   }),
   R('rperf-ref-vec-or-string-param', 'a function takes &Vec or &String (take &[T] or &str, which accept more)', /\bfn\s+\w+[^{;\n]{0,200}:\s*&(?!mut\b)(?:Vec<|String\b)/, 'fn total(items: &Vec<u32>) -> u32 {', 'fn total(items: &[u32]) -> u32 {'),
@@ -500,12 +643,13 @@ export const PERF_STYLE = [
   R('rperf-sort-float-partial-unwrap', 'floats are sorted with partial_cmp().unwrap(), which panics on NaN (total_cmp does not)', /\.partial_cmp\([^)\n]{0,80}\)\.unwrap\(\)/, 'scores.sort_by(|a, b| a.partial_cmp(b).unwrap());', 'scores.sort_by(|a, b| a.total_cmp(b));'),
   R('rperf-unwrap-or-new-container', 'unwrap_or(Vec::new()) builds the default every time (use unwrap_or_default)', /\.unwrap_or\(\s*(?:Vec|String|HashMap|BTreeMap|HashSet|BTreeSet)::new\(\)\s*\)/, 'let tags = map.get(k).cloned().unwrap_or(Vec::new());', 'let tags = map.get(k).cloned().unwrap_or_default();'),
   R('rperf-regex-compiled-per-call', 'Regex::new runs inside a function, so the pattern is compiled on every call', /\bRegex::new\(/, 'fn is_slug(s: &str) -> bool {\n    let re = Regex::new(r"^[a-z-]+$").unwrap();\n    re.is_match(s)\n}', 'static SLUG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z-]+$").unwrap());', {
-    test: T(/\bRegex::new\(/, (c) => !inTestBlock(c) && !regexCached(c)),
+    // A pattern that is a variable or built at run time (user input, a caller's rule) has to be compiled per call; only a literal or a constant can be hoisted.
+    test: T(/\bRegex::new\(/, (c) => !inTestBlock(c) && !regexCached(c) && !/\bRegex::new\(\s*&?\s*(?!r#*")(?:[a-z_]\w*\b|[a-z_][\w:]*\()/.test(c.lines[c.index])),
   }),
   R('rperf-println-in-library', 'a library prints to stdout or stderr (the caller cannot silence or capture it)', /(?<![\w:])(?:e?println|e?print)!\s*\(/, 'println!("loaded {} items", n);', 'log::info!("loaded {} items", n);', {
     files: LIB,
     sample: 'src/lib.rs',
-    test: T(/(?<![\w:])(?:e?println|e?print)!\s*\(/, (c) => !inTestBlock(c)),
+    test: T(/(?<![\w:])(?:e?println|e?print)!\s*\(/, (c) => !inTestBlock(c) && notBinary(c)),
   }),
   R('rperf-dbg-left-in', 'dbg! is left in the code (it prints to stderr in every build)', /(?<![\w:])dbg!\s*\(/, 'let n = dbg!(parse(s));', 'let n = parse(s);', {
     test: T(/(?<![\w:])dbg!\s*\(/, (c) => !inTestBlock(c)),
@@ -522,7 +666,11 @@ export const PERF_STYLE = [
   }),
   R('rperf-match-bool-literals', 'a match on a bool with true and false arms (use if else)', /\btrue\s*=>\s*[^,\n]{1,120},\s*false\s*=>/, 'let s = match ok { true => "yes", false => "no" };', 'let s = if ok { "yes" } else { "no" };'),
   R('rperf-vec-new-in-loop', 'a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)', undefined, 'for row in rows {\n    let mut cells = Vec::new();\n    cells.push(row.a);\n}', 'let mut cells = Vec::with_capacity(rows.len());\nfor row in rows {\n    cells.push(row.a);\n}', {
-    test: (line, ctx) => /let\s+mut\s+\w+\s*(?::\s*Vec<[^>\n]{0,60}>)?\s*=\s*Vec::new\(\)\s*;/.test(line) && inLoopBody(ctx) && !/with_capacity/.test(line),
+    // Test code is skipped (RUNTIME_RULES). A Vec that is the value of its block or is returned is the result of the iteration, not scratch space.
+    test: (line, ctx) => {
+      const m = /let\s+mut\s+(\w+)\s*(?::\s*Vec<[^>\n]{0,60}>)?\s*=\s*Vec::new\(\)\s*;/.exec(line)
+      return !!m && inLoopBody(ctx) && !/with_capacity/.test(line) && !testCode(ctx) && !vecIsBlockValue(ctx, m[1])
+    },
   }),
 ]
 
