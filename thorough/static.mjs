@@ -234,8 +234,127 @@ const paramOnlyConstants = (t, at, param) => {
   }
   return true
 }
+// ---- innerHTML precision: which values are markup the author wrote, or text that was escaped or sanitised first.
+// A call of one of these names (the last part of a dotted name, case ignored) cleans its input. Extend the list here; a project adds its own helpers in
+// .meerkat-xss-safe instead (one name per line, the reason after #).
+const XSS_SAFE_CALLS = ['esc', 'escape', 'escapeHtml', 'sanitize', 'sanitizeHtml', 'purify', 'DOMPurify']
+const xssSafeNames = (root) => new Set(readText(root, '.meerkat-xss-safe').split('\n').map((l) => l.split('#')[0].trim().toLowerCase()).filter(Boolean))
+// The right side of an assignment: from just after the operator to the end of the statement (a ; or a line end outside brackets and strings, or a // comment).
+const rhsText = (t, from) => {
+  let depth = 0
+  let q = ''
+  let i = from
+  for (; i < t.length && i < from + 2000; i++) {
+    const c = t[i]
+    if (q) {
+      if (c === '\\') i++
+      else if (c === q) q = ''
+      continue
+    }
+    if (c === '"' || c === "'" || c === '`') q = c
+    else if ('([{'.includes(c)) depth++
+    else if (')]}'.includes(c)) depth--
+    else if (depth <= 0 && c === ';') break
+    else if (depth <= 0 && c === '/' && t[i + 1] === '/') break
+    else if (depth <= 0 && c === '\n') {
+      const before = t.slice(from, i).trimEnd()
+      const next = /^\s*(\S)/.exec(t.slice(i + 1, i + 200))?.[1] ?? ''
+      if (before === '' || /[+,(?:&|=]$/.test(before) || /[+.?:&|]/.test(next)) continue
+      break
+    }
+  }
+  return t.slice(from, i).trim()
+}
+// Splits on a separator at the top level only (not inside strings, template literals or brackets).
+const splitTop = (s, sep) => {
+  const out = []
+  let depth = 0
+  let q = ''
+  let cur = ''
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (q) {
+      cur += c
+      if (c === '\\') cur += s[++i] ?? ''
+      else if (c === q) q = ''
+      continue
+    }
+    if (c === '"' || c === "'" || c === '`') q = c
+    else if ('([{'.includes(c)) depth++
+    else if (')]}'.includes(c)) depth--
+    if (depth === 0 && c === sep) {
+      out.push(cur)
+      cur = ''
+    } else cur += c
+  }
+  out.push(cur)
+  return out
+}
+const wrapped = (s) => {
+  if (!s.startsWith('(') || !s.endsWith(')')) return false
+  let depth = 0
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') depth++
+    else if (s[i] === ')' && --depth === 0 && i < s.length - 1) return false
+  }
+  return true
+}
+const CALL_HEAD = /^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\(/
+const cleansInput = (name, vouched) => {
+  const last = name.split('.').pop().toLowerCase()
+  return XSS_SAFE_CALLS.some((n) => n.toLowerCase() === last) || vouched.has(last) || vouched.has(name.toLowerCase())
+}
+// True when the term is a call of a cleaner, or a call with a cleaner call somewhere in its arguments.
+const cleansIn = (term, vouched) => {
+  const call = CALL_HEAD.exec(term)
+  if (!call) return false
+  if (cleansInput(call[1], vouched)) return true
+  const args = callText(term, call[0].length)
+  return args !== null && splitTop(args, ',').some((a) => cleansIn(a.trim(), vouched))
+}
+const safeTerm = (t, raw, vouched) => {
+  const term = raw.trim()
+  if (term === '') return false
+  if (wrapped(term)) return safeExpr(t, term.slice(1, -1), vouched)
+  if (/^(?:'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")$/.test(term)) return true
+  if (term.length > 1 && term.startsWith('`') && term.endsWith('`')) {
+    // Every ${} in a template literal must itself be safe.
+    const exprs = []
+    for (let i = 1; i < term.length - 1; i++) {
+      if (term[i] === '\\') i++
+      else if (term[i] === '$' && term[i + 1] === '{') {
+        let d = 0
+        let j = i + 1
+        for (; j < term.length; j++) {
+          if (term[j] === '{') d++
+          else if (term[j] === '}' && --d === 0) break
+        }
+        if (j >= term.length) return false
+        exprs.push(term.slice(i + 2, j))
+        i = j
+      }
+    }
+    return exprs.every((e) => safeExpr(t, e, vouched))
+  }
+  const call = CALL_HEAD.exec(term)
+  if (call) {
+    const args = callText(term, call[0].length)
+    if (args === null || term.slice(call[0].length + args.length + 1).trim() !== '') return false
+    if (cleansInput(call[1], vouched)) return true
+    // render(esc(text)): some other function, but every argument is itself safe and at least one went through a cleaner.
+    const list = splitTop(args, ',').filter((a) => a.trim() !== '')
+    return list.length > 0 && list.every((a) => safeExpr(t, a, vouched)) && list.some((a) => cleansIn(a.trim(), vouched))
+  }
+  const path = /^([A-Za-z_$][\w$]*)((?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*"|\d+)\])*)$/.exec(term)
+  if (path) return (/^[A-Z][A-Z0-9_]*$/.test(path[1]) && path[2] !== '') || isConstantMarkup(t, path[1])
+  return false
+}
+const safeExpr = (t, expr, vouched) => {
+  const terms = splitTop(expr, '+')
+  return terms.every((x) => safeTerm(t, x, vouched))
+}
 // innerHTML = '' or = '<svg ...>' (a plain string with no ${} and no + joining other text) injects nothing a visitor controls, so it is not a risk.
-const safeLiteralAssign = (t, m, why) => {
+const safeLiteralAssign = (t, m, why, vouched = new Set()) => {
   const from = m.index + m[0].length
   const eol = t.indexOf('\n', from)
   let rest = t.slice(from, eol < 0 ? t.length : eol).trim()
@@ -271,8 +390,9 @@ const safeLiteralAssign = (t, m, why) => {
     const tail = args === null ? null : t.slice(open + args.length + 1, lineEnd < 0 ? t.length : lineEnd)
     if (tail !== null && /^\s*;?\s*(?:\/\/.*)?$/.test(tail) && isStaticMarkupBuilder(t, localCall[1])) return true
   }
-  // A value passed through a sanitiser (DOMPurify.sanitize(x), sanitize(x), escapeHtml(x), esc(x)) is cleaned markup, not raw input.
-  if (new RegExp(String.raw`^(?:DOMPurify\.sanitize|(?:[A-Za-z_$][\w$.]*\.)?(?:sanitize|escape|esc|purify)\w*)\s*\(`, 'i').test(rest)) return true
+  // A value built only from safe parts: string literals, module-level constant tables, and calls of a known escape or sanitiser (XSS_SAFE_CALLS, or a name the
+  // project vouches for in .meerkat-xss-safe). Every part of a + chain must be safe, so esc(a) + b is still reported.
+  if (safeExpr(t, why.includes('insertAdjacentHTML') ? rest : rhsText(t, from), vouched)) return true
   // cond ? CONST : '' picks between constants, so the condition decides which author-written markup is shown, never what it contains.
   return new RegExp(String.raw`^[^?]+\?\s*${atom}\s*:\s*${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)
 }
@@ -342,6 +462,7 @@ const hmacChecked = (t, m) => {
 const unpackedSomewhere = (root, name) => trackedFiles(root).some((y) => y.endsWith('.py') && new RegExp(String.raw`\*\*${name}\b`).test(readText(root, y)))
 const riskyCode = (root) => {
   const allow = allowList(root, '.meerkat-risky-allow')
+  const vouched = xssSafeNames(root)
   const structured = []
   const fallbackSeverity = ['critical', 'high', 'medium', 'low', 'info'].includes(process.env.MEERKAT_DEFAULT_SEVERITY ?? '') ? process.env.MEERKAT_DEFAULT_SEVERITY : 'high'
   const f = []
@@ -353,7 +474,7 @@ const riskyCode = (root) => {
       if (!only.test(x)) continue
       // Every hit counts, not just the first in a file: a second innerHTML or eval further down is a separate risk.
       for (const m of t.matchAll(new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`))) {
-        if (safeLiteralAssign(t, m, why)) continue
+        if (safeLiteralAssign(t, m, why, vouched)) continue
         if (fixedText(t, m, why)) continue
         // A property or variable named exactly `key` set to Math.random() alone is a React list key or a sort/map key, not a secret (apiKey, secretKey, keyFile are still checked).
         if (why.startsWith('Math.random()') && /^key\s*[:=]\s*Math\.random\(\)$/i.test(m[0]) && !/[\w$]/.test(t[m.index - 1] ?? '') && !/(?:token|secret|password|passwd|nonce|session)/i.test(t.slice(t.lastIndexOf('\n', m.index) + 1, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index)))) continue
@@ -510,6 +631,30 @@ const imageWeight = (root) => {
 }
 
 const fx = (files, fn) => ({ fixture: () => withFixture(files, fn) })
+// Self-test for risky-code. The broken folder must fail (eval, and three innerHTML shapes that take raw input). The clean folder holds one innerHTML per safe shape
+// (constant table, escaped, sanitised, vouched helper) and must NOT be flagged: if it is, this returns 0, which the self-test reports as a check that stopped working.
+const RISKY_BROKEN = { 'app.js': 'const r = eval(input)\nel.innerHTML = location.hash\nel.innerHTML = "<b>" + name + "</b>"\nel.innerHTML = esc(a) + b\n' }
+const RISKY_CLEAN = {
+  'app.js': "const ICON = { close: '<svg></svg>' }\nbtn.innerHTML = ICON.close\nel.innerHTML = render(esc(text))\nel.innerHTML = '<b>' + escapeHtml(name) + '</b>'\nel.innerHTML = purify.sanitize(chunk, CONFIG)\nel.innerHTML = DOMPurify.sanitize(x)\nel.innerHTML = mine(x)\n",
+  '.meerkat-xss-safe': 'mine # strips every tag, reviewed\n',
+}
+const quietly = async (fn) => {
+  const log = console.log
+  console.log = () => {}
+  try {
+    return await fn()
+  } finally {
+    console.log = log
+  }
+}
+async function riskyFixture() {
+  const clean = await quietly(() => withFixture(RISKY_CLEAN, riskyCode))
+  if (clean !== 0) {
+    console.log('risky-code self-test: a safe innerHTML shape (constant table, escaped, sanitised or vouched) was flagged')
+    return 0
+  }
+  return withFixture(RISKY_BROKEN, riskyCode)
+}
 void dirname
 void extname
 void readFileSync
@@ -520,7 +665,7 @@ main({
   'broken-imports': { run: brokenImports, ...fx({ 'a.js': "import x from './nope.js'\n" }, brokenImports) },
   'dependency-pinning': { run: dependencyPinning, ...fx({ 'package.json': '{"dependencies":{"left-pad":"latest"}}' }, dependencyPinning) },
   'lockfile-integrity': { run: lockfileIntegrity, ...fx({ 'package-lock.json': '{"packages":{"":{},"node_modules/a":{"resolved":"http://registry.example.org/a.tgz","integrity":"sha512-x"}}}' }, lockfileIntegrity) },
-  'risky-code': { run: riskyCode, ...fx({ 'app.js': 'const r = eval(input)\n' }, riskyCode) },
+  'risky-code': { run: riskyCode, fixture: riskyFixture },
   'workflow-security': { run: workflowSecurity, ...fx({ '.github/workflows/ci.yml': 'name: ci\non: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: someone/action@v1\n      - run: echo "${{ github.event.pull_request.title }}"\n' }, workflowSecurity) },
   'html-structure': { run: htmlStructure, ...fx({ 'p.html': '<html><body><h1>a</h1><h1>b</h1></body></html>' }, htmlStructure) },
   'css-contrast': { run: cssContrast, ...fx({ 'a.css': '.x { color: #777777; background: #888888; }\n' }, cssContrast) },
