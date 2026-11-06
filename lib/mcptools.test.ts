@@ -192,7 +192,7 @@ describe('resources and prompts', () => {
   test('every tool schema is a closed object and no text has an em dash', () => {
     for (const t of TOOLS) {
       expect(t.inputSchema.additionalProperties).toBe(false)
-      expect(JSON.stringify(t)).not.toContain('—')
+      expect(JSON.stringify(t)).not.toContain(String.fromCharCode(8212))
     }
   })
 })
