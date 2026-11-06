@@ -113,14 +113,16 @@ describe('pull request comment', () => {
   test('upsertPlan updates the marked comment and creates only when none exists', () => {
     expect(upsertPlan([])).toEqual({ action: 'create' })
     expect(upsertPlan([{ id: 1, body: 'hello' }])).toEqual({ action: 'create' })
-    expect(upsertPlan([{ id: 1, body: 'hello' }, { id: 7, body: `${COMMENT_MARKER}\nold` }])).toEqual({ action: 'update', id: 7 })
+    expect(upsertPlan([{ id: 1, body: 'hello' }, { id: 7, body: `${COMMENT_MARKER}\nold`, user: { type: 'Bot', login: 'github-actions[bot]' } }])).toEqual({ action: 'update', id: 7 })
+    expect(upsertPlan([{ id: 8, body: `${COMMENT_MARKER}\nmine`, user: { type: 'User', login: 'alice' } }])).toEqual({ action: 'create' })
+    expect(upsertPlan([{ id: 9, body: COMMENT_MARKER, user: { type: 'User', login: 'github-actions[bot]' } }])).toEqual({ action: 'update', id: 9 })
   })
   test('postComment updates in place and never posts a second comment (fake fetch, no network)', async () => {
     const calls: string[] = []
     const fake = async (url: string, init: { method: string; body?: string; headers: Record<string, string> }) => {
       calls.push(`${init.method} ${url.replace('https://api.github.com', '')}`)
       expect(init.headers.authorization).toBe('Bearer tok')
-      const list = init.method === 'GET' ? [{ id: 42, body: `${COMMENT_MARKER}\nold` }] : { id: 42 }
+      const list = init.method === 'GET' ? [{ id: 42, body: `${COMMENT_MARKER}\nold`, user: { type: 'Bot', login: 'github-actions[bot]' } }] : { id: 42 }
       return { ok: true, status: 200, json: async () => list }
     }
     const r = await postComment({ body: 'new', repo: 'o/r', pr: 5, token: 'tok', fetchImpl: fake as never })
