@@ -96,7 +96,7 @@ Add a command as a check in one line (`meerkat check new`), write a check in Jav
 
 ## 🖱 Click-through
 
-Status: ◐ PARTIAL. The driver protocol is built and Meerkat schedules, times and reports a driver like any check. The reference drivers have not yet run against a real app, so treat the shipped examples as unproven. Exit 75 from a driver means it could not start, never a pass. Guide: [docs/click-through.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md).
+The driver protocol is built and Meerkat schedules, times and reports a driver like any check. The reference drivers have not yet run against a real app, so treat the shipped examples as unproven. Exit 75 from a driver means it could not start, never a pass. Guide: [docs/click-through.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md).
 
 ## ⚠ Known limits
 
