@@ -25,7 +25,7 @@ Run `npm ci` once first: vitest is the only dev dependency.
 Meerkat checks itself. While you work, a quick build-and-test check (build, type check, lints and the quick tests):
 
 ```
-node run.mjs --app . --preset smoke --plain
+node run.mjs --app . --preset project-smoke --plain
 ```
 
 Before you open a pull request, the quick preset:

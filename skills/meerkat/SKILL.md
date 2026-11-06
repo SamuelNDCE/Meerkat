@@ -50,7 +50,7 @@ A NOT RUN is never a pass. Report what is missing.
 | `meerkat last`, `meerkat why <check>` | The newest report, or one check's log. |
 | `meerkat describe` | JSON of every command, option, exit code and preset. The full current list. |
 
-Presets are listed by `meerkat presets`. `quick` runs before a push, `ci` on a pull request, `full` is the merge gate, `release` is before shipping, `smoke` asks whether a change breaks anything.
+Presets are listed by `meerkat presets`. `quick` runs before a push, `ci` on a pull request, `full` is the merge gate, `release` is before shipping, `project-smoke` asks whether a change breaks the project (not to be confused with `meerkat smoke`, which tests Meerkat itself).
 
 ## MCP tools
 

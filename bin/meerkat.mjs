@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // `meerkat`: the command line front door. Plans the command with lib/cli.mjs, then does it.
-// Exit codes: 0 passed, 1 a check failed or could not run, 2 a usage or configuration error, 3 nothing to run, 130 interrupted.
+// Exit codes: 0 passed, 1 a check failed or could not run, 2 a usage or configuration error, 3 nothing to run (run and presets), 75 could not start or target not found (gate, smoke, blast), 130 interrupted.
 // Results go to stdout; notes, progress and errors go to stderr.
 import { helpText, loadPresets, packAdd, packRemove, planCommand, presetsText, rootCommand } from '../lib/cli.mjs'
 import { EXTRA_WORDS, runExtra } from '../lib/extras-cli.mjs'
@@ -33,8 +33,9 @@ const version = () => VERSION // lib/version.mjs: package.json, read once
 
 async function main() {
   // The accepted-findings, history, suggestion and CI commands (lib/extras-cli.mjs) are handled before the older parser sees them.
-  if (EXTRA_WORDS.includes(argv[0])) {
-    const code = runExtra(argv, { env, cwd, out, err })
+  // `meerkat <word> --help` is answered from the command registry (planCommand), not by the command.
+  if (EXTRA_WORDS.includes(argv[0]) && !argv.includes('--help') && !argv.includes('-h')) {
+    const code = await runExtra(argv, { env, cwd, out, err })
     if (code !== null) return code
   }
   const presets = loadPresets({ cwd, env })

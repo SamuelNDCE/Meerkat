@@ -202,7 +202,7 @@ Measured on 2026-11-01 on Meerkat's own repository, a small project, on one PC (
 |---|---|---|---|
 | `meerkat security-fast` | the quick security checks: secrets, risky code, advisories, workflows | 8 | <1 s |
 | `meerkat security` | every security check, the slow ones too | 9 | 1.4 s |
-| `meerkat smoke` | does my change break anything: build, type check, lints and quick tests, for any project (the same checks as `functionality-fast`, with a clearer name) | 10 | not measured |
+| `meerkat project-smoke` | does my change break anything: build, type check, lints and quick tests, for any project (the same checks as `functionality-fast`, with a clearer name) | 10 | not measured |
 | `meerkat functionality-fast` | build, type check, lints and tests, quick | 10 | <1 s |
 | `meerkat functionality` | every functionality check, the slow ones too | 10 | <1 s |
 | `meerkat ui-fast` | the quick UI checks: pages, styles, accessibility basics | 4 | <1 s |
@@ -245,14 +245,14 @@ A focused run brings what its checks need (a UI check pulls in the build it wait
 A big project does not need every check on every edit. Two options narrow a run, and both work with any preset:
 
 ```
-meerkat smoke
-meerkat smoke --scope apps/web
-meerkat smoke --changed
+meerkat project-smoke
+meerkat project-smoke --scope apps/web
+meerkat project-smoke --changed
 ```
 
-- `meerkat smoke` runs the build, type check, lints and quick tests on the whole project. Without the command: `node run.mjs --app <folder> --preset smoke`.
-- `meerkat smoke --scope apps/web` runs only the checks that read files in `apps/web`, and keeps only findings inside it. For several folders repeat the option or use commas: `--scope apps/web,apps/api`.
-- `meerkat smoke --changed` runs only the checks that read files changed against the base branch (`MEERKAT_BASE` or the default branch).
+- `meerkat project-smoke` runs the build, type check, lints and quick tests on the whole project. Without the command: `node run.mjs --app <folder> --preset project-smoke`.
+- `meerkat project-smoke --scope apps/web` runs only the checks that read files in `apps/web`, and keeps only findings inside it. For several folders repeat the option or use commas: `--scope apps/web,apps/api`.
+- `meerkat project-smoke --changed` runs only the checks that read files changed against the base branch (`MEERKAT_BASE` or the default branch).
 
 What `--scope` limits: which checks run (those with no file in the folder are skipped) and which findings count. A check that scans the whole project still runs, and if it fails only on findings outside the folder it passes for that run. What it does not limit: repo-wide checks (git history, commit messages, dependency counts) look at the whole repository regardless. `--scope` and `--changed` cannot be used together.
 
