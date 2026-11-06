@@ -1,7 +1,7 @@
 ---
 name: meerkat-blast-before-edit
 description: |-
-  Use when you are about to change, rename, move or delete a function, class, file or exported symbol.
+  Use when you are about to change, rename, move or delete a function, class, file or exported symbol that other code may call, or when you are about to refactor something with callers.
   Runs Meerkat's blast radius so you see every importer, the modules affected, and the tests that reach the target before you edit.
   Then read those tests, edit, and run them again.
 ---

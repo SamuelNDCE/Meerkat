@@ -1,9 +1,8 @@
 ---
 name: meerkat
 description: |-
-  Meerkat runs a project's checks (build, tests, security, UI, speed) and saves a plain report. Use it:
-  before a commit or pull request (gate: `node lib/gate.mjs gate`, the `meerkat gate` word is not wired yet); after an edit, to see what it affects (meerkat blast <file>);
-  before a release (full preset); on an unfamiliar codebase or refactor (meerkat map); to check Meerkat works (smoke: `node lib/gate.mjs smoke`); to list checks (meerkat tests --json).
+  Use when you start on a project and want to know which Meerkat check fits, or when any of these is about to happen: you are about to commit, you are about to open a pull request, you are about to edit a function that has callers, you are about to post a log or a secret, you are reading code you do not know, you changed docs, or you just added a feature.
+  This is the overview: every command, exit code and preset. Each trigger has its own skill (meerkat-before-commit, meerkat-before-pr, meerkat-blast-before-edit, meerkat-secrets-before-post, meerkat-map-unfamiliar-code, meerkat-docs-check).
 ---
 
 # Meerkat
