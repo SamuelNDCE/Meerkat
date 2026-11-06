@@ -10,7 +10,7 @@
 // Known and accepted findings go in `.meerkat-secrets-allow` at the root, one per line: a path glob (`docs/examples/*`), or
 // `rule-name:some text on the line`. Lines starting with # are comments. Nothing else switches a finding off.
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { argVal, fail, hasFlag, notRun, pass, repoRoot, say } from './lib.mjs'
@@ -34,7 +34,8 @@ const SKIP_FILES = /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.
 // Test files and fixtures hold fake secrets on purpose (a project that tests its own secret detector has hundreds), so they are not scanned
 // unless asked (--include-tests). A real secret pasted into a test is still a risk: scan them now and then.
 const TEST_FILES = /(^|\/)(__fixtures__|__tests__|fixtures?|testdata|test-fixtures)\/|\.(test|spec)\.[a-z]+$/i
-const MAX_BYTES = 1_000_000
+// Files above this are not read and are reported NOT SCANNED (a big file is scanned in chunks, so this is only a sanity bound).
+const MAX_BYTES = Number(process.env.MEERKAT_SECRET_SCAN_MAX) || 50_000_000
 
 function entropy(text) {
   const counts = new Map()
@@ -82,52 +83,141 @@ function loadAllow(root) {
   return entries
 }
 
+// Files are read in chunks of CHUNK_BYTES, cut at the last line break, and the last HOLD_LINES complete lines stay in the next chunk, so a secret that
+// straddles a chunk boundary (or a key block whose body is a few lines below its header) is still seen whole. Above MAX_BYTES a file is not read at all.
+const CHUNK_BYTES = Math.max(64, Number(process.env.MEERKAT_SECRET_SCAN_CHUNK) || 1_000_000)
+const HOLD_LINES = 9
+const MAX_LINE = 2000
+
+// Yields { lines, base, count }: the lines to read, the line number of lines[0], and how many leading lines to report on (the rest wait for the next chunk).
+// Yields { binary: true } and stops when the file holds a zero byte.
+function* chunkedLines(full, size) {
+  const fd = openSync(full, 'r')
+  try {
+    let carry = Buffer.alloc(0)
+    let base = 1
+    let skipping = false // inside a line already known to be longer than MAX_LINE: dropped up to its line break
+    const chunk = Buffer.alloc(size)
+    for (;;) {
+      const n = readSync(fd, chunk, 0, size, null)
+      const eof = n === 0
+      let piece = chunk.subarray(0, n)
+      if (piece.includes(0)) {
+        yield { binary: true }
+        return
+      }
+      if (skipping) {
+        const nl = piece.indexOf(10)
+        if (nl < 0) {
+          if (eof) return
+          continue
+        }
+        skipping = false
+        base++ // the dropped long line
+        piece = piece.subarray(nl + 1)
+      }
+      const buf = Buffer.concat([carry, piece])
+      const cut = eof ? buf.length : buf.lastIndexOf(10)
+      if (cut < 0) {
+        if (buf.length > MAX_LINE + 1) {
+          skipping = true // this line is longer than MAX_LINE and is skipped anyway
+          carry = Buffer.alloc(0)
+        } else carry = buf
+        continue
+      }
+      const lines = buf.subarray(0, cut).toString('utf8').split(/\r?\n/)
+      const rest = eof ? Buffer.alloc(0) : buf.subarray(cut + 1)
+      const count = eof ? lines.length : Math.max(0, lines.length - HOLD_LINES)
+      if (count > 0 || eof) yield { lines, base, count }
+      base += count
+      carry = Buffer.concat([Buffer.from(lines.slice(count).map((l) => `${l}\n`).join('')), rest])
+      if (eof) return
+    }
+  } finally {
+    closeSync(fd)
+  }
+}
+
 export function scan(root) {
   const allow = loadAllow(root)
   const findings = []
+  const notScanned = [] // { file, reason }: files that were NOT read, never a silent pass
   let scanned = 0
+  let binary = 0
   for (const rel of listFiles(root)) {
     const norm = rel.split(path.sep).join('/')
     if (SKIP_FILES.test(norm) || norm.split('/').some((p) => SKIP_DIRS.has(p))) continue
     if (!hasFlag('--include-tests') && (TEST_FILES.test(norm) || isTestFile(norm))) continue
     if (allow.some((a) => a.path && a.path.test(norm))) continue
-    let buf
+    const full = path.join(root, rel)
+    let size
     try {
-      if (statSync(path.join(root, rel)).size > MAX_BYTES) continue
-      buf = readFileSync(path.join(root, rel))
-    } catch {
+      size = statSync(full).size
+    } catch (e) {
+      notScanned.push({ file: norm, reason: `unreadable (${e.code ?? 'error'})` })
       continue
     }
-    if (buf.includes(0)) continue // binary
-    scanned++
-    const text = buf.toString('utf8')
-    const lines = text.split(/\r?\n/)
+    if (size > MAX_BYTES) {
+      notScanned.push({ file: norm, reason: `too large (${(size / 1_000_000).toFixed(1)} MB, limit ${MAX_BYTES / 1_000_000} MB)` })
+      continue
+    }
     // Rust unit tests sit in the same file as the code, in a #[cfg(test)] module: fake secrets there are on purpose.
-    const inTest = hasFlag('--include-tests') ? () => false : rustTestLines(norm, text)
-    lines.forEach((line, i) => {
-      if (line.length > 2000 || inTest(i + 1)) return
-      for (const rule of RULES) {
-        const m = rule.re.exec(line)
-        if (!m) continue
-        const value = m[1] ?? m[0]
-        if (rule.entropy && entropy(value) < rule.entropy) continue
-        // A value that says it is fake (FAKE_TOKEN, SUPERSECRET) is not a secret. A key block mentioned in a comment has no key body under it.
-        if (!hasFlag('--include-tests') && (FAKE_VALUE.test(value) || FAKE_VALUE.test(m[0]))) continue
-        // Only a header in a comment, with no key text after it on the same line (also after a literal \n) or on the next, is a mention and not a key.
-        // The same for a constant that is the header alone (a constant named PEM_BEGIN that holds only the header text): the line ends right after it.
-        if (rule.name === 'private-key-block') {
-          const after = line.slice(m.index + m[0].length).replace(/\\n/g, '\n')
-          // A key body can follow after blank lines or armor headers (Proc-Type, DEK-Info), and a commented-out key has a comment prefix on every line.
-          const below = lines.slice(i + 1, i + 9).map((l) => l.replace(/^\s*(?:\/\/|#|\*|--\s?|\+|\.\.)?\s*["'`]?/, '')).join('\n')
-          const noBody = !/^[\s"'`\\]*[A-Za-z0-9+/=]{10,}/.test(after) && !/(?:^|\n)[A-Za-z0-9+/=]{10,}/.test(below)
-          if (noBody && (/^\s*(?:\/\/|#|\*|\/\*|--\s)/.test(line) || /^["'`]?[\s)\],;}]*$/.test(after.trim()))) continue
-        }
-        if (allow.some((a) => a.rule === rule.name && line.includes(a.text))) continue
-        findings.push({ file: norm, line: i + 1, rule: rule.name, sample: `${value.slice(0, 4)}...` })
+    let inTest = () => false
+    if (!hasFlag('--include-tests') && /\.rs$/i.test(norm)) {
+      try {
+        inTest = rustTestLines(norm, readFileSync(full, 'utf8'))
+      } catch {
+        /* the read below reports it */
       }
-    })
+    }
+    const before = findings.length
+    let isBinary = false
+    try {
+      for (const part of chunkedLines(full, CHUNK_BYTES)) {
+        if (part.binary) {
+          isBinary = true
+          break
+        }
+        for (let i = 0; i < part.count; i++) scanLine(part.lines, i, part.base + i, norm, inTest, allow, findings)
+      }
+    } catch (e) {
+      findings.length = before
+      notScanned.push({ file: norm, reason: `unreadable (${e.code ?? 'error'})` })
+      continue
+    }
+    if (isBinary) {
+      findings.length = before
+      binary++
+      notScanned.push({ file: norm, reason: 'binary, skipped by design', byDesign: true })
+      continue
+    }
+    scanned++
   }
-  return { findings, scanned }
+  return { findings, scanned, notScanned, binary }
+}
+
+function scanLine(lines, i, lineNo, norm, inTest, allow, findings) {
+  const line = lines[i]
+  if (line.length > MAX_LINE || inTest(lineNo)) return
+  for (const rule of RULES) {
+    const m = rule.re.exec(line)
+    if (!m) continue
+    const value = m[1] ?? m[0]
+    if (rule.entropy && entropy(value) < rule.entropy) continue
+    // A value that says it is fake (FAKE_TOKEN, SUPERSECRET) is not a secret. A key block mentioned in a comment has no key body under it.
+    if (!hasFlag('--include-tests') && (FAKE_VALUE.test(value) || FAKE_VALUE.test(m[0]))) continue
+    // Only a header in a comment, with no key text after it on the same line (also after a literal \n) or on the next, is a mention and not a key.
+    // The same for a constant that is the header alone (a constant named PEM_BEGIN that holds only the header text): the line ends right after it.
+    if (rule.name === 'private-key-block') {
+      const after = line.slice(m.index + m[0].length).replace(/\\n/g, '\n')
+      // A key body can follow after blank lines or armor headers (Proc-Type, DEK-Info), and a commented-out key has a comment prefix on every line.
+      const below = lines.slice(i + 1, i + 9).map((l) => l.replace(/^\s*(?:\/\/|#|\*|--\s?|\+|\.\.)?\s*["'`]?/, '')).join('\n')
+      const noBody = !/^[\s"'`\\]*[A-Za-z0-9+/=]{10,}/.test(after) && !/(?:^|\n)[A-Za-z0-9+/=]{10,}/.test(below)
+      if (noBody && (/^\s*(?:\/\/|#|\*|\/\*|--\s)/.test(line) || /^["'`]?[\s)\],;}]*$/.test(after.trim()))) continue
+    }
+    if (allow.some((a) => a.rule === rule.name && line.includes(a.text))) continue
+    findings.push({ file: norm, line: lineNo, rule: rule.name, sample: `${value.slice(0, 4)}...` })
+  }
 }
 
 function main() {
@@ -152,11 +242,16 @@ function main() {
   } catch {
     notRun(`${root} does not exist`)
   }
-  const { findings, scanned } = scan(root)
+  const { findings, scanned, notScanned, binary } = scan(root)
   say(`scanned ${scanned} files`)
   for (const f of findings.slice(0, 25)) say(`  ${f.file}:${f.line}  ${f.rule}  ${f.sample}`)
+  const risky = notScanned.filter((n) => !n.byDesign)
+  for (const n of risky.slice(0, 25)) say(`  NOT SCANNED: ${n.file}  ${n.reason}`)
+  if (risky.length > 25) say(`  ... and ${risky.length - 25} more NOT SCANNED`)
+  say(`NOT SCANNED: ${notScanned.length} file(s) (${binary} binary skipped by design, ${risky.length} too large or unreadable)`)
   if (findings.length) fail(`${findings.length} possible secret(s). Remove them (and rotate the key), or add an accepted one to .meerkat-secrets-allow`)
-  pass(`no secrets found in ${scanned} files`)
+  if (risky.length) pass(`WARNING: no secrets found in the ${scanned} files scanned, but ${risky.length} file(s) were NOT SCANNED (listed above) and are unchecked; ${binary} binary skipped by design`)
+  pass(`no secrets found in ${scanned} files scanned (${notScanned.length} NOT SCANNED: ${binary} binary skipped by design, 0 too large or unreadable)`)
 }
 
 main()

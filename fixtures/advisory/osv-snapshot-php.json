@@ -1,0 +1,2388 @@
+{
+ "format": "meerkat-advisory-snapshot",
+ "version": 1,
+ "source": "osv.dev",
+ "fetchedAt": "2026-11-06T07:28:09.492Z",
+ "licenceNote": "Records come from OSV.dev, an aggregator. Each record keeps the licence of its source database (for example GitHub Advisory Database is CC-BY 4.0). Keep the credit and the record id when you republish. https://google.github.io/osv.dev/data/",
+ "queried": [
+  {
+   "ecosystem": "Packagist",
+   "name": "laravel/framework"
+  },
+  {
+   "ecosystem": "Packagist",
+   "name": "monolog/monolog"
+  }
+ ],
+ "advisories": [
+  {
+   "id": "GHSA-3p32-j457-pg5x",
+   "aliases": [
+    "BIT-laravel-2021-21263",
+    "CVE-2021-21263"
+   ],
+   "summary": "Query Binding Exploitation",
+   "published": "2021-01-19T19:36:51Z",
+   "modified": "2026-09-10T03:49:13.905761438Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.22.1"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/database"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.3"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/database"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.22.1"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/database"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "6.0.0"
+        },
+        {
+         "fixed": "6.20.12"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "6.0.0"
+        },
+        {
+         "fixed": "6.20.11"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.2"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-3p32-j457-pg5x"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-21263"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/35865"
+    },
+    {
+     "type": "WEB",
+     "url": "https://blog.laravel.com/security-laravel-62011-7302-8221-released"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-44pg-c29v-hp6r",
+   "aliases": [],
+   "summary": "Laravel Guard bypass in Eloquent models",
+   "published": "2024-05-15T22:18:33Z",
+   "modified": "2024-11-29T05:40:49.412708Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.5.0"
+        },
+        {
+         "last_affected": "5.5.49"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "6.0.0"
+        },
+        {
+         "fixed": "6.18.34"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.23.2"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://blog.laravel.com/security-release-laravel-61834-7232"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2020-08-06-1.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-4mg9-vhxq-vm7j",
+   "aliases": [],
+   "summary": "SQL Server LIMIT / OFFSET SQL Injection in laravel/framework and illuminate/database",
+   "published": "2021-04-29T21:52:53Z",
+   "modified": "2024-12-02T05:40:15.245335Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.40.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "6.20.26"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/database"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.40.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/database"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "6.20.26"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-4mg9-vhxq-vm7j"
+    },
+    {
+     "type": "WEB",
+     "url": "https://packagist.org/packages/illuminate/database"
+    },
+    {
+     "type": "WEB",
+     "url": "https://packagist.org/packages/laravel/framework"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-546h-56qp-8jmw",
+   "aliases": [
+    "CVE-2024-13918"
+   ],
+   "summary": "Laravel framework susceptible to reflected cross-site scripting",
+   "published": "2025-03-10T12:30:55Z",
+   "modified": "2025-03-11T14:52:15.641880Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "11.9.0"
+        },
+        {
+         "fixed": "11.36.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-13918"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/53869"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/45287fb2a91c69bb1c110539b9b7341faf5aee33"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/CVE-2024-13918.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-5vg9-5847-vvmq",
+   "aliases": [
+    "CVE-2026-48019"
+   ],
+   "summary": "Laravel Framework: CRLF injection in default email rule ",
+   "published": "2026-06-17T13:53:44Z",
+   "modified": "2026-09-10T03:50:48.526187266Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:L"
+    }
+   ],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "13.0.0"
+        },
+        {
+         "fixed": "13.10.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "12.60.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-5vg9-5847-vvmq"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-5wcm-3v2w-8362",
+   "aliases": [
+    "CVE-2026-114508"
+   ],
+   "summary": "Laravel relationship inclusion can trigger unauthorized data destruction",
+   "published": "2026-10-23T21:47:48Z",
+   "modified": "2026-10-23T22:00:04.735320237Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:L"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "12.45.0"
+        },
+        {
+         "fixed": "12.68.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "13.0.0"
+        },
+        {
+         "fixed": "13.27.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-5wcm-3v2w-8362"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-114508"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/61322"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/61323"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-66hf-2p6w-jqfw",
+   "aliases": [
+    "CVE-2021-43808"
+   ],
+   "summary": "Laravel Framework XSS in Blade templating engine",
+   "published": "2021-12-08T19:57:36Z",
+   "modified": "2026-07-08T06:27:53.544025785Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "6.20.42"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.6"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.75.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/view"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "6.20.42"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/view"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.6"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/view"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.75.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-66hf-2p6w-jqfw"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-43808"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/39906"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/39908"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-6jvx-8ch9-j2jr",
+   "aliases": [],
+   "summary": "Laravel Cookie serialization vulnerability",
+   "published": "2024-05-15T22:15:07Z",
+   "modified": "2024-11-29T05:41:04.000865Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.5.0"
+        },
+        {
+         "fixed": "5.6.30"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2018-08-08-1.yaml"
+    },
+    {
+     "type": "WEB",
+     "url": "https://laravel.com/docs/5.6/upgrade#upgrade-5.6.30"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-7852-w36x-6mf6",
+   "aliases": [],
+   "summary": "Laravel Encrypter Component Potential Decryption Failure Leading to Unintended Behavior",
+   "published": "2024-05-15T22:08:06Z",
+   "modified": "2024-11-29T05:40:57.344982Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "5.5.40"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.6.0"
+        },
+        {
+         "fixed": "5.6.15"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/28e53f23a76206fb130e9a54eb95aa3f010e79c9"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/886d261df0854426b4662b7ed5db6a1c575a4279"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2018-03-30-1.yaml"
+    },
+    {
+     "type": "WEB",
+     "url": "https://medium.com/@taylorotwell/laravel-security-release-5-6-15-and-5-5-40-56f1257933a0"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-78fx-h6xr-vch4",
+   "aliases": [
+    "BIT-laravel-2025-27515",
+    "CVE-2025-27515"
+   ],
+   "summary": "Laravel has a File Validation Bypass",
+   "published": "2025-03-05T19:09:39Z",
+   "modified": "2026-09-10T03:49:48.526393935Z",
+   "severity": [
+    {
+     "type": "CVSS_V4",
+     "score": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:L/VI:L/VA:N/SC:N/SI:N/SA:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "12.0.0"
+        },
+        {
+         "fixed": "12.1.1"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "11.0.0"
+        },
+        {
+         "fixed": "11.44.1"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "10.48.29"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-78fx-h6xr-vch4"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2025-27515"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/2d133034fefddfb047838f4caca3687a3ba811a5"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/a4f7a8f9b83e21882abeef78c3174c66b0f4a26b"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-83wp-f5c3-hqqr",
+   "aliases": [
+    "CVE-2024-13919"
+   ],
+   "summary": "Laravel framework susceptible to reflected cross-site scripting",
+   "published": "2025-03-10T12:30:55Z",
+   "modified": "2025-03-14T21:02:02.468053Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "11.9.0"
+        },
+        {
+         "fixed": "11.36.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-13919"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/53869"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/45287fb2a91c69bb1c110539b9b7341faf5aee33"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/CVE-2024-13919.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-c2v7-j5gq-wcq4",
+   "aliases": [
+    "CVE-2017-14775"
+   ],
+   "summary": "Laravel Sensitive Data Exposure",
+   "published": "2022-05-17T00:34:22Z",
+   "modified": "2024-02-16T08:26:21.423376Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "5.5.10"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/auth"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "5.5.10"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2017-14775"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/21320"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/illuminate/auth/CVE-2017-14775.yaml"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/CVE-2017-14775.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-crmm-hgp2-wgrp",
+   "aliases": [],
+   "summary": "Laravel Framework: Temporary Signed URL Path Confusion",
+   "published": "2026-06-17T13:54:13Z",
+   "modified": "2026-09-10T03:51:08.672624600Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:L/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "13.0.0"
+        },
+        {
+         "fixed": "13.12.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "12.61.1"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-crmm-hgp2-wgrp"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/60137"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/60230"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/60350"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-f57v-q966-7fh6",
+   "aliases": [],
+   "summary": "Monolog Header injection in NativeMailerHandler",
+   "published": "2024-05-15T23:08:13Z",
+   "modified": "2024-11-29T05:40:52.145864Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "LOW"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "monolog/monolog"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "1.8.0"
+        },
+        {
+         "fixed": "1.12.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/Seldaek/monolog/issues/458"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/Seldaek/monolog/pull/448#issuecomment-68208704"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/Seldaek/monolog/commit/515a096c864b00b3967f7f601680f85d4a2e4001"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/monolog/monolog/2014-12-29-1.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-f9x3-7vq9-cph6",
+   "aliases": [
+    "CVE-2026-114509"
+   ],
+   "summary": "Laravel TokenGuard authentication bypass through non-string API credentials",
+   "published": "2026-10-23T21:50:27Z",
+   "modified": "2026-10-23T22:00:04.255898562Z",
+   "severity": [
+    {
+     "type": "CVSS_V4",
+     "score": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "CRITICAL"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "13.0.0"
+        },
+        {
+         "fixed": "13.29.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "12.68.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-f9x3-7vq9-cph6"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-114509"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/8dbb08bccac1be095dba4a9d259a419620f1e8a5"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/9b21ce0a9bb2b2599978bc0b0df4abea952ad31c"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-gv7v-rgg6-548h",
+   "aliases": [
+    "BIT-laravel-2024-52301",
+    "CVE-2024-52301"
+   ],
+   "summary": "Laravel environment manipulation via query string",
+   "published": "2024-11-12T22:08:42Z",
+   "modified": "2024-12-21T18:37:57.182411Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N"
+    },
+    {
+     "type": "CVSS_V4",
+     "score": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "6.20.45"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.7"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.83.28"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "9.0.0"
+        },
+        {
+         "fixed": "9.52.17"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "10.0.0"
+        },
+        {
+         "fixed": "10.48.23"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "11.0.0"
+        },
+        {
+         "fixed": "11.31.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-gv7v-rgg6-548h"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-52301"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/CVE-2024-52301.yaml"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://github.com/advisories/GHSA-gv7v-rgg6-548h"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-jh5r-qr3c-85q8",
+   "aliases": [
+    "CVE-2026-102279"
+   ],
+   "summary": "Laravel: XSS in Debug Page Information",
+   "published": "2026-09-29T18:24:25Z",
+   "modified": "2026-09-29T18:30:41.196307663Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:N/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "LOW"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "12.69.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "13.0.0"
+        },
+        {
+         "fixed": "13.30.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-jh5r-qr3c-85q8"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-102279"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/61381"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/b495ca2ec4e15a977e8700328bf13e8a79f29d12"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-jwvj-pwww-3mj5",
+   "aliases": [],
+   "summary": "laravel framework Unexpected database bindings via requests",
+   "published": "2024-05-15T22:19:51Z",
+   "modified": "2024-11-29T05:39:56.521856Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "6.0.0"
+        },
+        {
+         "fixed": "6.20.14"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.4"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.24.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-x7p5-p2c9-phvg"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2021-01-21.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-p62r-7637-3wwc",
+   "aliases": [],
+   "summary": "Laravel Hijacked authentication cookies vulnerability",
+   "published": "2024-05-15T22:06:42Z",
+   "modified": "2024-11-29T05:26:31.327092Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "4.0.0"
+        },
+        {
+         "fixed": "4.1.26"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2014-04-15.yaml"
+    },
+    {
+     "type": "WEB",
+     "url": "https://laravel.com/docs/5.3/upgrade#upgrade-4.1.26"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-pfg4-p438-p874",
+   "aliases": [
+    "CVE-2019-9081"
+   ],
+   "summary": "Laravel Framework Deserialization Vulnerability",
+   "published": "2022-05-14T01:31:22Z",
+   "modified": "2024-02-16T08:24:40.221686Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    }
+   ],
+   "database_specific": {
+    "severity": "CRITICAL"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.7.0"
+        },
+        {
+         "fixed": "6.20.44"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-9081"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/Laworigin/Laworigin.github.io/blob/master/2019/02/21/laravelv5-7%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96rce/index.html"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/discussions/40184"
+    },
+    {
+     "type": "WEB",
+     "url": "https://laworigin.github.io/2019/02/21/laravelv5-7%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96rce"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-qm5c-m76r-2hfr",
+   "aliases": [],
+   "summary": "Laravel RCE vulnerability in \"cookie\" session driver",
+   "published": "2024-05-15T22:16:52Z",
+   "modified": "2024-11-29T05:40:19.902767Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H"
+    }
+   ],
+   "database_specific": {
+    "severity": "CRITICAL"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "4.1.0"
+        },
+        {
+         "fixed": "6.18.31"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.22.4"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://blog.laravel.com/laravel-cookie-security-releases"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2020-07-27-1.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-qvqm-h22r-4cp9",
+   "aliases": [
+    "CVE-2018-15133"
+   ],
+   "summary": "Laravel Framework RCE Vulnerability",
+   "published": "2022-05-14T00:56:30Z",
+   "modified": "2025-01-13T15:00:54.255052Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    }
+   ],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "last_affected": "5.5.40"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.6.0"
+        },
+        {
+         "fixed": "5.6.30"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2018-15133"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/d84cf988ed5d4661a4bf1fdcb08f5073835083a0"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/kozmic/laravel-poc-CVE-2018-15133"
+    },
+    {
+     "type": "WEB",
+     "url": "https://laravel.com/docs/5.6/upgrade#upgrade-5.6.30"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-rc8x-jrrc-frfv",
+   "aliases": [
+    "CVE-2017-9303"
+   ],
+   "summary": "Laravel does not properly constrain the host portion of a password-reset URL",
+   "published": "2022-05-17T02:42:21Z",
+   "modified": "2024-04-25T23:11:46.086015Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/laravel"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.4.0"
+        },
+        {
+         "fixed": "5.4.22"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/auth"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.3.0"
+        },
+        {
+         "last_affected": "5.3.31"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/auth"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.4.0"
+        },
+        {
+         "fixed": "5.4.22"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.3.0"
+        },
+        {
+         "last_affected": "5.3.31"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "5.4.0"
+        },
+        {
+         "fixed": "5.4.22"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2017-9303"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/cef10551820530632a86fa6f1306fee95c5cac43"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/illuminate/auth/CVE-2017-9303.yaml"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/CVE-2017-9303.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-rj3w-99gc-8j58",
+   "aliases": [],
+   "summary": "Laravel Risk of mass-assignment vulnerabilities",
+   "published": "2024-05-15T22:05:00Z",
+   "modified": "2024-11-29T05:41:44.787576Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "4.0.0"
+        },
+        {
+         "fixed": "4.1.29"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/c942a1bc30999e3d7a5567f264bfc99c77843919"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2014-05-20.yaml"
+    },
+    {
+     "type": "WEB",
+     "url": "https://laravel.com/docs/5.3/upgrade#upgrade-4.1.29"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-vr95-p7q6-8m9q",
+   "aliases": [],
+   "summary": "Laravel Cross-site Scripting (XSS) vulnerability in blade templating",
+   "published": "2024-05-15T22:16:06Z",
+   "modified": "2024-11-29T05:42:16.505064Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "MODERATE"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.1.2"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/pull/31945"
+    },
+    {
+     "type": "WEB",
+     "url": "https://blog.laravel.com/security-laravel-712-released"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2020-03-13-1.yaml"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/releases/tag/v7.1.2"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-w2pm-r78h-4m7v",
+   "aliases": [
+    "CVE-2020-19316"
+   ],
+   "summary": "OS Command Injection in Laravel Framework",
+   "published": "2022-01-06T23:13:42Z",
+   "modified": "2024-02-19T05:24:32.920369Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H"
+    }
+   ],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "5.8.17"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-19316"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/44c3feb604944599ad1c782a9942981c3991fa31"
+    },
+    {
+     "type": "WEB",
+     "url": "http://www.netbytesec.com/advisories/OSCommandInjectionInLaravelFramework"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-w68r-5p45-5rqp",
+   "aliases": [
+    "BIT-laravel-2020-24941",
+    "CVE-2020-24941"
+   ],
+   "summary": "Improper Input Validation in Laravel",
+   "published": "2021-05-06T18:54:20Z",
+   "modified": "2023-12-06T01:00:24.436250Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "6.18.35"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.24.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "ADVISORY",
+     "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-24941"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/commit/897d107775737a958dbd0b2f3ea37877c7526371"
+    },
+    {
+     "type": "WEB",
+     "url": "https://blog.laravel.com/security-release-laravel-61835-7240"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-wq8p-mqvg-2p5h",
+   "aliases": [],
+   "summary": "laravel framework SQL Injection via limit and offset functions",
+   "published": "2024-05-15T22:20:42Z",
+   "modified": "2024-11-29T05:41:40.570199Z",
+   "severity": [],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "6.0.0"
+        },
+        {
+         "fixed": "6.20.26"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.5"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.40.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-4mg9-vhxq-vm7j"
+    },
+    {
+     "type": "WEB",
+     "url": "https://github.com/FriendsOfPHP/security-advisories/blob/master/laravel/framework/2021-04-28.yaml"
+    }
+   ]
+  },
+  {
+   "id": "GHSA-x7p5-p2c9-phvg",
+   "aliases": [],
+   "summary": "Unexpected database bindings",
+   "published": "2021-02-02T15:47:08Z",
+   "modified": "2024-12-02T05:49:41.891932Z",
+   "severity": [
+    {
+     "type": "CVSS_V3",
+     "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:L/I:L/A:N"
+    }
+   ],
+   "database_specific": {
+    "severity": "HIGH"
+   },
+   "affected": [
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "6.20.14"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.4"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "laravel/framework"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.24.0"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/database"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "0"
+        },
+        {
+         "fixed": "6.20.14"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/database"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "7.0.0"
+        },
+        {
+         "fixed": "7.30.4"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "package": {
+      "ecosystem": "Packagist",
+      "name": "illuminate/database"
+     },
+     "ranges": [
+      {
+       "type": "ECOSYSTEM",
+       "events": [
+        {
+         "introduced": "8.0.0"
+        },
+        {
+         "fixed": "8.24.0"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "references": [
+    {
+     "type": "WEB",
+     "url": "https://github.com/laravel/framework/security/advisories/GHSA-x7p5-p2c9-phvg"
+    },
+    {
+     "type": "ADVISORY",
+     "url": "https://github.com/advisories/GHSA-3p32-j457-pg5x"
+    },
+    {
+     "type": "WEB",
+     "url": "https://packagist.org/packages/illuminate/database"
+    },
+    {
+     "type": "WEB",
+     "url": "https://packagist.org/packages/laravel/framework"
+    }
+   ]
+  }
+ ]
+}

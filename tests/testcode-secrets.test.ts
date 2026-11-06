@@ -76,6 +76,54 @@ describe('secret-scan', () => {
   })
 })
 
+describe('secret-scan: large files are scanned, never silently passed', () => {
+  const runEnv = (root: string, env: Record<string, string> = {}) =>
+    spawnSync(process.execPath, [join(ROOT, 'thorough', 'secret-scan.mjs'), '--root', root], { encoding: 'utf8', env: { ...process.env, ...env } })
+  const filler = (bytes: number) => 'const filler = "lorem ipsum dolor sit amet consectetur adipiscing elit"\n'.repeat(Math.ceil(bytes / 66))
+  test('a token near the end of a 5.3 MB file is found', () => {
+    const big = filler(5_300_000) + `const t = '${REAL_GH}'\n`
+    const d = project({ 'src/big.js': big })
+    const r = runEnv(d)
+    expect(r.status, r.stdout).toBe(1)
+    expect(r.stdout).toContain('src/big.js:')
+    expect(r.stdout).toContain('github-token')
+  })
+  test('a token split across a chunk boundary is found at every offset', () => {
+    // 64-byte chunks: put the token at each alignment so the boundary falls inside it for most of them.
+    for (let pad = 0; pad < 40; pad += 3) {
+      const text = `${'x'.repeat(pad)} const t = '${REAL_GH}'\n` + filler(400)
+      const r = runEnv(project({ 'src/a.js': text }), { MEERKAT_SECRET_SCAN_CHUNK: '64' })
+      expect(r.status, `pad ${pad}: ${r.stdout}`).toBe(1)
+    }
+  })
+  test('a private key whose body arrives in the next chunk is found, with the right line number', () => {
+    const header = '-----BEGIN ' + 'PRIVATE KEY-----'
+    const text = filler(300) + `${header}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC\n` + filler(300)
+    const r = runEnv(project({ 'key.pem': text }), { MEERKAT_SECRET_SCAN_CHUNK: '64' })
+    expect(r.status, r.stdout).toBe(1)
+    expect(r.stdout).toContain(`key.pem:${filler(300).split('\n').length}`)
+  })
+  test('a file over the upper bound is reported NOT SCANNED, not a clean pass', () => {
+    const d = project({ 'src/ok.js': 'const a = 1\n', 'src/big.js': filler(200_000) + `const t = '${REAL_GH}'\n` })
+    const r = runEnv(d, { MEERKAT_SECRET_SCAN_MAX: '100000' })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toContain('NOT SCANNED: src/big.js')
+    expect(r.stdout).toMatch(/WARNING: .*1 file\(s\) were NOT SCANNED/)
+    expect(r.stdout).not.toMatch(/PASS: no secrets found in \d+ files\b(?! scanned)/)
+  })
+  test('the PASS line counts binaries skipped by design and says there are none that are unchecked', () => {
+    const d = project({ 'src/ok.js': 'const a = 1\n', 'data.bin': 'ab\0cd' })
+    const r = runEnv(d)
+    expect(r.status, r.stdout).toBe(0)
+    expect(r.stdout).toContain('1 NOT SCANNED: 1 binary skipped by design, 0 too large or unreadable')
+  })
+  test('an ordinary small clean tree still passes and reports 0 NOT SCANNED', () => {
+    const r = runEnv(project({ 'src/ok.js': 'const a = 1\n' }))
+    expect(r.status).toBe(0)
+    expect(r.stdout).toContain('(0 NOT SCANNED')
+  })
+})
+
 describe('credentials-in-urls', () => {
   const url = 'postgres://admin:Sup3rS3cretPw@db.acme.io/app'
   test('in shipped code it is found', () => {

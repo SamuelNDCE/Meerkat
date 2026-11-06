@@ -1,0 +1,8 @@
+{
+  "rule": "py-mktemp-race",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-python",
+  "why": "mkstemp creates the file as it picks the name, so no other process can take the name in between.",
+  "bad": "bad/scratch.py",
+  "good": "good/scratch.py"
+}

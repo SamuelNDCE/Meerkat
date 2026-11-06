@@ -1,0 +1,7 @@
+{
+  "packages": [
+    { "name": "laravel/framework", "version": "v7.30.0" },
+    { "name": "monolog/monolog", "version": "2.9.3" }
+  ],
+  "packages-dev": []
+}

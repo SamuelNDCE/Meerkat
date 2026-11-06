@@ -1,0 +1,8 @@
+{
+  "rule": "py-shell-true",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-python",
+  "why": "Running without shell=True removes a layer that only exists to be injected into.",
+  "bad": "bad/build.py",
+  "good": "good/build.py"
+}

@@ -95,7 +95,7 @@ export function applyMeerkatIgnore(root, list) {
   return kept
 }
 
-function listTrackedFiles(root) {
+export function listTrackedFiles(root) {
   try {
     const out = execFileSync('git', ['-C', root, 'ls-files', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 256 * 2 ** 20 })
     return out.split('\0').filter(Boolean).filter((f) => existsSync(join(root, f)))

@@ -95,3 +95,31 @@ test('the security-plus pack loads with no bad-check-file entries from sec-suppl
   expect(mine.filter((c: any) => String(c.id).startsWith('bad-check-file'))).toEqual([])
   expect(mine.map((c: any) => c.id).sort()).toEqual([...IDS].sort())
 })
+
+// A checkout is judged by its own with: block: a comment that mentions persist-credentials neither hides a real problem nor causes one.
+describe('actions-secrets-echo reads the checkout step, not comments', () => {
+  const workflow = (checkoutLines: string[]): string =>
+    ['name: ci', 'on: push', 'permissions:', '  contents: read', 'jobs:', '  build:', '    runs-on: ubuntu-latest', '    steps:', ...checkoutLines,
+      '      - uses: actions/upload-artifact@v4', '        with:', '          path: dist/', ''].join('\n')
+  const exitFor = (body: string): number => {
+    const dir = mkdtempSync(join(tmpdir(), 'meerkat-supply-wf-'))
+    made.push(dir)
+    mkdirSync(join(dir, '.github', 'workflows'), { recursive: true })
+    writeFileSync(join(dir, '.github', 'workflows', 'ci.yml'), body)
+    return exitCodeOf(['actions-secrets-echo', '--root', dir])
+  }
+
+  test('a comment mentioning persist-credentials above a checkout that sets it to false is not flagged', () => {
+    const body = workflow(['      # we set persist-credentials: false below so the token is not left on disk', '      - uses: actions/checkout@v4', '        with:', '          persist-credentials: false  # persist-credentials: true would keep the token'])
+    expect(exitFor(body)).toBe(0)
+  })
+  test('a checkout with no persist-credentials line is still flagged', () => {
+    expect(exitFor(workflow(['      - uses: actions/checkout@v4']))).toBe(1)
+  })
+  test('a comment saying persist-credentials: false does not excuse a checkout that lacks it', () => {
+    expect(exitFor(workflow(['      # persist-credentials: false', '      - uses: actions/checkout@v4']))).toBe(1)
+  })
+  test('a checkout whose with: block sets persist-credentials to true is flagged', () => {
+    expect(exitFor(workflow(['      - uses: actions/checkout@v4', '        with:', '          persist-credentials: true']))).toBe(1)
+  })
+})

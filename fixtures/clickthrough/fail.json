@@ -1,0 +1,11 @@
+{
+  "name": "fake-fail",
+  "driver": { "cmd": "node", "args": ["fake-driver.mjs"], "env": { "MEERKAT_FAKE_BREAK_SAVE": "1" } },
+  "defaultTimeoutMs": 5000,
+  "steps": [
+    { "type": "open", "url": "http://app.test/home" },
+    { "type": "click", "text": "Save" },
+    { "type": "assert", "text": "Saved" },
+    { "type": "screenshot", "name": "never" }
+  ]
+}

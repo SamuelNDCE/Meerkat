@@ -1,0 +1,8 @@
+{
+  "rule": "js-timer-string",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-js",
+  "why": "A string given to a timer is run as code, so a plain function reference is both shorter and safe.",
+  "bad": "bad/refresh.js",
+  "good": "good/refresh.js"
+}

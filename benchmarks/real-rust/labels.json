@@ -1,0 +1,3712 @@
+{
+ "labels": [
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 448,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/jobs/curator/playbooks/usage.rs",
+   "line": 74,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-cli/src/status.rs",
+   "line": 74,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/sync-server/src/devices.rs",
+   "line": 157,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/state.rs",
+   "line": 1042,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-sidecar/src/guide_watch.rs",
+   "line": 88,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-sidecar/src/run_retention.rs",
+   "line": 57,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/engine/compress.rs",
+   "line": 67,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/updater_check.rs",
+   "line": 101,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-fn-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/audit/src/moves.rs",
+   "line": 64,
+   "message": "a public function has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public function with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/audit/src/moves.rs",
+   "line": 46,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/dashboard.rs",
+   "line": 49,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/onboarding.rs",
+   "line": 743,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/sync_runtime.rs",
+   "line": 48,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-cli/src/calendar.rs",
+   "line": 71,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-cli/src/settings.rs",
+   "line": 58,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/pages.rs",
+   "line": 22,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-sidecar/src/session_guides.rs",
+   "line": 164,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/jobs/curator/scan.rs",
+   "line": 672,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-pub-type-undocumented",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-cli/src/usage.rs",
+   "line": 49,
+   "message": "a public struct, enum or trait has no /// doc comment above it",
+   "label": "TRUE",
+   "reason": "A public struct or enum with no doc comment; the finding is accurate (a documentation gap)."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/agents/src/guard/insecure_code_classes.rs",
+   "line": 69,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "TRUE",
+   "reason": "A public type with no Debug derive or impl; accurate."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/audit/src/live_signal.rs",
+   "line": 81,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "TRUE",
+   "reason": "A public type with no Debug derive or impl; accurate."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/sync-server/src/push/fcm.rs",
+   "line": 143,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "TRUE",
+   "reason": "A public type with no Debug derive or impl; accurate."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-sidecar/src/guide_watch.rs",
+   "line": 179,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "TRUE",
+   "reason": "A public type with no Debug derive or impl; accurate."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/dashboard.rs",
+   "line": 58,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "TRUE",
+   "reason": "A public type with no Debug derive or impl; accurate."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/email_smtp.rs",
+   "line": 41,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "FALSE",
+   "reason": "The item is a trait, and a trait cannot derive Debug, so there is nothing to add."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 1244,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "TRUE",
+   "reason": "A public type with no Debug derive or impl; accurate."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/dashboard.rs",
+   "line": 81,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "TRUE",
+   "reason": "A public type with no Debug derive or impl; accurate."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/search/src/lib.rs",
+   "line": 58,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "FALSE",
+   "reason": "The item is a trait, and a trait cannot derive Debug, so there is nothing to add."
+  },
+  {
+   "rule": "rapi-missing-debug-derive",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/plugin_host.rs",
+   "line": 168,
+   "message": "a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)",
+   "label": "TRUE",
+   "reason": "A public type with no Debug derive or impl; accurate."
+  },
+  {
+   "rule": "rapi-glob-reexport",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/workflows/mod.rs",
+   "line": 32,
+   "message": "a glob re-export (pub use x::*) exposes whatever the module adds later",
+   "label": "TRUE",
+   "reason": "pub use module::* re-exports every public item of the module, as the rule says."
+  },
+  {
+   "rule": "rapi-glob-reexport",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/workflows/mod.rs",
+   "line": 28,
+   "message": "a glob re-export (pub use x::*) exposes whatever the module adds later",
+   "label": "TRUE",
+   "reason": "pub use module::* re-exports every public item of the module, as the rule says."
+  },
+  {
+   "rule": "rapi-glob-reexport",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/workflows/mod.rs",
+   "line": 29,
+   "message": "a glob re-export (pub use x::*) exposes whatever the module adds later",
+   "label": "TRUE",
+   "reason": "pub use module::* re-exports every public item of the module, as the rule says."
+  },
+  {
+   "rule": "rapi-glob-reexport",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/workflows/mod.rs",
+   "line": 30,
+   "message": "a glob re-export (pub use x::*) exposes whatever the module adds later",
+   "label": "TRUE",
+   "reason": "pub use module::* re-exports every public item of the module, as the rule says."
+  },
+  {
+   "rule": "rapi-glob-reexport",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/workflows/mod.rs",
+   "line": 27,
+   "message": "a glob re-export (pub use x::*) exposes whatever the module adds later",
+   "label": "TRUE",
+   "reason": "pub use module::* re-exports every public item of the module, as the rule says."
+  },
+  {
+   "rule": "rapi-glob-reexport",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/workflows/mod.rs",
+   "line": 31,
+   "message": "a glob re-export (pub use x::*) exposes whatever the module adds later",
+   "label": "TRUE",
+   "reason": "pub use module::* re-exports every public item of the module, as the rule says."
+  },
+  {
+   "rule": "rapi-glob-reexport",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/workflows/mod.rs",
+   "line": 33,
+   "message": "a glob re-export (pub use x::*) exposes whatever the module adds later",
+   "label": "TRUE",
+   "reason": "pub use module::* re-exports every public item of the module, as the rule says."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/audit/src/runs.rs",
+   "line": 1611,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/sync-server/src/fleet.rs",
+   "line": 514,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-sidecar/src/session_groups_cmds.rs",
+   "line": 1947,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-sidecar/src/permission_rules_cmds.rs",
+   "line": 390,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/plugin_api/host.rs",
+   "line": 914,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/sync-server/src/main.rs",
+   "line": 1079,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/memory/src/store.rs",
+   "line": 1286,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/sync-server/src/routes.rs",
+   "line": 1949,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-sidecar/src/provider_prefs.rs",
+   "line": 1196,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-json-unwrap",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/nv-sidecar/src/model_catalog.rs",
+   "line": 4260,
+   "message": "serde_json parses external input with unwrap or expect (a bad document panics)",
+   "label": "FALSE",
+   "reason": "serde_json result unwrapped inside test code, where a panic is the failure signal."
+  },
+  {
+   "rule": "rapi-serde-untagged",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/plugin_api/manifest.rs",
+   "line": 124,
+   "message": "serde untagged enums guess the variant from the shape of the data (ambiguous input is accepted)",
+   "label": "TRUE",
+   "reason": "#[serde(untagged)] is present on the type; the rule reports the attribute and the finding is accurate."
+  },
+  {
+   "rule": "rapi-serde-untagged",
+   "check": "rp-api-ffi-wasm",
+   "file": "apps/desktop-web/src-tauri/src/pages.rs",
+   "line": 2532,
+   "message": "serde untagged enums guess the variant from the shape of the data (ambiguous input is accepted)",
+   "label": "TRUE",
+   "reason": "#[serde(untagged)] is present on the type; the rule reports the attribute and the finding is accurate."
+  },
+  {
+   "rule": "rapi-serde-untagged",
+   "check": "rp-api-ffi-wasm",
+   "file": "packages/runtime/src/plugin_api/manifest.rs",
+   "line": 305,
+   "message": "serde untagged enums guess the variant from the shape of the data (ambiguous input is accepted)",
+   "label": "TRUE",
+   "reason": "#[serde(untagged)] is present on the type; the rule reports the attribute and the finding is accurate."
+  },
+  {
+   "rule": "rasync-blocking-thread-sleep",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/workflow_runner.rs",
+   "line": 1318,
+   "message": "thread::sleep is called inside an async fn, which blocks the whole runtime thread",
+   "label": "FALSE",
+   "reason": "A std thread::sleep in test code (a plain test thread), not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-thread-sleep",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/workflow_runner.rs",
+   "line": 1288,
+   "message": "thread::sleep is called inside an async fn, which blocks the whole runtime thread",
+   "label": "FALSE",
+   "reason": "A std thread::sleep in test code (a plain test thread), not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-thread-sleep",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/workflow_runner.rs",
+   "line": 1113,
+   "message": "thread::sleep is called inside an async fn, which blocks the whole runtime thread",
+   "label": "FALSE",
+   "reason": "A std thread::sleep in test code (a plain test thread), not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-thread-sleep",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/file_triggers.rs",
+   "line": 362,
+   "message": "thread::sleep is called inside an async fn, which blocks the whole runtime thread",
+   "label": "FALSE",
+   "reason": "A std thread::sleep in test code (a plain test thread), not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-thread-sleep",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/file_triggers.rs",
+   "line": 421,
+   "message": "thread::sleep is called inside an async fn, which blocks the whole runtime thread",
+   "label": "FALSE",
+   "reason": "A std thread::sleep in test code (a plain test thread), not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-thread-sleep",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/workflow_runner.rs",
+   "line": 1255,
+   "message": "thread::sleep is called inside an async fn, which blocks the whole runtime thread",
+   "label": "FALSE",
+   "reason": "A std thread::sleep in test code (a plain test thread), not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-thread-sleep",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/workflow_runner.rs",
+   "line": 1164,
+   "message": "thread::sleep is called inside an async fn, which blocks the whole runtime thread",
+   "label": "FALSE",
+   "reason": "A std thread::sleep in test code (a plain test thread), not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-thread-sleep",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 2070,
+   "message": "thread::sleep is called inside an async fn, which blocks the whole runtime thread",
+   "label": "FALSE",
+   "reason": "A std thread::sleep in test code (a plain test thread), not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/panel_gate.rs",
+   "line": 884,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/embedder.rs",
+   "line": 1019,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "packages/runtime/src/workflows/compiler.rs",
+   "line": 1414,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/rounds.rs",
+   "line": 4104,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/rounds.rs",
+   "line": 4416,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "apps/sync-server/src/routes.rs",
+   "line": 1588,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/workflow_runner.rs",
+   "line": 1146,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/credibility_job.rs",
+   "line": 1023,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 4131,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-fs",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 4041,
+   "message": "a blocking std::fs call runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A blocking std::fs call in test setup or assertions, not on a production async runtime thread."
+  },
+  {
+   "rule": "rasync-blocking-net",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/lib.rs",
+   "line": 3138,
+   "message": "a blocking std::net connect or bind runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A one-shot local TcpListener::bind on port 0 to find a free port; it does not wait on the network."
+  },
+  {
+   "rule": "rasync-blocking-net",
+   "check": "rp-async",
+   "file": "apps/sync-server/src/hostlink/runtime.rs",
+   "line": 854,
+   "message": "a blocking std::net connect or bind runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A one-shot local TcpListener::bind on port 0 to find a free port; it does not wait on the network."
+  },
+  {
+   "rule": "rasync-blocking-net",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/connectors.rs",
+   "line": 257,
+   "message": "a blocking std::net connect or bind runs inside an async fn",
+   "label": "FALSE",
+   "reason": "A one-shot local TcpListener::bind on port 0 to find a free port; it does not wait on the network."
+  },
+  {
+   "rule": "rasync-std-mutex-across-await",
+   "check": "rp-async",
+   "file": "packages/llm/src/router.rs",
+   "line": 199,
+   "message": "a std Mutex guard is held across an .await in an async fn",
+   "label": "FALSE",
+   "reason": "A test-only log mutex; the guard is not held across an .await in production code."
+  },
+  {
+   "rule": "rasync-std-mutex-across-await",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/title.rs",
+   "line": 213,
+   "message": "a std Mutex guard is held across an .await in an async fn",
+   "label": "FALSE",
+   "reason": "A test-only log mutex; the guard is not held across an .await in production code."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/embedder.rs",
+   "line": 303,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/chat.rs",
+   "line": 791,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "packages/llm/src/ollama.rs",
+   "line": 774,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 1671,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/lexical_sync.rs",
+   "line": 778,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "packages/runtime/src/plugin_api/host.rs",
+   "line": 515,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/session_guides.rs",
+   "line": 1542,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "packages/runtime/src/security/judge.rs",
+   "line": 179,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/credibility_job.rs",
+   "line": 385,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-handle-dropped",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/heartbeat.rs",
+   "line": 316,
+   "message": "tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped",
+   "label": "FALSE",
+   "reason": "A deliberate fire-and-forget background task (or test code); dropping the JoinHandle is intended."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/lib.rs",
+   "line": 2541,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/backup_job.rs",
+   "line": 154,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/lib.rs",
+   "line": 2357,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/deps_probe.rs",
+   "line": 59,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/connectors.rs",
+   "line": 269,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/lib.rs",
+   "line": 3156,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/backup_job.rs",
+   "line": 103,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/pipeline.rs",
+   "line": 535,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/lib.rs",
+   "line": 1978,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-spawn-blocking-awaits",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/integrations.rs",
+   "line": 444,
+   "message": "spawn_blocking contains an .await, which cannot run on a blocking thread",
+   "label": "FALSE",
+   "reason": "The .await is on the JoinHandle outside the spawn_blocking closure; nothing inside the closure awaits, so the rule misreads the scope."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 1669,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "packages/runtime/src/plugin_api/supervisor.rs",
+   "line": 568,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 920,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 1207,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 577,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 2106,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 624,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 1190,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 743,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-select-no-cancel-note",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/chat.rs",
+   "line": 540,
+   "message": "tokio::select! has no note that its branches are cancel safe",
+   "label": "TRUE",
+   "reason": "tokio::select! with no cancel safety note; accurate (a documentation gap)."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/chat.rs",
+   "line": 2374,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/chat.rs",
+   "line": 1096,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/dispatch.rs",
+   "line": 2664,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/rounds.rs",
+   "line": 4041,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/chat.rs",
+   "line": 2453,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/rounds.rs",
+   "line": 4186,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/workflow_runner.rs",
+   "line": 995,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/jobs/credibility_job.rs",
+   "line": 1075,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/security/mod.rs",
+   "line": 1097,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-unbounded-channel",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/chat.rs",
+   "line": 876,
+   "message": "an unbounded channel is created, so a slow consumer lets memory grow without limit",
+   "label": "FALSE",
+   "reason": "An unbounded channel created in test code; unbounded growth is not a concern there."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1539,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/engine/rounds.rs",
+   "line": 6006,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1469,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1304,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1549,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1275,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1508,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1559,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-future-call-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1245,
+   "message": "an async fn is called with let _ = and never awaited (the future does nothing)",
+   "label": "FALSE",
+   "reason": "The call is awaited: `.await` follows on a later line of the same statement, so no future is dropped; the rule only reads the first line."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/rewrite_queue.rs",
+   "line": 499,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "FALSE",
+   "reason": "thread::spawn as a statement inside test code; the test thread does not need to be joined."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/dictation_stream_cmds.rs",
+   "line": 213,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "TRUE",
+   "reason": "thread::spawn used as a statement in production code, so the thread is never joined and a panic is lost."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/licence_refresh_cmds.rs",
+   "line": 1099,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "FALSE",
+   "reason": "thread::spawn as a statement inside test code; the test thread does not need to be joined."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "packages/llm/src/providers.rs",
+   "line": 6592,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "FALSE",
+   "reason": "thread::spawn as a statement inside test code; the test thread does not need to be joined."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/main.rs",
+   "line": 336,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "FALSE",
+   "reason": "thread::spawn as a statement inside test code; the test thread does not need to be joined."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "packages/search/src/vector.rs",
+   "line": 1253,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "FALSE",
+   "reason": "thread::spawn as a statement inside test code; the test thread does not need to be joined."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/second_copy_cmds.rs",
+   "line": 382,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "TRUE",
+   "reason": "thread::spawn used as a statement in production code, so the thread is never joined and a panic is lost."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "packages/runtime/src/keys.rs",
+   "line": 1256,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "FALSE",
+   "reason": "thread::spawn as a statement inside test code; the test thread does not need to be joined."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 15059,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "FALSE",
+   "reason": "thread::spawn as a statement inside test code; the test thread does not need to be joined."
+  },
+  {
+   "rule": "rasync-thread-spawn-discarded",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/emit.rs",
+   "line": 322,
+   "message": "thread::spawn is called as a statement, so the thread is never joined",
+   "label": "FALSE",
+   "reason": "thread::spawn as a statement inside test code; the test thread does not need to be joined."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/provider_prefs.rs",
+   "line": 90,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/fleet.rs",
+   "line": 172,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/account.rs",
+   "line": 122,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "packages/core/src/keychain.rs",
+   "line": 191,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "packages/agents/src/tools.rs",
+   "line": 4547,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "FALSE",
+   "reason": "A static cache inside test code, scoped to the test binary only."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/question_cmds.rs",
+   "line": 49,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "packages/core/src/keychain.rs",
+   "line": 221,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/provider_prefs.rs",
+   "line": 98,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/openrouter.rs",
+   "line": 52,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-global-mutable-state",
+   "check": "rp-async",
+   "file": "packages/runtime/src/checkpoints.rs",
+   "line": 346,
+   "message": "a global lazy lock holds mutable state shared by every caller (review the scope)",
+   "label": "TRUE",
+   "reason": "A static lazy lock holding mutable state shared by every caller; accurate (needs a scope review)."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 2703,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "FALSE",
+   "reason": "A runtime built once at a command entry point or inside test code; there is only one per process run."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/fleet.rs",
+   "line": 408,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "FALSE",
+   "reason": "A runtime built once at a command entry point or inside test code; there is only one per process run."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 3086,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "FALSE",
+   "reason": "A runtime built once at a command entry point or inside test code; there is only one per process run."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/chat.rs",
+   "line": 724,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "FALSE",
+   "reason": "A runtime built once at a command entry point or inside test code; there is only one per process run."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/desktop-web/src-tauri/src/integrations.rs",
+   "line": 507,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "TRUE",
+   "reason": "A tokio runtime is built inside a function that runs repeatedly (or a helper called per use), so it is rebuilt each call."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/sync_cmds.rs",
+   "line": 218,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "TRUE",
+   "reason": "A tokio runtime is built inside a function that runs repeatedly (or a helper called per use), so it is rebuilt each call."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 220,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "FALSE",
+   "reason": "A runtime built once at a command entry point or inside test code; there is only one per process run."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-sidecar/src/plugin_host.rs",
+   "line": 180,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "FALSE",
+   "reason": "A runtime built once at a command entry point or inside test code; there is only one per process run."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 3027,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "FALSE",
+   "reason": "A runtime built once at a command entry point or inside test code; there is only one per process run."
+  },
+  {
+   "rule": "rasync-runtime-built-per-call",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 3219,
+   "message": "a tokio runtime is built where it is used (build it once and share it; informational)",
+   "label": "FALSE",
+   "reason": "A runtime built once at a command entry point or inside test code; there is only one per process run."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 638,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 1192,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 590,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 1210,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 1193,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 2108,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 629,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/chat.rs",
+   "line": 483,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 1671,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rasync-sync-recv-in-async",
+   "check": "rp-async",
+   "file": "apps/nv-cli/src/repl.rs",
+   "line": 578,
+   "message": "a recv() with no .await runs inside an async fn (a std receiver blocks the thread)",
+   "label": "FALSE",
+   "reason": "recv() here is tokio async recv used as a select! branch or awaited; it does not block the thread."
+  },
+  {
+   "rule": "rerr-panic-in-library",
+   "check": "rp-errors",
+   "file": "packages/agents/src/guard/insecure_code.rs",
+   "line": 1297,
+   "message": "a library path calls panic!, so the caller cannot recover",
+   "label": "FALSE",
+   "reason": "A deliberate panic: an invalid built-in static pattern or rule set (a programmer error at start up), or a test."
+  },
+  {
+   "rule": "rerr-panic-in-library",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 1621,
+   "message": "a library path calls panic!, so the caller cannot recover",
+   "label": "FALSE",
+   "reason": "A deliberate panic: an invalid built-in static pattern or rule set (a programmer error at start up), or a test."
+  },
+  {
+   "rule": "rerr-panic-in-library",
+   "check": "rp-errors",
+   "file": "packages/agents/src/guard/insecure_code.rs",
+   "line": 1332,
+   "message": "a library path calls panic!, so the caller cannot recover",
+   "label": "FALSE",
+   "reason": "A deliberate panic: an invalid built-in static pattern or rule set (a programmer error at start up), or a test."
+  },
+  {
+   "rule": "rerr-panic-in-library",
+   "check": "rp-errors",
+   "file": "apps/sync-server/src/push/fcm.rs",
+   "line": 71,
+   "message": "a library path calls panic!, so the caller cannot recover",
+   "label": "FALSE",
+   "reason": "A deliberate panic: an invalid built-in static pattern or rule set (a programmer error at start up), or a test."
+  },
+  {
+   "rule": "rerr-panic-in-library",
+   "check": "rp-errors",
+   "file": "packages/agents/src/guard/insecure_code_classes.rs",
+   "line": 2807,
+   "message": "a library path calls panic!, so the caller cannot recover",
+   "label": "FALSE",
+   "reason": "A deliberate panic: an invalid built-in static pattern or rule set (a programmer error at start up), or a test."
+  },
+  {
+   "rule": "rerr-panic-in-library",
+   "check": "rp-errors",
+   "file": "packages/agents/src/guard/insecure_code_classes.rs",
+   "line": 2856,
+   "message": "a library path calls panic!, so the caller cannot recover",
+   "label": "FALSE",
+   "reason": "A deliberate panic: an invalid built-in static pattern or rule set (a programmer error at start up), or a test."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/board.rs",
+   "line": 350,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/canvas.rs",
+   "line": 135,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/workflows/compiler.rs",
+   "line": 590,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "TRUE",
+   "reason": "unreachable!() in library runtime code guarding a documented invariant that a future change could break."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/schedule.rs",
+   "line": 435,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/orchestra.rs",
+   "line": 727,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/orchestra.rs",
+   "line": 477,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/wanted_notes.rs",
+   "line": 164,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/canvas.rs",
+   "line": 180,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/orchestra.rs",
+   "line": 731,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-unreachable-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/projects.rs",
+   "line": 227,
+   "message": "a library path calls unreachable!, which panics if the assumption is ever wrong",
+   "label": "FALSE",
+   "reason": "An exhaustive-match arm in a command handler that is already handled earlier (for example the Help arm); a binary entry point, not library code."
+  },
+  {
+   "rule": "rerr-assert-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/reset_cmds.rs",
+   "line": 587,
+   "message": "a library path uses assert! (it stays in release builds and panics on bad input)",
+   "label": "FALSE",
+   "reason": "A compile-time const assert, an invariant check, or test code; not a runtime assert on caller input."
+  },
+  {
+   "rule": "rerr-assert-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/model_cmds.rs",
+   "line": 1297,
+   "message": "a library path uses assert! (it stays in release builds and panics on bad input)",
+   "label": "FALSE",
+   "reason": "A compile-time const assert, an invariant check, or test code; not a runtime assert on caller input."
+  },
+  {
+   "rule": "rerr-assert-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/reset_cmds.rs",
+   "line": 666,
+   "message": "a library path uses assert! (it stays in release builds and panics on bad input)",
+   "label": "FALSE",
+   "reason": "A compile-time const assert, an invariant check, or test code; not a runtime assert on caller input."
+  },
+  {
+   "rule": "rerr-assert-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/search_cmds.rs",
+   "line": 87,
+   "message": "a library path uses assert! (it stays in release builds and panics on bad input)",
+   "label": "FALSE",
+   "reason": "A compile-time const assert, an invariant check, or test code; not a runtime assert on caller input."
+  },
+  {
+   "rule": "rerr-assert-in-library",
+   "check": "rp-errors",
+   "file": "packages/core/src/error_codes/mod.rs",
+   "line": 1054,
+   "message": "a library path uses assert! (it stays in release builds and panics on bad input)",
+   "label": "FALSE",
+   "reason": "A compile-time const assert, an invariant check, or test code; not a runtime assert on caller input."
+  },
+  {
+   "rule": "rerr-assert-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 234,
+   "message": "a library path uses assert! (it stays in release builds and panics on bad input)",
+   "label": "FALSE",
+   "reason": "A compile-time const assert, an invariant check, or test code; not a runtime assert on caller input."
+  },
+  {
+   "rule": "rerr-assert-in-library",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/engine/model_failover/retry_tests/policy_switch.rs",
+   "line": 68,
+   "message": "a library path uses assert! (it stays in release builds and panics on bad input)",
+   "label": "FALSE",
+   "reason": "A compile-time const assert, an invariant check, or test code; not a runtime assert on caller input."
+  },
+  {
+   "rule": "rerr-assert-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 233,
+   "message": "a library path uses assert! (it stays in release builds and panics on bad input)",
+   "label": "FALSE",
+   "reason": "A compile-time const assert, an invariant check, or test code; not a runtime assert on caller input."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "packages/search/src/fuzzy.rs",
+   "line": 22,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "TRUE",
+   "reason": "A .len() or count() cast with as u32 can truncate silently on large input; accurate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "packages/agents/src/sessions.rs",
+   "line": 287,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "TRUE",
+   "reason": "A .len() or count() cast with as u32 can truncate silently on large input; accurate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop/transient.rs",
+   "line": 145,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "TRUE",
+   "reason": "A .len() or count() cast with as u32 can truncate silently on large input; accurate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "packages/agents/src/shell_isolation.rs",
+   "line": 336,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "TRUE",
+   "reason": "A .len() or count() cast with as u32 can truncate silently on large input; accurate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/pages.rs",
+   "line": 2601,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "TRUE",
+   "reason": "A .len() or count() cast with as u32 can truncate silently on large input; accurate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 7366,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "FALSE",
+   "reason": "The cast is on a short constant string or a small count in test code; it cannot truncate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/engine/rounds.rs",
+   "line": 1449,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "FALSE",
+   "reason": "The cast is on a short constant string or a small count in test code; it cannot truncate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "packages/search/src/fuzzy.rs",
+   "line": 19,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "TRUE",
+   "reason": "A .len() or count() cast with as u32 can truncate silently on large input; accurate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 7343,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "FALSE",
+   "reason": "The cast is on a short constant string or a small count in test code; it cannot truncate."
+  },
+  {
+   "rule": "rerr-len-narrowing-cast",
+   "check": "rp-errors",
+   "file": "packages/agents/src/fs_tools/diff.rs",
+   "line": 118,
+   "message": "a length is cast to a smaller integer with as, which can silently truncate",
+   "label": "TRUE",
+   "reason": "A .len() or count() cast with as u32 can truncate silently on large input; accurate."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 2421,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/hooks.rs",
+   "line": 394,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/dictation_stream_cmds.rs",
+   "line": 310,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/main.rs",
+   "line": 1040,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "packages/llm/src/providers.rs",
+   "line": 6197,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/model_catalog.rs",
+   "line": 5625,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/engine/todo.rs",
+   "line": 80,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 832,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/lifecycle.rs",
+   "line": 167,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-let-underscore-result",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/jobs/embedder.rs",
+   "line": 370,
+   "message": "a Result from send, write, flush or remove is dropped with let _ =",
+   "label": "FALSE",
+   "reason": "A deliberate discard of a channel send or flush failure (the receiver is gone, or nothing useful can be done)."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/calendar_cmds.rs",
+   "line": 509,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "packages/core/src/cortex_merge.rs",
+   "line": 257,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/sync_runtime.rs",
+   "line": 603,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 4525,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/settings.rs",
+   "line": 229,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "packages/import/src/sources.rs",
+   "line": 76,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/provider_prefs.rs",
+   "line": 195,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/jobs/mod.rs",
+   "line": 70,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "packages/codegraph/src/extract.rs",
+   "line": 359,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-ok-discards-error",
+   "check": "rp-errors",
+   "file": "packages/core/src/keychain.rs",
+   "line": 553,
+   "message": "a Result is turned into an Option with .ok() and the error is thrown away",
+   "label": "FALSE",
+   "reason": "An optional lookup (environment variable, file read, probe) where absence is a normal outcome and the reason does not matter."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "packages/mcp-oauth/src/flow.rs",
+   "line": 179,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "packages/core/src/version_code.rs",
+   "line": 310,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/mcp_server.rs",
+   "line": 508,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/runtime.rs",
+   "line": 967,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/board.rs",
+   "line": 223,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/runtime.rs",
+   "line": 948,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/runtime.rs",
+   "line": 696,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/runtime.rs",
+   "line": 566,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "packages/core/src/fsio.rs",
+   "line": 311,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-discards-source",
+   "check": "rp-errors",
+   "file": "apps/sync-server/src/listen.rs",
+   "line": 85,
+   "message": "map_err(|_| ...) drops the original error, so its cause is lost",
+   "label": "FALSE",
+   "reason": "The source error carries no information (channel closed, parse failure) and the replacement error states the cause."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/lib.rs",
+   "line": 3352,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/jobs/embedder.rs",
+   "line": 343,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/connectors/github.rs",
+   "line": 101,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/dashboard.rs",
+   "line": 114,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/dashboard.rs",
+   "line": 333,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/connectors/github.rs",
+   "line": 116,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/lib.rs",
+   "line": 3140,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/onboarding.rs",
+   "line": 1002,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/dashboard.rs",
+   "line": 270,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-map-err-to-string",
+   "check": "rp-errors",
+   "file": "packages/sync/src/config.rs",
+   "line": 312,
+   "message": "map_err turns the error into a String, which loses its type",
+   "label": "TRUE",
+   "reason": "map_err(|e| e.to_string()) flattens the error to text and loses its type and source; accurate."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/lib.rs",
+   "line": 1080,
+   "message": "a library function returns Result with a String error",
+   "label": "FALSE",
+   "reason": "A command boundary or private helper where String is the agreed error type (a #[tauri::command] must return a String error), or test code."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "packages/llm/src/providers.rs",
+   "line": 2438,
+   "message": "a library function returns Result with a String error",
+   "label": "FALSE",
+   "reason": "A command boundary or private helper where String is the agreed error type (a #[tauri::command] must return a String error), or test code."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/pages.rs",
+   "line": 1073,
+   "message": "a library function returns Result with a String error",
+   "label": "TRUE",
+   "reason": "A public library function returns Result<_, String> instead of a typed error; accurate."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/managed_usage_cmds.rs",
+   "line": 2815,
+   "message": "a library function returns Result with a String error",
+   "label": "FALSE",
+   "reason": "A command boundary or private helper where String is the agreed error type (a #[tauri::command] must return a String error), or test code."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 3864,
+   "message": "a library function returns Result with a String error",
+   "label": "FALSE",
+   "reason": "A command boundary or private helper where String is the agreed error type (a #[tauri::command] must return a String error), or test code."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/pages.rs",
+   "line": 3056,
+   "message": "a library function returns Result with a String error",
+   "label": "TRUE",
+   "reason": "A public library function returns Result<_, String> instead of a typed error; accurate."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/vault_cmds.rs",
+   "line": 274,
+   "message": "a library function returns Result with a String error",
+   "label": "FALSE",
+   "reason": "A command boundary or private helper where String is the agreed error type (a #[tauri::command] must return a String error), or test code."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/connectors.rs",
+   "line": 584,
+   "message": "a library function returns Result with a String error",
+   "label": "FALSE",
+   "reason": "A command boundary or private helper where String is the agreed error type (a #[tauri::command] must return a String error), or test code."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/settings.rs",
+   "line": 123,
+   "message": "a library function returns Result with a String error",
+   "label": "TRUE",
+   "reason": "A public library function returns Result<_, String> instead of a typed error; accurate."
+  },
+  {
+   "rule": "rerr-string-error-result",
+   "check": "rp-errors",
+   "file": "packages/agents/src/diagram.rs",
+   "line": 231,
+   "message": "a library function returns Result with a String error",
+   "label": "TRUE",
+   "reason": "A public library function returns Result<_, String> instead of a typed error; accurate."
+  },
+  {
+   "rule": "rerr-unit-error-type",
+   "check": "rp-errors",
+   "file": "packages/agents/src/shell_tool.rs",
+   "line": 2263,
+   "message": "a library function returns Result with the unit type () as its error",
+   "label": "TRUE",
+   "reason": "Result<_, ()> carries no reason for the failure; accurate."
+  },
+  {
+   "rule": "rerr-unit-error-type",
+   "check": "rp-errors",
+   "file": "packages/agents/src/github_device.rs",
+   "line": 177,
+   "message": "a library function returns Result with the unit type () as its error",
+   "label": "FALSE",
+   "reason": "A private function whose doc says Err means no usable answer, so the unit error is documented and sufficient."
+  },
+  {
+   "rule": "rerr-unit-error-type",
+   "check": "rp-errors",
+   "file": "packages/agents/src/permission_rules.rs",
+   "line": 922,
+   "message": "a library function returns Result with the unit type () as its error",
+   "label": "TRUE",
+   "reason": "Result<_, ()> carries no reason for the failure; accurate."
+  },
+  {
+   "rule": "rerr-unit-error-type",
+   "check": "rp-errors",
+   "file": "packages/agents/src/permission_rules.rs",
+   "line": 913,
+   "message": "a library function returns Result with the unit type () as its error",
+   "label": "TRUE",
+   "reason": "Result<_, ()> carries no reason for the failure; accurate."
+  },
+  {
+   "rule": "rerr-unwrap-or-builds-value",
+   "check": "rp-errors",
+   "file": "packages/agents/src/fs_tools.rs",
+   "line": 212,
+   "message": "unwrap_or is given a value that is built eagerly (use unwrap_or_else or unwrap_or_default)",
+   "label": "FALSE",
+   "reason": "The argument is a cheap constant (Path::new, a unit-like enum variant), so eager evaluation costs nothing."
+  },
+  {
+   "rule": "rerr-unwrap-or-builds-value",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/fleet.rs",
+   "line": 251,
+   "message": "unwrap_or is given a value that is built eagerly (use unwrap_or_else or unwrap_or_default)",
+   "label": "TRUE",
+   "reason": "unwrap_or builds a String-carrying value on every call; unwrap_or_else would build it only on failure."
+  },
+  {
+   "rule": "rerr-unwrap-or-builds-value",
+   "check": "rp-errors",
+   "file": "packages/agents/src/github_device.rs",
+   "line": 352,
+   "message": "unwrap_or is given a value that is built eagerly (use unwrap_or_else or unwrap_or_default)",
+   "label": "FALSE",
+   "reason": "The argument is a cheap constant (Path::new, a unit-like enum variant), so eager evaluation costs nothing."
+  },
+  {
+   "rule": "rerr-unwrap-or-builds-value",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/plugin_api/manifest.rs",
+   "line": 425,
+   "message": "unwrap_or is given a value that is built eagerly (use unwrap_or_else or unwrap_or_default)",
+   "label": "FALSE",
+   "reason": "The argument is a cheap constant (Path::new, a unit-like enum variant), so eager evaluation costs nothing."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "packages/calendar/src/oauth.rs",
+   "line": 68,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "FALSE",
+   "reason": "The enum derives thiserror::Error (which supplies Display) or is a serialized wire type, not a std error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/workflows/validate.rs",
+   "line": 26,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "TRUE",
+   "reason": "A public error enum with no Display impl and no thiserror derive, so it cannot be printed or used as std::error::Error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "packages/calendar/src/import.rs",
+   "line": 26,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "FALSE",
+   "reason": "The enum derives thiserror::Error (which supplies Display) or is a serialized wire type, not a std error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "apps/sync-server/src/devices.rs",
+   "line": 91,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "TRUE",
+   "reason": "A public error enum with no Display impl and no thiserror derive, so it cannot be printed or used as std::error::Error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "packages/core/src/error.rs",
+   "line": 9,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "FALSE",
+   "reason": "The enum derives thiserror::Error (which supplies Display) or is a serialized wire type, not a std error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "packages/sync/src/envelope.rs",
+   "line": 58,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "FALSE",
+   "reason": "The enum derives thiserror::Error (which supplies Display) or is a serialized wire type, not a std error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "packages/agents/src/github_device.rs",
+   "line": 446,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "TRUE",
+   "reason": "A public error enum with no Display impl and no thiserror derive, so it cannot be printed or used as std::error::Error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "apps/sync-server/src/hostlink/contract.rs",
+   "line": 72,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "FALSE",
+   "reason": "The enum derives thiserror::Error (which supplies Display) or is a serialized wire type, not a std error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "packages/calendar/src/subscription.rs",
+   "line": 59,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "FALSE",
+   "reason": "The enum derives thiserror::Error (which supplies Display) or is a serialized wire type, not a std error."
+  },
+  {
+   "rule": "rerr-error-no-display",
+   "check": "rp-errors",
+   "file": "packages/calendar/src/google.rs",
+   "line": 32,
+   "message": "an error enum has no Display impl, so it cannot be shown to a user",
+   "label": "FALSE",
+   "reason": "The enum derives thiserror::Error (which supplies Display) or is a serialized wire type, not a std error."
+  },
+  {
+   "rule": "rerr-process-exit-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 1234,
+   "message": "a library calls process::exit, which skips every caller and every destructor",
+   "label": "FALSE",
+   "reason": "process::exit in the CLI binary entry and panic handling, which is the binary own exit path, not library code."
+  },
+  {
+   "rule": "rerr-process-exit-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 1227,
+   "message": "a library calls process::exit, which skips every caller and every destructor",
+   "label": "FALSE",
+   "reason": "process::exit in the CLI binary entry and panic handling, which is the binary own exit path, not library code."
+  },
+  {
+   "rule": "rerr-process-exit-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/lifecycle.rs",
+   "line": 180,
+   "message": "a library calls process::exit, which skips every caller and every destructor",
+   "label": "FALSE",
+   "reason": "process::exit in the CLI binary entry and panic handling, which is the binary own exit path, not library code."
+  },
+  {
+   "rule": "rerr-process-exit-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 499,
+   "message": "a library calls process::exit, which skips every caller and every destructor",
+   "label": "FALSE",
+   "reason": "process::exit in the CLI binary entry and panic handling, which is the binary own exit path, not library code."
+  },
+  {
+   "rule": "rerr-process-exit-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/lifecycle.rs",
+   "line": 130,
+   "message": "a library calls process::exit, which skips every caller and every destructor",
+   "label": "FALSE",
+   "reason": "process::exit in the CLI binary entry and panic handling, which is the binary own exit path, not library code."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 2914,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/orchestra_cmds.rs",
+   "line": 444,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/scheduler.rs",
+   "line": 466,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/model_failover.rs",
+   "line": 378,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/vault_export_cmds.rs",
+   "line": 104,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/prompt_scheduler.rs",
+   "line": 217,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 3016,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/guide_watch.rs",
+   "line": 961,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/search_warm.rs",
+   "line": 53,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-catch-unwind-in-library",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/prompt_scheduler.rs",
+   "line": 496,
+   "message": "a library turns panics into values with catch_unwind (hides bugs from the caller)",
+   "label": "FALSE",
+   "reason": "Deliberate panic isolation at a job, thread or tool-call boundary so one panic does not take down the process."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "apps/sync-server/src/push/mod.rs",
+   "line": 531,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 6130,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 9705,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/panic_log.rs",
+   "line": 134,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/acp.rs",
+   "line": 2714,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "packages/agents/src/orchestrator.rs",
+   "line": 2159,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "packages/llm/src/router.rs",
+   "line": 221,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "packages/agents/src/web_sources/router.rs",
+   "line": 647,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "apps/sync-server/src/push/fcm.rs",
+   "line": 568,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-lock-unwrap-poison",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 13756,
+   "message": "a lock is unwrapped, so one panic while it was held makes every later call panic",
+   "label": "FALSE",
+   "reason": "Mutex lock().unwrap() in test code, where a poisoned lock should fail the test."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/notes.rs",
+   "line": 1257,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "packages/audit/src/provenance.rs",
+   "line": 854,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "packages/agents/src/tools.rs",
+   "line": 11409,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "packages/agents/src/web_guard.rs",
+   "line": 557,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "packages/agents/src/web_guard.rs",
+   "line": 843,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "packages/core/src/fsio.rs",
+   "line": 1799,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/provenance_cmds.rs",
+   "line": 621,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "packages/agents/src/diagram.rs",
+   "line": 7521,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "packages/agents/src/pdf_tool.rs",
+   "line": 1285,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-parse-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/provenance_cmds.rs",
+   "line": 353,
+   "message": "parse().unwrap() panics on input the user typed",
+   "label": "FALSE",
+   "reason": "parse().unwrap() in test code on a fixed value."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/vault_cmds.rs",
+   "line": 921,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/vault_cmds.rs",
+   "line": 1017,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/run_cmds.rs",
+   "line": 1205,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/library_cmds.rs",
+   "line": 2372,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/session_cmds.rs",
+   "line": 1961,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/engine/prompt.rs",
+   "line": 954,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "packages/agents/src/agent_files.rs",
+   "line": 431,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/vault_cmds.rs",
+   "line": 1100,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/vault_cmds.rs",
+   "line": 861,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-env-var-unwrap",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/vault_cmds.rs",
+   "line": 983,
+   "message": "an environment variable is read with unwrap or expect (panics when it is not set)",
+   "label": "FALSE",
+   "reason": "env::var().unwrap() in test code reading a variable the test just set."
+  },
+  {
+   "rule": "rerr-anyhow-in-library",
+   "check": "rp-errors",
+   "file": "packages/sync/src/reconcile.rs",
+   "line": 409,
+   "message": "a library exposes anyhow types, so callers cannot match its errors",
+   "label": "FALSE",
+   "reason": "anyhow is only used to build the message of an existing NvError::Other variant; the variant itself is the finding."
+  },
+  {
+   "rule": "rerr-anyhow-in-library",
+   "check": "rp-errors",
+   "file": "packages/core/src/error.rs",
+   "line": 26,
+   "message": "a library exposes anyhow types, so callers cannot match its errors",
+   "label": "TRUE",
+   "reason": "anyhow::Error is exposed in the public error type of a library crate (NvError::Other), so callers cannot match on it."
+  },
+  {
+   "rule": "rerr-anyhow-in-library",
+   "check": "rp-errors",
+   "file": "packages/vault/src/export.rs",
+   "line": 569,
+   "message": "a library exposes anyhow types, so callers cannot match its errors",
+   "label": "FALSE",
+   "reason": "anyhow is only used to build the message of an existing NvError::Other variant; the variant itself is the finding."
+  },
+  {
+   "rule": "rerr-anyhow-in-library",
+   "check": "rp-errors",
+   "file": "packages/sync/src/client.rs",
+   "line": 49,
+   "message": "a library exposes anyhow types, so callers cannot match its errors",
+   "label": "FALSE",
+   "reason": "anyhow is only used to build the message of an existing NvError::Other variant; the variant itself is the finding."
+  },
+  {
+   "rule": "rerr-match-err-swallowed",
+   "check": "rp-errors",
+   "file": "packages/runtime/src/workspace_checkpoints.rs",
+   "line": 612,
+   "message": "an Err arm is matched with _ and an empty body, so the error disappears",
+   "label": "FALSE",
+   "reason": "A deliberate Err(_) arm that falls back to a default; the error is intentionally ignored."
+  },
+  {
+   "rule": "rerr-match-err-swallowed",
+   "check": "rp-errors",
+   "file": "packages/core/src/fsio.rs",
+   "line": 305,
+   "message": "an Err arm is matched with _ and an empty body, so the error disappears",
+   "label": "FALSE",
+   "reason": "A deliberate Err(_) arm that falls back to a default; the error is intentionally ignored."
+  },
+  {
+   "rule": "rerr-match-err-swallowed",
+   "check": "rp-errors",
+   "file": "packages/agents/src/fs_tools.rs",
+   "line": 1540,
+   "message": "an Err arm is matched with _ and an empty body, so the error disappears",
+   "label": "FALSE",
+   "reason": "A deliberate Err(_) arm that falls back to a default; the error is intentionally ignored."
+  },
+  {
+   "rule": "rerr-unwrap-in-drop",
+   "check": "rp-errors",
+   "file": "apps/nv-sidecar/src/run_retention.rs",
+   "line": 250,
+   "message": "a Drop impl calls unwrap or expect, so a panic can happen during unwinding",
+   "label": "FALSE",
+   "reason": "unwrap inside a Drop impl of a test-only helper type (scratch dir or test vault)."
+  },
+  {
+   "rule": "rerr-unwrap-in-drop",
+   "check": "rp-errors",
+   "file": "packages/agents/src/office_tool.rs",
+   "line": 543,
+   "message": "a Drop impl calls unwrap or expect, so a panic can happen during unwinding",
+   "label": "FALSE",
+   "reason": "unwrap inside a Drop impl of a test-only helper type (scratch dir or test vault)."
+  },
+  {
+   "rule": "rerr-unwrap-in-drop",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/integration_land_job.rs",
+   "line": 302,
+   "message": "a Drop impl calls unwrap or expect, so a panic can happen during unwinding",
+   "label": "FALSE",
+   "reason": "unwrap inside a Drop impl of a test-only helper type (scratch dir or test vault)."
+  },
+  {
+   "rule": "rerr-unwrap-in-drop",
+   "check": "rp-errors",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 2429,
+   "message": "a Drop impl calls unwrap or expect, so a panic can happen during unwinding",
+   "label": "FALSE",
+   "reason": "unwrap inside a Drop impl of a test-only helper type (scratch dir or test vault)."
+  },
+  {
+   "rule": "rerr-unwrap-in-drop",
+   "check": "rp-errors",
+   "file": "apps/desktop-web/src-tauri/src/sync_runtime.rs",
+   "line": 743,
+   "message": "a Drop impl calls unwrap or expect, so a panic can happen during unwinding",
+   "label": "FALSE",
+   "reason": "unwrap inside a Drop impl of a test-only helper type (scratch dir or test vault)."
+  },
+  {
+   "rule": "rperf-len-compare-zero",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/repo_instructions.rs",
+   "line": 102,
+   "message": "len() is compared with 0 (use is_empty, which states the intent)",
+   "label": "FALSE",
+   "reason": "len() is called on fs::Metadata, which has no is_empty(), so `> 0` is the only form available."
+  },
+  {
+   "rule": "rperf-len-compare-zero",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/recorder/keyframe.rs",
+   "line": 351,
+   "message": "len() is compared with 0 (use is_empty, which states the intent)",
+   "label": "FALSE",
+   "reason": "len() is called on fs::Metadata, which has no is_empty(), so `> 0` is the only form available."
+  },
+  {
+   "rule": "rperf-len-compare-zero",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/recorder/keyframe.rs",
+   "line": 651,
+   "message": "len() is compared with 0 (use is_empty, which states the intent)",
+   "label": "FALSE",
+   "reason": "len() is called on fs::Metadata, which has no is_empty(), so `> 0` is the only form available."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/jobs/heartbeat.rs",
+   "line": 146,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/github_tool.rs",
+   "line": 952,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/tools.rs",
+   "line": 5639,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "packages/search/src/lexical.rs",
+   "line": 2075,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/status.rs",
+   "line": 275,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/github_write.rs",
+   "line": 379,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/diagram.rs",
+   "line": 2622,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/banner.rs",
+   "line": 121,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/orchestra_plan.rs",
+   "line": 614,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-push-str-format",
+   "check": "rp-perf-style",
+   "file": "apps/desktop-web/src-tauri/src/pages.rs",
+   "line": 773,
+   "message": "push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)",
+   "label": "TRUE",
+   "reason": "push_str(&format!(..)) allocates a temporary String; write! would avoid it. Accurate (style)."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/git_strip.rs",
+   "line": 370,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "packages/llm/src/providers.rs",
+   "line": 2561,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "packages/memory/src/store.rs",
+   "line": 1147,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/mcp_server.rs",
+   "line": 982,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/library.rs",
+   "line": 206,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/git_strip_pr.rs",
+   "line": 203,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "packages/memory/src/store.rs",
+   "line": 1148,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/provider_prefs.rs",
+   "line": 1343,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/git_strip_pr.rs",
+   "line": 213,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-bool-eq-literal",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/git_strip.rs",
+   "line": 468,
+   "message": "a bool is compared with == true or == false",
+   "label": "FALSE",
+   "reason": "A serde_json Value compared with a bool literal; the comparison is the idiomatic form and a plain bool shortcut does not apply."
+  },
+  {
+   "rule": "rperf-index-range-loop",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/jobs/curator/playbooks/detect.rs",
+   "line": 481,
+   "message": "a loop indexes a vector by position over 0..len (iterate the items instead)",
+   "label": "FALSE",
+   "reason": "The index is needed (it is used for neighbours, offsets or a second slice), so an iterator would not be simpler."
+  },
+  {
+   "rule": "rperf-index-range-loop",
+   "check": "rp-perf-style",
+   "file": "apps/desktop-web/src-tauri/src/pages.rs",
+   "line": 1291,
+   "message": "a loop indexes a vector by position over 0..len (iterate the items instead)",
+   "label": "FALSE",
+   "reason": "The index is needed (it is used for neighbours, offsets or a second slice), so an iterator would not be simpler."
+  },
+  {
+   "rule": "rperf-index-range-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/diagram.rs",
+   "line": 4633,
+   "message": "a loop indexes a vector by position over 0..len (iterate the items instead)",
+   "label": "FALSE",
+   "reason": "The index is needed (it is used for neighbours, offsets or a second slice), so an iterator would not be simpler."
+  },
+  {
+   "rule": "rperf-index-range-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/secret_shapes.rs",
+   "line": 1151,
+   "message": "a loop indexes a vector by position over 0..len (iterate the items instead)",
+   "label": "FALSE",
+   "reason": "The index is needed (it is used for neighbours, offsets or a second slice), so an iterator would not be simpler."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 1847,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 716,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/shell_tool.rs",
+   "line": 2206,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 1680,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 715,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 1681,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 714,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/shell_isolation.rs",
+   "line": 749,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 829,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-option-option",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 1679,
+   "message": "Option<Option<T>> is written (flatten it or use a clearer type)",
+   "label": "TRUE",
+   "reason": "Option<Option<_>> is present; accurate (a style finding, here sometimes deliberate for tri-state values)."
+  },
+  {
+   "rule": "rperf-regex-compiled-per-call",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/fs_tools.rs",
+   "line": 799,
+   "message": "Regex::new runs inside a function, so the pattern is compiled on every call",
+   "label": "FALSE",
+   "reason": "The pattern is dynamic (user input) or the builder runs once inside a OnceLock or static initialiser."
+  },
+  {
+   "rule": "rperf-regex-compiled-per-call",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/secret_shapes.rs",
+   "line": 1329,
+   "message": "Regex::new runs inside a function, so the pattern is compiled on every call",
+   "label": "TRUE",
+   "reason": "A regex built from a constant pattern on every call; it should be compiled once."
+  },
+  {
+   "rule": "rperf-regex-compiled-per-call",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/fs_tools.rs",
+   "line": 792,
+   "message": "Regex::new runs inside a function, so the pattern is compiled on every call",
+   "label": "FALSE",
+   "reason": "The pattern is dynamic (user input) or the builder runs once inside a OnceLock or static initialiser."
+  },
+  {
+   "rule": "rperf-regex-compiled-per-call",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/workflows/compiler.rs",
+   "line": 743,
+   "message": "Regex::new runs inside a function, so the pattern is compiled on every call",
+   "label": "FALSE",
+   "reason": "The pattern is dynamic (user input) or the builder runs once inside a OnceLock or static initialiser."
+  },
+  {
+   "rule": "rperf-regex-compiled-per-call",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/report_redact.rs",
+   "line": 30,
+   "message": "Regex::new runs inside a function, so the pattern is compiled on every call",
+   "label": "FALSE",
+   "reason": "The pattern is dynamic (user input) or the builder runs once inside a OnceLock or static initialiser."
+  },
+  {
+   "rule": "rperf-regex-compiled-per-call",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/client_secret.rs",
+   "line": 807,
+   "message": "Regex::new runs inside a function, so the pattern is compiled on every call",
+   "label": "FALSE",
+   "reason": "The pattern is dynamic (user input) or the builder runs once inside a OnceLock or static initialiser."
+  },
+  {
+   "rule": "rperf-regex-compiled-per-call",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/mask.rs",
+   "line": 54,
+   "message": "Regex::new runs inside a function, so the pattern is compiled on every call",
+   "label": "FALSE",
+   "reason": "The pattern is dynamic (user input) or the builder runs once inside a OnceLock or static initialiser."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/provenance_cmds.rs",
+   "line": 263,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/audit.rs",
+   "line": 142,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/plugins.rs",
+   "line": 483,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/canvas.rs",
+   "line": 162,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/init.rs",
+   "line": 198,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/exec.rs",
+   "line": 2094,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/canvas.rs",
+   "line": 192,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/mcp.rs",
+   "line": 575,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/plugins.rs",
+   "line": 324,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-println-in-library",
+   "check": "rp-perf-style",
+   "file": "apps/nv-cli/src/audit.rs",
+   "line": 130,
+   "message": "a library prints to stdout or stderr (the caller cannot silence or capture it)",
+   "label": "FALSE",
+   "reason": "Printing is the purpose of this CLI command or test; the code is a binary command module, not a library."
+  },
+  {
+   "rule": "rperf-allow-dead-code-crate",
+   "check": "rp-perf-style",
+   "file": "packages/import/src/lib.rs",
+   "line": 20,
+   "message": "dead_code is allowed for the whole crate, which hides unused code",
+   "label": "TRUE",
+   "reason": "A crate-wide #![allow(dead_code, unused)] hides every unused item; accurate."
+  },
+  {
+   "rule": "rperf-allow-dead-code-crate",
+   "check": "rp-perf-style",
+   "file": "packages/auth/src/lib.rs",
+   "line": 19,
+   "message": "dead_code is allowed for the whole crate, which hides unused code",
+   "label": "TRUE",
+   "reason": "A crate-wide #![allow(dead_code, unused)] hides every unused item; accurate."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/chat_cmds.rs",
+   "line": 9721,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/repo_instructions.rs",
+   "line": 231,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/supply_chain.rs",
+   "line": 2046,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/tools.rs",
+   "line": 1985,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/supply_chain.rs",
+   "line": 1135,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/protocol.rs",
+   "line": 152,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/sync-server/src/main.rs",
+   "line": 381,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/github_fake.rs",
+   "line": 55,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 4816,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/model_routing.rs",
+   "line": 174,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec::new() is not allocated inside the loop body that repeats (or it is in test code); the rule matched a declaration near a loop."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/line_refs.rs",
+   "line": 263,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec is moved into the CodeBlock pushed out of the loop, so it cannot be hoisted."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/orchestrate.rs",
+   "line": 1092,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The handle list is local scratch rebuilt for every chunk and consumed in the same iteration, so it could be sized once."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/session_groups_cmds.rs",
+   "line": 575,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The path stack is local scratch used and dropped in each iteration; one reused Vec with clear() would do."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "apps/nv-sidecar/src/tool_loop.rs",
+   "line": 3501,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec is the value of the match arm and is returned out of the iteration, so it cannot be hoisted."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/secret_shapes.rs",
+   "line": 1201,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The line window is local scratch rebuilt per iteration and dropped; one reused Vec with clear() would do."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/supply_chain/runners.rs",
+   "line": 722,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The texts list is local scratch built and consumed in each iteration; it could be hoisted and cleared."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/supply_chain/runners.rs",
+   "line": 1406,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The texts list is local scratch built and consumed in each iteration; it could be hoisted and cleared."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/supply_chain.rs",
+   "line": 1108,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The kept words are local scratch joined into a string in the same iteration; it could be hoisted and cleared."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/guard/supply_chain.rs",
+   "line": 5073,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The sub-hit list is local scratch passed to shell_hits and merged in each iteration; it could be hoisted and cleared."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/orchestra_plan.rs",
+   "line": 406,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec is moved into the PlanAgent pushed out of the loop, so it cannot be hoisted."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/orchestra_plan.rs",
+   "line": 407,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec is moved into the PlanAgent pushed out of the loop, so it cannot be hoisted."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/orchestra_plan.rs",
+   "line": 408,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec is moved into the PlanAgent pushed out of the loop, so it cannot be hoisted."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/agents/src/tools.rs",
+   "line": 11394,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "Test code: a mock server reads one request per connection, and a fresh buffer per request is the point."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/codegraph/src/extract.rs",
+   "line": 273,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The emitted list is a per-file dedupe scratch used and dropped in each iteration; it could be hoisted and cleared."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/llm/src/stub.rs",
+   "line": 26,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "Test stub server: a fresh request buffer per connection is the point."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/engine/rounds.rs",
+   "line": 4785,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "Test mock server: a fresh request buffer per connection is the point."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/jobs/curator/repair.rs",
+   "line": 374,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The add list is local scratch built and consumed in each iteration; it could be hoisted and cleared."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/jobs/curator/repair.rs",
+   "line": 375,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "TRUE",
+   "reason": "The because list is local scratch built and joined in each iteration; it could be hoisted and cleared."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/jobs/curator/repair.rs",
+   "line": 480,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec is moved into the ProposedRelink pushed out of the loop, so it cannot be hoisted."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/runtime/src/workspace_checkpoints.rs",
+   "line": 822,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "The Vec is moved into Op::Remove stored in the result, so it cannot be hoisted."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/vault/src/vault.rs",
+   "line": 2173,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "Test code: each worker thread returns its own list; the loop is over threads and the list is moved out."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/vault/src/vault.rs",
+   "line": 2253,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "Test code: each worker thread returns its own list; the loop is over threads and the list is moved out."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/vault/src/vault.rs",
+   "line": 2325,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "Test code: each worker thread returns its own list; the loop is over threads and the list is moved out."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/vault/src/vault.rs",
+   "line": 2345,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "Test code: each worker thread returns its own list; the loop is over threads and the list is moved out."
+  },
+  {
+   "rule": "rperf-vec-new-in-loop",
+   "check": "rp-perf-style",
+   "file": "packages/vault/src/vault.rs",
+   "line": 2401,
+   "message": "a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)",
+   "label": "FALSE",
+   "reason": "Test code: each worker thread returns its own list; the loop is over threads and the list is moved out."
+  }
+ ]
+}

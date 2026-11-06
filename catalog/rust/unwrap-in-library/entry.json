@@ -1,0 +1,8 @@
+{
+  "rule": "rs-unwrap-in-library",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-rust",
+  "why": "Returning the error with ? lets the caller decide what to do, where unwrap() panics the whole program.",
+  "bad": "bad/src/lib.rs",
+  "good": "good/src/lib.rs"
+}

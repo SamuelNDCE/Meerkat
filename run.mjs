@@ -1,12 +1,18 @@
 // Meerkat, the validation tool (issue #3114). Contract: docs/testing/validation-tool.md.
 //   npm --prefix apps/desktop-electron run verify            (fast tier)
 //   npm --prefix apps/desktop-electron run verify -- --thorough
+import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { cpus, freemem } from 'node:os'
+import { diffSnapshots, snapshotDigest, snapshotTree, violationText } from './lib/integrity.mjs'
+import { cacheFile, cacheHit, cacheKey, readCache, saveCache, updatedCache } from './lib/resultcache.mjs'
+import { acceptedSets, applyAccepted } from './lib/accepted.mjs'
+import { githubAnnotations } from './lib/ci-output.mjs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { changedFiles as gitChangedFiles, inScopeFile, scopedFiles } from './lib/changed.mjs'
 import { appDirOf, appProblem, repoRootOf } from './lib/paths.mjs'
+import { loadOrder } from './lib/testorder.mjs'
 import { applyProfile } from './lib/profiles.mjs'
 import { defaultParallel, lowerPriority, priorityProblem } from './lib/priority.mjs'
 import { createProgress } from './lib/progress.mjs'
@@ -21,7 +27,7 @@ import { clampScale } from './lib/timeouts.mjs'
 import { detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
 import { compactSummary } from './lib/tui/results.mjs'
-import { saveFindings } from './lib/findingsdoc.mjs'
+import { buildFindings, saveFindings } from './lib/findingsdoc.mjs'
 import { createInterface } from 'node:readline/promises'
 import { verifyRunDir } from './lib/aiverify.mjs'
 import { appendRunLog, createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
@@ -43,6 +49,15 @@ import { loadTheme } from './lib/tui/theme.mjs'
 import { VERSION } from './lib/version.mjs'
 
 const meerkatVersion = () => VERSION // lib/version.mjs: package.json, read once
+
+// The commit a project is on, or null (not a git repository, or git is missing). Part of the result-cache key.
+function headOf(root) {
+  try {
+    return execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null
+  } catch {
+    return null
+  }
+}
 
 // How a time estimate reads: "about 1 second", "about 5 seconds", "about 2.5 minutes".
 export function durationText(ms) {
@@ -76,6 +91,15 @@ async function askYes(text) {
   }
 }
 
+// The findings of a run as findings.json will list them, or null when they cannot be built (accepting findings is then skipped, never fatal).
+function safeBuild(args) {
+  try {
+    return buildFindings({ ...args, meta: { runId: 'accepted', version: '', dir: '', preset: null, tier: '', startedAt: '', endedAt: '', ms: 0 } })
+  } catch {
+    return null
+  }
+}
+
 export function parseArgs(argv) {
   const o = { progress: null, profile: null, thorough: false, changed: false, scope: [], all: false, only: [], suites: [], include: [], list: false, selfTest: false, json: null, keepGoing: false, ui: false, theme: null, app: null, config: null, noConfig: false, preset: null, groups: [], estimate: false, init: false, listPresets: false, errors: [] }
   const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
@@ -90,6 +114,9 @@ export function parseArgs(argv) {
       else o.scope.push(...v.split(',').map((x) => x.trim()).filter(Boolean))
     }
     else if (a === '--all') o.all = true
+    else if (a === '--ratchet') o.ratchet = true
+    else if (a === '--no-cache') o.noCache = true
+    else if (a === '--format') o.format = next()
     else if (a === '--list') o.list = true
     else if (a === '--self-test') o.selfTest = true
     else if (a === '--keep-going') o.keepGoing = true
@@ -391,7 +418,13 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     status.stop()
   } else {
     splash.step('Choosing the checks to run')
-    const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, windows: chosen.preset?.windows !== false || env.MEERKAT_WINDOWS === '1', skipCompile: chosen.preset?.skipCompile === true })
+    const order = loadOrder([appDir, repoRoot])
+    if (order.error) {
+      settleSplash()
+      fail(order.error)
+      return 2
+    }
+    const sel = selectChecks(checks, { kindOrder: order.kinds ?? null, tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, windows: chosen.preset?.windows !== false || env.MEERKAT_WINDOWS === '1', skipCompile: chosen.preset?.skipCompile === true })
     settleSplash()
     if (opts.estimate) {
       // How long this run should take on this PC: the learned times, run through the same scheduling rules (lib/eta.mjs).
@@ -431,8 +464,58 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     // How much a run may use at once: every thread by default, and 3 GB of memory left free; the config can change both.
     const budget = { cpu: read.config.budget?.cpu ?? Math.min(10, cpus().length), reserveGB: read.config.budget?.reserveGB ?? 3, maxParallel: read.config.budget?.maxParallel ?? 10, maxWindows: found?.result.maxWindows ?? 3 }
     schedulerUsed = { slots: budget.cpu, maxParallel: budget.maxParallel, reserveGB: budget.reserveGB }
-    results = await stoppable(ctx, log, () => runAll(sel.run, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: defaultParallel(cpus().length, env), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder), deadlineMs: runDeadlineMs(ctx, opts) }))
+    // Result cache and project guard (lib/resultcache.mjs, lib/integrity.mjs). A check that passed on this exact project recently is
+    // reused, not run again. The project is compared before and after the run: a write into it fails the run.
+    const cacheOn = !opts.noCache && !opts.selfTest && Boolean(repoRoot)
+    // cargo writes a Cargo.lock when a project has none (cargo metadata, audit, deny): that first lockfile is not a check changing the project.
+    const allowWrites = [...(Array.isArray(read.config.allowWrites) ? read.config.allowWrites.filter((x) => typeof x === 'string') : []), ...(repoRoot && !existsSync(join(repoRoot, 'Cargo.lock')) ? ['Cargo.lock'] : [])]
+    const beforeSnap = opts.selfTest ? null : snapshotTree(repoRoot, { allow: allowWrites })
+    const digest = beforeSnap ? snapshotDigest(beforeSnap) : null
+    const head = headOf(repoRoot)
+    const cacheBefore = cacheOn && digest ? readCache(cacheFile(env, appDir)) : null
+    const cacheKeys = new Map()
+    const cached = []
+    const toRun = []
+    for (const c of sel.run) {
+      if (!cacheOn || !digest) {
+        toRun.push(c)
+        continue
+      }
+      const key = cacheKey({ digest, head, tier, version: meerkatVersion(), checkId: c.id })
+      cacheKeys.set(c.id, key)
+      const hit = cacheHit(cacheBefore, c.id, key)
+      if (hit) cached.push({ ...hit.result, status: 'PASS', ms: 0, cached: true, detail: `unchanged since ${hit.at.slice(0, 16).replace('T', ' ')} UTC: passed on this exact project (--no-cache runs it again)` })
+      else toRun.push(c)
+    }
+    const ranNow = toRun.length ? await stoppable(ctx, log, () => runAll(toRun, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: defaultParallel(cpus().length, env), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder), deadlineMs: runDeadlineMs(ctx, opts) })) : []
+    results = [...ranNow, ...cached]
+    if (cached.length && !quiet) log(`cache: ${cached.length} passing check(s) reused from an earlier run on this exact project (--no-cache runs everything again)`)
     bar.stop()
+    // The project guard: anything a check wrote into the project fails the run, and nothing from that run is cached.
+    const afterSnap = beforeSnap ? snapshotTree(repoRoot, { allow: allowWrites }) : null
+    const writes = beforeSnap && afterSnap ? diffSnapshots(beforeSnap, afterSnap) : null
+    const wroteProject = Boolean(writes && writes.changed.length + writes.added.length + writes.removed.length)
+    if (wroteProject) results.push({ id: 'project-integrity', title: 'Checks must not change the project', suite: 'other', group: 'functionality', status: 'FAIL', detail: violationText(writes), ms: 0 })
+    if (cacheOn && digest && !wroteProject) {
+      const passes = results.filter((r) => r.status === 'PASS' && !r.cached && cacheKeys.has(r.id)).map((r) => ({ id: r.id, key: cacheKeys.get(r.id), result: r }))
+      if (passes.length) {
+        const { text } = updatedCache(cacheBefore ?? { schemaVersion: 1, entries: {} }, passes)
+        saveCache(env, appDir, text)
+      }
+    }
+    // Accepted findings (lib/accepted.mjs): dismissed ones, and with --ratchet the baseline. A check whose findings are all accepted passes.
+    const acceptedSetsNow = opts.selfTest ? null : acceptedSets({ env, projectPath: appDir, ratchet: Boolean(opts.ratchet) })
+    const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size))
+    // The ids come from the same builder that writes findings.json, so a dismissed id matches what the run lists.
+    const builtNow = anyAccepted ? safeBuild({ results, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env }) : null
+    const acceptedRecords = builtNow ? applyAccepted(results, ctx.findingsSink, acceptedSetsNow, builtNow.findings, builtNow.hiddenChecks) : []
+    if (acceptedRecords.length) {
+      try {
+        writeFileSync(join(ctx.logDir, 'accepted.json'), JSON.stringify({ schemaVersion: 1, mode: opts.ratchet ? 'ratchet' : 'dismissed', items: acceptedRecords }, null, 2))
+      } catch {
+        /* the record of accepted findings is a convenience; the run result stands */
+      }
+    }
     status.stop()
     // Keep what this run measured, so the next run's order, bar and time left are closer to the truth.
     saveTimings(timingsFile, { ...recordRun(timings, results, tier), project: appDir })
@@ -465,6 +548,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (opts.scope?.length) for (const entry of ctx.findingsSink.values()) entry.findings = (entry.findings ?? []).filter((f) => inScopeFile(f.file, opts.scope))
   const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
   if (findingsInfo && !opts.selfTest && !hush && !boardShown) log(findingsInfo.line)
+  // --format github: one workflow annotation per open finding, so GitHub Actions shows them on the changed lines (lib/ci-output.mjs).
+  if (opts.format === 'github' && findingsInfo?.doc) for (const l of githubAnnotations(findingsInfo.doc)) process.stdout.write(`${l}\n`)
   const report = writeRunReport({ checks: ranChecks.length ? ranChecks : checks, interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs })
   // Optional (--ai-verify): a model double-checks the medium, high and critical findings. Off by default; it asks first unless --yes (lib/aiverify.mjs).
   if (opts.aiVerify && findingsInfo && !opts.selfTest && ctx.logDir) {

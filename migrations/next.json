@@ -1,0 +1,95 @@
+{
+  "framework": "next",
+  "name": "Next.js",
+  "package": "next",
+  "source": "Official Next.js upgrade guides, read 2026-11-06. Add a guide entry per major step; items must come from the guide text, never from memory.",
+  "guides": [
+    {
+      "from": 14,
+      "to": 15,
+      "url": "https://nextjs.org/docs/app/guides/upgrading/version-15",
+      "items": [
+        {
+          "id": "react-19",
+          "title": "react and react-dom must be 19 or newer",
+          "anchor": "#react-19",
+          "files": ["package.json"],
+          "pattern": "\"react(-dom)?\"\\s*:",
+          "change": "Install next, react, react-dom and eslint-config-next at latest; with TypeScript also upgrade @types/react and @types/react-dom. Replace useFormState with useActionState."
+        },
+        {
+          "id": "async-request-apis",
+          "title": "cookies, headers, draftMode, params and searchParams are now asynchronous",
+          "anchor": "#async-request-apis-breaking-change",
+          "files": ["app/**/*.{js,jsx,ts,tsx}", "src/app/**/*.{js,jsx,ts,tsx}"],
+          "pattern": "\\b(cookies|headers|draftMode)\\s*\\(|\\bsearchParams\\b|\\bparams\\b",
+          "change": "Use await cookies(), await headers(), await draftMode(); type params and searchParams as Promise and await them (or use React use() in synchronous components). The official codemod can do this."
+        },
+        {
+          "id": "runtime-experimental-edge",
+          "title": "runtime = 'experimental-edge' now errors",
+          "anchor": "#runtime-configuration-breaking-change",
+          "files": ["app/**/*.{js,jsx,ts,tsx}", "src/app/**/*.{js,jsx,ts,tsx}"],
+          "pattern": "experimental-edge",
+          "change": "Change the runtime segment config to 'edge'."
+        },
+        {
+          "id": "fetch-not-cached",
+          "title": "fetch requests are no longer cached by default",
+          "anchor": "#fetch-requests",
+          "files": ["app/**/*.{js,jsx,ts,tsx}", "src/app/**/*.{js,jsx,ts,tsx}"],
+          "pattern": "\\bfetch\\s*\\(",
+          "change": "Pass cache: 'force-cache' on requests that should stay cached, or export const fetchCache = 'default-cache' from a layout or page."
+        },
+        {
+          "id": "route-handler-get",
+          "title": "GET route handlers are no longer cached by default",
+          "anchor": "#route-handlers",
+          "files": ["app/**/route.{js,ts}", "src/app/**/route.{js,ts}"],
+          "pattern": "export\\s+(async\\s+)?function\\s+GET",
+          "change": "Add export const dynamic = 'force-static' to handlers that should be cached."
+        },
+        {
+          "id": "client-cache",
+          "title": "Page segments are no longer reused from the client cache on navigation",
+          "anchor": "#client-cache",
+          "files": ["next.config.{js,mjs,ts}"],
+          "pattern": "staleTimes|experimental",
+          "change": "To keep the old behaviour set experimental.staleTimes (dynamic: 30, static: 180 in the guide's example)."
+        },
+        {
+          "id": "next-font",
+          "title": "@next/font package removed",
+          "anchor": "#nextfont",
+          "files": ["app/**/*.{js,jsx,ts,tsx}", "pages/**/*.{js,jsx,ts,tsx}", "src/**/*.{js,jsx,ts,tsx}"],
+          "pattern": "@next/font",
+          "change": "Import from next/font/google or next/font/local instead of @next/font."
+        },
+        {
+          "id": "renamed-experimental-config",
+          "title": "experimental.bundlePagesExternals and experimental.serverComponentsExternalPackages are now stable and renamed",
+          "anchor": "#bundlepagesrouterdependencies",
+          "files": ["next.config.{js,mjs,ts}"],
+          "pattern": "bundlePagesExternals|serverComponentsExternalPackages",
+          "change": "Rename to bundlePagesRouterDependencies and serverExternalPackages, moved out of experimental."
+        },
+        {
+          "id": "speed-insights",
+          "title": "Automatic Speed Insights instrumentation removed",
+          "anchor": "#speed-insights",
+          "files": ["package.json"],
+          "pattern": "speed-insights",
+          "change": "Follow the Vercel Speed Insights Quickstart if you still want it."
+        },
+        {
+          "id": "nextrequest-geo-ip",
+          "title": "NextRequest geo and ip properties removed",
+          "anchor": "#nextrequest-geolocation",
+          "files": ["middleware.{js,ts}", "src/middleware.{js,ts}", "app/**/route.{js,ts}"],
+          "pattern": "\\.(geo|ip)\\b",
+          "change": "Read the value from your host instead; on Vercel use geolocation() and ipAddress() from @vercel/functions."
+        }
+      ]
+    }
+  ]
+}

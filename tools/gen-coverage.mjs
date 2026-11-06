@@ -63,6 +63,8 @@ const LOOKS_AT = {
   dotnet: '.NET projects (sln, csproj)',
   php: 'PHP projects (composer.json)',
   ruby: 'Ruby projects',
+  'c-cpp': 'C and C++ source files',
+  'doc-drift': 'README.md and docs/*.md, compared with the code',
   swift: 'Swift packages',
   dart: 'Dart and Flutter projects',
   terraform: 'Terraform files (.tf); its check also holds the Compose rules',

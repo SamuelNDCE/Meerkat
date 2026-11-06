@@ -1,0 +1,8 @@
+{
+  "name": "codemap-fixture",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "bin": { "fx": "bin/fx.js" },
+  "scripts": { "start": "node src/server.js", "test": "echo no tests" },
+  "dependencies": { "left-pad": "1.0.0" }
+}
