@@ -59,6 +59,12 @@ function runCheck(d, side) {
     } else if (d.family === 'electron-plus') writeFileSync(join(dir, 'package.json'), ELECTRON_PKG)
     mkdirSync(dirname(target), { recursive: true })
     writeFileSync(target, copy)
+    // Companion files (a src/main.rs beside a Cargo.toml) make the project the kind of project the rule is about.
+    for (const cp of d.companions ?? []) {
+      const dest = join(dir, ...cp.split('/'))
+      mkdirSync(dirname(dest), { recursive: true })
+      writeFileSync(dest, readFileSync(join(CORPUS, d.id, side, ...cp.split('/'))))
+    }
     const child = spawn(process.execPath, [join(REPO, 'thorough', d.script), d.check, '--root', dir], { stdio: ['ignore', 'pipe', 'pipe'], env: ENV })
     let out = ''
     let timedOut = false
