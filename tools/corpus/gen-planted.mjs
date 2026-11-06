@@ -111,14 +111,14 @@ function filler(ext, r, count, which) {
   return lines
 }
 
-function build(ext, text, ops, r) {
+function build(ext, text, ops, r, noIndent = false) {
   let lines = text.split('\n')
   let trailingNl = false
   if (lines[lines.length - 1] === '') {
     lines.pop()
     trailingNl = true
   }
-  if (ops.indent && INDENTABLE.has(ext)) {
+  if (ops.indent && INDENTABLE.has(ext) && !noIndent) {
     const pad = ops.indent === 'tab' ? '\t' : ' '.repeat(ops.indent)
     lines = lines.map((l) => (l ? pad + l : l))
   }
@@ -149,6 +149,9 @@ const VARIANTS = [
 const BASENAMES = ['app', 'server', 'index', 'handler', 'util', 'service', 'main', 'worker', 'client', 'routes', 'loader', 'tasks']
 const DIRS = ['', 'src/', 'lib/', 'src/core/', 'app/', 'pkg/']
 
+// Files a rule needs beside its sample (the rule's own `needs` test is about the whole project): path -> content.
+const COMPANIONS = { 'rcargo-no-lockfile-binary': { 'src/main.rs': 'fn main() {}\n' } }
+
 const defaultPath = (rule) => {
   if (rule.sample) return { path: rule.sample, fixed: true }
   if (rule.files) return { path: 'src/lib.rs', fixed: true }
@@ -175,8 +178,10 @@ for (const [family, script, mod] of SOURCES) {
         const r = rng(SEED ^ hash(`${check}/${rule.id}/${v}`))
         const ops = VARIANTS[v]()
         const renamed = ops.rename ? applyRenames(r, rule, rule.bad, rule.good) : { bad: rule.bad, good: rule.good, map: {} }
-        const bad = build(ext, renamed.bad, ops, rng(SEED ^ hash(`f/${check}/${rule.id}/${v}`)))
-        const good = build(ext, renamed.good, ops, rng(SEED ^ hash(`f/${check}/${rule.id}/${v}`)))
+        // A rule anchored at column 0 (^ not followed by \s) cannot see an indented line, so that variant is not indented.
+        const noIndent = /^\^(?!\\s)/.test(rule.re?.source ?? '')
+        const bad = build(ext, renamed.bad, ops, rng(SEED ^ hash(`f/${check}/${rule.id}/${v}`)), noIndent)
+        const good = build(ext, renamed.good, ops, rng(SEED ^ hash(`f/${check}/${rule.id}/${v}`)), noIndent)
         let file = base.path
         if (!base.fixed && v > 0) file = `${pick(r, DIRS)}${pick(r, BASENAMES)}.${ext}`
         const sig = `${file}\0${bad.text}\0${good.text}`
@@ -187,10 +192,13 @@ for (const [family, script, mod] of SOURCES) {
         seen.add(sig)
         const id = `${check}.${rule.id}.v${v}`
         const dir = join(OUT, id)
+        const companions = COMPANIONS[rule.id] ?? {}
         for (const [side, t] of [['bad', bad.text], ['good', good.text]]) {
-          const p = join(dir, side, ...file.split('/'))
-          mkdirSync(dirname(p), { recursive: true })
-          writeFileSync(p, t)
+          for (const [cp, ct] of [[file, t], ...Object.entries(companions)]) {
+            const p = join(dir, side, ...cp.split('/'))
+            mkdirSync(dirname(p), { recursive: true })
+            writeFileSync(p, ct)
+          }
         }
         const opNames = Object.entries(ops).filter(([, x]) => x).map(([k, x]) => (x === true ? k : `${k}=${x}`))
         const renames = Object.entries(renamed.map).map(([a, b]) => `${a}->${b}`)
@@ -206,6 +214,7 @@ for (const [family, script, mod] of SOURCES) {
           ops: opNames,
           canonical: v === 0,
           severity: rule.severity ?? null,
+          ...(Object.keys(companions).length ? { companions: Object.keys(companions) } : {}),
           defect: `${id}/bad/${file}`,
           twin: `${id}/good/${file}`,
         })

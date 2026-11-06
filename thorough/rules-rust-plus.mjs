@@ -12,6 +12,8 @@ const TOML_SKIP = /^\s*#/
 // Tests, docs, examples, benches and vendored code, plus this engine's own files (their samples quote the dangerous code on purpose).
 // Agent worktrees (.claude/worktrees) are duplicate checkouts of the same code, so they are excluded too.
 const TEST_OUT = /(^|\/)\.claude\/|(^|\/)(tests?|__tests__|spec|specs|examples?|docs?|fixtures?|testdata|vendor|third_party|benches?)\/|\.(test|spec)\.[a-z]+$|(^|\/)(rules-rust-plus|rust-plus)\.mjs$|(^|\/)[^/]*_tests?\.rs$|(^|\/)tests?\.rs$|(^|\/)[^/]*_test\.rs$|(^|\/)packs\/rust-plus\//i
+// Index of the first line that is neither blank nor a comment: a file-level finding is reported there, not on a leading comment line.
+const firstCodeLine = (ctx) => ctx.lines.findIndex((l) => l.trim() !== '' && !SLASH_SKIP.test(l))
 // Library code: every src file except the binary entry point and src/bin/.
 const LIB = /(^|\/)src\/(?!main\.rs$|bin\/)(?:[^/]+\/)*[^/]+\.rs$/
 const CARGO = /(^|\/)Cargo\.toml$/
@@ -462,7 +464,7 @@ export const API_FFI_WASM = [
   R('rapi-js-eval', 'JavaScript source is evaluated from Rust (js_sys::eval or Function::new_*_args)', /\bjs_sys::eval\(|\bFunction::new_(?:no|with)_args\(/, 'let v = js_sys::eval(&code)?;', 'let v = JsValue::from_str(&code);'),
   R('rapi-wasm-unchecked-cast', 'a JS value is cast without a type check (unchecked_into or unchecked_ref)', /\.unchecked_(?:into|ref)\b/, 'let el = value.unchecked_into::<HtmlElement>();', 'let el = value.dyn_into::<HtmlElement>()?;'),
   LIBR('rapi-wasm-no-panic-hook', 'a wasm_bindgen crate sets no panic hook, so Rust panics show as an unhelpful JS error', undefined, '#[wasm_bindgen]\npub fn run() {}', '#[wasm_bindgen(start)]\npub fn start() {\n    console_error_panic_hook::set_once();\n}', undefined, {
-    test: (line, ctx) => ctx.index === 0 && /#\[wasm_bindgen/.test(ctx.text) && !/set_panic_hook|console_error_panic_hook/.test(ctx.text),
+    test: (line, ctx) => ctx.index === firstCodeLine(ctx) && /#\[wasm_bindgen/.test(ctx.text) && !/set_panic_hook|console_error_panic_hook/.test(ctx.text),
   }),
   R('rapi-serde-json-unwrap', 'serde_json parses external input with unwrap or expect (a bad document panics)', /\bserde_json::from_(?:str|slice|reader|value)\b[^\n]{0,200}\)\s*\.(?:unwrap|expect)\(/, 'let cfg: Cfg = serde_json::from_str(body).unwrap();', 'let cfg: Cfg = serde_json::from_str(body)?;'),
   R('rapi-secret-field-serialized', 'a secret field is Serialize with no skip_serializing (it is written into responses and logs)', undefined, '#[derive(Serialize)]\npub struct Login {\n    pub user: String,\n    pub password: String,\n}', '#[derive(Serialize)]\npub struct Login {\n    pub user: String,\n    #[serde(skip_serializing)]\n    pub password: String,\n}', {
