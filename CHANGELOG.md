@@ -8,6 +8,30 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+### Added
+
+- `meerkat gate` runs only the checks that cover the changed files (`--staged`, `--base <ref>` or `--against <ref>`); `meerkat smoke` proves each selected check starts and stops in time. Both exit 75 when they could not start (no base, not a git repo, no checks loaded), which is not a pass (lib/gate.mjs, wired in bin/meerkat.mjs)
+- `meerkat hook status`: shows the hook file, whether the Meerkat block is installed and whether an install would be allowed. `hook install` now refuses unsafe hook files, and the block is tool-fault safe: if node or run.mjs is missing, or the run times out (600 s when a working `timeout` exists), it says so on stderr and lets the push go; a real Meerkat failure still blocks with its own exit code (lib/hook-safety.mjs)
+- Planted-defect corpus generator and measurement: `tools/corpus/gen-planted.mjs` writes every planted defect and its clean twin into a complete base project, `tools/corpus/measure.mjs` reports recall and false alarms per family (the `corpus/` folder is gitignored and is generated, not committed)
+- Real-code benchmark for the Rust rules: `benchmarks/real-rust/` (labels, baseline, `measure.mjs`) compares the six rust-plus checks with 387 findings labelled TRUE or FALSE by reading the source
+- docs: `docs/features.md` and `docs/ai.md`; README and docs rewritten to say what Meerkat is now (a scanner for people and a tool for AIs)
+- tests for each fix below (tests/innerhtml-precision, tests/testcode-secrets, tests/secsupply, tests/rustplus-testskip, tests/rustplus-wrongrules, lib/hook-safety)
+
+### Changed
+
+- Commands load lazily: the command words live in `lib/extras-words.mjs` and the heavy modules are loaded only when a command needs them. The commit message records `--help` loading 17 modules instead of 85 and `tests --json` 109 instead of 141 (counts taken from that message, not re-measured here)
+- One command surface: the build-and-test preset `smoke` was renamed `project-smoke` (the word `smoke` is now also a command), help lists every command, and one exit-code table covers all commands (docs/commands.md, lib/help.mjs)
+- rust-plus: the runtime rules (panics, unwraps, blocking, spawning, channels, locks, swallowed errors) skip `#[cfg(test)]` modules and `#[test]` functions; documentation, Debug, readability and unsafe-contract rules still report there
+- rust-plus: 17 pedantic rules were narrowed because they flagged correct real code
+- planted-corpus work raised the recall of the generator-companion and column-0 variants, and the wasm panic-hook rule now reports on the first code line
+
+### Fixed
+
+- secret-scan: files are read in chunks (1,000,000 bytes by default, `MEERKAT_SECRET_SCAN_CHUNK`) so a large file is no longer skipped silently with "no secrets found"; a file above 50,000,000 bytes (`MEERKAT_SECRET_SCAN_MAX`) is reported NOT SCANNED instead of passing
+- risky-code: the innerHTML scanner fails closed. A region it cannot read with certainty (an unterminated string, a `/` that may be a regex, a statement with no clear end, or an exhausted scan window) is reported, never treated as safe; scans are bounded (200,000 characters and 2,000 lines per assignment, 4,000,000 characters per file)
+- workflow security: each checkout is judged by its own step, and YAML comments are ignored when looking for `persist-credentials`
+- Not yet verified on the full suite in this release branch: the full `npm test` result and the accuracy corpus (see the pull request notes); generated counts in the README and docs/checks.md are refilled by a separate step
+
 - accepted findings: `meerkat dismiss <id> --reason "..."` accepts one finding (kept with its reason in the home folder, never in the project); `meerkat undismiss`, and `meerkat dismissals` (or `--stats` for each rule across every project, so a rule dismissed again and again shows as a review candidate). A check whose every finding is accepted passes, and the run records what was accepted in `accepted.json`
 - `meerkat baseline` accepts the newest run's findings as they are; `meerkat run --ratchet` then fails only on findings that are not in the baseline
 - project integrity: a check that writes into the project now fails the run (`project-integrity`), listing the files. Intended writes can be allowed with `"allowWrites": [globs]` in meerkat.config.json

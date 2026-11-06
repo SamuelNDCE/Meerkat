@@ -119,10 +119,8 @@ describe('adversarial inputs: the large-file edge', () => {
     expect((run.findings?.findings ?? []).some((f: any) => f.check === 'large-files' && f.file === 'src/big.js')).toBe(true)
   })
 
-  // KNOWN GAP (found by this suite, 2026-11-06): secret-scan skips every file over 1 MB (MAX_BYTES in thorough/secret-scan.mjs) without saying so, and
-  // reports "no secrets found". A token in a big file passes. test.fails keeps the suite green while the gap is open and turns red when it is fixed, so
-  // the marker has to be removed then.
-  test.fails('secret-scan either finds a token in a file over 1 MB or says it skipped that file', () => {
+  // Was a known gap (secret-scan skipped every file over 1 MB silently). Fixed by chunked scanning (379f85a), so the test.fails marker is removed.
+  test('secret-scan either finds a token in a file over 1 MB or says it skipped that file', () => {
     const run = meerkat(bigWithSecret(), ['--preset', 'quick', '--only', 'secret-scan', '--all'])
     const detail = String(run.results.find((r: any) => r.id === 'secret-scan')?.detail ?? '')
     expect(/possible secret|skipped|too large|over 1 ?MB|not scanned/i.test(detail), detail).toBe(true)

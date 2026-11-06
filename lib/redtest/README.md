@@ -29,7 +29,9 @@ node lib/redtest/run.mjs --kind all
 
 A gap that is real and not yet fixed is written as a `test.fails` test with a comment saying what is wrong. The suite stays green while the gap is open and turns red the moment it is fixed, which is the signal to remove the marker.
 
-- `secret-scan` skips every file over 1 MB without saying so, and reports "no secrets found". A token inside a large file passes. (`adversarial.test.ts`)
+- `secret-scan` skips every file over 1 MB without saying so, and reports "no secrets found". A token inside a large file passes. (`adversarial.test.ts`) \*
+
+> \*Corrected 2026-11-06: fixed by chunked scanning (379f85a). Large files are now scanned in chunks and a file too large to scan is reported NOT SCANNED; the `test.fails` marker was removed.
 
 ## Adding a test
 
