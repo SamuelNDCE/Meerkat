@@ -36,13 +36,28 @@ $script:title = $env:UIA_WINDOW_TITLE
 
 function Find-Window([string]$sub, [int]$timeoutMs) {
   $sw = [Diagnostics.Stopwatch]::StartNew()
+  $lastScan = -10000
   do {
-    $kids = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition)
-    foreach ($k in $kids) {
+    # Fast path: the main window title of each process (cheap, so the deadline is kept to within a poll).
+    foreach ($pr in [Diagnostics.Process]::GetProcesses()) {
       try {
-        $n = $k.Current.Name
-        if ($n -and $n.IndexOf($sub, [StringComparison]::OrdinalIgnoreCase) -ge 0) { return $k }
+        $t = $pr.MainWindowTitle
+        if ($t -and $pr.MainWindowHandle -ne [IntPtr]::Zero -and $t.IndexOf($sub, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+          return [System.Windows.Automation.AutomationElement]::FromHandle($pr.MainWindowHandle)
+        }
       } catch { }
+    }
+    # Slow path: scan every top-level window (catches secondary windows). One scan can take seconds, so skip it near the deadline.
+    $left = $timeoutMs - $sw.ElapsedMilliseconds
+    if (($sw.ElapsedMilliseconds - $lastScan) -ge 3000 -and ($lastScan -lt 0 -or $left -gt 3000)) {
+      $lastScan = $sw.ElapsedMilliseconds
+      $kids = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition)
+      foreach ($k in $kids) {
+        try {
+          $n = $k.Current.Name
+          if ($n -and $n.IndexOf($sub, [StringComparison]::OrdinalIgnoreCase) -ge 0) { return $k }
+        } catch { }
+      }
     }
     Start-Sleep -Milliseconds 250
   } while ($sw.ElapsedMilliseconds -lt $timeoutMs)
