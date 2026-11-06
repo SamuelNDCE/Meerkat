@@ -1,0 +1,47 @@
+# Copy this file to .github/workflows/meerkat.yml in your repository.
+# It needs no secrets of your own: only the GITHUB_TOKEN every workflow already has.
+name: meerkat
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write # only used to update the one Meerkat comment on a pull request
+
+concurrency:
+  group: meerkat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  meerkat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Pinned by full commit SHA, read from each action's own repository (git ls-remote of the tag shown in the comment).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the gate compares against a base commit, so it needs history
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # The gate: runs only the checks that cover the files this change touched. A failing check fails the job.
+      # --format github adds annotation lines on the changed files and a block in the job summary.
+      - name: Meerkat gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: npx -y @samuelndce/meerkat gate --base "$BASE_SHA" --format github
+
+      # Pull requests only: a full run for the findings, then one comment (updated on every push, never duplicated).
+      # continue-on-error: the gate above is what fails the job; this step only reports.
+      - name: Meerkat comment
+        if: ${{ always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx -y @samuelndce/meerkat run --format github || true
+          npx -y @samuelndce/meerkat pr-comment --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --post
