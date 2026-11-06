@@ -60,7 +60,10 @@ describe('rules promoted after narrowing', () => {
     const id = 'rperf-vec-new-in-loop'
     quiet(id, 'fn f() {\n    for l in ls {\n        let mut body = Vec::new();\n        body.push(1);\n        blocks.push(CodeBlock { lang, lines: body });\n    }\n}\n')
     quiet(id, 'fn f() {\n    for e in es {\n        let mut dirs = Vec::new();\n        dirs.push(1);\n        let op = Op::Remove { dirs };\n    }\n}\n')
-    quiet(id, 'fn f() {\n    for e in es {\n        let mut owns: Vec<String> = Vec::new();\n        owns.push(p);\n        agents.push(PlanAgent {\n            n,\n            owns,\n            reads,\n        });\n    }\n}\n')
+    const filler = '        step();\n'.repeat(55)
+    quiet(id, `fn f() {\n    for e in es {\n        let mut owns: Vec<String> = Vec::new();\n        owns.push(p);\n${filler}        agents.push(PlanAgent {\n            n,\n            owns,\n        });\n    }\n}\n`)
+    // a record built close to the Vec, with the Vec as a plain field, is the labelled TRUE shape (add and because in the curator repair)
+    fires(id, 'fn f() {\n    for e in es {\n        let mut add = Vec::new();\n        add.push(p);\n        out.push(Repair {\n            add,\n            because_of: because,\n        });\n    }\n}\n')
     fires(id, 'fn f() {\n    for e in es {\n        let mut path: Vec<usize> = Vec::new();\n        path.push(1);\n        use_it(&path);\n    }\n}\n')
     fires(id, bad(id))
   })

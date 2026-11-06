@@ -373,8 +373,15 @@ const publicFnReturn = (ctx) => {
 // The Vec named `name` is the value of its block (a line with just the name, or Ok(name) / Some(name)) or is returned, within the next 40 lines.
 const vecIsBlockValue = (ctx, name) => new RegExp(`^\\s*(?:(?:Ok|Some)\\(\\s*)?${name}\\s*\\)?\\s*$|\\breturn\\s+(?:(?:Ok|Some)\\(\\s*)?${name}\\b`, 'm').test(ctx.lines.slice(ctx.index + 1, ctx.index + 41).join('\n'))
 
-// The Vec named `name` becomes a field of a struct or enum value built later (`Block { lines: name }`, `Op::Remove { name }`, or the bare field on its own line), within 60 lines.
-const vecMovedIntoValue = (ctx, name) => new RegExp(`\\b\\w+\\s*:\\s*${name}\\s*[,}]|\\{\\s*(?:\\w+\\s*,\\s*)*${name}\\s*(?:,\\s*\\w+\\s*)*\\}|^\\s*${name}\\s*,\\s*$`, 'm').test(ctx.lines.slice(ctx.index + 1, ctx.index + 61).join('\n'))
+// The Vec named `name` is moved into a struct or enum value built later in the loop, so it is that record's field and not a scratch buffer to hoist.
+// Two shapes: written inside one pair of braces on one line (`Op::Remove { dirs }`, `CodeBlock { lang, lines: body }`) within 60 lines; or a field of a record built
+// 50 or more lines further down (`owns,` / `fixes: fixes,`), because a Vec that lives through that much of a loop body is the record's own field.
+const vecMovedIntoValue = (ctx, name) => {
+  const rest = ctx.lines.slice(ctx.index + 1, ctx.index + 121)
+  const inline = new RegExp(String.raw`\{[^{}\n]*\b${name}\b[^{}\n]*\}`)
+  const field = new RegExp(String.raw`\b\w+\s*:\s*${name}\s*[,}]|^\s*${name}\s*,\s*$`)
+  return rest.some((l, k) => (k < 60 && inline.test(l)) || (k >= 49 && field.test(l)))
+}
 
 // TOML: the table a line belongs to, and the body of a named table in a whole file.
 const HEADER = /^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*$/
