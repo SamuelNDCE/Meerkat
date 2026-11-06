@@ -5,7 +5,7 @@
 **A scanner for people, and a tool and scaffolding for AIs.**<br>
 Meerkat checks, maps and tests a project: security, correctness, accessibility, performance and code health, with every result saved and explained.
 
-<img src="https://img.shields.io/badge/version-0.5-blue" alt="version 0.5"> <img src="https://img.shields.io/badge/checks-see%20docs%2Ffeatures.md-informational" alt="checks: see docs/features.md"> <img src="https://img.shields.io/badge/use-standalone-success" alt="use: standalone"> <img src="https://img.shields.io/badge/use-with%20AI%20(MCP)-8A2BE2" alt="use: with AI over MCP"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/telemetry.svg" alt="telemetry: none">
+<img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/version.svg" alt="version"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/licence.svg" alt="licence"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/planted-defect-recall.svg" alt="planted-defect recall"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/checks.svg" alt="checks"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/suites.svg" alt="suites"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/dependencies.svg" alt="dependencies"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/telemetry.svg" alt="telemetry"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/node.svg" alt="node"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/tested-on.svg" alt="tested on"> <img src="https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/badges/works-with.svg" alt="works with">
 
 ![Meerkat running: what is running now, a status line, every check with its time, and a timeline](https://raw.githubusercontent.com/SamuelNDCE/Meerkat/main/docs/images/meerkat-run.gif)
 
@@ -60,6 +60,10 @@ Legend: ✔ OK works / ◐ PARTIAL works with limits / ✖ BROKEN built but not 
 | 🧠 [Skills](https://github.com/SamuelNDCE/Meerkat/blob/main/skills/README.md) | Short guides that tell an AI when to reach for Meerkat | ✔ OK |
 | 🖱 [Click-through](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md) | Opens your real app and presses controls through a driver you supply | ◐ PARTIAL |
 | 🪝 [Hook safety](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#hook-safety) | A git pre-push hook that runs the quick preset; removable cleanly | ✔ OK |
+
+<!-- counts:start -->
+**395 checks · 1433 sub-checks · 50 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
+<!-- counts:end -->
 
 How many checks exist: see [docs/features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md), or run `meerkat tests --json`.
 
