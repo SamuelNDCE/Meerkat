@@ -96,6 +96,7 @@ Status: ◐ PARTIAL. The driver protocol is built and Meerkat schedules, times a
 ## ⚠ Known limits
 
 - Rust findings are leads to check, not verdicts; the false-alarm figure is from one project.
+- `gate` and the tool self-check `smoke` are not routed as `meerkat` words yet; blast and map are available as commands.
 - Red testing, the real-code benchmark and the advisory scan run from a repository checkout or a library, not as everyday commands.
 - Recall on planted bugs measures what was planted, not real-world accuracy.
 - If Meerkat reports something fine, open a [false alarm](https://github.com/SamuelNDCE/Meerkat/issues/new?template=false-positive.yml) issue; if it misses a real problem, open a [missed problem](https://github.com/SamuelNDCE/Meerkat/issues/new?template=missed-bug.yml) issue.
