@@ -3,18 +3,27 @@
 // Exit codes: 0 passed, 1 a check failed or could not run, 2 a usage or configuration error, 3 nothing to run (run and presets), 75 could not start or target not found (gate, smoke, blast), 130 interrupted.
 // Results go to stdout; notes, progress and errors go to stderr.
 import { helpText, loadPresets, packAdd, packRemove, planCommand, presetsText, rootCommand } from '../lib/cli.mjs'
-import { EXTRA_WORDS, runExtra } from '../lib/extras-cli.mjs'
-import { buildBugReport } from '../lib/bugreport.mjs'
-import { execute } from '../lib/commands.mjs'
-import { afterRun, runMenu, spawnRun } from '../lib/menu.mjs'
+import { executeBasic } from '../lib/basic-commands.mjs'
+import { EXTRA_WORDS } from '../lib/extras-words.mjs'
+import { spawnRun } from '../lib/spawnrun.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
-import { aiStatus, aiTest, aiUse } from '../lib/aiconfig.mjs'
-import { latestRunDir, logRoot } from '../lib/runlog.mjs'
-import { runLog, showRun } from '../lib/runs.mjs'
-import { asyncTimedExec, maybeAutoUpdateAsync, runUpdateCommand } from '../lib/update.mjs'
-import { createUpdateCheck, outcomeOf } from '../lib/updatecheck.mjs'
 import { addRecent } from '../lib/userconfig.mjs'
 import { VERSION } from '../lib/version.mjs'
+
+// Everything below is loaded only by the command that needs it: `meerkat --help` and the look-up commands must not pay for the menu, the screens, the runner or the update code.
+const lazy = (path) => {
+  let p = null
+  return () => (p ??= import(path))
+}
+const menuMod = lazy('../lib/menu.mjs')
+const commandsMod = lazy('../lib/commands.mjs')
+const runlogMod = lazy('../lib/runlog.mjs')
+const runsMod = lazy('../lib/runs.mjs')
+const updateMod = lazy('../lib/update.mjs')
+const updateCheckMod = lazy('../lib/updatecheck.mjs')
+const aiMod = lazy('../lib/aiconfig.mjs')
+const bugMod = lazy('../lib/bugreport.mjs')
+const extrasMod = lazy('../lib/extras-cli.mjs')
 
 process.noDeprecation = true // the claude command on Windows is a .cmd shim, which can only be started through a shell
 process.stdout.on('error', (e) => {
@@ -35,7 +44,7 @@ async function main() {
   // The accepted-findings, history, suggestion and CI commands (lib/extras-cli.mjs) are handled before the older parser sees them.
   // `meerkat <word> --help` is answered from the command registry (planCommand), not by the command.
   if (EXTRA_WORDS.includes(argv[0]) && !argv.includes('--help') && !argv.includes('-h')) {
-    const code = await runExtra(argv, { env, cwd, out, err })
+    const code = await (await extrasMod()).runExtra(argv, { env, cwd, out, err })
     if (code !== null) return code
   }
   const presets = loadPresets({ cwd, env })
@@ -48,6 +57,8 @@ async function main() {
   let updateCheck = null
   if (interactive && (plan.kind === 'menu' || (plan.kind === 'run' && !plan.json && !plan.quiet))) {
     const inMenu = plan.kind === 'menu'
+    const { asyncTimedExec, maybeAutoUpdateAsync } = await updateMod()
+    const { createUpdateCheck, outcomeOf } = await updateCheckMod()
     const color = Boolean(process.stdout.isTTY) && !env.NO_COLOR && !env.MEERKAT_PLAIN
     const wipe = () => process.stdout.write('\r\x1b[2K')
     const check = createUpdateCheck({
@@ -84,8 +95,9 @@ async function main() {
     case 'help':
     case 'describe':
     case 'completion':
+      return executeBasic(plan, ctx)
     case 'noun':
-      return execute(plan, ctx)
+      return (await commandsMod()).execute(plan, ctx)
     case 'version':
       out(version())
       return 0
@@ -93,7 +105,7 @@ async function main() {
       out(presetsText(presets))
       return 0
     case 'bug':
-      out(buildBugReport({ env }))
+      out((await bugMod()).buildBugReport({ env }))
       return 0
     case 'root': {
       const r = rootCommand(plan.action, plan.folder, env)
@@ -101,27 +113,30 @@ async function main() {
       return r.ok ? 0 : 1
     }
     case 'ai': {
+      const { aiStatus, aiTest, aiUse } = await aiMod()
       const r = plan.action === 'status' ? { ok: true, text: aiStatus(env) } : plan.action === 'use' ? aiUse(plan.args, env) : plan.action === 'test' ? await aiTest(env) : { ok: false, text: 'usage: meerkat ai status | use <claude|openai|openrouter> [model] | test' }
       out(plan.json ? JSON.stringify({ ok: r.ok, text: r.text }, null, 2) : r.text)
       return r.ok ? 0 : 1
     }
     case 'menu':
-      return runMenu({ cwd, env, folder: plan.folder ?? null, updateCheck })
+      return (await menuMod()).runMenu({ cwd, env, folder: plan.folder ?? null, updateCheck })
     case 'update':
-      return runUpdateCommand(plan, { repoDir: MEERKAT_DIR, env })
+      return (await updateMod()).runUpdateCommand(plan, { repoDir: MEERKAT_DIR, env })
     case 'pack': {
-      if (plan.action === 'list') return execute({ kind: 'noun', noun: 'pack', verb: 'list', folder: plan.folder ?? cwd, flags: {} }, ctx)
+      if (plan.action === 'list') return (await commandsMod()).execute({ kind: 'noun', noun: 'pack', verb: 'list', folder: plan.folder ?? cwd, flags: {} }, ctx)
       const r = plan.action === 'add' ? packAdd(plan.folder, env) : packRemove(plan.folder, env)
       out(r.text)
       return r.ok ? 0 : 1
     }
     case 'last':
     case 'why': {
+      const { runLog, showRun } = await runsMod()
       const r = plan.kind === 'last' ? showRun(env, undefined) : runLog(env, plan.args[1], plan.args[2])
       ;(r.ok ? out : err)(r.text)
       return r.ok ? 0 : 1
     }
     case 'logs': {
+      const { latestRunDir, logRoot } = await runlogMod()
       const dir = latestRunDir(env)
       out(`logs are saved in ${logRoot(env)}${dir ? `\nnewest run: ${dir}` : ''}`)
       return 0
@@ -136,6 +151,8 @@ async function main() {
       }
       const code = spawnRun(plan.args, { env, cwd })
       if (interactive && !plan.json && !plan.quiet) {
+        const { afterRun, runMenu } = await menuMod()
+        const { latestRunDir } = await runlogMod()
         const next = await afterRun({ runDir: latestRunDir(env), env, args: plan.args, cwd, canMenu: true })
         // m on the results screen: back to the home menu, for the same project.
         if (next === 'menu') await runMenu({ cwd, env, folder: plan.folder ?? cwd })
