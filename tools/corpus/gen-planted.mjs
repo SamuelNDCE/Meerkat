@@ -13,7 +13,8 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { baseFor } from './base-project.mjs'
+import { BASE_VARIANT, TWIN_BASE, baseFor } from './base-project.mjs'
+import { fixTwin } from './twin-fixes.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '..', '..')
@@ -183,7 +184,7 @@ for (const [family, script, mod] of SOURCES) {
         // A rule anchored at column 0 (^ not followed by \s) cannot see an indented line, so that variant is not indented.
         const noIndent = /^\^(?!\\s)/.test(rule.re?.source ?? '')
         const bad = build(ext, renamed.bad, ops, rng(SEED ^ hash(`f/${check}/${rule.id}/${v}`)), noIndent)
-        const good = build(ext, renamed.good, ops, rng(SEED ^ hash(`f/${check}/${rule.id}/${v}`)), noIndent)
+        const good = build(ext, fixTwin(ext, renamed.good, rule.id, base.path), ops, rng(SEED ^ hash(`f/${check}/${rule.id}/${v}`)), noIndent)
         let file = base.path
         if (!base.fixed && v > 0) file = `${pick(r, DIRS)}${pick(r, BASENAMES)}.${ext}`
         const sig = `${file}\0${bad.text}\0${good.text}`
@@ -216,7 +217,8 @@ for (const [family, script, mod] of SOURCES) {
           ops: opNames,
           canonical: v === 0,
           severity: rule.severity ?? null,
-          base: baseFor(family, file),
+          base: BASE_VARIANT[rule.id] ?? baseFor(family, file),
+          ...(TWIN_BASE[rule.id] ? { twinBase: TWIN_BASE[rule.id] } : {}),
           ...(Object.keys(companions).length ? { companions: Object.keys(companions) } : {}),
           defect: `${id}/bad/${file}`,
           twin: `${id}/good/${file}`,

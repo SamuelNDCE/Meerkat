@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { baseTree } from './base-project.mjs'
+import { completeTwin } from './complete-config.mjs'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const arg = (name, dflt) => {
@@ -40,18 +41,24 @@ if (Number.isFinite(LIMIT) && LIMIT < defects.length) {
 
 // --no-base writes the planted file alone (the first version of this measurement): single-file projects trip checks that need a whole project.
 const WITH_BASE = !process.argv.includes('--no-base')
+const COMPLETE_TWINS = !process.argv.includes('--fragment-twins')
 const ELECTRON_PKG = '{\n  "name": "sample",\n  "devDependencies": { "electron": "41.0.0" }\n}\n'
 
 function runCheck(d, side) {
   return new Promise((resolveRun) => {
     const dir = mkdtempSync(join(tmpdir(), 'planted-'))
-    const copy = readFileSync(join(CORPUS, d[side === 'bad' ? 'defect' : 'twin']))
+    let copy = readFileSync(join(CORPUS, d[side === 'bad' ? 'defect' : 'twin']))
+    // The clean twin of a whole-config-file sample is the complete base config with the sample merged in (--fragment-twins keeps the bare fragment).
+    if (side === 'good' && WITH_BASE && COMPLETE_TWINS && d.base) {
+      const merged = completeTwin(d.file, copy.toString('utf8'), d.twinBase ?? d.base)
+      if (merged != null) copy = Buffer.from(merged)
+    }
     // A bare package.json fragment is the sample of a rule, not the project's manifest: keep it one folder down, beside a real Electron manifest.
     const rel = d.family === 'electron-plus' && d.file === 'package.json' ? 'sample/package.json' : d.file
     const target = join(dir, ...rel.split('/'))
     // The complete clean base project first (licence, security policy, README, manifest, lockfile, CI, tests), then the sample replaces one file.
     if (WITH_BASE && d.base) {
-      for (const [r, text] of Object.entries(baseTree(d.base))) {
+      for (const [r, text] of Object.entries(baseTree((side === 'good' && d.twinBase) || d.base))) {
         const p = join(dir, ...r.split('/'))
         mkdirSync(dirname(p), { recursive: true })
         writeFileSync(p, text)

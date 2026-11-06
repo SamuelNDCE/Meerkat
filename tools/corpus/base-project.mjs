@@ -49,3 +49,18 @@ export const baseTree = (name) => {
   return BASES[name]
 }
 export const BASE_NAMES = Object.keys(BASES)
+
+// Base variants: a few rules are about something the ordinary base would silence or already has, so the project that holds their planted
+// file is a base with that one thing changed. The rule is not edited to pass; the project is made the kind the rule is about.
+// ep-window-open-variable: the ordinary Electron main.js denies every window the page opens (setWindowOpenHandler), which is exactly what the
+// rule treats as a reason not to report window.open(variable). This base has no such handler.
+const NO_HANDLER = /\n {2}win\.webContents\.setWindowOpenHandler\([\s\S]*?\n {2}\}\)\n/
+const noHandlerMain = BASES.electron['main.js'].replace(NO_HANDLER, '\n')
+if (noHandlerMain === BASES.electron['main.js']) throw new Error('electron base main.js has no setWindowOpenHandler block to remove')
+BASES['electron-no-open-handler'] = { ...BASES.electron, 'main.js': noHandlerMain }
+// rcargo-no-lockfile-binary: a binary crate with no Cargo.lock; the ordinary Rust base ships a lockfile and has no main.rs.
+const { 'Cargo.lock': _lock, ...rustNoLock } = BASES.rust
+BASES['rust-no-lockfile'] = { ...rustNoLock, 'src/main.rs': 'fn main() {}\n' }
+export const BASE_VARIANT = { 'ep-window-open-variable': 'electron-no-open-handler', 'rcargo-no-lockfile-binary': 'rust-no-lockfile' }
+// The clean twin of the lockfile rule is the same binary crate WITH its Cargo.lock (the ordinary Rust base; the companion main.rs makes it a binary).
+export const TWIN_BASE = { 'rcargo-no-lockfile-binary': 'rust' }
