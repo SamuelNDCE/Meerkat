@@ -2,6 +2,16 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## 0.5.2 (2026-11-06)
+
+A hotfix release. Items marked unverified were not proven against a real newer release or a live client.
+
+- Smart update: `meerkat update` now verifies the new version in a copy first, keeps your local changes, and saves a patch of them before it changes anything. It refuses only when a file the update changes overlaps files you edited. Unverified against a real newer published release; covered by unit tests (lib/smartupdate.test.ts, lib/updatedirty.test.ts)
+- Update banner fixed: the "update available" banner was hidden by a network timeout and by a stale cache entry. Both cases are handled now (lib/updatenotice.test.ts). Unverified against a real newer release
+- MCP: `meerkat mcp serve` now offers 28 tools, 12 added. The new tools are covered by unit tests (lib/mcp.test.ts, lib/mcptools.test.ts, lib/mcpextras.test.ts); unverified against a live MCP client
+- New commands and their help: the added commands are listed in `meerkat --help` and have their own help text (lib/help.test.ts, lib/cli.test.ts, lib/extras.test.ts)
+- Hook injection fix: `hook install` refuses folder paths containing shell characters, and the installed hook quotes the path it uses (lib/hook-safety.test.ts)
+
 ## 0.5 (2026-11-06)
 
 A minor release: it adds an MCP surface, skills, click-through drivers, new commands and a measured accuracy story. Everything below is taken from the code and docs on the release branch. Items marked unverified were not proven here.
