@@ -93,7 +93,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat tools [folder]` | every optional outside tool, whether it is found, and one install command per ecosystem (npm, pip, cargo, system); `--json` |
 | `meerkat tools install [folder]` | put the missing npm-based tools in `~/.meerkat/tools` (never in the project, never global, `--ignore-scripts`); shows the list first and asks, or use `--yes`; `--dry-run` only shows the list |
 | `meerkat self-test [folder]` | prove every check fails on its broken case |
-| `meerkat hook install` / `hook remove` [folder] | install or remove a git pre-push hook that runs the quick preset with `--ratchet` |
+| `meerkat hook install` / `hook remove` / `hook status` [folder] | install or remove a git pre-push hook that runs the quick preset with `--ratchet`, or show whether it is installed |
 | `meerkat ai status` / `use <provider> [model]` / `test` | choose the model for the AI checks; `use claude haiku`, `use openrouter deepseek/deepseek-chat` |
 | `meerkat update [check\|apply\|auto\|notify\|off\|status]` | updating Meerkat; looks up the latest version once a day (turn off with `meerkat update off`), never installs without you |
 | `meerkat mcp install [claude]` / `serve` / `status` | register or run the tool server for AI agents |

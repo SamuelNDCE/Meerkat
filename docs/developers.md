@@ -63,7 +63,8 @@ Checks you write for your own project never need a change here: put them in your
 
 Meerkat's update (`u` in the menu, or `meerkat update`) changes only Meerkat's own folder. It is built to be safe to run at any time:
 
-- **A folder with changes of its own is never overwritten.** Any modified or new file in Meerkat's folder stops the update with a message, and nothing is changed.
+- **A file you changed is never overwritten.** If you edited a file the update also changes, the update stops, names that file, and changes nothing. Edits to other files are kept exactly as they are.
+- **The update is tried in a copy first.** Meerkat saves your uncommitted changes as a patch in the log folder (`update-patches/`, named with the time and the new version), builds a temporary copy of your folder in the log folder (`update-verify/`) with your changes and the new version, and runs `meerkat self-test` and `meerkat --help` there. Only if both pass does your folder move; otherwise it is left untouched, the reason is shown, and the copy is deleted.
 - **Commits you have made are kept.** If the folder is on another branch with commits GitHub does not have, the update moves the folder onto the default branch and leaves those commits on their branch. The result names that branch.
 - **Your settings live outside the folder.** Per-user settings are in `~/.meerkat*.json`, logs in `~/.meerkat/logs` (or `MEERKAT_LOG_DIR`). Project settings are in your project (`meerkat.config.json`, `.meerkat/`). The update touches none of them.
 - **Your project is never edited.** Meerkat reads your project from outside.

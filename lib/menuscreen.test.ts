@@ -231,7 +231,7 @@ describe('versions and the remembered answer', () => {
     const ex = (cmd: string, args: string[]) => {
       const key = args.join(' ')
       if (key.startsWith('merge --ff-only')) return ((merged = true), '')
-      if (key === 'status --porcelain' || key.startsWith('merge-base')) return ''
+      if (key.startsWith('status --porcelain') || key.startsWith('merge-base')) return ''
       if (key.startsWith('show')) return JSON.stringify({ version: merged || key.startsWith('show origin') ? '1.4.0' : '1.3.2' })
       return exec([])(cmd, args)
     }

@@ -1,137 +1,153 @@
 # Meerkat features
 
-Every feature, what it does, when to use it, how to call it, what it returns, what it does not do, and whether it works today. Facts here were checked against `lib/cli.mjs`, `lib/help.mjs`, `lib/mcp.mjs`, `lib/mcpextras.mjs`, `lib/extras-cli.mjs` and `lib/gate.mjs`. `meerkat describe` prints the full, current command list as JSON.
+Each feature below has the same short block: what it is, why it is good, what it does, what it does NOT do, and its command or tool name. The command list in `meerkat describe` is the full, current one (JSON), and `meerkat help <command>` gives the options of one command. The checks themselves are listed in [checks.md](checks.md).
 
-Status legend: OK works / PARTIAL works in part / BROKEN built but not working / PLANNED not built / blank not applicable.
+| Feature | Command or tool |
+|---|---|
+| Checks and presets | `meerkat verify`, `meerkat full`, `meerkat run <preset>`, `meerkat check <id>`; MCP `meerkat_run`, `meerkat_list`, `meerkat_presets` |
+| Findings and prompt | `meerkat findings`, `meerkat finding`, `meerkat prompt`; MCP `meerkat_findings`, `meerkat_finding` |
+| Accepted findings and ratchet | `meerkat dismiss`, `undismiss`, `dismissals`, `baseline`, `--ratchet`; MCP `meerkat_dismiss`, `meerkat_undismiss`, `meerkat_dismissals`, `meerkat_baseline` |
+| Trend, suggestions and PR comment | `meerkat trend`, `meerkat suggest`, `meerkat pr-comment`; MCP `meerkat_trend`, `meerkat_suggest`, `meerkat_pr_comment` |
+| Gate (checks for changed files) | `meerkat gate`; MCP `meerkat_gate` |
+| Smoke | `meerkat run smoke` (preset), `meerkat smoke` (self-check); MCP `meerkat_smoke` |
+| Blast radius | `meerkat blast <file>[#symbol]`; MCP `meerkat_blast` |
+| Codebase map | `meerkat map`; MCP `meerkat_map` |
+| Red testing | `node lib/redtest/run.mjs --kind <kind>`; MCP `meerkat_redtest` |
+| Catalog and tests command | `meerkat tests --json`, `meerkat.order.json`; MCP `meerkat_tests` |
+| Doctor, tools, discover and recommend | `meerkat doctor`, `meerkat tools`, `meerkat discover`, `meerkat recommend`; MCP `meerkat_doctor`, `meerkat_tools`, `meerkat_discover`, `meerkat_recommend` |
+| MCP tools | `meerkat mcp serve`: 28 tools |
+| MCP resources and prompts | `meerkat://run/latest/...`, `meerkat://map/latest`, `meerkat://tests/catalog`, nine prompts |
+| Hook safety | `meerkat hook install\|remove\|status`; MCP `meerkat_hook`, `meerkat_hook_status` |
+| AI verification of findings | `--ai-verify`, `meerkat ai` |
 
-| Feature | Command or tool | Status |
-|---|---|---|
-| Checks and presets | `meerkat verify`, `meerkat full`, `meerkat run <preset>`, `meerkat check <id>` | OK |
-| Findings and prompt | `meerkat findings`, `meerkat finding`, `meerkat prompt` | OK |
-| Accepted findings and ratchet | `meerkat dismiss`, `meerkat baseline`, `--ratchet` | OK |
-| Gate (checks for changed files) | `node lib/gate.mjs gate` (`meerkat gate` not routed yet) | PARTIAL |
-| Smoke preset (did my change break anything) | `meerkat run smoke` | OK |
-| Smoke self-check (does the tool behave) | `node lib/gate.mjs smoke` (`meerkat smoke` not routed yet) | PARTIAL |
-| Blast radius | `meerkat blast <file>[#symbol]` | OK |
-| Codebase map | `meerkat map` | OK |
-| Red testing | `node lib/redtest/run.mjs --kind <kind>` (repository checkout only) | PARTIAL |
-| Advisory scan | `lib/advisory.mjs` (library only, no command) | PLANNED |
-| Catalog and tests command | `meerkat tests --json`, `meerkat.order.json` | OK |
-| MCP tools | `meerkat mcp serve`: 16 tools | OK |
-| MCP resources and prompts | `meerkat://run/latest/...`, `meerkat://map/latest`, `meerkat://tests/catalog`, nine prompts | OK |
-| Hook safety | `meerkat hook install\|remove` | OK |
-| AI verification of findings | `--ai-verify`, `meerkat ai` | PARTIAL |
-
-"OK" means the command exists in the command registry or the MCP server and was seen to run on this branch (`meerkat blast`, the hook usage text and the MCP tool list were run; the rest are read from the code and covered by the repository tests). PARTIAL and PLANNED rows say why below.
+Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 
 ## Checks and presets
 
-- **What it does:** runs the checks that apply to your project (secrets, web security, accessibility, build, tests, performance, code shape and more) and saves a report, a findings file and one log per check. A check that cannot run is NOT RUN, never a pass.
-- **When to use it:** `quick` (also `verify`) before every push; `full` before a release or a merge you cannot undo; `ci` on a build server; `release` just before shipping; `security`, `ui`, `performance`, `refactor` for one kind. `meerkat presets` lists them.
-- **Command:** `meerkat verify [folder]`, `meerkat full [folder]`, `meerkat run <preset> [folder]`, `meerkat check <id|suite|suite/check|suite/check/sub>... [folder]`, `meerkat self-test [folder]` (proves each check fails on its broken sample). The list of checks is [checks.md](checks.md).
-- **Exit codes:** 0 everything passed; 1 a check failed or could not run; 2 a usage or configuration error; 3 nothing to run (the preset selected no checks here); 130 interrupted.
-- **Does not:** edit your project, install anything without a yes, or call an AI unless you opt in. `quick` skips builds and compiled test suites on purpose; `full` does not include the AI review (`release` adds it).
-- **Status:** OK.
+- **What it is:** the main job of Meerkat: a set of checks (secrets, web security, accessibility, build, tests, performance, code shape and more) that fit your project, grouped into presets.
+- **Why it is good:** one command tells a person or an AI whether a project is safe to push, and a check that could not run says so instead of passing.
+- **What it does:** runs the checks that apply, then saves a report, a findings file and one log per check. `quick` (also `verify`) before a push; `full` before a release; `ci`, `release`, `security`, `ui`, `performance`, `refactor` for one purpose. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage or configuration error, 3 nothing to run, 130 interrupted.
+- **What it does NOT do:** edit your project, install anything without a yes, or call an AI unless you opt in. `quick` skips builds and compiled test suites on purpose; `full` leaves out the AI review.
+- **Command or tool:** `meerkat verify [folder]`, `meerkat full [folder]`, `meerkat run <preset> [folder]`, `meerkat check <id|suite|suite/check> [folder]`, `meerkat self-test`; MCP `meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_self_test`, `meerkat_last`, `meerkat_why`.
 
 ## Findings and prompt
 
-- **What it does:** every run saves `findings.json`, `findings.md`, `findings.sarif` and `detections.jsonl`. `meerkat findings` lists them worst first; `meerkat finding <id>` shows one in full; `meerkat prompt` writes a prompt for an AI that has never seen the project.
-- **When to use it:** after any run that did not pass; in CI with `--fail-on`; to hand the results to an AI.
-- **Command:** `meerkat findings [folder|run-id] [--severity s] [--suite s] [--check id] [--new] [--fixed] [--limit n] [--fail-on s] [--export sarif|md|json [file]] [--json]`, `meerkat finding <id> [run-id]`, `meerkat prompt [folder|run-id] [--print] [--no-copy]`.
-- **Exit codes:** 0 done; 1 with `--fail-on` when a finding at or above that severity exists, or when `prompt` finds no run with a `findings.json`; 2 usage error.
-- **Does not:** decide a finding is a false alarm for you. Medium and above can be double-checked by an AI only if you opt in.
-- **Status:** OK.
+- **What it is:** the saved result of a run, as data a person or an AI can read, filter and hand on.
+- **Why it is good:** an AI that never saw the project gets every problem with its place, evidence and fix hint, worst first, without scrolling a log.
+- **What it does:** every run saves `findings.json`, `findings.md`, `findings.sarif` and `detections.jsonl`. `meerkat findings` lists them (filters: severity, suite, check, new, fixed), `meerkat finding <id>` shows one in full, `meerkat prompt` writes a prompt for an AI. `--fail-on <severity>` sets the exit code for CI.
+- **What it does NOT do:** decide for you that a finding is a false alarm. An AI double-check happens only if you opt in.
+- **Command or tool:** `meerkat findings [folder|run-id] [--json]`, `meerkat finding <id>`, `meerkat prompt [--print]`; MCP `meerkat_findings`, `meerkat_finding`.
 
 ## Accepted findings and ratchet
 
-- **What it does:** keeps a finding you have judged not to be a problem (with a reason), or accepts today's findings as a baseline so only new ones fail.
-- **When to use it:** a known false alarm; adopting Meerkat on an old project.
-- **Command:** `meerkat dismiss <id> --reason "..."`, `meerkat undismiss <id>`, `meerkat dismissals [--stats]`, `meerkat baseline [--clear]`, `meerkat trend`, `meerkat suggest`, `meerkat pr-comment`, and `--ratchet` on a run.
-- **Exit codes:** 0 done; 1 the action failed (for example, no run yet or a finding id not found).
-- **Does not:** delete the finding; the reason and the dismissal are kept. These commands are handled in `lib/extras-cli.mjs` and are not yet in `meerkat help`.
-- **Status:** OK.
+- **What it is:** a way to record that a finding is not a problem, or to accept today's findings as a baseline.
+- **Why it is good:** a known false alarm stops blocking, and an old project can adopt Meerkat so that only new findings fail.
+- **What it does:** `dismiss` keeps a finding out of the failures with a written reason; `undismiss` takes it back; `dismissals` lists them (`--stats` counts per rule); `baseline` accepts the newest run's findings and `--ratchet` then fails only on new ones. All are saved in your home folder.
+- **What it does NOT do:** delete the finding. The reason stays recorded. The MCP write tools need a folder and refuse a run that belongs to another folder.
+- **Command or tool:** `meerkat dismiss <id> --reason "..."`, `meerkat undismiss <id>`, `meerkat dismissals [--stats]`, `meerkat baseline [--clear]`; MCP `meerkat_dismiss`, `meerkat_undismiss`, `meerkat_dismissals`, `meerkat_baseline`.
+
+## Trend, suggestions and PR comment
+
+- **What it is:** three small readers of the newest run and the run history.
+- **Why it is good:** you see whether a project is getting better, get a starting fix per finding, and get a ready summary to paste into a pull request.
+- **What it does:** `trend` prints one line per recent run (findings by severity, new, fixed); `suggest` prints suggested commands as markdown; `pr-comment` prints markdown for a pull request comment, with an optional link to the CI run.
+- **What it does NOT do:** run a suggested command, or post the comment anywhere.
+- **Command or tool:** `meerkat trend [folder]`, `meerkat suggest [run-folder]`, `meerkat pr-comment [run-folder] [--run-url <url>]`; MCP `meerkat_trend`, `meerkat_suggest`, `meerkat_pr_comment`.
 
 ## Gate
 
-- **What it does:** runs only the checks whose paths match the files changed since a base ref, so a commit or pull request is checked fast.
-- **When to use it:** before committing (`--staged`, for a pre-commit hook) or on a pull request (`--base <ref>`). The Claude skill tells an AI to use it before every commit.
-- **Command:** `node lib/gate.mjs gate [--staged | --base <ref> | --against <ref>] [--app <folder>] [--thorough] [--json]`. The word `meerkat gate` is not routed by `bin/meerkat.mjs` on this branch (it answers "Unknown command"), so use the file path until it is wired.
-- **Exit codes:** 0 pass; 1 a check failed or a check's tool crashed; 2 usage error; 75 not run (no base ref found, no checks loaded, or any selected check could not run or hung). 75 is not a pass.
-- **Does not:** check files that did not change, or read the staged version of a partly staged file (it checks the file as saved).
-- **Status:** PARTIAL. The logic and its tests exist; the `meerkat gate` command word is not wired here.
+- **What it is:** a run limited to the files you changed.
+- **Why it is good:** a commit or a pull request is checked in seconds, not minutes, and the answer covers exactly what you touched.
+- **What it does:** runs only the checks whose paths match the files changed (`--staged`, `--base <ref>` or `--against <ref>`; `--thorough` for the slower tier). Exit codes: 0 passed, 1 a check failed or crashed, 2 usage error, 75 could not run (no base found, no checks loaded, or a selected check could not run). 75 is not a pass.
+- **What it does NOT do:** check files that did not change, or read the staged copy of a partly staged file (it checks the file as saved).
+- **Command or tool:** `meerkat gate [--staged | --base <ref> | --against <ref>] [--app <folder>] [--json]`; MCP `meerkat_gate`.
 
 ## Smoke
 
-Two different things use the word.
-
-- **Smoke preset.** Asks "did my change break the build, type check, lints and quick tests?". `meerkat run smoke [folder]` (add `--changed` or `--scope <folder>` to focus it). Exit codes as for any run. Does not look at security, looks or speed. **Status: OK.**
-- **Smoke self-check.** Runs each selected check on the changed files with a tiny time limit and fails when the tool misbehaves (a check crashes, hangs, or none is selected for a non-empty change). It tests Meerkat, not your project, so a check that finds problems in your project is fine. `node lib/gate.mjs smoke [--staged | --base <ref>] [--timeout <seconds>]`. Exit codes 0, 1, 2, 75 as for the gate. **Status: PARTIAL** (`meerkat smoke` is not routed here yet).
+- **What it is:** two things that share a word: the `smoke` preset (did my change break the basics?) and the smoke self-check (does the tool behave?).
+- **Why it is good:** the preset is the fastest sanity check of a project; the self-check finds a broken or hanging check before you trust a gate result.
+- **What it does:** the preset runs build, type check, lints and quick tests, and `--changed` or `--scope <folder>` narrows it. The self-check runs each check selected for your changes with a short time limit and fails when a check crashes, hangs, or none is selected for a non-empty change. Exit codes 0, 1, 2, 75 as for the gate.
+- **What it does NOT do:** the preset does not look at security, looks or speed; the self-check tests Meerkat, not your project, so a check that finds problems in your project is fine.
+- **Command or tool:** `meerkat run smoke [folder]`; `meerkat smoke [--staged | --base <ref>] [--timeout <seconds>]`; MCP `meerkat_smoke`.
 
 ## Blast radius
 
-- **What it does:** for a file or a symbol, lists the importers, the modules touched, the tests that reach it, and imports it could not resolve (listed as "could also be importers", never counted as safe).
-- **When to use it:** after an edit, to see what it affects; before a refactor, to choose the tests to run.
-- **Command:** `meerkat blast <file>[#symbol] [--app <folder>] [--json]`. The file is relative to the app folder. The code map is cached per git commit, so a repeat run is fast; `--json` adds `map.source` (`cache`, `built` or `built-uncached`).
-- **Exit codes:** 0 done; 2 usage error; 75 the file is not in the map (not a pass or a fail: the answer is unknown).
-- **Does not:** run any code, follow dynamic imports or computed paths it cannot resolve, or read languages other than JavaScript, TypeScript and Python.
-- **Status:** OK.
+- **What it is:** the list of what an edit to a file or symbol affects.
+- **Why it is good:** before changing code you know what imports it and which tests reach it, so you edit with less guessing.
+- **What it does:** lists importers, modules touched, tests that reach it and imports it could not resolve (shown as "could also be importers", never counted as safe). The code map is cached per git commit. Exit codes: 0 done, 2 usage error, 75 the file is not in the map (the answer is unknown).
+- **What it does NOT do:** run any code, follow dynamic imports or computed paths it cannot resolve, or read languages other than JavaScript, TypeScript and Python.
+- **Command or tool:** `meerkat blast <file>[#symbol] [--app <folder>] [--json]`; MCP `meerkat_blast`.
 
 ## Codebase map
 
-- **What it does:** writes `codemap.json` (every file, import, export, entry point and module edge) and `codemap.md` (entry points, modules and edges, most imported files, unresolved imports, blast radius of the top five) into a new run folder.
-- **When to use it:** first, on an unfamiliar codebase or before a refactor.
-- **Command:** `meerkat map [--app <folder>] [--json]`.
-- **Exit codes:** 0 done; 2 usage error.
-- **Does not:** import or run your code (it reads text with regular expressions), guess an import it cannot resolve (it is marked unresolved with a reason), or map more than a fixed number of files.
-- **Status:** OK.
+- **What it is:** a written map of a project: entry points, modules and their imports.
+- **Why it is good:** a person or an AI meeting unfamiliar code gets its shape in one file before reading any of it.
+- **What it does:** writes `codemap.json` (files, imports, exports, entry points, module edges) and `codemap.md` (entry points, modules, most imported files, unresolved imports, blast radius of the top five) into a new run folder.
+- **What it does NOT do:** import or run your code (it reads text with regular expressions), guess an import it cannot resolve (it is marked unresolved with a reason), or map more than a fixed number of files.
+- **Command or tool:** `meerkat map [--app <folder>] [--json]`; MCP `meerkat_map`, then the resource `meerkat://map/latest`.
 
 ## Red testing
 
-- **What it does:** attacks Meerkat itself with throwaway projects: planted bugs (recall per family), injected faults (a check that throws or hangs, a missing program), odd inputs (empty folder, huge file, symlink loop), one test per past fixed bug, and clean twins that must produce no false alarms.
-- **When to use it:** when changing Meerkat's checks or runner.
-- **Command:** `node lib/redtest/run.mjs --kind mutation|faults|adversarial|regression|cleantwin|all` from a repository checkout. The files are also part of `npm test`.
-- **Exit codes:** those of the test runner (0 all passed). Known gaps are recorded as expected failures in [lib/redtest/README.md](../lib/redtest/README.md).
-- **Does not:** exist as a `meerkat` command, or touch any folder the test did not create.
-- **Status:** PARTIAL (works from a checkout only; it is not part of the installed command).
-
-## Advisory scan
-
-- **What it does:** `lib/advisory.mjs` reads the manifests of a project, matches its packages against a local OSV snapshot offline, and advises. Only a refresh of the snapshot would use the network.
-- **Where it stands:** nothing in the command line, the menu or the MCP server calls it on this branch, so there is no command to run. Dependency advisories today come from the `npm-audit-all`, `rust-audit` and opt-in `detectors` (osv-scanner) checks.
-- **Does not:** change, stop or update anything, even when finished.
-- **Status:** PLANNED (as a command). The library exists.
+- **What it is:** Meerkat attacking itself with throwaway projects.
+- **Why it is good:** it proves the checks still catch real defects and do not cry wolf, so a pass can be trusted.
+- **What it does:** planted bugs (recall per family), injected faults (a check that throws or hangs, a missing program), odd inputs (empty folder, huge file, symlink loop), one test per past fixed bug, and clean twins that must give no false alarms. Known gaps are recorded in [lib/redtest/README.md](../lib/redtest/README.md).
+- **What it does NOT do:** exist as a `meerkat` command word, or touch any folder the test did not create. It needs a repository checkout.
+- **Command or tool:** `node lib/redtest/run.mjs --kind mutation|faults|adversarial|regression|cleantwin|all`; MCP `meerkat_redtest`.
 
 ## Catalog and tests command
 
-- **What it does:** `meerkat tests --json` prints every kind of test and family of check: what it proves, what triggers it (`commit`, `pr`, `gate`, `promote`, `manual`), its cost (`fast`, `medium`, `slow`) and what it needs (tools, network, app). It is generated from the check registry, so it cannot drift. `meerkat.order.json` in the project folder sets which kinds start first.
-- **When to use it:** to pick tests, or to find which check proves a thing.
-- **Command:** `meerkat tests [folder] [--json]`. Order file: `{"version": 1, "kinds": ["security", "functionality", "ui", "performance", "refactor"]}`.
-- **Exit codes:** 0 done; 2 when `meerkat.order.json` is wrong (unknown kind, repeated kind, unknown key or bad JSON).
-- **Does not:** run anything. The order file changes what starts first, never what runs; dependencies and lane limits still apply.
-- **Status:** OK.
+- **What it is:** a generated list of every kind of test and family of check.
+- **Why it is good:** it answers "which check proves this?" and "what will this cost?" and cannot drift, because it is built from the check registry.
+- **What it does:** prints what each kind proves, what triggers it (`commit`, `pr`, `gate`, `promote`, `manual`), its cost (`fast`, `medium`, `slow`) and what it needs. `meerkat.order.json` (`{"version": 1, "kinds": [...]}`) sets which kinds start first.
+- **What it does NOT do:** run anything. The order file changes what starts first, never what runs. Exit code 2 when the order file is wrong.
+- **Command or tool:** `meerkat tests [folder] [--json]`; MCP `meerkat_tests`, resource `meerkat://tests/catalog`.
+
+## Doctor, tools, discover and recommend
+
+- **What it is:** four read-only questions about a project and this computer.
+- **Why it is good:** when a check could not run, or a project has tests Meerkat does not use yet, you find out why and what to do next.
+- **What it does:** `doctor` says what would run here, what is missing and how to fix it; `tools` lists the optional outside tools found or missing; `discover` lists the project's own tests that `full`, `thorough` and `release` would run too; `recommend` lists tests the project could run that no check covers.
+- **What it does NOT do:** run tests or install anything. Installing is `meerkat tools install` and adding a recommendation is `meerkat recommend --add`, both a person's step and neither offered as an MCP tool.
+- **Command or tool:** `meerkat doctor`, `meerkat tools`, `meerkat discover`, `meerkat recommend` (each `[folder] [--json]`); MCP `meerkat_doctor`, `meerkat_tools`, `meerkat_discover`, `meerkat_recommend`.
 
 ## MCP tools
 
-- **What it does:** a stdio MCP server offering these 16 calls: `meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_self_test`, `meerkat_gate`, `meerkat_smoke`, `meerkat_blast`, `meerkat_map`, `meerkat_tests`, `meerkat_findings`, `meerkat_finding`, `meerkat_redtest`, `meerkat_dismiss`, `meerkat_baseline`. `meerkat_dismiss` and `meerkat_baseline` write (to the home folder, not the project). `meerkat_run` can take minutes (up to 30) and sets `isError` when the exit code is not 0. Folders must be inside the folder the server started in or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
-- **Command:** `meerkat mcp serve`, `meerkat mcp install [claude] [--dry-run]`, `meerkat mcp status`, or `node bin/meerkat-mcp.mjs`.
-- **Exit codes:** the server speaks JSON-RPC on stdin and stdout; a failed run is reported inside the tool result.
-- **Does not:** run any shell command other than Meerkat's own checks. The gate, blast, map and catalog are MCP tools (`meerkat_gate`, `meerkat_blast`, `meerkat_map`, `meerkat_tests`).
-- **Status:** OK. The 16 tool names are defined in `lib/mcp.mjs` (6) and `lib/mcptools.mjs` (10). The first six were listed from a running server earlier; the ten added ones are covered by unit tests and were not re-listed from a running server for this entry.
+- **What it is:** a stdio MCP server that offers Meerkat to an AI client as tools.
+- **Why it is good:** an AI can run the checks, read the findings and look up a blast radius itself, with inputs that are checked before anything starts.
+- **What it does:** offers 28 tools. Read-only: `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_blast`, `meerkat_tests`, `meerkat_findings`, `meerkat_finding`, `meerkat_doctor`, `meerkat_discover`, `meerkat_recommend`, `meerkat_tools`, `meerkat_trend`, `meerkat_suggest`, `meerkat_pr_comment`, `meerkat_dismissals`, `meerkat_hook_status`, `meerkat_describe`. They run the project's own commands: `meerkat_run`, `meerkat_self_test`, `meerkat_gate`, `meerkat_smoke`, `meerkat_redtest`, and `meerkat_map` writes a map into the log folder. Writes (description starts with WRITES, folder required): `meerkat_dismiss`, `meerkat_undismiss`, `meerkat_baseline`, `meerkat_hook`. Folders must be inside the folder the server started in or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
+- **What it does NOT do:** run any command except Meerkat's own, or offer `root add`, `update`, `init`, check or preset edits, `recommend --add`, `tools install`, `rules test`, `logs`, `repos` or `recent`.
+- **Command or tool:** `meerkat mcp serve`, `meerkat mcp install [claude] [--dry-run]`, `meerkat mcp status`, or `node bin/meerkat-mcp.mjs`. The tools are defined in `lib/mcp.mjs`, `lib/mcptools.mjs` and `lib/mcpmore.mjs`.
 
 ## MCP resources and prompts
 
-- **What it does:** read-only resources: `meerkat://run/latest/findings`, `meerkat://run/latest/report`, `meerkat://map/latest`, `meerkat://tests/catalog` and the template `meerkat://run/latest/log/{check}`. Nine prompts: `triage_newest_run`, `check_one_fix`, `scan_diff`, `pre_commit_check`, `pre_pr_check`, `scan_for_secrets`, `blast_before_edit`, `map_unfamiliar_repo`, `red_test_scenario`. Prompts are text to pick; they run nothing.
-- **Does not:** explain why a finding matters (rule, evidence and place only) or add a write path.
-- **Status:** OK.
+- **What it is:** read-only data and ready-made requests an MCP client can pick.
+- **Why it is good:** the client can read the latest result directly and start a common job (triage, pre-commit check) with one choice.
+- **What it does:** resources `meerkat://run/latest/findings`, `meerkat://run/latest/report`, `meerkat://map/latest`, `meerkat://tests/catalog` and the template `meerkat://run/latest/log/{check}`. Nine prompts: `triage_newest_run`, `check_one_fix`, `scan_diff`, `pre_commit_check`, `pre_pr_check`, `scan_for_secrets`, `blast_before_edit`, `map_unfamiliar_repo`, `red_test_scenario`.
+- **What it does NOT do:** run anything (a prompt is text to pick), explain why a finding matters beyond rule, evidence and place, or add a way to write.
+- **Command or tool:** served by `meerkat mcp serve`.
 
 ## Hook safety
 
-- **What it does:** `meerkat hook install [folder]` adds a git pre-push hook that runs the quick preset with `--ratchet`. It writes one block between marker lines, creates the hook if missing, appends to an existing hook without touching the rest, and replaces only its own block on a second install. `meerkat hook remove` removes only that block.
-- **Exit codes:** 0 done; 1 not a git repository, or the hook could not be written.
-- **Does not:** overwrite your own hook lines, or push anything. It is not listed in `meerkat help` yet.
-- **Status:** OK.
+- **What it is:** a git pre-push hook that runs the quick preset.
+- **Why it is good:** a push is checked without anyone remembering to, and the hook can be removed cleanly.
+- **What it does:** `install` adds one block between marker lines (creates the hook if missing, appends to an existing hook, replaces only its own block on a second install); `remove` takes out only that block; `status` shows the hook file, whether the block is there and whether an install would be allowed. The hook runs the quick preset with `--ratchet`. Exit codes: 0 done, 1 not a git repository or the hook could not be written.
+- **What it does NOT do:** overwrite your own hook lines, or push anything. Install and remove are not run unless asked.
+- **Command or tool:** `meerkat hook install|remove|status [folder]`; MCP `meerkat_hook` (WRITES), `meerkat_hook_status`.
 
 ## AI verification of findings
 
-- **What it does:** optional, off by default. `--ai-verify` (or `v` on the results screen) asks the model you chose (`meerkat ai use`) to double-check each medium, high and critical finding. It says what it will send first and asks unless `--yes`. Verdicts add notes; nothing is deleted. A model error is NOT RUN, never a pass.
-- **Status:** PARTIAL. Documented in [reference.md](reference.md); not re-run in this pass because it needs a model and a key.
+- **What it is:** an optional second opinion on findings from a model you choose.
+- **Why it is good:** it can mark a medium, high or critical finding as a likely false alarm before a person spends time on it.
+- **What it does:** with `--ai-verify` (or `v` on the results screen) it asks the model chosen by `meerkat ai use` to double-check each medium, high and critical finding. It says what it will send first and asks unless `--yes`. Verdicts add notes. A model error counts as not run, never as a pass. Details in [reference.md](reference.md).
+- **What it does NOT do:** run unless you ask, delete a finding, or send anything before you agree.
+- **Command or tool:** `--ai-verify`, `meerkat ai status|use|test`.
+
+## Planned
+
+### Advisory scan
+
+- **What it is:** `lib/advisory.mjs`, a library that reads a project's manifests and matches its packages against a local OSV snapshot.
+- **Why it is good:** it would flag known-vulnerable dependencies offline, with no network call except an optional refresh of the snapshot.
+- **What it does:** nothing you can call yet: no command, menu entry or MCP tool uses it. Dependency advisories today come from the `npm-audit-all`, `rust-audit` and opt-in `detectors` (osv-scanner) checks.
+- **What it does NOT do:** change, stop or update anything, even when finished.
+- **Command or tool:** none yet.
