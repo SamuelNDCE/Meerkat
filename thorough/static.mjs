@@ -242,6 +242,36 @@ const xssSafeNames = (root) => new Set(readText(root, '.meerkat-xss-safe').split
 // The right side of an assignment, read the way JavaScript reads it: from just after the operator to the end of the statement (a ; or a line end outside
 // brackets and strings). Comments are removed first. A // comment ends only the line it is on: the expression goes on when the next line that holds code
 // starts with a continuation token, exactly as for a plain line end, so a comment cannot hide a raw value on the next line.
+// Blanks // and /* */ comments with spaces (line breaks kept, so every index stays the same) outside strings and template literals. Every later step reads this copy.
+let blankedFor = ''
+let blankedText = ''
+const blankComments = (t) => {
+  if (t === blankedFor) return blankedText
+  let out = ''
+  let q = ''
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i]
+    if (q) {
+      out += c
+      if (c === '\\') out += t[++i] ?? ''
+      else if (c === q) q = ''
+    } else if (c === '"' || c === "'" || c === '`') {
+      q = c
+      out += c
+    } else if (c === '/' && t[i + 1] === '/') {
+      while (i < t.length && t[i] !== '\n') (out += ' '), i++
+      i--
+    } else if (c === '/' && t[i + 1] === '*') {
+      const end = t.indexOf('*/', i + 2)
+      const stop = end < 0 ? t.length : end + 2
+      for (; i < stop; i++) out += t[i] === '\n' ? '\n' : ' '
+      i--
+    } else out += c
+  }
+  blankedFor = t
+  blankedText = out
+  return out
+}
 const rhsText = (t, from) => {
   let depth = 0
   let q = ''
@@ -249,7 +279,7 @@ const rhsText = (t, from) => {
   let i = from
   // The first character of the next line that holds code (blank lines and whole-line // comments are skipped).
   const nextCode = (at) => {
-    const m = /^(?:\s*(?:\/\/[^\n]*)?\n)*\s*(\S)/.exec(t.slice(at, at + 400))
+    const m = /^(?:\s|\/\/[^\n]*|\/\*[\s\S]*?\*\/)*(\S)/.exec(t.slice(at, at + 400))
     return m ? m[1] : ''
   }
   const continues = (before, at) => before === '' || /[+,(?:&|=]$/.test(before) || /[+.?:&|]/.test(nextCode(at))
@@ -318,12 +348,15 @@ const wrapped = (s) => {
 }
 const CALL_HEAD = /^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\(/
 // A decoder, unescaper or raw-markup helper turns text back into markup, so it is never accepted as a cleaner, not even when a project vouches for it.
-const DECODER_NAME = /decode|unescape|atob|raw/i
+// Judged on whole name parts (split at . _ $ - spaces and camelCase), so unescapeHtml and he.unescape are decoders but drawChart and withdrawHtml are not.
+const DECODER_PARTS = new Set(['decode', 'decoded', 'decoder', 'decodeuri', 'decodeuricomponent', 'unescape', 'unescaped', 'atob', 'raw'])
+const nameSegments = (name) => name.split(/[\s._$-]+/).flatMap((p) => p.split(/(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/)).map((p) => p.toLowerCase()).filter(Boolean)
+const isDecoder = (name) => nameSegments(name).some((p) => DECODER_PARTS.has(p))
 // A call is safe only when its callee is a known cleaner (XSS_SAFE_CALLS) or a name the project vouches for. A wrapper around a cleaner is not: whatever it does
 // to the cleaned text afterwards is unknown, so it is reported unless it is vouched too.
 const cleansInput = (name, vouched) => {
   const last = name.split('.').pop().toLowerCase()
-  if (DECODER_NAME.test(name)) return false
+  if (isDecoder(name)) return false
   return XSS_SAFE_CALLS.some((n) => n.toLowerCase() === last) || vouched.has(last) || vouched.has(name.toLowerCase())
 }
 const safeTerm = (t, raw, vouched) => {
@@ -365,7 +398,8 @@ const safeExpr = (t, expr, vouched) => {
   return terms.every((x) => safeTerm(t, x, vouched))
 }
 // innerHTML = '' or = '<svg ...>' (a plain string with no ${} and no + joining other text) injects nothing a visitor controls, so it is not a risk.
-const safeLiteralAssign = (t, m, why, vouched = new Set()) => {
+const safeLiteralAssign = (t0, m, why, vouched = new Set()) => {
+  const t = blankComments(t0)
   const from = m.index + m[0].length
   const eol = t.indexOf('\n', from)
   let rest = t.slice(from, eol < 0 ? t.length : eol).trim()

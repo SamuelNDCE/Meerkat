@@ -154,6 +154,39 @@ describe('the scanner reads the value as JavaScript does', () => {
   })
 })
 
+describe('decoder names are judged on whole name parts', () => {
+  const vouch = (text: string) => ({ '.meerkat-xss-safe': text })
+  for (const name of ['unescapeHtml', 'decodeHtml', 'rawSafe', 'he.unescape']) {
+    test(`${name} is a decoder: flagged even when vouched`, () => {
+      expect(js(`el.innerHTML = ${name}(x)`, vouch(`${name}\n`)).code).toBe(1)
+    })
+  }
+  for (const name of ['drawChart', 'withdrawHtml']) {
+    test(`${name} is not a decoder: accepted when vouched and its argument is safe`, () => {
+      expect(js(`el.innerHTML = ${name}(esc(x))`, vouch(`${name}\n`)).code).toBe(0)
+      expect(js(`el.innerHTML = ${name}(esc(x))`).code).toBe(1) // not vouched
+    })
+  }
+})
+
+describe('comments are removed before the value is read', () => {
+  test('a // comment inside a call parenthesis cannot hide a raw continuation', () => {
+    expect(js('el.innerHTML = esc(a // )\n) + raw').code).toBe(1)
+  })
+  test('a /* */ comment between a safe value and a raw continuation flags', () => {
+    expect(js("el.innerHTML = '<b>' /* c */ + raw").code).toBe(1)
+    expect(js("el.innerHTML = esc(a) /* ) */ + raw").code).toBe(1)
+  })
+  test('a block comment on its own line before a raw continuation flags', () => {
+    expect(js("el.innerHTML = '<b>'\n/* c */\n+ raw").code).toBe(1)
+    expect(js("el.innerHTML = '<b>' /* c */\n+ raw").code).toBe(1)
+  })
+  test('comments between safe parts are still accepted', () => {
+    expect(js("el.innerHTML = '<b>' /* open */ + esc(a) /* text */ + '</b>'").code).toBe(0)
+    expect(js("el.innerHTML = '<b>'\n/* c */\n+ esc(a)").code).toBe(0)
+  })
+})
+
 describe('the risky-code self-test', () => {
   test('--fixtures fails for the reasons it is meant to', () => {
     let out = ''
