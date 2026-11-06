@@ -2,216 +2,115 @@
 
 # Meerkat
 
-<img src="docs/images/badges/version.svg" alt="version"> <img src="docs/images/badges/licence.svg" alt="licence: PCL 1.0"> <a href="https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md"><img src="docs/images/badges/planted-defect-recall.svg" alt="planted-defect recall"></a> <img src="docs/images/badges/checks.svg" alt="checks"> <img src="docs/images/badges/sub-checks.svg" alt="sub-checks"> <img src="docs/images/badges/suites.svg" alt="suites"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none"> <img src="docs/images/badges/node.svg" alt="node: 20+"> <img src="docs/images/badges/tested-on.svg" alt="tested on: Windows 11"> <img src="docs/images/badges/works-with.svg" alt="works with NeuralVault and MCP">
-
 **A scanner for people, and a tool and scaffolding for AIs.**<br>
 Meerkat checks, maps and tests a project: security, correctness, accessibility, performance and code health, with every result saved and explained.
 
-<a href="https://www.npmjs.com/package/@samuelndce/meerkat"><img src="https://img.shields.io/badge/npm-package-CB3837?style=for-the-badge" alt="npm package"></a> <a href="https://github.com/SamuelNDCE/Meerkat"><img src="https://img.shields.io/badge/GitHub-repository-181717?style=for-the-badge" alt="GitHub repository"></a>
-
-<!-- counts:start -->
-{{COUNTS: filled in by tools/gen-checks.mjs}}
-<!-- counts:end -->
+<img src="https://img.shields.io/badge/version-0.5-blue" alt="version 0.5"> <img src="https://img.shields.io/badge/checks-see%20docs%2Ffeatures.md-informational" alt="checks: see docs/features.md"> <img src="https://img.shields.io/badge/use-standalone-success" alt="use: standalone"> <img src="https://img.shields.io/badge/use-with%20AI%20(MCP)-8A2BE2" alt="use: with AI over MCP"> <img src="docs/images/badges/dependencies.svg" alt="dependencies: zero"> <img src="docs/images/badges/telemetry.svg" alt="telemetry: none">
 
 ![Meerkat running: what is running now, a status line, every check with its time, and a timeline](docs/images/meerkat-run.gif)
 
 <sub>Sample data: a made-up project, drawn by Meerkat's real screens.</sub>
 
-**[What it is](#what-meerkat-is) · [Quick start](#quick-start) · [Primary features](#primary-features) · [AI section](#ai-section) · [Make it yours](#make-it-yours) · [Commands](#commands) · [Licence](#licence)**
-
 </div>
 
-## What Meerkat is
+## 💡 Why Meerkat
 
-Meerkat is one command that looks at a project and tells you, honestly, whether it is safe to ship. It is for developers who want the answer to "is this safe to push?" without running a dozen separate tools in the right order, and for AI coding assistants that need a reliable way to check their own work.
+- **One command, an honest answer.** `meerkat verify` works out what applies to your project and says whether it is safe to ship. A check that could not run is NOT RUN, and the run fails.
+- **Two ways to use it.** Standalone in a terminal (no AI, no account, no network), or with an AI over MCP, which uses the same checks to verify its own work.
+- **Read-only and private.** It never edits your project, has no telemetry, and uploads nothing.
 
-There are two ways to use it, and the first needs no AI at all:
+## 🚀 Quick start
 
-- **Standalone.** You run `meerkat verify` in a terminal. It works out what applies to your project, runs the checks, shows a live board and a results screen, and saves a report. No account, no network call of its own, no AI.
-- **With an AI.** The same checks are offered to an AI as an MCP tool, a code map, a blast-radius lookup, a test catalog and a ready-made prompt. The AI uses Meerkat to check its changes, map an unfamiliar codebase and see what an edit affects. Meerkat does more with an AI, but it never needs one.
-
-What it will not do: it never edits your project, never passes a check that could not run (that is NOT RUN, and the run fails), and sends nothing over the network unless you turn on an opt-in check that says what it will send first.
-
-## Quick start
-
-You need [Node.js](https://nodejs.org) 20 or newer. There are no other dependencies.
+You need [Node.js](https://nodejs.org) 20 or newer. No other dependencies.
 
 ```
 npm install -g @samuelndce/meerkat
 ```
 
 ```
-meerkat --version
-```
-
-From the repository instead: clone it, then run `npm link` inside the folder to install the `meerkat` command.
-
-Run the quick checks in your project folder (the everyday run, before a push):
-
-```
 meerkat verify
 ```
-
-Run every check, the slow ones too (before a release or a merge you cannot undo):
 
 ```
 meerkat full
 ```
 
-Point it at another project by path or by name (`meerkat root add <folder>` teaches it where your projects live):
-
 ```
-meerkat verify ../my-app
+meerkat last
 ```
 
-When a check fails, `meerkat last` shows the report, `meerkat why <check>` shows that check's log, and `meerkat findings` lists every finding, worst first. Exit codes: 0 passed, 1 a check failed or could not run, 2 a usage or configuration error, 3 nothing to run. See [docs/features.md](docs/features.md).
+`verify` is the quick everyday run, `full` adds the slow checks, and `last` shows the saved results. `meerkat why <check>` shows one check's log and `meerkat findings` lists every finding, worst first. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage error, 3 nothing to run. Every command: [docs/commands.md](docs/commands.md).
 
-## Primary features
+## 🧩 Features at a glance
 
-Each feature below has a full entry (what it does, when to use it, the command, exit codes, what it does not do, and its status) in [docs/features.md](docs/features.md).
+Legend: ✔ OK works / ◐ PARTIAL works with limits / ✖ BROKEN built but not working / ○ PLANNED not built.
 
-**Checks.** Hundreds of checks in suites (secrets, web security, accessibility, build, tests, performance, code shape and more), chosen by what your project contains. A check that cannot run says NOT RUN and why, and the run fails. Every rule is proven on a bad and a good sample (`meerkat self-test`). The generated list is [docs/checks.md](docs/checks.md). Presets pick a set: `quick`, `full`, `ci`, `release`, `smoke`, `security` and more (`meerkat presets`).
-
-**Gate.** Runs only the checks whose paths match the files you changed, for a pre-commit hook (`--staged`) or a pull request (`--base <ref>`). Partly shipped: the logic is in `lib/gate.mjs` and runs as `node lib/gate.mjs gate`; the `meerkat gate` word is not wired into the main command on this branch yet.
-
-**Smoke.** Two different things share the name. The `smoke` preset (`meerkat run smoke`) asks "did my change break the build, type check, lints and quick tests?". The smoke self-check (`lib/gate.mjs smoke`) runs checks on the changed files with a tiny time limit to prove the tool itself behaves; it tests Meerkat, not your project.
-
-**Blast radius.** `meerkat blast <file>[#symbol]` lists the files that import a target, the modules touched, the tests that reach it and the imports it could not resolve (never counted as safe). Run it before and after an edit.
-
-**Codebase map.** `meerkat map` writes `codemap.json` and `codemap.md`: entry points, modules, edges between them, the most imported files and unresolved imports. Read it first on an unfamiliar codebase.
-
-**Red testing.** A suite that attacks Meerkat itself: planted bugs, injected faults, odd inputs, past regressions and clean twins that must stay quiet. It runs from a repository checkout (`node lib/redtest/run.mjs --kind all`), not as a `meerkat` command. See [lib/redtest/README.md](lib/redtest/README.md).
-
-**Advisory scan.** A library (`lib/advisory.mjs`) that matches the packages a project declares against an OSV snapshot, offline, and only advises. It is not wired to a command yet. Today advisories come from the `npm-audit-all`, `rust-audit` and opt-in `detectors` checks.
-
-**Catalog and tests command.** `meerkat tests --json` prints every kind of test and family of check: what it proves, what triggers it, its cost and what it needs. It is generated from the check registry. `meerkat.order.json` sets which kinds start first.
-
-**MCP tools and resources.** `meerkat mcp serve` (or `bin/meerkat-mcp.mjs`) is an MCP server over stdio with six tools, two read-only resources, one resource template and three prompts. `meerkat mcp install` registers it with Claude Code.
-
-**Hook safety.** `meerkat hook install` adds a git pre-push hook that runs the quick preset with `--ratchet`. It writes one marked block, keeps anything already in the hook, and `meerkat hook remove` takes out only that block.
-
-Also: findings files (JSON, Markdown, SARIF), accepted findings (`dismiss`, `baseline`, `--ratchet`), your project's own tests found automatically (`meerkat discover`), live board and results screen, smart time limits, and a prompt writer (`meerkat prompt`).
-
-## AI section
-
-Everything an AI needs is in [docs/ai.md](docs/ai.md): which tool or command for which job, the six MCP tools, the resources and prompts, the order to run tests, the exit codes, and how to read the findings JSON. The short version:
-
-- Before committing: the gate. After an edit: `meerkat blast <file>`. On a new codebase: `meerkat map`. To know which checks exist: `meerkat tests --json`.
-- Over MCP, call `meerkat_run`, then read `meerkat://run/latest/findings`.
-- A NOT RUN is never a pass. Never edit the Meerkat config or turn a check off to make a run pass.
-
-For Claude Code, the skill in [skills/meerkat/SKILL.md](skills/meerkat/SKILL.md) tells the AI when to reach for Meerkat. Add the server with:
-
-```
-claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs
-```
-
-## Make it yours
-
-- Add a command as a check in one line: `meerkat check new`.
-- Write a check in JavaScript, in a pack: [docs/writing-checks.md](docs/writing-checks.md).
-- Make a preset: `meerkat preset new`.
-- Silence a known finding with a reason: `meerkat dismiss <id> --reason "..."`.
-- Settings live in `meerkat.config.json` (`meerkat init` writes one): [docs/customizing.md](docs/customizing.md).
-
-## Extend Meerkat
-
-You can add your own checks, packs, presets and click-through steps. The full how-to is [docs/adding-tests.md](docs/adding-tests.md).
-
-Legend: OK works / PARTIAL works with limits / PLANNED not built.
-
-| I want to | How | Status |
+| Feature | What it does | Status |
 |---|---|---|
-| Run one project command as a check, no JavaScript | `customChecks` in `meerkat.config.json` (`cmd`, `args`, `suite`, `group`, `tier`, `cwd`, `timeoutSeconds`, `weight`, `needs`, `install`). Code: `lib/customchecks.mjs` | OK |
-| Write a check in JavaScript | A pack file: a `.mjs` whose default export is an array of checks. Example: `packs/a11y/a11y.mjs` | OK |
-| Add a pack | `meerkat pack add <folder>`, then `meerkat pack enable <name>` | OK |
-| Choose which groups and packs run | `meerkat preset new`. A preset selects checks, it does not register them | OK |
-| See my check under a suite | Set the check's `suite` field, or add it to `lib/suites.mjs` (`CHECK_SUITE` or `PACK_SUITE`). Otherwise it is listed under "other" | OK |
-| Click through my app's UI | Write your own steps as a window check (lane `electron` or `windows`). Meerkat has no generic built-in UI click-through | PARTIAL |
-| Let Meerkat find my scripts | `meerkat discover` reads `package.json` scripts, Makefile, Playwright and Cypress configs and `scripts/` | OK |
-| See my checks over MCP | `meerkat_list` should show checks from packs and config. Check with `meerkat_list` | PARTIAL |
+| 🔍 [Checks and presets](docs/features.md#checks-and-presets) | Runs the checks that fit your project; presets pick a set (`quick`, `full`, `ci`, `release`) | ✔ OK |
+| 🚦 [Gate on changed files](docs/features.md#gate) | Runs only the checks matching the files you changed | ◐ PARTIAL |
+| 💨 [Smoke](docs/features.md#smoke) | The `smoke` preset works; the tool self-check is not routed as a command yet | ◐ PARTIAL |
+| 💥 [Blast radius](docs/features.md#blast-radius) | Lists what an edit to a file or symbol affects | ✔ OK |
+| 🗺 [Codebase map](docs/features.md#codebase-map) | Writes a map of entry points, modules and imports | ✔ OK |
+| 🧪 [Red testing](docs/features.md#red-testing) | Attacks Meerkat itself with planted bugs and clean twins (repository checkout only) | ◐ PARTIAL |
+| 📏 [Real-code benchmark](docs/accuracy.md#real-code-benchmark) | Measures false alarms on real Rust code (repository checkout only) | ◐ PARTIAL |
+| 📡 [Advisory scan](docs/features.md#advisory-scan) | Offline match of declared packages against an advisory snapshot (library, no command) | ○ PLANNED |
+| 📚 [Test catalog](docs/features.md#catalog-and-tests-command) | `meerkat tests --json` lists every kind of test and what it proves | ✔ OK |
+| 🔌 [MCP server](docs/features.md#mcp-tools) | Offers the checks to an AI as tools, resources and prompts | ✔ OK |
+| 🧠 [Skills](skills/README.md) | Short guides that tell an AI when to reach for Meerkat | ✔ OK |
+| 🖱 [Click-through](docs/click-through.md) | Opens your real app and presses controls through a driver you supply | ◐ PARTIAL |
+| 🪝 [Hook safety](docs/features.md#hook-safety) | A git pre-push hook that runs the quick preset; removable cleanly | ✔ OK |
 
-A check has these required fields (validated in `lib/load-checks.mjs`): `id` (kebab-case), `group` (security, functionality, ui, performance or refactor), `tier` (fast or thorough), `lane` (free, cargo, electron or windows), `title` and `run` (a function, or `{cmd}`). Optional: `weight`, `suite`, `subs`, `scale`, `severity`, `fix`.
+How many checks exist: see [docs/features.md](docs/features.md), or run `meerkat tests --json`.
 
-```js
-export default [{
-  id: 'no-todo-left', group: 'functionality', tier: 'fast', lane: 'free',
-  title: 'No TODO markers in src',
-  run: { cmd: 'node', args: ['scripts/no-todo.mjs'], cwd: 'repo' },
-  selfTest: { cmd: 'node', args: ['scripts/no-todo.mjs', '--fixtures'], cwd: 'repo', expectFail: true, expectMatch: 'TODO' },
-}]
-```
+## 🎯 Accuracy (summary)
 
-Click-through steps: you write the click path for your app, Meerkat runs it and reports. A window check runs only with `--include windows` or `MEERKAT_WINDOWS=1` (`lib/runner.mjs`, [docs/reference.md](docs/reference.md)). The worked example, specific to NeuralVault, is `examples/neuralvault/screens-checks.mjs`.
+Measured 2026-11-06 with `tools/corpus/gen-planted.mjs` and `tools/corpus/measure.mjs` (planted bugs and clean twins) and `benchmarks/real-rust/measure.mjs` (real code). Legend as above.
 
-Prove a new check with a `selfTest` on a broken sample, then run `node run.mjs --self-test`. A PASS means the broken case was caught.
-
-## Commands
-
-`meerkat help` lists every command and `meerkat <command> --help` explains one. The full table is [docs/commands.md](docs/commands.md); `meerkat describe` prints all of it as JSON.
-
-| Job | Command |
-|---|---|
-| Quick or full run | `meerkat verify`, `meerkat full`, `meerkat run <preset>` |
-| Only some checks | `meerkat check <id or suite>` |
-| Results | `meerkat last`, `meerkat why <check>`, `meerkat findings`, `meerkat finding <id>` |
-| Understand the code | `meerkat map`, `meerkat blast <file>` |
-| Find what exists | `meerkat tests`, `meerkat suite list`, `meerkat doctor` |
-| Set up | `meerkat init`, `meerkat tools`, `meerkat mcp install`, `meerkat hook install` |
-
-## Using Meerkat to build NeuralVault and the Perpetual Technologies website
-
-**Why.** Samuel wants Meerkat used whenever anyone, human or AI agent, builds or works on NeuralVault and on the Perpetual Technologies website. Meerkat finds bugs in code, checks docs against code, and maps what a change affects, so problems are caught before they ship.
-
-**How.** Legend: OK works on `main` / PARTIAL works only on a branch or by a longer command / PLANNED not wired yet.
-
-| Moment | What to run | Status |
+| Measure | Result | Status |
 |---|---|---|
-| Before a commit or PR | `meerkat verify` (quick) or `meerkat full` | OK on `main` |
-| Before a commit or PR, only the files you changed | `meerkat gate --base <ref>` | PARTIAL: `node lib/gate.mjs gate --base <ref>` on this branch; the `meerkat gate` word is on the `wire-gate` branch, not merged |
-| After an edit | `meerkat blast <file>` | PARTIAL: on the `meerkat-040-integration` branch, not yet merged to `main` |
-| Before a release | `meerkat full` (or `meerkat run release`) | OK on `main` |
-| Unfamiliar codebase or a refactor | `meerkat map` | PARTIAL: on the `meerkat-040-integration` branch, not yet merged to `main` |
-| Check Meerkat itself | `meerkat smoke` | PARTIAL: `node lib/gate.mjs smoke` on this branch; the `meerkat smoke` word is on `wire-gate`, not merged. `meerkat self-test` is OK on `main` |
-| AI agents | `meerkat mcp serve` | OK on `main`: six tools (`meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_self_test`), plus resources and prompts |
+| Planted-bug recall, default run | 99.77% (1735 of 1739). The 4 misses are lock-unwrap defects, hidden by design in the default run | ✔ OK |
+| Planted-bug recall, pedantic run (`--all`) | 100% | ✔ OK |
+| False alarms on real code (NeuralVault Rust benchmark) | 4.6%: 6 of 130 labelled findings were false, 124 true | ✔ OK |
+| False alarms on clean twins | 0 of 1739 | ✔ OK |
+| Real-code mutation run (200 mutants) | default 37%, all rules 98% | ◐ PARTIAL |
 
-There is no gate, blast or map MCP tool. Agents call `meerkat_run` with `preset: "full"` for the merge gate and use the shell commands for the rest. `meerkat mcp install` registers the server with Claude Code. Full agent guide: [docs/ai.md](docs/ai.md).
+**Caveat.** The planted corpus is built from each rule's own samples, so high recall there shows the rules do what they were written to do, not that they find every real bug. The real-code numbers matter more, and they cover one project in one language. Details, commands and what is not measured yet: [docs/accuracy.md](docs/accuracy.md).
 
-`blast` exits 75 when the file is not in the code map. `gate` and `smoke` exit 75 when they could not run. Exit 75 is not a pass.
+## 🤖 Using it with AI
 
-**Known limits.** Treat Rust findings as leads to check, not verdicts.
-- Recall and false-alarm rates for the Rust rules are not stated here. They change with every run: see [docs/accuracy.md](docs/accuracy.md), which gives each figure with its date and the command that produced it. The Rust measuring scripts (`benchmarks/real-rust/measure.mjs`, `tools/corpus/measure.mjs`) are not on this branch.
+- **MCP server:** `meerkat mcp serve` offers 16 tools, read-only resources (`meerkat://run/latest/...`) and prompts. `meerkat mcp install` registers it with Claude Code.
+- **Skills:** the [skills](skills/README.md) folder holds short guides (before a commit, before a PR, blast radius before an edit, mapping unfamiliar code, and more).
+- **Rule for agents:** a NOT RUN is never a pass, and never edit the config or turn a check off to make a run pass.
 
-**Read more.** [docs/features.md](docs/features.md) (every feature and its status), [docs/ai.md](docs/ai.md) (for AI agents), [docs/adding-tests.md](docs/adding-tests.md) (adding a check), [CONTRIBUTING.md](CONTRIBUTING.md).
+Everything an AI needs: [docs/ai.md](docs/ai.md).
 
-## CI, privacy, updates
+## 🔧 Extending Meerkat
 
-Meerkat exits non-zero on any failure or NOT RUN and writes `summary.json` and SARIF for every run: `node run.mjs --preset ci --json meerkat.json` in a build job. It has no telemetry and never uploads your code or results; its one network call of its own is a once-a-day version look-up (`meerkat update off` turns it off). Versions follow [semantic versioning](https://semver.org); the version lives in `package.json` and [CHANGELOG.md](CHANGELOG.md) says what changed.
+Add a command as a check in one line (`meerkat check new`), write a check in JavaScript in a pack, make a preset (`meerkat preset new`), or silence a known finding with a reason (`meerkat dismiss`). Prove a new check with a `selfTest` on a broken sample. How-to: [docs/adding-tests.md](docs/adding-tests.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Verification
+## 🖱 Click-through
 
-Meerkat is tested against deliberately planted defects, and against clean projects that must stay quiet.
+Status: ◐ PARTIAL. The driver protocol is built and Meerkat schedules, times and reports a driver like any check. The reference drivers have not yet run against a real app, so treat the shipped examples as unproven. Exit 75 from a driver means it could not start, never a pass. Guide: [docs/click-through.md](docs/click-through.md).
 
-<!-- accuracy-readme:begin -->
-{{ACCURACY: filled in by tools/accuracy-corpus.mjs}}
-<!-- accuracy-readme:end -->
+## ⚠ Known limits
 
-Details and caveats: [docs/accuracy.md](docs/accuracy.md). Recall on planted bugs measures what was planted, not real-world accuracy. If Meerkat reports something that is fine, open a [false alarm](https://github.com/SamuelNDCE/Meerkat/issues/new?template=false-positive.yml) issue; if it misses a real problem, open a [missed problem](https://github.com/SamuelNDCE/Meerkat/issues/new?template=missed-bug.yml) issue.
+- Rust findings are leads to check, not verdicts; the false-alarm figure is from one project.
+- `gate` and the tool self-check `smoke` are not routed as `meerkat` words yet; blast and map are available as commands.
+- Red testing, the real-code benchmark and the advisory scan run from a repository checkout or a library, not as everyday commands.
+- Recall on planted bugs measures what was planted, not real-world accuracy.
+- If Meerkat reports something fine, open a [false alarm](https://github.com/SamuelNDCE/Meerkat/issues/new?template=false-positive.yml) issue; if it misses a real problem, open a [missed problem](https://github.com/SamuelNDCE/Meerkat/issues/new?template=missed-bug.yml) issue.
 
-## Licence
-
-Meerkat is under the [Perpetual Community Licence 1.0](LICENSE). People can use, change and share it free; organisations can use it free but must say publicly that they do; nobody may sell Meerkat itself. The numbered terms in `LICENSE` are what counts. See [docs/licence-notes.md](docs/licence-notes.md). To report a security problem, see [SECURITY.md](SECURITY.md). To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## More documentation
+## 🔗 Links
 
 | Read | For |
 |---|---|
 | [docs/features.md](docs/features.md) | every feature: use, command, exit codes, limits, status |
 | [docs/ai.md](docs/ai.md) | everything an AI needs |
-| [docs/reference.md](docs/reference.md) | the full manual: presets, settings, environment variables, timeouts |
-| [docs/checks.md](docs/checks.md) | every check and suite |
+| [docs/adding-tests.md](docs/adding-tests.md) | adding checks, packs, presets |
+| [docs/accuracy.md](docs/accuracy.md) | how accuracy is measured, with figures and caveats |
 | [docs/commands.md](docs/commands.md) | every command and flag |
-| [docs/findings.md](docs/findings.md) | the findings files and protocol |
-| [docs/accuracy.md](docs/accuracy.md) | how accuracy is measured |
-| [docs/credits.md](docs/credits.md) | the outside tools Meerkat can run, with licences |
-| [PROJECT.md](PROJECT.md) | rules for working in this repository |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | how to contribute |
+| [CHANGELOG.md](CHANGELOG.md) | what changed |
+
+Licence: [Perpetual Community Licence 1.0](LICENSE) ([notes](docs/licence-notes.md)). Security problems: [SECURITY.md](SECURITY.md).

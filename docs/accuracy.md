@@ -2,6 +2,74 @@
 
 Meerkat's checks can be wrong in two ways. A **false positive** is a FAIL on a project that is fine. A **false negative** is a PASS on a project that has the very defect the check exists for. The compatibility matrix guards the first kind; the accuracy corpus guards the second.
 
+Status legend: ✔ OK / ◐ PARTIAL / ✖ BROKEN / ○ PLANNED.
+
+## Current figures (0.5, measured 2026-11-06)
+
+| Measure | Result | Source | Status |
+|---|---|---|---|
+| Planted-bug recall, default run | 99.77%: 1735 of 1739 | `tools/corpus/measure.mjs` | ✔ OK |
+| Planted-bug recall, pedantic run (`--all`) | 100% | `tools/corpus/measure.mjs --all` | ✔ OK |
+| False alarms on clean twins | 0 of 1739 | `tools/corpus/measure.mjs` | ✔ OK |
+| False alarms on real Rust code | 4.6%: 6 of 130 labelled findings false, 124 true | `benchmarks/real-rust/measure.mjs` on a copy of the NeuralVault Rust tree | ✔ OK |
+| Real-code mutation run, default rules | 37% (200 mutants) | mutation run on real code | ◐ PARTIAL |
+| Real-code mutation run, all rules | 98% (200 mutants) | mutation run on real code | ◐ PARTIAL |
+
+The four planted-bug misses in the default run are lock-unwrap defects. Those rules are pedantic and hidden by design in the default run, which is why the pedantic run reaches 100%.
+
+### Which mutation run this is
+
+The 37% and 98% come from one run of 200 mutants on real code (Rust code of the NeuralVault project), once with the default rules and once with all rules on. The mutation figure measures how many injected changes a rule set noticed, so it is a recall-style number on real code. It is one run on one project and its raw output is not stored in this repository, so it is marked PARTIAL: treat it as a snapshot, and re-run before quoting it as current.
+
+### Caveats
+
+- The planted corpus is built from each rule's own bad and good samples, so recall there is close to the ceiling by construction. It shows the rules do what they were written to do. It does not show that real bugs are found.
+- The clean-twin number (0 of 1739) has the same limit: the twins are the rules' own good samples.
+- The real-code false-alarm rate comes from 130 findings a person labelled in one project (NeuralVault) in one language (Rust). It says nothing about other languages or projects.
+- The labelled sample is a seeded random draw of findings hidden by default; labels are tied to exact files and lines of that snapshot.
+- The six remaining labelled false alarms cannot be removed without losing a labelled true finding of the same shape (the table at the end of `benchmarks/real-rust/README.md`).
+
+### What is not measured yet
+
+- Recall on real code for any language other than the NodeGoat run described below (29.4% on 17 vulnerabilities, 2026-11-02).
+- False-alarm rates on real code outside Rust.
+- The mutation run on more than one project, and with stored raw output.
+- The false-alarm rate of the non-Rust checks on real code.
+
+### How the planted corpus is built
+
+`tools/corpus/gen-planted.mjs` writes, for every rule of the data-driven checks (`code-patterns`, `client-frameworks`, `electron-plus`, `rust-plus`), several variants of the rule's known-bad sample and the matching known-good twin, plus a `manifest.json`. It is deterministic from `--seed`. Variant 0 is the sample unchanged; the others add harmless surrounding code, indentation, line endings and renamed local variables, so the defect stays a defect. Each defect is written into a complete clean base project (`tools/corpus/base-project.mjs`).
+
+```
+node tools/corpus/gen-planted.mjs --out corpus/planted --seed 20261106 --per-rule 4
+```
+
+```
+node tools/corpus/measure.mjs --corpus corpus/planted --out result.json
+```
+
+```
+node tools/corpus/measure.mjs --corpus corpus/planted --all --out result-pedantic.json
+```
+
+The measure script copies each defective file into a fresh folder, runs only the check that should catch it, and counts it caught when that check reports the planted rule as FAIL. It then does the same with the clean twin: a FAIL of the same rule is a false alarm, a FAIL of another rule of that check is counted apart as an other-rule alarm. A rule reported NA (not evaluated, for example pedantic and off by default) counts as a miss. `--all` turns on the pedantic rules. Other flags: `--limit`, `--offset`, `--batch`, `--jobs`, `--timeout`, `--family`.
+
+### Real-code benchmark
+
+`benchmarks/real-rust/measure.mjs` runs the six rust-plus checks on a copy of a real Rust project and compares their findings with labels a person made (TRUE: a real instance of what the rule says; FALSE: a false alarm). Precision is TRUE / (TRUE + FALSE) over labelled findings still reported. In the November 2026 narrowing pass the labelled false alarms fell from 20 to 6 of 130 labelled findings (4.6%) with no labelled TRUE finding lost, and all 79 pedantic Rust rules that have a labelled sample are now in the default run.
+
+```
+node benchmarks/real-rust/measure.mjs --copy-from <project folder> <tree folder>
+```
+
+```
+node benchmarks/real-rust/measure.mjs <tree folder>
+```
+
+The first command builds a read-only copy of the project's Rust files once; the second measures (about 30 seconds). It exits 1 if precision falls below `baseline.json`. Full instructions, the labelling process and the list of remaining false alarms: `benchmarks/real-rust/README.md`.
+
+The older figures below (the 0.4.0 final run, the per-suite table and the NodeGoat measurement) are kept as history; they were produced by `tools/accuracy-corpus.mjs`, a different corpus.
+
 ## What the corpus is
 
 `tools/accuracy-corpus.mjs` writes a set of small, realistic, KNOWN-BAD projects into a temporary folder. Each is a git repository with one commit (the secrets project also has a history with a committed-then-deleted secret and badly worded commit messages). Every project plants real, plausible defects, one per rule family, on its own line of otherwise clean code:
