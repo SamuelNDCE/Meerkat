@@ -242,13 +242,50 @@ const xssSafeNames = (root) => new Set(readText(root, '.meerkat-xss-safe').split
 // The right side of an assignment, read the way JavaScript reads it: from just after the operator to the end of the statement (a ; or a line end outside
 // brackets and strings). Comments are removed first. A // comment ends only the line it is on: the expression goes on when the next line that holds code
 // starts with a continuation token, exactly as for a plain line end, so a comment cannot hide a raw value on the next line.
-// Blanks // and /* */ comments with spaces (line breaks kept, so every index stays the same) outside strings and template literals. Every later step reads this copy.
 let blankedFor = ''
 let blankedText = ''
+let blankedFailed = false
+// Set by the last blankComments call: true when a regex literal could not be read to its end, so the text cannot be trusted and the value is reported.
+let blankFailed = false
+// A / starts a regex (not a division) when the code before it cannot end an expression: nothing, a line start, one of ( , = : [ ! & | ? { } ; or one of these words.
+const REGEX_AFTER_WORD = new Set(['return', 'typeof', 'case', 'void', 'delete', 'throw', 'yield', 'await', 'in', 'of', 'else', 'do'])
+const regexAllowed = (out) => {
+  let k = out.length
+  while (k > 0 && (out[k - 1] === ' ' || out[k - 1] === '\t' || out[k - 1] === '\r')) k--
+  if (k === 0) return true
+  if ('(,=:[!&|?{};\n'.includes(out[k - 1])) return true
+  const w = /[A-Za-z]+$/.exec(out.slice(Math.max(0, k - 12), k))?.[0]
+  return w !== undefined && REGEX_AFTER_WORD.has(w) && !/[\w$.]/.test(out[k - w.length - 1] ?? '')
+}
+// The end (exclusive, flags included) of the regex literal that opens at t[at], or -1 when it is not closed on its line. Honours \ escapes and [...] classes.
+const regexEnd = (t, at) => {
+  let inClass = false
+  let j = at + 1
+  for (; j < t.length; j++) {
+    const d = t[j]
+    if (d === '\n') return -1
+    if (d === '\\') {
+      if (t[j + 1] === '\n' || j + 1 >= t.length) return -1
+      j++
+    } else if (inClass) inClass = d !== ']'
+    else if (d === '[') inClass = true
+    else if (d === '/') break
+  }
+  if (j >= t.length) return -1
+  j++
+  while (j < t.length && /[A-Za-z]/.test(t[j])) j++
+  return j
+}
+// Blanks // and /* */ comments with spaces (line breaks kept, so every index stays the same) outside strings, template literals and regex literals. A regex literal is
+// replaced by 0 characters: it is never a safe part, and its quotes or slashes can no longer confuse the later steps. Every later step reads this copy.
 const blankComments = (t) => {
-  if (t === blankedFor) return blankedText
+  if (t === blankedFor) {
+    blankFailed = blankedFailed
+    return blankedText
+  }
   let out = ''
   let q = ''
+  let failed = false
   for (let i = 0; i < t.length; i++) {
     const c = t[i]
     if (q) {
@@ -266,25 +303,45 @@ const blankComments = (t) => {
       const stop = end < 0 ? t.length : end + 2
       for (; i < stop; i++) out += t[i] === '\n' ? '\n' : ' '
       i--
+    } else if (c === '/' && regexAllowed(out)) {
+      const e = regexEnd(t, i)
+      if (e < 0) {
+        failed = true
+        out += c
+      } else {
+        out += '0'.repeat(e - i)
+        i = e - 1
+      }
     } else out += c
   }
   blankedFor = t
   blankedText = out
+  blankedFailed = failed
+  blankFailed = failed
   return out
 }
+// The scan is bounded by 2000 characters of CODE (blanked comments and white space do not count); when that runs out before the statement clearly ends, it returns
+// null and the caller treats the value as unsafe.
 const rhsText = (t, from) => {
   let depth = 0
   let q = ''
   let out = ''
-  let i = from
-  // The first character of the next line that holds code (blank lines and whole-line // comments are skipped).
+  let code = 0
+  let ended = false
+  // The first character of the next line that holds code (blank lines and blanked comments are skipped, however long they are).
   const nextCode = (at) => {
-    const m = /^(?:\s|\/\/[^\n]*|\/\*[\s\S]*?\*\/)*(\S)/.exec(t.slice(at, at + 400))
-    return m ? m[1] : ''
+    let k = at
+    while (k < t.length && /\s/.test(t[k])) k++
+    return t[k] ?? ''
   }
   const continues = (before, at) => before === '' || /[+,(?:&|=]$/.test(before) || /[+.?:&|]/.test(nextCode(at))
-  for (; i < t.length && i < from + 2000; i++) {
+  for (let i = from; ; i++) {
+    if (i >= t.length) {
+      ended = true
+      break
+    }
     const c = t[i]
+    if (!/\s/.test(c) && ++code > 2000) break
     if (q) {
       out += c
       if (c === '\\') out += t[++i] ?? ''
@@ -294,23 +351,20 @@ const rhsText = (t, from) => {
     if (c === '"' || c === "'" || c === '`') q = c
     else if ('([{'.includes(c)) depth++
     else if (')]}'.includes(c)) depth--
-    else if (depth <= 0 && c === ';') break
-    else if (depth <= 0 && c === '/' && t[i + 1] === '/') {
-      const eol = t.indexOf('\n', i)
-      if (eol < 0 || !continues(out.trimEnd(), eol + 1)) break
-      out += '\n'
-      i = eol
-      continue
+    else if (depth <= 0 && c === ';') {
+      ended = true
+      break
     } else if (depth <= 0 && c === '\n') {
       if (continues(out.trimEnd(), i + 1)) {
         out += c
         continue
       }
+      ended = true
       break
     }
     out += c
   }
-  return out.trim()
+  return ended ? out.trim() : null
 }
 // Splits on a separator at the top level only (not inside strings, template literals or brackets).
 const splitTop = (s, sep) => {
@@ -348,10 +402,11 @@ const wrapped = (s) => {
 }
 const CALL_HEAD = /^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\(/
 // A decoder, unescaper or raw-markup helper turns text back into markup, so it is never accepted as a cleaner, not even when a project vouches for it.
-// Judged on whole name parts (split at . _ $ - spaces and camelCase), so unescapeHtml and he.unescape are decoders but drawChart and withdrawHtml are not.
-const DECODER_PARTS = new Set(['decode', 'decoded', 'decoder', 'decodeuri', 'decodeuricomponent', 'unescape', 'unescaped', 'atob', 'raw'])
+// Judged on name parts (split at . _ $ - spaces and camelCase), each part against the stems below as a prefix, so decodeHtmlEntities, unescapeAll, rawSafe and
+// he.unescape are decoders but drawChart and withdrawHtml are not (no part of them starts with a stem).
+const DECODER_STEMS = ['decod', 'unescap', 'atob', 'raw']
 const nameSegments = (name) => name.split(/[\s._$-]+/).flatMap((p) => p.split(/(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/)).map((p) => p.toLowerCase()).filter(Boolean)
-const isDecoder = (name) => nameSegments(name).some((p) => DECODER_PARTS.has(p))
+const isDecoder = (name) => nameSegments(name).some((p) => DECODER_STEMS.some((stem) => p.startsWith(stem)))
 // A call is safe only when its callee is a known cleaner (XSS_SAFE_CALLS) or a name the project vouches for. A wrapper around a cleaner is not: whatever it does
 // to the cleaned text afterwards is unknown, so it is reported unless it is vouched too.
 const cleansInput = (name, vouched) => {
@@ -400,6 +455,7 @@ const safeExpr = (t, expr, vouched) => {
 // innerHTML = '' or = '<svg ...>' (a plain string with no ${} and no + joining other text) injects nothing a visitor controls, so it is not a risk.
 const safeLiteralAssign = (t0, m, why, vouched = new Set()) => {
   const t = blankComments(t0)
+  if (blankFailed) return false
   const from = m.index + m[0].length
   const eol = t.indexOf('\n', from)
   let rest = t.slice(from, eol < 0 ? t.length : eol).trim()
@@ -420,6 +476,7 @@ const safeLiteralAssign = (t0, m, why, vouched = new Set()) => {
   }
   // The statement as JavaScript reads it. When it runs over more than one line, the one-line shortcuts below (which look at the first line only) do not apply.
   const full = why.includes('insertAdjacentHTML') ? rest : rhsText(t, from)
+  if (full === null) return false
   const oneLine = !full.includes('\n')
   // A plain name or dotted path that is a top-level constant holding only text (const ICONS = { save: '<svg ...>' }) is author-written markup too.
   const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*(?:\/\/.*)?$/.exec(rest)
@@ -453,12 +510,14 @@ const bareValue = (t, m) => {
   if (!/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*"|\d+|[A-Za-z_$][\w$]*)\])*\s*;?\s*(?:\/\/.*)?$/.test(rest)) return false
   return !/^(?:location|document|window|self|top|parent|event|evt|ev|e|req|request|res|params|query|props|searchParams|data|msg|message|input|userInput|body|url|href)\b/i.test(rest)
 }
-// The text of a call's arguments, from just after its opening parenthesis to the matching close; null when it does not close within 600 characters.
+// The text of a call's arguments, from just after its opening parenthesis to the matching close; null when it does not close within 600 characters of code (white space and blanked comments do not count).
 const callText = (t, start) => {
   let depth = 1
   let q = ''
-  for (let i = start; i < t.length && i < start + 600; i++) {
+  let code = 0
+  for (let i = start; i < t.length; i++) {
     const c = t[i]
+    if (!/\s/.test(c) && ++code > 600) return null
     if (q) {
       if (c === '\\') i++
       else if (c === q) q = ''
@@ -537,7 +596,11 @@ const riskyCode = (root) => {
         const ls = t.lastIndexOf('\n', m.index - 1) + 1
         const before = t.slice(ls, m.index)
         if (/^\s*(?:\/\/|\/\*|\*|#)/.test(before) || (!why.startsWith('a plain http') && /\.(rs|py|go)$/.test(x) && (before.match(/(?<!\\)"/g) ?? []).length % 2 === 1)) continue
-        if (/\.[cm]?[jt]sx?$/.test(x) && /\/\/[^\n]*$/.test(before) && !/['"`][^'"`\n]*\/\/[^\n]*$/.test(before)) continue
+        // Inside a comment: the scanner's own blanked copy has a space where the code has a character (a regex literal becomes 0, so a // inside one is not a comment).
+        if (/\.[cm]?[jt]sx?$/.test(x)) {
+          const b = blankComments(t)
+          if (!blankFailed && b[m.index] === ' ' && t[m.index] !== ' ') continue
+        }
         const lineText = t.slice(ls, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index))
         // A plain http:// name that is only compared, trimmed or declared as a namespace is an identifier, not a request (XML and metadata namespaces, URL prefixes).
         // Only when the URL itself is the helper's direct argument, or the URL's own host is a known namespace host (not anything else on the line).

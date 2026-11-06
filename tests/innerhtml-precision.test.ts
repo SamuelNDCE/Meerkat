@@ -202,3 +202,75 @@ describe('the risky-code self-test', () => {
     expect(out).toContain('innerHTML assignment')
   })
 })
+
+describe('regex literals are not comments', () => {
+  test('a regex holding // before a raw value still flags', () => {
+    expect(js(String.raw`x = /\/\//; el.innerHTML = raw`).code).toBe(1)
+  })
+  test('a regex holding // before a safe value does not hide or swallow it', () => {
+    expect(js(String.raw`const re = /\/\//; el.innerHTML = esc(a)`).code).toBe(0)
+  })
+  test('a regex holding /* before a safe value is not an unterminated comment', () => {
+    expect(js(String.raw`const re = /a\/*b/; el.innerHTML = esc(a)` + '\nnext()').code).toBe(0)
+  })
+  test('a regex inside the value is judged as a raw part', () => {
+    expect(js(String.raw`el.innerHTML = esc(a) + /a\/*b/.source + raw`).code).toBe(1)
+    expect(js(String.raw`el.innerHTML = esc(a) + /\/\//.source + raw`).code).toBe(1)
+    expect(js(String.raw`el.innerHTML = esc(a) + /a\/*b/.source`).code).toBe(1)
+  })
+  test('a regex holding a quote does not open a string', () => {
+    expect(js("const re = /'/; el.innerHTML = esc(a) // it's\n  + raw").code).toBe(1)
+  })
+  test('an unterminated regex fails closed', () => {
+    expect(js('x = /abc\nel.innerHTML = esc(a)').code).toBe(1)
+  })
+  test('a real // comment still blanks', () => {
+    expect(js('el.innerHTML = esc(a) // note + raw').code).toBe(0)
+    expect(js('el.innerHTML = esc(a) // note\n  + raw').code).toBe(1)
+  })
+  test('division is not a regex', () => {
+    expect(js('el.innerHTML = esc(a / 2) // x').code).toBe(0)
+  })
+})
+
+describe('decoder stems', () => {
+  const vouch = (text: string) => ({ '.meerkat-xss-safe': text })
+  for (const name of ['decodeHtmlEntities', 'unescapeAll', 'rawSafe', 'rawHtml', 'htmlDecode', 'decodingHtml', 'unescapingAll', 'rawsafe', 'decodeHTMLEntities']) {
+    test(`${name} flags even when vouched`, () => {
+      expect(js(`el.innerHTML = ${name}(esc(x))`, vouch(`${name}\n`)).code).toBe(1)
+    })
+  }
+  test('decodeHtmlEntities(esc(x)) and unescapeAll(x) flag', () => {
+    expect(js('el.innerHTML = decodeHtmlEntities(esc(x))', vouch('decodeHtmlEntities\n')).code).toBe(1)
+    expect(js('el.innerHTML = unescapeAll(x)', vouch('unescapeAll\n')).code).toBe(1)
+  })
+  for (const name of ['drawChart', 'withdrawHtml', 'withdrawAll']) {
+    test(`${name}(esc(x)) is accepted when vouched`, () => {
+      expect(js(`el.innerHTML = ${name}(esc(x))`, vouch(`${name}\n`)).code).toBe(0)
+    })
+  }
+})
+
+describe('the scan window is measured on code, not on blanked text', () => {
+  test('a value, 2500 characters of comment, then + raw flags', () => {
+    expect(js(`el.innerHTML = esc(a) /* ${'x'.repeat(2500)} */ + raw`).code).toBe(1)
+    expect(js(`el.innerHTML = esc(a) // ${'x'.repeat(2500)}\n  + raw`).code).toBe(1)
+  })
+  test('a value, 1500 characters of whitespace, then + raw flags', () => {
+    expect(js(`el.innerHTML = esc(a)${' '.repeat(1500)}\n  + raw`).code).toBe(1)
+  })
+  test('a value followed by 1000 characters of whitespace and a clear end is accepted', () => {
+    expect(js(`el.innerHTML = esc(a)${' '.repeat(1000)}\nnext()`).code).toBe(0)
+    expect(js(`el.innerHTML = esc(a)${' '.repeat(1000)};`).code).toBe(0)
+  })
+  test('a long comment between safe parts is accepted', () => {
+    expect(js(`el.innerHTML = '<b>' /* ${'x'.repeat(2500)} */ + esc(a)`).code).toBe(0)
+  })
+  test('a call whose arguments hold a long comment is judged, not abandoned', () => {
+    expect(js(`el.innerHTML = esc(a /* ${'x'.repeat(900)} */)`).code).toBe(0)
+  })
+  test('a statement that does not end within 2000 characters of code fails closed', () => {
+    const parts = Array.from({ length: 500 }, () => "'<i>'").join(' + ')
+    expect(js(`el.innerHTML = ${parts}\nnext()`).code).toBe(1)
+  })
+})
