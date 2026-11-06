@@ -33,7 +33,7 @@ export default [
     estSeconds: 1,
     needs: ['node'],
     run: { cmd: 'node', args: [`${MK}/thorough/secret-scan.mjs`], cwd: 'repo' },
-    selfTest: { cmd: 'node', args: [`${MK}/thorough/secret-scan.mjs`, '--fixtures'], cwd: 'repo', expectFail: true },
+    selfTest: { cmd: 'node', args: [`${MK}/thorough/secret-scan.mjs`, '--fixtures'], cwd: 'repo', expectFail: true, expectMatch: 'planted secrets found by rule' },
   },
   {
     id: 'npm-audit-all',
@@ -49,7 +49,8 @@ export default [
     needs: ['npm'],
     paths: ['package.json', 'package-lock.json', '**/package.json', '**/package-lock.json'],
     run: { cmd: 'node', args: [`${MK}/thorough/npm-audit.mjs`], cwd: 'app' },
-    // An offline registry makes audit fail, which is the failure this proves is not swallowed.
-    selfTest: { cmd: 'npm', args: ['audit', '--audit-level=high', '--registry', 'http://127.0.0.1:9'], cwd: 'app', expectFail: true },
+    // Plants one high-severity advisory in a local stand-in registry and requires npm audit to report it. An unreachable or unusable registry is NOT RUN (exit 75), never a pass:
+    // the old self-test pointed npm at a dead registry, which printed "found 0 vulnerabilities" and proved nothing about detection.
+    selfTest: { cmd: 'node', args: [`${MK}/thorough/npm-audit.mjs`, '--fixtures'], cwd: 'repo', expectFail: true, expectMatch: 'planted high-severity vulnerability' },
   },
 ]

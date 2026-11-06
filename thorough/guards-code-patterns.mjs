@@ -205,6 +205,16 @@ export const rbNotFoundRoute = (line) => /(?:to:\s*|=>\s*)['"][^'"\n]*#(?:not_fo
 export const jsConstExec = firstArgIsConst(/(?<![\w$.])(?:(?:child_process|childProcess|cp)\.)?exec(?:Sync)?\(\s*([A-Za-z_$][\w$]*)\s*[,)]/, 'js')
 // spawn with a fixed program and an array of fixed words: the shell has nothing to parse but those words (npm needs shell: true on Windows).
 export const jsSpawnFixedArgs = (line) => /\bspawn(?:Sync)?\(\s*(['"])[^'"\n]*\1\s*,\s*\[\s*(?:(['"])[^'"\n]*\2\s*,?\s*)+\]\s*,\s*\{[^}\n]*\bshell\s*:\s*true\b/.test(cut(line))
+// The same, when the words are in a name declared once in the file as an array of fixed strings (const args = ['deploy', '--json']) and never changed after.
+const FIXED_WORD = String.raw`(?:(['"])[^'"\n]*\1|\x60[^\x60\n$]*\x60|\d+)`
+export const jsSpawnFixedVar = (line, ctx) => {
+  const m = /\bspawn(?:Sync)?\(\s*(['"])[^'"\n]*\1\s*,\s*([A-Za-z_$][\w$]*)\s*,\s*\{[^}\n]*\bshell\s*:\s*true\b/.exec(cut(line))
+  if (!m || !ctx?.text) return false
+  const n = esc(m[2])
+  const decl = new RegExp(String.raw`(?:const|let|var)\s+${n}\s*(?::[^=\n]+)?=\s*`)
+  if (!new RegExp(decl.source + String.raw`\[\s*(?:${FIXED_WORD}\s*,?\s*)+\]`).test(ctx.text)) return false
+  return !new RegExp(String.raw`(?<![\w$.])${n}\s*(?:\.(?:push|unshift|splice|concat|fill)\(|\[[^\]\n]*\]\s*=(?!=)|=(?![=>]))`).test(ctx.text.replace(decl, ''))
+}
 // require(name) right after a check that name is in a fixed list of strings (a Set or array literal in the same file).
 export const jsRequireAllowListed = (line, ctx) => {
   const m = /(?<![\w$.])require\(\s*([A-Za-z_$][\w$]*)\s*\)/.exec(cut(line))

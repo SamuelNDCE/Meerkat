@@ -344,6 +344,16 @@ export const blankRustStrings = (text) => {
 }
 // A value that says it is not real. It is the value itself that has to say so (FAKE_TOKEN, SUPERSECRET, example.com), never the file.
 export const FAKE_VALUE = /fake|dummy|placeholder|supersecret|not[-_]?(?:a[-_])?real|redacted|changeme|example|sample|[_-]test[_-]|your[-_]?(?:key|token|secret)/i
+// A value that is a stand-in, not a secret: it has a word such as test, example, placeholder, dummy, fake, mock, demo, changeme or xxxx as a whole word
+// (set off by - _ . / a digit or the ends, so "latest" and "contest" do not count), or it is filler (one character repeated 8 or more times, or a long value made of
+// only one or two different characters). A real-looking random value is not matched.
+const PLACEHOLDER_WORD = /(?:^|[^a-z])(?:tests?|testing|examples?|samples?|placeholders?|dummy|fake|mock|demo|changeme|change[-_]me|redacted|replace[-_]?me|todo|x{4,}|your[-_]?(?:key|token|secret|password|api[-_]?key))(?:[^a-z]|$)/i
+export const isPlaceholderValue = (value) => {
+  const v = String(value ?? '')
+  if (PLACEHOLDER_WORD.test(v)) return true
+  if (/(.)\1{7,}/.test(v)) return true
+  return v.length >= 8 && new Set(v.toLowerCase()).size <= 2
+}
 
 // Settings files (.meerkat-budgets.json and every .meerkat-<area>-allow) may sit in the project root or, to keep the root tidy, in a .meerkat/ folder;
 // the folder wins when the file is in both.
@@ -466,4 +476,9 @@ export const envFileHoldsSecret = (text) => {
   return false
 }
 // Whether a key or certificate file has any content beyond comments and blank lines (a stub that says "mounted at runtime" holds no key).
-export const keyFileHasContent = (text) => String(text ?? '').split(/\r?\n/).some((l) => l.trim() && !/^\s*(#|;|\/\/)/.test(l))
+// A PEM file whose block headers are all public (PUBLIC KEY, CERTIFICATE, CERTIFICATE REQUEST, X509 CRL) holds nothing secret, whatever its .pem or .key name.
+export const isPublicPemOnly = (text) => {
+  const heads = [...String(text ?? '').matchAll(/-----BEGIN ([A-Z0-9 ]+)-----/g)].map((m) => m[1])
+  return heads.length > 0 && heads.every((h) => /^(?:(?:RSA|EC|DSA) )?PUBLIC KEY$|^(?:(?:TRUSTED|X509|NEW) )?CERTIFICATE(?: REQUEST)?$|^X509 CRL$/.test(h))
+}
+export const keyFileHasContent = (text) => !isPublicPemOnly(text) && String(text ?? '').split(/\r?\n/).some((l) => l.trim() && !/^\s*(#|;|\/\/)/.test(l))

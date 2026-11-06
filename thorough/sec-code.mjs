@@ -223,6 +223,18 @@ const neutralSql = (t) => {
   const marks = [...u.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*[\w.]+\.map\(\s*\(\s*\w*\s*\)\s*=>\s*(?:'\?'|"\?")\s*\)\s*\.join\(/g)].map((m) => m[1])
   for (const n of marks) u = u.replace(new RegExp(String.raw`(['"\x60])\s*\+\s*${n}\s*\+\s*(['"\x60])`, 'g'), '')
   u = u.replace(/(['"])\s*\+\s*(?:Date\.now\(\)|\d+)(?:\s*[-*]\s*(?:\d+|Date\.now\(\)))*(?=\s*[,);\n])/g, '$1')
+  // A quoted-identifier helper (qIdent, quoteIdent, escapeIdentifier ..., or a function in this file that only wraps its argument in quotes after doubling the quote
+  // character) makes a table or column name safe: ${qIdent(table)}, ${cols.map(qIdent).join(', ')} and ' + qIdent(col) + ' are text, not a value.
+  const quoters = new Set([...u.matchAll(/\b(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\b|\([^)\n]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>))/g)]
+    .filter((m) => /^[\s\S]{0,260}?\.replace\(\s*\/(?:"|\x60)\/g/.test(u.slice(m.index + m[0].length)) && !/\b(?:SELECT|INSERT|UPDATE|DELETE)\b/i.test(u.slice(m.index, m.index + 260)))
+    .map((m) => m[1] ?? m[2]))
+  for (const n of u.matchAll(/\b(?:q|quote|escape)_?(?:ident(?:ifier)?|id|name)s?\b|\bquote_ident\b|\bqi\b/gi)) quoters.add(n[0])
+  for (const n of [...quoters].map((q) => q.replace(/[$.*+?^()[\]{}|\\]/g, '\\$&'))) {
+    u = u.replace(new RegExp(String.raw`\$\{\s*${n}\s*\([^(){}]*\)\s*\}`, 'g'), 'x')
+    u = u.replace(new RegExp(String.raw`\$\{\s*[\w.$]+\.map\(\s*(?:${n}|\(?\s*\w+\s*\)?\s*=>\s*${n}\s*\(\s*\w+\s*\))\s*\)(?:\.join\([^()]*\))?\s*\}`, 'g'), 'x')
+    u = u.replace(new RegExp(String.raw`(['"\x60])\s*\+\s*${n}\s*\([^()]*\)\s*\+\s*(['"\x60])`, 'g'), '')
+    u = u.replace(new RegExp(String.raw`(['"\x60])\s*\+\s*${n}\s*\([^()]*\)(?=\s*[,);\n])`, 'g'), '$1')
+  }
   return u
 }
 const sqlBuilt = {
@@ -312,6 +324,12 @@ const openRedirect = {
       const text = h.m[0].endsWith('(') ? h.text + ' ' + callText(t, h.at + h.m[0].length - 1) : h.text
       const arg = h.m[0].endsWith('(') ? firstArg(t, h) : text
       const tn = taintNames(t, REDIR_REQ)
+      // A name whose every assignment comes through a function named safe*, allow* or validate* (const next = safeNext(searchParams.get('next'))) went through an allow-list.
+      for (const n of [...tn]) {
+        const assign = new RegExp(String.raw`(?<![\w$.])${n}\s*(?::[^=\n]+)?=(?![=>])([^\n]*)`, 'g')
+        const rhs = [...t.matchAll(assign)].map((m) => m[1])
+        if (rhs.length && rhs.every((r) => /^\s*(?:await\s+)?[\w$.]*(?:safe|allow|validate)[\w$]*\s*\(/i.test(r))) tn.delete(n)
+      }
       if (h.m[0].endsWith('(') && tableLookup(t, arg)) return false
       // location.href = location.pathname + '?' + params: only the query of the page's own address changes, never the destination.
       if (/^(?:window\.|document\.)?location(?:\.href)?\s*=\s*(?:window\.)?location\.(?:pathname|origin)\b/.test(h.text.trim().replace(/^[^=]*?(?=(?:window\.|document\.)?location)/, ''))) return false
@@ -364,6 +382,10 @@ const md5Password = {
     .map((h) => ({ line: h.line, why: 'MD4 or MD5 is used on what looks like a password (use bcrypt, scrypt or argon2)' })),
 }
 const TOKENISH = /token|secret|passw|nonce|session|api[_-]?key|\botp\b|csrf|reset|\bsalt\b|\bkey\b|\bpin\b|verif|invite|\bauth|\bcode\b|uuid|captcha|\bsid\b|\bid_?gen/i
+// The words that make a random value a secret (a plain id or key is not one): when one is near, the value is judged a secret whatever it is called.
+const SECRETISH = /token|secret|passw|nonce|session|api[_-]?key|\botp\b|csrf|reset|\bsalt\b|\bpin\b|verif|invite|\bauth|captcha|\bsid\b/i
+// A name that says the value is an identifier or a list/cache key: newId(), attachmentId =, requestId:, uuid =, cacheKey =.
+const ID_NAME = /(?:\b(?:function\s+)?[A-Za-z_$][\w$]*(?:[a-z0-9]Id|ID|_id|Uuid|UUID|(?:cache|item|row|list|dom|react|map|sort|lookup)Key)|\b(?:id|uuid))\s*(?:[:=(]|=>)/
 const weakCrypto = [
   pat(code, /\bcreate(?:De)?[Cc]ipher\s*\(/, 'createCipher uses no IV, so the same key always gives the same output (use createCipheriv with a random IV)'),
   pat(code, /\bcreate(?:De)?[Cc]ipheriv\s*\(\s*['"](?:des|rc4|bf|blowfish|aes-\d+-ecb)/i, 'a weak or unsafe cipher (DES, RC4, Blowfish or ECB mode) is named'),
@@ -373,9 +395,13 @@ const weakCrypto = [
   pat(code, /(?:Cipheriv|Decipheriv)\s*\([^\n]*?(?:Buffer\.from|new Buffer)\(\s*['"]|\b(?:key|iv|IV|secretKey)\s*[:=]\s*(?:Buffer\.from|new Buffer)\(\s*['"]|\b(?:AES|DES3?|ChaCha20\w*)\.new\(\s*b?['"]|\b(?:key|iv|IV|KEY)\s*=\s*b['"][^'"\n]{4,}['"]/,
     'a cipher key or IV is written into the code (load it from a secret store or an environment variable)'),
   // The generator call, or the name it is assigned to / the function it sits in (up to 3 lines above), says token, secret, key, code...
-  pat(code, /(?<!['"\`])(?:\b(?:Math\.random|random\.(?:random|choice|choices|randint|randrange|getrandbits|sample)|(?:Kernel\.|Random\.)?rand|mt_rand|lcg_value|uniqid|rand\.(?:Int|Intn|Int31n?|Int63n?|Uint32|Uint64|Float64|Read)|Random\.new|SecureRandom\.hex\(\s*\d{1,2}\s*\)\.to_i|new\s+(?:java\.util\.)?Random)\s*\(|\bnew\s+Random\b\s*(?!\())/, (t, h) => TOKENISH.test(near(t, h.line, 3, 0))
-    ? 'a random number from a generator that is not secure makes a token or secret (use crypto.randomBytes, Python secrets, SecureRandom, random_bytes or crypto/rand)'
-    : null),
+  pat(code, /(?<!['"\`])(?:\b(?:Math\.random|random\.(?:random|choice|choices|randint|randrange|getrandbits|sample)|(?:Kernel\.|Random\.)?rand|mt_rand|lcg_value|uniqid|rand\.(?:Int|Intn|Int31n?|Int63n?|Uint32|Uint64|Float64|Read)|Random\.new|SecureRandom\.hex\(\s*\d{1,2}\s*\)\.to_i|new\s+(?:java\.util\.)?Random)\s*\(|\bnew\s+Random\b\s*(?!\())/, (t, h) => {
+    const around = near(t, h.line, 3, 0)
+    if (!TOKENISH.test(around)) return null
+    // An id or a cache key only has to be unique, not secret: no secret word near, and the value is named as an id / list key, or it is the fallback for crypto.randomUUID.
+    if (!SECRETISH.test(around) && (ID_NAME.test(around) || /\brandomUUID\b/.test(around))) return null
+    return 'a random number from a generator that is not secure makes a token or secret (use crypto.randomBytes, Python secrets, SecureRandom, random_bytes or crypto/rand)'
+  }),
   // A cipher name or key held in a constant in one file and passed to createCipheriv / createDecipheriv in another.
   {
     files: code,
