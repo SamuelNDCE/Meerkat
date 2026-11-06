@@ -85,7 +85,7 @@ node lib/clickthrough.mjs <scenario.json> [--root <dir>] [--out <dir>]
 | 1 | a step failed, or the scenario file is invalid. The last lines name the step number, what was expected and what was seen |
 | 75 | the app or the driver could not start here (app never became ready, driver command missing). Never a pass |
 
-`--root` is the folder every relative path in the scenario is resolved from (default: the current folder). `--out` is where the run folder goes (default: `$MEERKAT_SCRATCH/click-through` inside a Meerkat run, otherwise `.meerkat/click-through` under the root). Each run gets its own time-stamped subfolder holding `result.json`, `app.log` (the app's output), the screenshots, and a `session` folder the driver may use to keep state between steps.
+`--root` is the folder every relative path in the scenario is resolved from (default: the current folder). `--out` is where the run folder goes (default: `$MEERKAT_SCRATCH/click-through` inside a Meerkat run, otherwise `.meerkat/click-through` under the root). Each run gets its own time-stamped subfolder holding `result.json`, `app.log` (the app's output), `driver.log` (the driver's stderr), the screenshots, and a `session` folder the driver may use to keep state between steps.
 
 ## The scenario format
 
@@ -143,9 +143,82 @@ FAIL step 3 (assert "Saved") failed. expected: text "Saved" is present. actual: 
 
 ## The driver contract
 
-The driver is any command. The runner starts it **once per step**, writes one JSON object to its **stdin**, and reads a JSON object from the **last line of stdout that parses as JSON** (anything printed before is ignored, so logging is safe). Because each step is a fresh process, a driver that needs a browser or window to stay open between steps keeps what it needs in the `session` folder (a debug port, a process id, a cookie file) or starts a background helper the first time and reuses it.
+The driver is any command. The runner starts it **once per scenario** and talks to it over **stdin and stdout**, one JSON object per line (newline-delimited, UTF-8). Because the process stays alive, a browser or window opened by the first step is still there for the next one: no state needs to be parked in the `session` folder. This is **protocol 2**. Protocol 1 (one process per step) still works for one release, see the end of this section.
 
-Request (stdin):
+**Start.** The runner spawns the driver command once. The first line the runner sends:
+
+```json
+{"type":"hello","protocol":2,"scenario":"notes app: create a note","session":"<run folder>/session","outDir":"<run folder>","env":{"MEERKAT_CT_SESSION":"<run folder>/session","MEERKAT_CT_OUT":"<run folder>"}}
+```
+
+The driver replies with one line, either of:
+
+```json
+{"type":"ready","ok":true,"capabilities":["click","type","assert","screenshot"]}
+{"type":"ready","ok":false,"detail":"no display on this machine"}
+```
+
+`ok: false` ends the run with exit 75 and prints `detail`. A driver that exits before it sends `ready` also ends the run with exit 75.
+
+**Each step.** The runner sends one line:
+
+```json
+{"id":3,"type":"step","step":{"type":"click","text":"New note"},"index":3,"total":9,"timeoutMs":10000}
+```
+
+`step` is the step exactly as written in the scenario. `index` counts from 1 (0 is the `ready.windowTitle` probe). Extra flag `evidence: true` marks the best-effort screenshot taken after a failure. The driver replies with one line:
+
+```json
+{"id":3,"ok":true,"state":"clicked <button> New note"}
+{"id":4,"ok":false,"expected":"element with text \"Save\" found and clicked","actual":"no element with text \"Save\"; buttons on the page: Cancel, Close"}
+```
+
+| Field | Meaning |
+|---|---|
+| `id` | the `id` of the request being answered. Required. A reply with a different `id` is ignored and logged to `driver.log` |
+| `ok` | `true` only if the step really happened. Required |
+| `actual` | on failure, what the driver saw. The more specific the better (the visible buttons, the current address, the error text). Printed in the failure |
+| `expected` | optional; overrides the runner's wording of what was expected |
+| `state`, `detail` | optional extra evidence kept in `result.json` |
+
+**Screenshots.** A step of type `screenshot` carries `path`, the exact file to write. The driver writes the PNG there and replies `ok`. The runner then checks the file exists and is not empty.
+
+**End.** The runner sends `{"type":"stop"}` and waits up to 5 seconds for `{"type":"stopped"}`, then kills the driver process tree. It always does this, even when a step failed.
+
+**Timeouts.** A step with no reply within `timeoutMs` plus 1.5 seconds fails with `no answer within N ms`. The driver is killed and the run stops with that failure (the remaining steps are recorded as skipped).
+
+**Logs.** Anything the driver writes to **stderr** goes to `<outDir>/driver.log`, as do stdout lines that are not JSON (so printing noise is safe) and the runner's own notes (for example an ignored reply). A driver that exits in the middle of a step fails that step with its exit code.
+
+**Exit codes.** A driver command that cannot be spawned, a driver that exits before `ready`, and `ready` with `ok: false` all end the run with **75** ("cannot run here"; never a pass). Use `ok: false` for "no display", "browser not installed", "app not built".
+
+**Which protocol runs.** The runner sends `hello` first. A driver that answers with a `ready` line is run as protocol 2. A driver that does not answer within `driver.helloTimeoutMs` (default 5000) is stopped and the scenario runs in the old per-step mode (protocol 1). To skip the probe, set `"protocol": 1` in the scenario's `driver` block; set `"protocol": 2` to require it (then `ready` may take as long as `ready.timeoutMs`, default 60000, and silence is exit 75). `result.json` records the `protocol` used.
+
+A minimal protocol 2 driver, in Node, for any stack (fill in the marked parts with whatever your stack offers: an Electron remote-debugging port, a browser's DevTools protocol, an accessibility API for a native window, an HTTP call to an in-app test hook). A complete working fake is `fixtures/clickthrough/fake-persistent-driver.mjs`.
+
+```js
+import { createInterface } from 'node:readline'
+const send = (o) => process.stdout.write(JSON.stringify(o) + '\n')
+const rl = createInterface({ input: process.stdin })
+rl.on('line', async (line) => {
+  const m = JSON.parse(line)
+  if (m.type === 'hello') return send({ type: 'ready', ok: true, capabilities: [] }) // start or connect to the app here
+  if (m.type === 'stop') { send({ type: 'stopped' }); process.exit(0) }
+  try {
+    // switch on m.step.type: open, click, type, wait-for, assert, screenshot (write m.step.path), stop
+    send({ id: m.id, ok: true })
+  } catch (e) {
+    send({ id: m.id, ok: false, actual: String(e.message) })
+  }
+})
+```
+
+Which stack uses what is for the project to decide. Meerkat does not recommend or install one, and no driver in this repository uses a browser library.
+
+### Protocol 1 (deprecated)
+
+> \*Deprecated 2026-11-06: protocol 1 is kept for one release and is then removed. Move drivers to protocol 2 above.
+
+The runner starts the driver **once per step**, writes one JSON object to its stdin, closes it, and reads a JSON object from the **last line of stdout that parses as JSON**. A driver that needs a browser open between steps has to keep a debug port or process id in the `session` folder. Request (stdin):
 
 ```json
 {
@@ -160,48 +233,7 @@ Request (stdin):
 }
 ```
 
-For a `screenshot` step, `step.path` is the exact file to write. `index` is 0 for the readiness probe. Extra flags: `evidence: true` marks the best-effort screenshot taken after a failure, `implicit: true` marks the final cleanup `stop`.
-
-Response (stdout, exit code 0):
-
-```json
-{ "ok": true, "state": "clicked <button> New note" }
-{ "ok": false, "expected": "element with text \"Save\" found and clicked", "actual": "no element with text \"Save\"; buttons on the page: Cancel, Close" }
-```
-
-| Field | Meaning |
-|---|---|
-| `ok` | `true` only if the step really happened. Required |
-| `actual` | on failure, what the driver saw. The more specific the better (the visible buttons, the current address, the error text). Printed in the failure |
-| `expected` | optional; overrides the runner's wording of what was expected |
-| `state`, `detail` | optional extra evidence kept in `result.json` |
-
-Rules the runner enforces:
-
-- `ok: true` counts only with exit code 0. Any other exit with no JSON is a failed step, and the last line of stderr is shown.
-- A step that runs past `timeoutMs` (plus 1.5 seconds of grace so a driver can report its own timeout) is killed, with its children, and fails with `no answer within N ms`.
-- Exit code **75** with no JSON, or a driver command that cannot be started, ends the whole run with exit 75 ("cannot run here"). Use it for "no display", "browser not installed", "app not built".
-- The driver gets the environment of the run plus `MEERKAT_CT_SESSION` and `MEERKAT_CT_OUT`.
-- `ready.windowTitle` is sent as a step of type `ready` with a `windowTitle` field; answer `ok: true` once a window with that title exists.
-
-A minimal driver skeleton, in Node, for any stack (fill in the three marked functions with whatever your stack offers: an Electron remote-debugging port, a browser's DevTools protocol, an accessibility API for a native window, an HTTP call to an in-app test hook):
-
-```js
-let raw = ''
-for await (const c of process.stdin) raw += c
-const { step, session, timeoutMs } = JSON.parse(raw)
-const done = (o) => { console.log(JSON.stringify(o)); process.exit(0) }
-try {
-  // 1. connect to the running app (read the connection details from `session`, or start it and save them there)
-  // 2. switch on step.type: open, click, type, wait-for, assert, screenshot (write step.path), stop
-  // 3. report what you saw
-  done({ ok: true })
-} catch (e) {
-  done({ ok: false, actual: String(e.message) })
-}
-```
-
-Which stack uses what is for the project to decide. Meerkat does not recommend or install one, and no driver in this repository uses a browser library.
+Response (stdout, exit code 0): `{ "ok": true, "state": "..." }` or `{ "ok": false, "expected": "...", "actual": "..." }`, with the same fields as above (no `id`). Rules: `ok: true` counts only with exit code 0; a step past `timeoutMs` plus 1.5 seconds is killed and fails with `no answer within N ms`; exit **75** with no JSON, or a command that cannot start, ends the run with 75; `ready.windowTitle` is sent as a step of type `ready` with index 0; the final cleanup `stop` carries `implicit: true`; the environment gets `MEERKAT_CT_SESSION` and `MEERKAT_CT_OUT`.
 
 ## Running a scenario as a check
 
