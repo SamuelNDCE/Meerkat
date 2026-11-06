@@ -88,6 +88,14 @@ A change to a rule must not make Meerkat worse at finding real problems:
 
 Read the source before you label. Open the file at the reported line in the project copy, read the code around it, and only then decide TRUE (the rule's claim is right here) or FALSE (a false alarm: test code, a deliberate discard, the rule misreading the code). Never label from the message text alone. Give every label a one-sentence `reason`. A rule, file and line may appear once in `labels.json`.
 
+## Rules for changing Meerkat itself
+
+- **Pack rule.** A check lives in a pack folder in `packs/` (a `.mjs` whose default export is an array of checks) and passes the validation in `lib/load-checks.mjs`. A new pack gets a load test (follow `tests/docdrift.test.ts`). Extending Meerkat for your own project is in [docs/adding-tests.md](docs/adding-tests.md).
+- **Proof rule.** Every new check has a `selfTest` on a broken sample, with `expectFail: true` and an `expectMatch` that matches the output of the broken case. The loader does not enforce it, so a reviewer does. Run `node run.mjs --self-test`.
+- **Labelling rule.** A claim about a command or feature says where it works: OK on `main`, PARTIAL (name the branch, for example `meerkat-040-integration`, or write "not yet merged"), or PLANNED. Do not write "release branch".
+- **README sweep rule.** A change that adds or removes a check, command or feature updates the README, `docs/checks.md` and `docs/features.md` in the same pull request (see PROJECT.md). Counts come from `node tools/gen-checks.mjs`, never from typing. Never state a figure (recall, false-alarm rate, a count) without its source and date.
+- **Known doc error.** The first line of `lib/load-checks.mjs` says it loads `checks/*.mjs`. The real input is a pack folder passed in by the caller. Fix the comment when you next change that file.
+
 ## Keeping the rules accurate
 
 The rules are the heart of Meerkat, and they are meant to change.

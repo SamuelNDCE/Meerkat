@@ -56,7 +56,7 @@ Status legend: OK works / PARTIAL works in part / BROKEN built but not working /
 - **What it does:** runs only the checks whose paths match the files changed since a base ref, so a commit or pull request is checked fast.
 - **When to use it:** before committing (`--staged`, for a pre-commit hook) or on a pull request (`--base <ref>`). The Claude skill tells an AI to use it before every commit.
 - **Command:** `node lib/gate.mjs gate [--staged | --base <ref> | --against <ref>] [--app <folder>] [--thorough] [--json]`. The word `meerkat gate` is not routed by `bin/meerkat.mjs` on this branch (it answers "Unknown command"), so use the file path until it is wired.
-- **Exit codes:** 0 pass; 1 a check failed or a check's tool crashed; 2 usage error; 75 not run (no base ref found, no checks loaded, or every selected check could not run). 75 is not a pass.
+- **Exit codes:** 0 pass; 1 a check failed or a check's tool crashed; 2 usage error; 75 not run (no base ref found, no checks loaded, or any selected check could not run or hung). 75 is not a pass.
 - **Does not:** check files that did not change, or read the staged version of a partly staged file (it checks the file as saved).
 - **Status:** PARTIAL. The logic and its tests exist; the `meerkat gate` command word is not wired here.
 
@@ -112,7 +112,7 @@ Two different things use the word.
 
 ## MCP tools
 
-- **What it does:** a stdio MCP server with six tools: `meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_self_test`. `meerkat_run` can take minutes (up to 30) and sets `isError` when the exit code is not 0. Folders must be inside the folder the server started in or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
+- **What it does:** a stdio MCP server offering these 6 calls: `meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_self_test`. `meerkat_run` can take minutes (up to 30) and sets `isError` when the exit code is not 0. Folders must be inside the folder the server started in or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
 - **Command:** `meerkat mcp serve`, `meerkat mcp install [claude] [--dry-run]`, `meerkat mcp status`, or `node bin/meerkat-mcp.mjs`.
 - **Exit codes:** the server speaks JSON-RPC on stdin and stdout; a failed run is reported inside the tool result.
 - **Does not:** offer a gate, blast, map or catalog tool. For the merge gate call `meerkat_run` with `preset: "full"`; for blast, gate, map and the catalog use the shell commands.
