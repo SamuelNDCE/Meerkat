@@ -9,7 +9,7 @@ In short: Meerkat reads files as text and applies rules. It is a fast first line
 ## 1. What Meerkat scans
 
 <!-- coverage:start -->
-Counted from all 49 packs under `packs/`: **383 checks** in **48 suites** with **1421 rules** (sub-checks).
+Counted from all 51 packs under `packs/`: **383 checks** in **48 suites** with **1421 rules** (sub-checks).
 
 Run by default: 337 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
 

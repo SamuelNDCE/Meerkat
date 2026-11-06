@@ -23,7 +23,7 @@ Meerkat checks, maps and tests a project: security, correctness, accessibility, 
 
 ## What Meerkat is
 
-Meerkat is one command that looks at a project and tells you, honestly, whether it is safe to ship. It is for developers who want the answer to "is this safe to push?" without running ten tools in the right order, and for AI coding assistants that need a reliable way to check their own work.
+Meerkat is one command that looks at a project and tells you, honestly, whether it is safe to ship. It is for developers who want the answer to "is this safe to push?" without running a dozen separate tools in the right order, and for AI coding assistants that need a reliable way to check their own work.
 
 There are two ways to use it, and the first needs no AI at all:
 

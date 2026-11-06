@@ -71,7 +71,7 @@ A NOT RUN is never a pass. Report what is missing instead of treating it as succ
 
 ## How to read findings JSON
 
-Each run saves a folder (default `~/.meerkat/logs/runs/<date>-<time>-<tier>/`, or under `MEERKAT_LOG_DIR`; `latest.json` points at the newest). Read `findings.json` first, then `summary.json`.
+Each run saves a folder (default `~/.meerkat/logs/runs/<date>-<time>-<tier>/` (with `<project>-` before the tier when the project is known), or under `MEERKAT_LOG_DIR`; `latest.json` points at the newest). Read `findings.json` first, then `summary.json`.
 
 `findings.json` holds `run`, `counts` (by severity) and `findings[]`. Each finding has:
 

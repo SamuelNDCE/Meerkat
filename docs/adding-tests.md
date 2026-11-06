@@ -17,11 +17,11 @@ A check proves one thing about a project.
 
 ## A smoke test
 
-`meerkat smoke` tests Meerkat, not the project: it runs each selected check on the changed files with a tiny time limit and fails when a check crashes, hangs, or none is selected for a non-empty change.
+`node lib/gate.mjs smoke` (the `meerkat smoke` word is not wired yet) tests Meerkat, not the project: it runs each selected check on the changed files with a tiny time limit and fails when a check crashes, hangs, or none is selected for a non-empty change.
 
 - Code: `lib/gate.mjs` (`runSmoke`, `classify`, `gateFiles`).
 - Test: `lib/gate.test.ts`. Build a throwaway git repository with the `repo()` helper, define a check object like `crashes` or `hangs` (a `run` that throws or never returns), call `runSmoke` with it and the changed files, and expect the exit code from `EXIT` (`fail` for a crashed or hung check, `pass` for a check that only finds problems in the project).
-- A fix to what `meerkat gate` selects goes in the same file with `runGate` and `gateFiles`.
+- A fix to what `node lib/gate.mjs gate` selects goes in the same file with `runGate` and `gateFiles`.
 
 ## A red test
 
