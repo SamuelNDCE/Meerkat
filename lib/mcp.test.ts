@@ -349,3 +349,14 @@ describe('stdio smoke test', () => {
     }
   }, 10000)
 })
+
+describe('meerkat_list reports the server itself', () => {
+  test('it names the server version and a tool count equal to the registered tools', async () => {
+    const { ctx } = makeCtx({ runMeerkat: async () => ({ code: 0, stdout: '', stderr: '', timedOut: false }) })
+    const listed = await handleMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, ctx)
+    const r = await call(ctx, 'meerkat_list', {})
+    expect(r.result.structuredContent.server).toEqual({ version: '9.9.9', tools: listed.result.tools.length })
+    expect(r.result.structuredContent.server.tools).toBe(TOOLS.length)
+    expect(r.result.content[0].text.split('\n')[0]).toBe(`meerkat server 9.9.9, ${TOOLS.length} tools`)
+  })
+})

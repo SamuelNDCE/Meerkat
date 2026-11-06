@@ -113,3 +113,11 @@ suite('completion', () => {
     expect(allWords()).toContain('verify')
   })
 })
+
+suite('redtest is a CLI command', () => {
+  test('it is dispatched and listed in help', () => {
+    expect(EXTRA_WORDS).toContain('redtest')
+    expect(COMMAND_LIST).toContain('redtest')
+    expect(COMMANDS.some((c) => c.name === 'redtest')).toBe(true)
+  })
+})

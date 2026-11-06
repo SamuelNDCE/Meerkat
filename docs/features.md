@@ -12,7 +12,7 @@ Each feature below has the same short block: what it is, why it is good, what it
 | Smoke | `meerkat run smoke` (preset), `meerkat smoke` (self-check); MCP `meerkat_smoke` |
 | Blast radius | `meerkat blast <file>[#symbol]`; MCP `meerkat_blast` |
 | Codebase map | `meerkat map`; MCP `meerkat_map` |
-| Red testing | `node lib/redtest/run.mjs --kind <kind>`; MCP `meerkat_redtest` |
+| Red testing | `meerkat redtest --kind <kind>` (or `node lib/redtest/run.mjs --kind <kind>`); MCP `meerkat_redtest` |
 | Catalog and tests command | `meerkat tests --json`, `meerkat.order.json`; MCP `meerkat_tests` |
 | Doctor, tools, discover and recommend | `meerkat doctor`, `meerkat tools`, `meerkat discover`, `meerkat recommend`; MCP `meerkat_doctor`, `meerkat_tools`, `meerkat_discover`, `meerkat_recommend` |
 | MCP tools | `meerkat mcp serve`: 28 tools |
@@ -92,7 +92,7 @@ Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 - **Why it is good:** it proves the checks still catch real defects and do not cry wolf, so a pass can be trusted.
 - **What it does:** planted bugs (recall per family), injected faults (a check that throws or hangs, a missing program), odd inputs (empty folder, huge file, symlink loop), one test per past fixed bug, and clean twins that must give no false alarms. Known gaps are recorded in [lib/redtest/README.md](../lib/redtest/README.md).
 - **What it does NOT do:** exist as a `meerkat` command word, or touch any folder the test did not create. It needs a repository checkout.
-- **Command or tool:** `node lib/redtest/run.mjs --kind mutation|faults|adversarial|regression|cleantwin|all`; MCP `meerkat_redtest`.
+- **Command or tool:** `meerkat redtest --kind mutation|faults|adversarial|regression|cleantwin|all` (the same as `node lib/redtest/run.mjs --kind ...`); MCP `meerkat_redtest`.
 
 ## Catalog and tests command
 

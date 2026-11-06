@@ -34,7 +34,7 @@ Everything an AI needs to use Meerkat. This page agrees with [skills/meerkat/SKI
 | `meerkat_tests` | The catalog of everything Meerkat can check: kinds, families, each check, what it proves, cost and when it runs. | `detail` (`summary` or `full`) |
 | `meerkat_findings` | List the newest run's findings, most severe first. Reads files only. | `severity`, `check`, `suite`, `status` (`new` or `known`), `limit` (1 to 500, default 50) |
 | `meerkat_finding` | One finding in full: what, where, evidence, check, log and a fix hint. Reads files only. | `id` (required, first 4 or more characters are enough) |
-| `meerkat_redtest` | Run Meerkat's own red tests (deliberate attacks on its checks) to prove they still catch defects. | `kind`: `mutation`, `faults`, `adversarial`, `regression` (default), `cleantwin`, or `all` |
+| `meerkat_redtest` | Run Meerkat's own red tests (deliberate attacks on its checks) to prove they still catch defects. Also a CLI command: `meerkat redtest --kind <kind>`. | `kind`: `mutation`, `faults`, `adversarial`, `regression` (default), `cleantwin`, or `all` |
 | `meerkat_dismiss` | WRITES: record one finding as "not a problem" with a reason. Saved in the home folder, not the project. Only with the person's agreement. | `folder`, `id`, `reason` (all required) |
 | `meerkat_baseline` | WRITES: accept every open finding of the newest run as the baseline for ratchet runs, or clear it. Only when the person asks. | `folder` (required), `clear` |
 | `meerkat_doctor` | What would run here, which outside tools are missing and how to install them. Changes nothing. | `folder` |
