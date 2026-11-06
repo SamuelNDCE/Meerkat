@@ -26,10 +26,10 @@ function ctx(over: Record<string, unknown> = {}) {
 const rpc = (c: unknown, method: string, params?: unknown) => handleMessage({ jsonrpc: '2.0', id: 1, method, params }, c)
 
 describe('capabilities and tools', () => {
-  test('initialize advertises resources and prompts, and there are sixteen tools', async () => {
+  test('initialize advertises resources and prompts, and there are twenty-eight tools', async () => {
     const r = await rpc(ctx(), 'initialize', { protocolVersion: '2025-11-25' })
     expect(r.result.capabilities).toEqual({ tools: {}, resources: {}, prompts: {} })
-    expect(TOOLS).toHaveLength(16)
+    expect(TOOLS).toHaveLength(28)
   })
 })
 

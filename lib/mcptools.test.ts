@@ -196,3 +196,91 @@ describe('resources and prompts', () => {
     }
   })
 })
+
+describe('the last group of tools: each rejects a bad argument and builds the right command', () => {
+  test('every tool in the group has a two-line description, a closed schema and a registered handler', () => {
+    const names = ['meerkat_doctor', 'meerkat_discover', 'meerkat_recommend', 'meerkat_tools', 'meerkat_trend', 'meerkat_suggest', 'meerkat_pr_comment', 'meerkat_dismissals', 'meerkat_hook_status', 'meerkat_describe', 'meerkat_undismiss', 'meerkat_hook']
+    for (const n of names) {
+      const t = TOOLS.find((x: { name: string }) => x.name === n)
+      expect(t, n).toBeTruthy()
+      expect(t.description.split('\n')).toHaveLength(2)
+      expect(t.inputSchema.additionalProperties).toBe(false)
+    }
+    for (const n of ['meerkat_undismiss', 'meerkat_hook']) {
+      const t = TOOLS.find((x: { name: string }) => x.name === n)
+      expect(t.description.startsWith('WRITES:')).toBe(true)
+      expect(t.inputSchema.required).toContain('folder')
+    }
+  })
+
+  test.each([['meerkat_doctor', 'doctor'], ['meerkat_discover', 'discover'], ['meerkat_recommend', 'recommend'], ['meerkat_tools', 'tools']])('%s runs the command on the folder and rejects an unknown argument and a folder outside', async (tool, word) => {
+    const { ctx, cli } = makeCtx()
+    expect(isErr(await call(ctx, tool, {}))).toBe(false)
+    expect(cli[0]).toEqual([word, HERE, '--json'])
+    expect(isErr(await call(ctx, tool, { extra: 1 }))).toBe(true)
+    expect(isErr(await call(ctx, tool, { folder: 42 }))).toBe(true)
+    expect(isErr(await call(ctx, tool, { folder: resolve('/elsewhere') }))).toBe(true)
+    expect(cli).toHaveLength(1)
+  })
+
+  test('trend and hook_status reject a bad folder and build their argument lists', async () => {
+    const { ctx, cli } = makeCtx()
+    await call(ctx, 'meerkat_trend', {})
+    await call(ctx, 'meerkat_hook_status', {})
+    expect(cli).toEqual([['trend', '--app', HERE], ['hook', 'status', HERE]])
+    expect(isErr(await call(ctx, 'meerkat_trend', { folder: '\\host\share' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_hook_status', { folder: '' }))).toBe(true)
+    expect(cli).toHaveLength(2)
+  })
+
+  test('suggest and pr_comment take the run folder from the server and reject a bad argument', async () => {
+    const { ctx, cli } = makeCtx()
+    await call(ctx, 'meerkat_suggest', {})
+    await call(ctx, 'meerkat_pr_comment', { run_url: 'https://ci.example/run/1' })
+    expect(cli).toEqual([['suggest', '/logs/run1'], ['pr-comment', '/logs/run1', '--run-url', 'https://ci.example/run/1']])
+    expect(isErr(await call(ctx, 'meerkat_suggest', { dir: '/etc' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_pr_comment', { run_url: 'file:///etc/passwd' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_pr_comment', { run_url: 'https://x.example/a b' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_pr_comment', { run_url: 7 }))).toBe(true)
+    expect(cli).toHaveLength(2)
+    const none = makeCtx({ latestFindings: () => ({ ok: false, text: 'There is no run yet.' }) })
+    expect(isErr(await call(none.ctx, 'meerkat_suggest', {}))).toBe(true)
+    expect(none.cli).toHaveLength(0)
+  })
+
+  test('dismissals and describe validate their arguments', async () => {
+    const { ctx, cli } = makeCtx({ runCli: async (argv: string[]) => ({ code: 0, stdout: argv[0] === 'describe' ? '{"commands":[]}' : 'No dismissals.', stderr: '', timedOut: false }) })
+    expect(isErr(await call(ctx, 'meerkat_dismissals', { stats: 'yes' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_dismissals', { nope: true }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_dismissals', { stats: true }))).toBe(false)
+    expect(isErr(await call(ctx, 'meerkat_describe', { x: 1 }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_describe', {}))).toBe(false)
+    expect(cli).toHaveLength(0)
+  })
+
+  test('undismiss needs a folder, a good id and a run of that folder', async () => {
+    const { ctx, cli } = makeCtx()
+    const r = await call(ctx, 'meerkat_undismiss', { folder: HERE, id: 'aaaa1111' })
+    expect(isErr(r)).toBe(false)
+    expect(cli[0]).toEqual(['undismiss', 'aaaa1111', '--app', HERE, '--run', '/logs/run1'])
+    expect(isErr(await call(ctx, 'meerkat_undismiss', { id: 'aaaa1111' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_undismiss', { folder: HERE, id: 'a' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_undismiss', { folder: HERE, id: '--run' }))).toBe(true)
+    const other = makeCtx({ latestFindings: () => ({ ok: true, dir: '/logs/other', doc: doc(OTHER) }) })
+    expect(isErr(await call(other.ctx, 'meerkat_undismiss', { folder: HERE, id: 'aaaa1111' }))).toBe(true)
+    expect(other.cli).toHaveLength(0)
+    expect(cli).toHaveLength(1)
+  })
+
+  test('hook needs a folder and an action of install or remove', async () => {
+    const { ctx, cli } = makeCtx()
+    expect(isErr(await call(ctx, 'meerkat_hook', { folder: HERE, action: 'install' }))).toBe(false)
+    expect(isErr(await call(ctx, 'meerkat_hook', { folder: HERE, action: 'remove' }))).toBe(false)
+    expect(cli).toEqual([['hook', 'install', HERE], ['hook', 'remove', HERE]])
+    expect(isErr(await call(ctx, 'meerkat_hook', { action: 'install' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_hook', { folder: HERE }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_hook', { folder: HERE, action: 'status; rm -rf' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_hook', { folder: resolve('/elsewhere'), action: 'install' }))).toBe(true)
+    expect(cli).toHaveLength(2)
+  })
+})
