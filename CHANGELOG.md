@@ -2,6 +2,22 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## 0.5 (2026-11-06)
+
+A minor release: it adds an MCP surface, skills, click-through drivers, new commands and a measured accuracy story. Everything below is taken from the code and docs on the release branch. Items marked unverified were not proven here.
+
+- MCP: `meerkat mcp serve` now offers 16 tools (6 in lib/mcp.mjs, 10 in lib/mcptools.mjs): run, list, presets, last, why, self_test, gate, smoke, blast, map, tests, findings, finding, redtest, dismiss, baseline. It also serves 5 resources (latest findings, latest report, per-check log template, latest code map, test catalog) and 9 prompts (triage, one fix, scan diff, pre-commit, pre-PR, secrets, blast before edit, map unfamiliar repo, red-test scenario). `meerkat_dismiss` and `meerkat_baseline` write to the home folder, so keep the client's approval step on. The ten added tools are covered by unit tests; unverified against a live MCP client in this release
+- Skills: a `skills/` folder of 9 short guides for an AI (meerkat, before a commit, before a PR, blast radius before an edit, mapping unfamiliar code, click-through, docs check, secrets before posting, smoke and red tests)
+- Click-through protocol 2: the driver stays alive for a whole scenario and talks newline-delimited JSON over stdin and stdout (hello, ready); protocol 1 is deprecated and kept for one release. Reference drivers are in examples/drivers: CDP (browser or Electron) and Windows UI Automation. They have NOT yet been run against a real app: unverified, treat as unproven. Only a fake driver and unit tests (tests/clickthrough.test.ts, tests/cdpdriver.test.ts) have run
+- rust-plus: the runtime rules (panics, unwraps, blocking, spawning, channels, locks, swallowed errors) skip `#[cfg(test)]` modules and `#[test]` functions; 17 pedantic rules were narrowed because they flagged correct real code; pedantic rules with a labelled sample were promoted into the default run (79 per docs/accuracy.md)
+- Real-code benchmark for the Rust rules: `benchmarks/real-rust/` compares the rust-plus checks with findings a person labelled TRUE or FALSE by reading the source. Labelled false alarms fell from 20 to 6 of 130 labelled findings (4.6%) with no labelled true finding lost. One project (NeuralVault), one language
+- New commands: `meerkat gate` (only the checks that cover the changed files), `meerkat smoke` (proves each check starts and stops in time), `meerkat blast <file>[#symbol]`, `meerkat map`, `meerkat tests` (the catalog, `--json`). Gate, smoke and blast exit 75 when they could not start, which is never a pass. The old preset `smoke` is now `project-smoke`
+- Hook safety: `meerkat hook status`; `hook install` refuses unsafe hook files; the pre-push block lets a push go with a message on stderr when node or run.mjs is missing or the run times out, and still blocks on a real Meerkat failure
+- Accuracy, measured 2026-11-06 (docs/accuracy.md): planted-bug recall 99.77% (1735 of 1739) in the default run and 100% in the pedantic run; 0 false alarms on 1739 clean twins; 4.6% false alarms on real Rust code (6 of 130 labelled); real-code mutation run 37% (default rules) and 98% (all rules) on 200 mutants, from one run whose raw output is not stored here (unverified, re-run before quoting). The planted corpus is built from the rules' own samples, so those figures are near the ceiling by construction
+- Not verified in this release: a full `npm test` run, and the click-through drivers against a real app
+
+The entries under Unreleased below are part of this release.
+
 ## 0.4.1 (2026-11-04)
 
 - Updates: U works from the project picker, updates survive a folder on another branch, a spinner while checking. New smoke preset and --scope to check one folder. Accuracy corpus is opt-in.

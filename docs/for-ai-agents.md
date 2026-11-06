@@ -63,7 +63,7 @@ All of these print results on stdout and progress or errors on stderr. Add `--js
 | `meerkat run list\|show <id>\|log <check>` | Past runs (JSON with `--json`), one run, or one check's log from a run. | 0, 2 |
 | `meerkat logs` | The folder where logs are kept. | 0 |
 | `meerkat recommend [folder]` | Tests the project could run that no check covers yet. Writes nothing. | 0, 2 |
-| `meerkat mcp serve` | Starts the MCP server (six tools, below). | 0 |
+| `meerkat mcp serve` | Starts the MCP server (16 tools, below). | 0 |
 
 Commands that change files exist too (`check new\|edit\|remove`, `preset new\|edit\|delete`, `pack enable\|disable`, `init`, `mcp install`, `update`). They need `--yes` when there is no terminal, `--dry-run` shows what they would do, and an agent should not use them to turn a check off to make a run pass (see the rules at the end).
 
@@ -152,7 +152,7 @@ Pick the smallest one that answers your question. `--list-presets` shows these p
 
 ## MCP server
 
-`bin/meerkat-mcp.mjs` lets an MCP client run Meerkat as tools over stdio. It needs only Node 20 or newer, sends nothing over the network, and can run only the six tools below. It cannot run any other command.
+`bin/meerkat-mcp.mjs` lets an MCP client run Meerkat as tools over stdio. It needs only Node 20 or newer, sends nothing over the network, and can run only the 16 tools below. It cannot run any other command.
 
 Claude Code:
 
@@ -183,8 +183,18 @@ The server's working folder is the default `folder` for the tools. Replace `<pat
 | `meerkat_last` | none | Returns the newest run's `report.md`. |
 | `meerkat_why` | `check`, `lines?` | Returns one check's log header and the end of its output from the newest run. |
 | `meerkat_self_test` | `folder?`, `only?` | Runs each check against a deliberately broken sample to prove it can catch problems. Same result shape as `meerkat_run`. |
+| `meerkat_gate` | `folder`, `staged`, `base`, `against` | Run only the checks that cover the changed files (`staged`, `base` or `against`). Exit code 0 means safe to go on; 75 means it could not start. Runs the project's own commands. |
+| `meerkat_smoke` | gate inputs, `timeout` (1 to 600 s, default 5) | Prove each selected check starts, runs and stops in time. Same file selection as the gate, plus a timeout. |
+| `meerkat_blast` | `target` (required, `src/a.js` or `src/a.js#name`), `folder` | Blast radius of a file or symbol: what imports it, what it imports, what could break. `found: false` means the file is not in the code map. |
+| `meerkat_map` | `folder` | Build the code map (files, exports, imports, most imported files) and save `codemap.json` and `codemap.md` in a new run folder. |
+| `meerkat_tests` | `detail` (`summary` or `full`) | The catalog of everything Meerkat can check: kinds, families, each check, what it proves, cost and when it runs. |
+| `meerkat_findings` | `severity`, `check`, `suite`, `status` (`new` or `known`), `limit` (1 to 500, default 50) | List the newest run's findings, most severe first. Reads files only. |
+| `meerkat_finding` | `id` (required, first 4 or more characters are enough) | One finding in full: what, where, evidence, check, log and a fix hint. Reads files only. |
+| `meerkat_redtest` | `kind`: `mutation`, `faults`, `adversarial`, `regression` (default), `cleantwin`, or `all` | Run Meerkat's own red tests (deliberate attacks on its checks) to prove they still catch defects. |
+| `meerkat_dismiss` | `folder`, `id`, `reason` (all required) | WRITES: record one finding as "not a problem" with a reason. Saved in the home folder, not the project. Only with the person's agreement. |
+| `meerkat_baseline` | `folder` (required), `clear` | WRITES: accept every open finding of the newest run as the baseline for ratchet runs, or clear it. Only when the person asks. |
 
-There is no separate gate tool: to run the merge gate through MCP, call `meerkat_run` with `preset: "full"`; to read the catalog, run `meerkat tests --json` in a shell.
+The gate is `meerkat_gate` (changed files only) or `meerkat_run` with `preset: "full"` (everything). The catalog is `meerkat_tests`; blast and map are `meerkat_blast` and `meerkat_map`. `meerkat_dismiss` and `meerkat_baseline` write to the home folder: keep the client's approval step on for them.
 
 Running a check runs the project's own commands: its `meerkat.config.json` can add checks that run any command. Only point the tools at projects the person trusts.
 

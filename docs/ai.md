@@ -29,10 +29,20 @@ Status here follows [features.md](features.md): the gate and smoke self-check ru
 | `meerkat_last` | The newest run's `report.md`, plus counts and the 20 most severe findings. | none |
 | `meerkat_why` | One check's log header and the end of its output. | `check` (required), `lines` (1 to 1000, default 80) |
 | `meerkat_self_test` | Run each check on a broken sample to prove it can fail. Can take minutes. | `folder`, `only` |
+| `meerkat_gate` | Run only the checks that cover the changed files (`staged`, `base` or `against`). Exit code 0 means safe to go on; 75 means it could not start. Runs the project's own commands. | `folder`, `staged`, `base`, `against` |
+| `meerkat_smoke` | Prove each selected check starts, runs and stops in time. Same file selection as the gate, plus a timeout. | gate inputs, `timeout` (1 to 600 s, default 5) |
+| `meerkat_blast` | Blast radius of a file or symbol: what imports it, what it imports, what could break. `found: false` means the file is not in the code map. | `target` (required, `src/a.js` or `src/a.js#name`), `folder` |
+| `meerkat_map` | Build the code map (files, exports, imports, most imported files) and save `codemap.json` and `codemap.md` in a new run folder. | `folder` |
+| `meerkat_tests` | The catalog of everything Meerkat can check: kinds, families, each check, what it proves, cost and when it runs. | `detail` (`summary` or `full`) |
+| `meerkat_findings` | List the newest run's findings, most severe first. Reads files only. | `severity`, `check`, `suite`, `status` (`new` or `known`), `limit` (1 to 500, default 50) |
+| `meerkat_finding` | One finding in full: what, where, evidence, check, log and a fix hint. Reads files only. | `id` (required, first 4 or more characters are enough) |
+| `meerkat_redtest` | Run Meerkat's own red tests (deliberate attacks on its checks) to prove they still catch defects. | `kind`: `mutation`, `faults`, `adversarial`, `regression` (default), `cleantwin`, or `all` |
+| `meerkat_dismiss` | WRITES: record one finding as "not a problem" with a reason. Saved in the home folder, not the project. Only with the person's agreement. | `folder`, `id`, `reason` (all required) |
+| `meerkat_baseline` | WRITES: accept every open finding of the newest run as the baseline for ratchet runs, or clear it. Only when the person asks. | `folder` (required), `clear` |
 
 `folder` must be inside the folder the server was started in, or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
 
-There is no gate, blast, map or catalog MCP tool. For the merge gate call `meerkat_run` with `preset: "full"`. For blast, gate, map and the catalog use the shell commands.
+The gate, smoke, blast, map and catalog are all MCP tools (`meerkat_gate`, `meerkat_smoke`, `meerkat_blast`, `meerkat_map`, `meerkat_tests`), and the same commands also exist in a shell. `meerkat_dismiss` and `meerkat_baseline` write, so keep the client's approval step on for them.
 
 ## Resources and prompts
 
@@ -43,8 +53,10 @@ Resources (read only, from the newest run):
 | `meerkat://run/latest/findings` | JSON: `run`, `counts`, and `findings[]` with id, severity, rule, check, suite, file, line, status, message and evidence. |
 | `meerkat://run/latest/report` | The run's `report.md`. |
 | `meerkat://run/latest/log/{check}` | The log header and the end of one check's output, for example `.../log/build`. |
+| `meerkat://map/latest` | `codemap.md` from the newest `meerkat_map`. Call `meerkat_map` first if none exists. |
+| `meerkat://tests/catalog` | The full catalog of kinds, families and checks (same as `meerkat_tests` with `detail: "full"`). |
 
-Prompts (text for the person to pick; they run nothing): `triage_newest_run` (go through the findings worst first), `check_one_fix` (argument `check`, optional `folder`: rerun only that check and confirm its finding is gone), `scan_diff` (optional `folder`: run `quick` and keep only findings in the files changed).
+Prompts (text for the person to pick; they run nothing): `triage_newest_run` (go through the findings worst first), `check_one_fix` (argument `check`, optional `folder`: rerun only that check and confirm its finding is gone), `scan_diff` (optional `folder`: run `quick` and keep only findings in the files changed), `pre_commit_check` (gate the staged files), `pre_pr_check` (optional `base`: gate the branch against the base ref), `scan_for_secrets`, `blast_before_edit` (argument `target`), `map_unfamiliar_repo`, `red_test_scenario` (argument `kind`).
 
 ## The order to run tests
 

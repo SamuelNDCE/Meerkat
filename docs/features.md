@@ -17,8 +17,8 @@ Status legend: OK works / PARTIAL works in part / BROKEN built but not working /
 | Red testing | `node lib/redtest/run.mjs --kind <kind>` (repository checkout only) | PARTIAL |
 | Advisory scan | `lib/advisory.mjs` (library only, no command) | PLANNED |
 | Catalog and tests command | `meerkat tests --json`, `meerkat.order.json` | OK |
-| MCP tools | `meerkat mcp serve`: six tools | OK |
-| MCP resources and prompts | `meerkat://run/latest/...`, three prompts | OK |
+| MCP tools | `meerkat mcp serve`: 16 tools | OK |
+| MCP resources and prompts | `meerkat://run/latest/...`, `meerkat://map/latest`, `meerkat://tests/catalog`, nine prompts | OK |
 | Hook safety | `meerkat hook install\|remove` | OK |
 | AI verification of findings | `--ai-verify`, `meerkat ai` | PARTIAL |
 
@@ -112,15 +112,15 @@ Two different things use the word.
 
 ## MCP tools
 
-- **What it does:** a stdio MCP server offering these 6 calls: `meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_self_test`. `meerkat_run` can take minutes (up to 30) and sets `isError` when the exit code is not 0. Folders must be inside the folder the server started in or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
+- **What it does:** a stdio MCP server offering these 16 calls: `meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_self_test`, `meerkat_gate`, `meerkat_smoke`, `meerkat_blast`, `meerkat_map`, `meerkat_tests`, `meerkat_findings`, `meerkat_finding`, `meerkat_redtest`, `meerkat_dismiss`, `meerkat_baseline`. `meerkat_dismiss` and `meerkat_baseline` write (to the home folder, not the project). `meerkat_run` can take minutes (up to 30) and sets `isError` when the exit code is not 0. Folders must be inside the folder the server started in or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
 - **Command:** `meerkat mcp serve`, `meerkat mcp install [claude] [--dry-run]`, `meerkat mcp status`, or `node bin/meerkat-mcp.mjs`.
 - **Exit codes:** the server speaks JSON-RPC on stdin and stdout; a failed run is reported inside the tool result.
-- **Does not:** offer a gate, blast, map or catalog tool. For the merge gate call `meerkat_run` with `preset: "full"`; for blast, gate, map and the catalog use the shell commands.
-- **Status:** OK (the six tool names were listed from the running server).
+- **Does not:** run any shell command other than Meerkat's own checks. The gate, blast, map and catalog are MCP tools (`meerkat_gate`, `meerkat_blast`, `meerkat_map`, `meerkat_tests`).
+- **Status:** OK. The 16 tool names are defined in `lib/mcp.mjs` (6) and `lib/mcptools.mjs` (10). The first six were listed from a running server earlier; the ten added ones are covered by unit tests and were not re-listed from a running server for this entry.
 
 ## MCP resources and prompts
 
-- **What it does:** read-only resources from the newest run: `meerkat://run/latest/findings`, `meerkat://run/latest/report` and the template `meerkat://run/latest/log/{check}`. Three prompts: `triage_newest_run`, `check_one_fix`, `scan_diff`. Prompts are text to pick; they run nothing.
+- **What it does:** read-only resources: `meerkat://run/latest/findings`, `meerkat://run/latest/report`, `meerkat://map/latest`, `meerkat://tests/catalog` and the template `meerkat://run/latest/log/{check}`. Nine prompts: `triage_newest_run`, `check_one_fix`, `scan_diff`, `pre_commit_check`, `pre_pr_check`, `scan_for_secrets`, `blast_before_edit`, `map_unfamiliar_repo`, `red_test_scenario`. Prompts are text to pick; they run nothing.
 - **Does not:** explain why a finding matters (rule, evidence and place only) or add a write path.
 - **Status:** OK.
 
