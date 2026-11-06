@@ -239,15 +239,25 @@ const paramOnlyConstants = (t, at, param) => {
 // .meerkat-xss-safe instead (one name per line, the reason after #).
 const XSS_SAFE_CALLS = ['esc', 'escape', 'escapeHtml', 'sanitize', 'sanitizeHtml', 'purify', 'DOMPurify']
 const xssSafeNames = (root) => new Set(readText(root, '.meerkat-xss-safe').split('\n').map((l) => l.split('#')[0].trim().toLowerCase()).filter(Boolean))
-// The right side of an assignment: from just after the operator to the end of the statement (a ; or a line end outside brackets and strings, or a // comment).
+// The right side of an assignment, read the way JavaScript reads it: from just after the operator to the end of the statement (a ; or a line end outside
+// brackets and strings). Comments are removed first. A // comment ends only the line it is on: the expression goes on when the next line that holds code
+// starts with a continuation token, exactly as for a plain line end, so a comment cannot hide a raw value on the next line.
 const rhsText = (t, from) => {
   let depth = 0
   let q = ''
+  let out = ''
   let i = from
+  // The first character of the next line that holds code (blank lines and whole-line // comments are skipped).
+  const nextCode = (at) => {
+    const m = /^(?:\s*(?:\/\/[^\n]*)?\n)*\s*(\S)/.exec(t.slice(at, at + 400))
+    return m ? m[1] : ''
+  }
+  const continues = (before, at) => before === '' || /[+,(?:&|=]$/.test(before) || /[+.?:&|]/.test(nextCode(at))
   for (; i < t.length && i < from + 2000; i++) {
     const c = t[i]
     if (q) {
-      if (c === '\\') i++
+      out += c
+      if (c === '\\') out += t[++i] ?? ''
       else if (c === q) q = ''
       continue
     }
@@ -255,15 +265,22 @@ const rhsText = (t, from) => {
     else if ('([{'.includes(c)) depth++
     else if (')]}'.includes(c)) depth--
     else if (depth <= 0 && c === ';') break
-    else if (depth <= 0 && c === '/' && t[i + 1] === '/') break
-    else if (depth <= 0 && c === '\n') {
-      const before = t.slice(from, i).trimEnd()
-      const next = /^\s*(\S)/.exec(t.slice(i + 1, i + 200))?.[1] ?? ''
-      if (before === '' || /[+,(?:&|=]$/.test(before) || /[+.?:&|]/.test(next)) continue
+    else if (depth <= 0 && c === '/' && t[i + 1] === '/') {
+      const eol = t.indexOf('\n', i)
+      if (eol < 0 || !continues(out.trimEnd(), eol + 1)) break
+      out += '\n'
+      i = eol
+      continue
+    } else if (depth <= 0 && c === '\n') {
+      if (continues(out.trimEnd(), i + 1)) {
+        out += c
+        continue
+      }
       break
     }
+    out += c
   }
-  return t.slice(from, i).trim()
+  return out.trim()
 }
 // Splits on a separator at the top level only (not inside strings, template literals or brackets).
 const splitTop = (s, sep) => {
@@ -300,17 +317,14 @@ const wrapped = (s) => {
   return true
 }
 const CALL_HEAD = /^([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\(/
+// A decoder, unescaper or raw-markup helper turns text back into markup, so it is never accepted as a cleaner, not even when a project vouches for it.
+const DECODER_NAME = /decode|unescape|atob|raw/i
+// A call is safe only when its callee is a known cleaner (XSS_SAFE_CALLS) or a name the project vouches for. A wrapper around a cleaner is not: whatever it does
+// to the cleaned text afterwards is unknown, so it is reported unless it is vouched too.
 const cleansInput = (name, vouched) => {
   const last = name.split('.').pop().toLowerCase()
+  if (DECODER_NAME.test(name)) return false
   return XSS_SAFE_CALLS.some((n) => n.toLowerCase() === last) || vouched.has(last) || vouched.has(name.toLowerCase())
-}
-// True when the term is a call of a cleaner, or a call with a cleaner call somewhere in its arguments.
-const cleansIn = (term, vouched) => {
-  const call = CALL_HEAD.exec(term)
-  if (!call) return false
-  if (cleansInput(call[1], vouched)) return true
-  const args = callText(term, call[0].length)
-  return args !== null && splitTop(args, ',').some((a) => cleansIn(a.trim(), vouched))
 }
 const safeTerm = (t, raw, vouched) => {
   const term = raw.trim()
@@ -340,10 +354,7 @@ const safeTerm = (t, raw, vouched) => {
   if (call) {
     const args = callText(term, call[0].length)
     if (args === null || term.slice(call[0].length + args.length + 1).trim() !== '') return false
-    if (cleansInput(call[1], vouched)) return true
-    // render(esc(text)): some other function, but every argument is itself safe and at least one went through a cleaner.
-    const list = splitTop(args, ',').filter((a) => a.trim() !== '')
-    return list.length > 0 && list.every((a) => safeExpr(t, a, vouched)) && list.some((a) => cleansIn(a.trim(), vouched))
+    return cleansInput(call[1], vouched)
   }
   const path = /^([A-Za-z_$][\w$]*)((?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*"|\d+)\])*)$/.exec(term)
   if (path) return (/^[A-Z][A-Z0-9_]*$/.test(path[1]) && path[2] !== '') || isConstantMarkup(t, path[1])
@@ -373,17 +384,20 @@ const safeLiteralAssign = (t, m, why, vouched = new Set()) => {
     if (arg === null) return false
     rest = arg.trim()
   }
+  // The statement as JavaScript reads it. When it runs over more than one line, the one-line shortcuts below (which look at the first line only) do not apply.
+  const full = why.includes('insertAdjacentHTML') ? rest : rhsText(t, from)
+  const oneLine = !full.includes('\n')
   // A plain name or dotted path that is a top-level constant holding only text (const ICONS = { save: '<svg ...>' }) is author-written markup too.
   const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*(?:\/\/.*)?$/.exec(rest)
-  if (root && isConstantMarkup(t, root[1])) return true
-  if (root && !root[0].includes('.') && paramOnlyConstants(t, m.index, root[1])) return true
+  if (oneLine && root && isConstantMarkup(t, root[1])) return true
+  if (oneLine && root && !root[0].includes('.') && paramOnlyConstants(t, m.index, root[1])) return true
   // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
   const atom = String.raw`(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|\x60[^\x60$\\]*\x60|[A-Z][A-Z0-9_]*(?:\.\w+|\[['"]\w+['"]\])*)`
-  if (new RegExp(String.raw`^${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)) return true
+  if (oneLine && new RegExp(String.raw`^${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)) return true
   // A call of a function declared in this same file: judged by reading that function. A builder whose result is a template of table lookups produces
   // author-written markup. A renderer that escapes with a local escaper is NOT accepted: reading JavaScript with patterns kept finding bypasses, so it is reported.
   const localCall = /^([A-Za-z_$][\w$]*)\(/.exec(rest)
-  if (localCall && !why.includes('insertAdjacentHTML')) {
+  if (oneLine && localCall && !why.includes('insertAdjacentHTML')) {
     const open = t.indexOf(localCall[0], from) + localCall[0].length
     const args = callText(t, open)
     const lineEnd = t.indexOf('\n', open)
@@ -392,9 +406,9 @@ const safeLiteralAssign = (t, m, why, vouched = new Set()) => {
   }
   // A value built only from safe parts: string literals, module-level constant tables, and calls of a known escape or sanitiser (XSS_SAFE_CALLS, or a name the
   // project vouches for in .meerkat-xss-safe). Every part of a + chain must be safe, so esc(a) + b is still reported.
-  if (safeExpr(t, why.includes('insertAdjacentHTML') ? rest : rhsText(t, from), vouched)) return true
+  if (safeExpr(t, full, vouched)) return true
   // cond ? CONST : '' picks between constants, so the condition decides which author-written markup is shown, never what it contains.
-  return new RegExp(String.raw`^[^?]+\?\s*${atom}\s*:\s*${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)
+  return oneLine && new RegExp(String.raw`^[^?]+\?\s*${atom}\s*:\s*${atom}\s*;?\s*(?:\/\/.*)?$`).test(rest)
 }
 const bareValue = (t, m) => {
   const from = m.index + m[0].length
@@ -635,7 +649,7 @@ const fx = (files, fn) => ({ fixture: () => withFixture(files, fn) })
 // (constant table, escaped, sanitised, vouched helper) and must NOT be flagged: if it is, this returns 0, which the self-test reports as a check that stopped working.
 const RISKY_BROKEN = { 'app.js': 'const r = eval(input)\nel.innerHTML = location.hash\nel.innerHTML = "<b>" + name + "</b>"\nel.innerHTML = esc(a) + b\n' }
 const RISKY_CLEAN = {
-  'app.js': "const ICON = { close: '<svg></svg>' }\nbtn.innerHTML = ICON.close\nel.innerHTML = render(esc(text))\nel.innerHTML = '<b>' + escapeHtml(name) + '</b>'\nel.innerHTML = purify.sanitize(chunk, CONFIG)\nel.innerHTML = DOMPurify.sanitize(x)\nel.innerHTML = mine(x)\n",
+  'app.js': "const ICON = { close: '<svg></svg>' }\nbtn.innerHTML = ICON.close\nel.innerHTML = esc(text)\nel.innerHTML = '<b>' + escapeHtml(name) + '</b>'\nel.innerHTML = purify.sanitize(chunk, CONFIG)\nel.innerHTML = DOMPurify.sanitize(x)\nel.innerHTML = mine(x)\n",
   '.meerkat-xss-safe': 'mine # strips every tag, reviewed\n',
 }
 const quietly = async (fn) => {

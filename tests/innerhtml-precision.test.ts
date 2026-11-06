@@ -52,6 +52,8 @@ describe('shapes that take raw input are still reported', () => {
     'a lower-case object that is not a constant table': 'el.innerHTML = icons.close',
     'a template with a raw part next to an escaped one': 'el.innerHTML = `<i>${esc(a)}</i>${b}`',
     'a name that only looks like a cleaner': 'el.innerHTML = escalate(text)',
+    'a wrapper around esc (changed 2026-11-06: was accepted)': 'el.innerHTML = render(esc(text))',
+    'esc nested two deep inside wrappers (changed 2026-11-06: was accepted)': 'el.innerHTML = wrap(render(esc(text)), "x")',
     'an append of raw input': 'el.innerHTML += userText',
   }
   for (const [label, code] of Object.entries(positives)) {
@@ -73,8 +75,6 @@ describe('shapes that are author-written, escaped or sanitised are not reported'
     'a lower-case constant table of strings': "const icons = { close: '<svg/>' }\nbtn.innerHTML = icons.close",
     'a constant array literal': "const ROWS = ['<li>a</li>', '<li>b</li>']\nlist.innerHTML = ROWS[0]",
     'an esc-wrapped call': 'el.innerHTML = esc(text)',
-    'esc inside another call': 'el.innerHTML = render(esc(text))',
-    'esc nested two deep': 'el.innerHTML = wrap(render(esc(text)), "x")',
     'escape': 'el.innerHTML = escape(text)',
     'escapeHtml joined with literals': "el.innerHTML = '<b>' + escapeHtml(name) + '</b>'",
     'an escaped template part': 'el.innerHTML = `<b>${esc(name)}</b>`',
@@ -120,6 +120,37 @@ describe('.meerkat-xss-safe vouches for a project helper', () => {
   })
   test('a name only in a reason comment is not vouched', () => {
     expect(js('el.innerHTML = other(x)', { '.meerkat-xss-safe': 'mine # other is not vouched\n' }).code).toBe(1)
+  })
+})
+
+describe('wrappers of a cleaner are not safe (fail closed)', () => {
+  const vouch = (text: string) => ({ '.meerkat-xss-safe': text })
+  test('unwrap(esc(x)) flags', () => {
+    expect(js('el.innerHTML = unwrap(esc(x))').code).toBe(1)
+  })
+  test('render(esc(x)) flags unless render is vouched', () => {
+    expect(js('el.innerHTML = render(esc(x))').code).toBe(1)
+    expect(js('el.innerHTML = render(esc(x))', vouch('render # reviewed, only places text\n')).code).toBe(0)
+  })
+  test('a decoder wrapping a cleaner flags even when vouched', () => {
+    expect(js('el.innerHTML = decodeURIComponent(esc(x))').code).toBe(1)
+    expect(js('el.innerHTML = decodeURIComponent(esc(x))', vouch('decodeURIComponent\n')).code).toBe(1)
+    expect(js('el.innerHTML = rawHtml(x)', vouch('rawHtml # reviewed\n')).code).toBe(1)
+    expect(js('el.innerHTML = atob(x)', vouch('atob # reviewed\n')).code).toBe(1)
+  })
+})
+
+describe('the scanner reads the value as JavaScript does', () => {
+  test('a // comment then a continuation line with a raw variable flags', () => {
+    expect(js("el.innerHTML = '<b>' // safe so far\n  + name").code).toBe(1)
+    expect(js('el.innerHTML = esc(a) // note\n  // another note\n  + raw').code).toBe(1)
+    expect(js('el.innerHTML = esc(a) // note\n  .concat(raw)').code).toBe(1)
+  })
+  test('a // comment then an unrelated statement still ends the value', () => {
+    expect(js('el.innerHTML = esc(a) // note\nnext()').code).toBe(0)
+  })
+  test('a // comment between safe continuation lines is not flagged', () => {
+    expect(js("el.innerHTML = '<b>' // open\n  + esc(a) // text\n  + '</b>'").code).toBe(0)
   })
 })
 
