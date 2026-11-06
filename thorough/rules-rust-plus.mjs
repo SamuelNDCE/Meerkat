@@ -12,6 +12,8 @@ const TOML_SKIP = /^\s*#/
 // Tests, docs, examples, benches and vendored code, plus this engine's own files (their samples quote the dangerous code on purpose).
 // Agent worktrees (.claude/worktrees) are duplicate checkouts of the same code, so they are excluded too.
 const TEST_OUT = /(^|\/)\.claude\/|(^|\/)(tests?|__tests__|spec|specs|examples?|docs?|fixtures?|testdata|vendor|third_party|benches?)\/|\.(test|spec)\.[a-z]+$|(^|\/)(rules-rust-plus|rust-plus)\.mjs$|(^|\/)[^/]*_tests?\.rs$|(^|\/)tests?\.rs$|(^|\/)[^/]*_test\.rs$|(^|\/)packs\/rust-plus\//i
+// Index of the first line that is neither blank nor a comment: a file-level finding is reported there, not on a leading comment line.
+const firstCodeLine = (ctx) => ctx.lines.findIndex((l) => l.trim() !== '' && !SLASH_SKIP.test(l))
 // Library code: every src file except the binary entry point and src/bin/.
 const LIB = /(^|\/)src\/(?!main\.rs$|bin\/)(?:[^/]+\/)*[^/]+\.rs$/
 const CARGO = /(^|\/)Cargo\.toml$/
@@ -95,6 +97,133 @@ const hasDocAbove = (ctx) => {
   return false
 }
 
+// Name of the nearest function above the line ('' when none).
+const fnNameOf = (ctx) => /\bfn\s+(\w+)/.exec(enclosingFn(ctx))?.[1] ?? ''
+
+// The text of a call, from the match of `re` (which must end at the opening paren) on this line to its closing paren (at most 60 lines).
+const callSpan = (ctx, re) => {
+  const text = ctx.lines.slice(ctx.index, ctx.index + 60).join('\n')
+  const m = re.exec(text)
+  if (!m) return ''
+  let depth = 0
+  for (let i = m.index + m[0].length - 1; i < text.length; i++) {
+    if (text[i] === '(') depth++
+    else if (text[i] === ')' && --depth === 0) return text.slice(m.index, i + 1)
+  }
+  return text.slice(m.index)
+}
+
+// The attribute and doc lines directly above line `from` (blank lines and the lines of a multi-line attribute included), as one string.
+const attrsAbove = (ctx, from = ctx.index) => {
+  const out = []
+  for (let i = from - 1; i >= 0 && i >= from - 30; i--) {
+    const l = ctx.lines[i]
+    if (!/^\s*(?:#\[|\/\/|\)\]|[\w:]+,?\s*$|$)/.test(l)) break
+    out.push(l)
+  }
+  return out.join('\n')
+}
+// The same, for a signature that starts on an earlier line than the one with the match (walks up to the `fn` line first).
+const attrsAboveFn = (ctx) => {
+  let i = ctx.index
+  while (i > 0 && ctx.index - i < 12 && !/\bfn\b/.test(ctx.lines[i])) i--
+  return attrsAbove(ctx, i)
+}
+
+// True when the line sits in the body of a for, while or loop (nearest enclosing blocks walked outwards by brace count, up to the function header).
+const LOOP_HEAD = /^\s*(?:\}\s*)?(?:'\w+:\s*)?(?:for\b[^\n]*\bin\b|while\b|loop\b)/
+const braceCounts = (l) => {
+  const s = l.replace(/"(?:[^"\\]|\\.)*"/g, '').replace(/'(?:[^'\\]|\\.)'/g, '').replace(/\/\/.*$/, '')
+  return [(s.match(/\{/g) || []).length, (s.match(/\}/g) || []).length]
+}
+const inLoopBody = (ctx) => {
+  let depth = 0
+  for (let i = ctx.index - 1; i >= 0 && i >= ctx.index - 200; i--) {
+    const [o, c] = braceCounts(ctx.lines[i])
+    depth += c - o
+    if (depth < 0) {
+      if (LOOP_HEAD.test(ctx.lines[i])) return true
+      if (FN_LINE.test(ctx.lines[i])) return false
+      depth = 0
+    }
+  }
+  return false
+}
+// The body lines of the for loop whose header is the current line (until the closing brace at the header's indent or less).
+const loopBody = (ctx) => {
+  const indent = /^\s*/.exec(ctx.lines[ctx.index])[0].length
+  const out = []
+  for (let i = ctx.index + 1; i < ctx.lines.length && i <= ctx.index + 80; i++) {
+    const l = ctx.lines[i]
+    if (/^\s*\}/.test(l) && /^\s*/.exec(l)[0].length <= indent) break
+    out.push(l)
+  }
+  return out.join('\n')
+}
+
+// A `== true` / `!= false` whose left side is a plain bool. An index into a serde_json value (`v["k"] == false`) has no `!` form.
+const boolEqPlain = (line) => {
+  for (const m of line.matchAll(/[=!]=\s*(?:true|false)\b/g)) if (!/\]\s*$/.test(line.slice(0, m.index))) return true
+  return false
+}
+// `.len()` on fs Metadata (no is_empty exists): the line goes through metadata(), or the receiver was bound from a metadata call just above.
+const metadataLen = (ctx) => {
+  const line = ctx.lines[ctx.index]
+  if (/\bmetadata\b[^\n]*\.len\(\)/.test(line)) return true
+  const recv = /(\w+)\s*\.len\(\)\s*(?:==|!=|>)\s*0\b/.exec(line)?.[1]
+  if (!recv) return false
+  if (/^(?:meta|metadata|md|stat|\w+_meta|\w+_metadata|\w+_md)$/.test(recv)) return true
+  return new RegExp(`\\b${recv}\\b[^\\n]{0,160}\\bmetadata\\b`).test(before(ctx, 40))
+}
+// An unwrap_or argument that allocates nothing: Path::new, Duration::from_*, enum variants (Type::Variant(..)), primitive conversions.
+const CHEAP_TYPE = /^(?:Path|OsStr|Duration|Cow|Some|Ok|Err|Instant|SystemTime|u8|u16|u32|u64|u128|usize|i8|i16|i32|i64|i128|isize|f32|f64|char|bool|Ordering|NonZero\w*)$/
+// The text of the call that opens at `at` in `text` (up to its matching close parenthesis).
+const parenSpan = (text, at) => {
+  let depth = 0
+  for (let i = text.indexOf('(', at); i >= 0 && i < text.length; i++) {
+    if (text[i] === '(') depth++
+    else if (text[i] === ')' && --depth === 0) return text.slice(at, i + 1)
+  }
+  return text.slice(at)
+}
+const ALLOCATES = /\.to_string\(\)|\.to_owned\(\)|\.to_vec\(\)|String::from\(|String::new\(|format!\(|vec!\[|Vec::(?:new|from|with_capacity)\(|Box::new\(|\.clone\(\)/
+const unwrapOrBuilds = (ctx) => {
+  const line = ctx.lines[ctx.index]
+  const text = ctx.lines.slice(ctx.index, ctx.index + 12).join('\n')
+  for (const m of line.matchAll(/\.unwrap_or\(\s*(?:([\w:]+)::(\w+)\(|(format!\(|vec!\[|\w+\.to_(?:string|owned)\(\)))/g)) {
+    if (m[3]) return true
+    if (CHEAP_TYPE.test(m[1].split('::').pop())) continue
+    // An enum variant (Type::Variant(..)) is cheap unless its payload is built with an allocation.
+    if (/^[A-Z]/.test(m[2])) {
+      if (ALLOCATES.test(parenSpan(text, m.index))) return true
+      continue
+    }
+    return true
+  }
+  return false
+}
+// A pattern compiled once: the function is named like a cache, or a Lazy/OnceLock/get_or_init context sits above it before any function header.
+const LAZY_CTX = /LazyLock|Lazy::new|Lazy<|OnceLock|OnceCell|lazy_static|get_or_init|get_or_insert_with|thread_local!/
+const regexCached = (ctx) => {
+  if (/cached|get_or_init/i.test(fnNameOf(ctx))) return true
+  for (let i = ctx.index; i >= 0 && i >= ctx.index - 15; i--) {
+    if (LAZY_CTX.test(ctx.lines[i])) return true
+    if (i < ctx.index && FN_LINE.test(ctx.lines[i])) return false
+  }
+  return false
+}
+// A spawned body that sends on or owns a channel end reports through it, so dropping the handle is deliberate.
+const CHAN_END = /\b(?:rx|tx|\w+_rx|\w+_tx|\w*receiver|\w*sender)\b|\.(?:recv|try_recv|blocking_recv)\(/
+const spawnUsesChannel = (ctx) => CHAN_END.test(callSpan(ctx, /\bspawn\(/))
+// A thread that is only handed a channel end as an argument (`run_session(id, rx, paths)`) is not shown to report through it: only a send, a receive or a loop over the receiver counts.
+const CHAN_USE = /\b\w*(?:tx|sender)\w*\s*\.\s*(?:send|try_send|blocking_send)\(|\b\w*(?:rx|receiver)\w*\s*\.\s*(?:recv|try_recv|blocking_recv|recv_timeout|iter|try_iter)\(|\bin\s+&?(?:mut\s+)?\w*(?:rx|receiver)\b/
+const threadUsesChannel = (ctx) => CHAN_USE.test(callSpan(ctx, /\bspawn\(/))
+// The macro call on this line says its case was handled elsewhere (a dispatch invariant): "handled above", "already printed".
+const macroSaysHandled = (ctx) => {
+  const l = ctx.lines[ctx.index]
+  return /handled|already/i.test(l + (l.includes(')') ? '' : (ctx.lines[ctx.index + 1] ?? '')))
+}
+
 // TOML: the table a line belongs to, and the body of a named table in a whole file.
 const HEADER = /^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*$/
 const tomlTable = (ctx) => {
@@ -118,19 +247,43 @@ const tomlBody = (text, name) => {
   return out.join('\n')
 }
 
-// Rust source rule: outside string literals, skipping comment lines, test paths (TEST_OUT) by default.
-const R = (id, title, re, bad, good, extra = {}) => ({
-  id,
-  title,
-  ext: extra.files ? undefined : ['rs'],
-  skipLine: SLASH_SKIP,
-  notIn: TEST_OUT,
-  bad,
-  good,
-  ...(re ? { re } : {}),
-  ...(re && !extra.test ? { test: outsideStrings(re) } : {}),
-  ...extra,
-})
+// RUNTIME rules: they describe what happens when the program runs (a panic, an unwrap, a blocking call, a spawn, a channel, a lock, a
+// swallowed error). Code inside a #[cfg(test)] module or a #[test] function is not shipped and may panic on purpose, so these rules skip it
+// (found by matching braces from the attribute, see rustInTest in kit.mjs). Documentation, Debug, readability, unsafe-soundness and manifest
+// rules are NOT in this list: they keep reporting inside test code exactly as before.
+export const RUNTIME_RULES = new Set([
+  'rerr-expect-empty-message', 'rerr-expect-generic-message', 'rerr-let-underscore-result', 'rerr-ok-discards-error', 'rerr-map-err-discards-source',
+  'rerr-map-err-to-string', 'rerr-lock-unwrap-poison', 'rerr-parse-unwrap', 'rerr-env-var-unwrap', 'rerr-match-err-swallowed', 'rerr-unwrap-in-drop',
+  'rasync-blocking-thread-sleep', 'rasync-blocking-fs', 'rasync-blocking-net', 'rasync-reqwest-blocking', 'rasync-std-mutex-across-await',
+  'rasync-spawn-handle-dropped', 'rasync-spawn-blocking-awaits', 'rasync-block-on-in-async', 'rasync-unbounded-channel', 'rasync-zero-sleep-busy-loop',
+  'rasync-std-mpsc-in-async-file', 'rasync-future-call-discarded', 'rasync-thread-spawn-discarded', 'rasync-global-mutable-state', 'rasync-reqwest-no-timeout',
+  'rasync-runtime-built-per-call', 'rasync-std-command-in-async', 'rasync-blocking-lock-in-async', 'rasync-sync-recv-in-async', 'rasync-stdin-read-in-async',
+  'rperf-sort-float-partial-unwrap', 'rperf-is-some-then-unwrap', 'rperf-regex-compiled-per-call',
+  'rapi-cstring-unwrap', 'rapi-serde-json-unwrap',
+  // The library rules (LIBR) already skip test code on their own: rerr-panic-in-library, rerr-unreachable-in-library, rerr-assert-in-library,
+  // rerr-process-exit-in-library, rerr-catch-unwind-in-library, rerr-anyhow-in-library, rasync-main-in-library, rsafe-env-set-var.
+])
+
+// Rust source rule: outside string literals, skipping comment lines, test paths (TEST_OUT) by default. A RUNTIME rule also skips test code in the file.
+const R = (id, title, re, bad, good, extra = {}) => {
+  const rule = {
+    id,
+    title,
+    ext: extra.files ? undefined : ['rs'],
+    skipLine: SLASH_SKIP,
+    notIn: TEST_OUT,
+    bad,
+    good,
+    ...(re ? { re } : {}),
+    ...(re && !extra.test ? { test: outsideStrings(re) } : {}),
+    ...extra,
+  }
+  if (RUNTIME_RULES.has(id) && rule.test) {
+    const base = rule.test
+    rule.test = (line, ctx) => !rustInTest(ctx) && base(line, ctx)
+  }
+  return rule
+}
 // Library rule: src files only, and not inside a #[cfg(test)] block.
 const LIBR = (id, title, re, bad, good, more, extra = {}) =>
   R(id, title, re, bad, good, { files: LIB, sample: 'src/lib.rs', test: re ? T(re, (c) => !inTestBlock(c) && (more ? more(c) : true)) : undefined, ...extra })
@@ -204,20 +357,28 @@ export const SAFETY = [
 export const ERRORS = [
   R('rerr-expect-empty-message', 'expect is called with an empty message, so a panic says nothing', /\.expect\(\s*""\s*\)/, 'let cfg = load().expect("");', 'let cfg = load().expect("config file is required");'),
   R('rerr-expect-generic-message', 'expect is called with a generic word ("failed", "error") instead of what failed', /\.expect\(\s*"(?:failed|error|oops|should work|unwrap|panic|todo|msg|unexpected)"\s*\)/i, 'let p = open().expect("failed");', 'let p = open().expect("config file opens");'),
-  LIBR('rerr-panic-in-library', 'a library path calls panic!, so the caller cannot recover', /(?<![\w:])panic!\s*[([{]/, 'panic!("bad state");', 'return Err(Error::BadState);'),
-  LIBR('rerr-unreachable-in-library', 'a library path calls unreachable!, which panics if the assumption is ever wrong', /(?<![\w:])unreachable!\s*[([{]/, 'unreachable!("tag {}", tag);', 'return Err(Error::UnknownTag(tag));'),
-  LIBR('rerr-assert-in-library', 'a library path uses assert! (it stays in release builds and panics on bad input)', /(?<![\w:])(?:assert|assert_eq|assert_ne)!\s*\(/, 'assert!(len <= MAX);', 'if len > MAX { return Err(Error::TooLong); }'),
+  LIBR('rerr-panic-in-library', 'a library path calls panic!, so the caller cannot recover', /(?<![\w:])panic!\s*[([{]/, 'panic!("bad state");', 'return Err(Error::BadState);', (c) => !macroSaysHandled(c)),
+  LIBR('rerr-unreachable-in-library', 'a library path calls unreachable!, which panics if the assumption is ever wrong', /(?<![\w:])unreachable!\s*[([{]/, 'unreachable!("tag {}", tag);', 'return Err(Error::UnknownTag(tag));', (c) => !macroSaysHandled(c)),
+  LIBR('rerr-assert-in-library', 'a library path uses assert! (it stays in release builds and panics on bad input)', /(?<![\w:])(?:assert|assert_eq|assert_ne)!\s*\(/, 'assert!(len <= MAX);', 'if len > MAX { return Err(Error::TooLong); }', (c) => !/\bconst\s+fn\b/.test(enclosingFn(c)) && !/^\s*(?:pub(?:\([^)]*\))?\s+)?(?:const|static)\s/.test(c.lines[c.index])),
   R('rerr-len-narrowing-cast', 'a length is cast to a smaller integer with as, which can silently truncate', /\.(?:len|count)\(\)\s+as\s+(?:u8|u16|u32|i8|i16|i32)\b/, 'let n = items.len() as u16;', 'let n = u16::try_from(items.len())?;'),
-  R('rerr-let-underscore-result', 'a Result from send, write, flush or remove is dropped with let _ =', /\blet\s+_\s*=\s*[\w.:]*\.(?:send|write|write_all|flush|sync_all|remove_file|create_dir_all|read_to_string|write_str|set_len)\(/, 'let _ = tx.send(msg);', 'tx.send(msg).map_err(|_| Error::Closed)?;'),
+  R('rerr-let-underscore-result', 'a Result from send, write, flush or remove is dropped with let _ =', /\blet\s+_\s*=\s*[\w.:]*\.(?:send|write|write_all|flush|sync_all|remove_file|create_dir_all|read_to_string|write_str|set_len)\(/, 'let _ = file.write_all(buf);', 'file.write_all(buf).map_err(|_| Error::Closed)?;', {
+    // A channel send fails only when the receiver is gone, which is the normal way a task is told to stop; sockets and sinks still count.
+    test: T(/\blet\s+_\s*=\s*[\w.:]*\.(?:send|write|write_all|flush|sync_all|remove_file|create_dir_all|read_to_string|write_str|set_len)\(/, (c) => {
+      const m = /\blet\s+_\s*=\s*([\w.:]*)\.send\(/.exec(c.lines[c.index])
+      return !m || /socket|sock|stream|udp|client|conn|http|session|writer/i.test(m[1])
+    }),
+  }),
   R('rerr-ok-discards-error', 'a Result is turned into an Option with .ok() and the error is thrown away', /\.ok\(\);\s*(?:\/\/.*)?$/, 'remove_cache(path).ok();', 'remove_cache(path).or_else(ignore_missing)?;'),
   R('rerr-map-err-discards-source', 'map_err(|_| ...) drops the original error, so its cause is lost', /\.map_err\(\s*\|\s*_\s*\|/, 'read(path).map_err(|_| Error::Read)?;', 'read(path).map_err(|e| Error::Read(e))?;'),
   R('rerr-map-err-to-string', 'map_err turns the error into a String, which loses its type', /\.map_err\(\s*\|\s*(\w+)\s*\|\s*\1\.to_string\(\)\s*\)/, 'parse(s).map_err(|e| e.to_string())?;', 'parse(s).map_err(Error::Parse)?;'),
   LIBR('rerr-box-dyn-error-public', 'a public library function returns Box<dyn Error> (callers cannot match on it)', /\bpub\s+(?:async\s+)?fn\s+\w+[^{;\n]{0,200}->\s*(?:std::result::)?Result<[^\n]{0,200}Box<dyn\s+(?:std::error::)?Error\b/, 'pub fn load(p: &Path) -> Result<Config, Box<dyn Error>> {', 'pub fn load(p: &Path) -> Result<Config, LoadError> {'),
-  LIBR('rerr-string-error-result', 'a library function returns Result with a String error', /->\s*(?:std::result::)?Result<[^\n{;]{0,120},\s*String\s*>/, 'fn parse(s: &str) -> Result<u32, String> {', 'fn parse(s: &str) -> Result<u32, ParseError> {'),
+  LIBR('rerr-string-error-result', 'a library function returns Result with a String error', /->\s*(?:std::result::)?Result<[^\n{;]{0,120},\s*String\s*>/, 'fn parse(s: &str) -> Result<u32, String> {', 'fn parse(s: &str) -> Result<u32, ParseError> {', (c) => !/#\[(?:tauri::)?command\b/.test(attrsAboveFn(c))),
   LIBR('rerr-unit-error-type', 'a library function returns Result with the unit type () as its error', /->\s*(?:std::result::)?Result<[^\n{;]{0,120},\s*\(\s*\)\s*>/, 'fn read(&self) -> Result<Vec<u8>, ()> {', 'fn read(&self) -> Result<Vec<u8>, ReadError> {'),
-  R('rerr-unwrap-or-builds-value', 'unwrap_or is given a value that is built eagerly (use unwrap_or_else or unwrap_or_default)', /\.unwrap_or\(\s*(?:[\w:]+::\w+\(|format!\(|vec!\[|\w+\.to_(?:string|owned)\(\))/, 'let s = opt.unwrap_or(String::from("none"));', 'let s = opt.unwrap_or_else(|| String::from("none"));'),
+  R('rerr-unwrap-or-builds-value', 'unwrap_or is given a value that is built eagerly (use unwrap_or_else or unwrap_or_default)', /\.unwrap_or\(\s*(?:[\w:]+::\w+\(|format!\(|vec!\[|\w+\.to_(?:string|owned)\(\))/, 'let s = opt.unwrap_or(String::from("none"));', 'let s = opt.unwrap_or_else(|| String::from("none"));', {
+    test: T(/\.unwrap_or\(\s*(?:[\w:]+::\w+\(|format!\(|vec!\[|\w+\.to_(?:string|owned)\(\))/, (c) => unwrapOrBuilds(c)),
+  }),
   R('rerr-error-no-display', 'an error enum has no Display impl, so it cannot be shown to a user', undefined, 'pub enum ParseError {\n    Empty,\n    Bad,\n}', 'pub enum ParseError {\n    Empty,\n}\n\nimpl std::fmt::Display for ParseError {\n    fn fmt(&self, f: &mut std::fmt::Formatter<\'_>) -> std::fmt::Result {\n        write!(f, "parse error")\n    }\n}', {
-    test: (line, ctx) => /^\s*(?:pub\s+)?enum\s+\w*Error\b/.test(line) && !/impl(?:<[^>]*>)?\s+(?:std::fmt::|fmt::)?Display\s+for\b/.test(ctx.text),
+    test: (line, ctx) => /^\s*(?:pub\s+)?enum\s+\w*Error\b/.test(line) && !/impl(?:<[^>]*>)?\s+(?:std::fmt::|fmt::)?Display\s+for\b/.test(ctx.text) && !/#\[derive\([^\]\n]*\bError\b/.test(attrsAbove(ctx)),
   }),
   R('rerr-main-question-no-result', 'main uses ? but returns (), so an error is not reported by a non-zero exit', undefined, 'fn main() {\n    let c = read()?;\n    run(c);\n}', 'fn main() -> Result<(), Box<dyn Error>> {\n    let c = read()?;\n    Ok(())\n}', {
     files: /(^|\/)src\/main\.rs$/,
@@ -230,7 +391,10 @@ export const ERRORS = [
   R('rerr-parse-unwrap', 'parse().unwrap() panics on input the user typed', /\.parse(?:::<[^>\n]{1,40}>)?\(\)\.unwrap\(\)/, 'let n: u32 = arg.parse().unwrap();', 'let n: u32 = arg.parse().map_err(|_| Error::BadNumber)?;'),
   R('rerr-env-var-unwrap', 'an environment variable is read with unwrap or expect (panics when it is not set)', /\benv::var\(\s*"[^"\n]{1,80}"\s*\)\.(?:unwrap|expect)\(/, 'let home = env::var("HOME").unwrap();', 'let home = env::var("HOME").ok();'),
   LIBR('rerr-anyhow-in-library', 'a library exposes anyhow types, so callers cannot match its errors', /\banyhow::(?:Result|Error|anyhow|bail|ensure)\b/, 'pub fn load() -> anyhow::Result<Config> {', 'pub fn load() -> Result<Config, LoadError> {'),
-  R('rerr-match-err-swallowed', 'an Err arm is matched with _ and an empty body, so the error disappears', /\bErr\(\s*_\s*\)\s*=>\s*(?:\{\s*\}|\(\))/, 'match read() { Ok(v) => v, Err(_) => {} }', 'match read() { Ok(v) => v, Err(e) => return Err(e.into()) }'),
+  R('rerr-match-err-swallowed', 'an Err arm is matched with _ and an empty body, so the error disappears', /\bErr\(\s*_\s*\)\s*=>\s*(?:\{\s*\}|\(\))/, 'match read() { Ok(v) => v, Err(_) => {} }', 'match read() { Ok(v) => v, Err(e) => return Err(e.into()) }', {
+    // In exists/is_/try_/has_ functions a failed call means "not there", so ignoring the error is the answer.
+    test: T(/\bErr\(\s*_\s*\)\s*=>\s*(?:\{\s*\}|\(\))/, (c) => !/^(?:exists|is_|try_|has_)|_exists$/.test(fnNameOf(c))),
+  }),
   R('rerr-unwrap-in-drop', 'a Drop impl calls unwrap or expect, so a panic can happen during unwinding', /^\s*impl(?:<[^>]*>)?\s+Drop\s+for\b/, 'impl Drop for Conn {\n    fn drop(&mut self) {\n        self.flush().unwrap();\n    }\n}', 'impl Drop for Conn {\n    fn drop(&mut self) {\n        let _ = self.close();\n    }\n}', {
     test: (line, ctx) => /^\s*impl(?:<[^>]*>)?\s+Drop\s+for\b/.test(line) && /\.(?:unwrap|expect)\(/.test(after(ctx, 12)),
   }),
@@ -251,9 +415,13 @@ export const ASYNC = [
   R('rasync-std-mutex-across-await', 'a std Mutex guard is held across an .await in an async fn', /\blet\s+(?:mut\s+)?\w+\s*=\s*[\w.]+\.lock\(\)\.unwrap\(\);/, 'async fn save(&self) {\n    let g = self.state.lock().unwrap();\n    self.disk.write(&g).await;\n}', 'fn snapshot(&self) -> State {\n    let g = self.state.lock().unwrap();\n    g.clone()\n}\n\nasync fn save(&self) {\n    let s = self.snapshot();\n    self.disk.write(&s).await;\n}', {
     test: (line, ctx) => /\blet\s+(?:mut\s+)?\w+\s*=\s*[\w.]+\.lock\(\)\.unwrap\(\);/.test(line) && inAsyncFn(ctx) && /\.await\b/.test(after(ctx, 12)) && !/\bdrop\(/.test(after(ctx, 12)),
   }),
-  R('rasync-spawn-handle-dropped', 'tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped', /^\s*(?:tokio::)?(?:task::)?spawn\(/, 'tokio::spawn(run_worker(rx));', 'let worker = tokio::spawn(run_worker(rx));'),
+  R('rasync-spawn-handle-dropped', 'tokio::spawn is called as a statement, so its JoinHandle and its errors are dropped', /^\s*(?:tokio::)?(?:task::)?spawn\(/, 'tokio::spawn(run_worker(config));', 'let worker = tokio::spawn(run_worker(config));', {
+    // A body that owns or sends on a channel end reports through it, so the dropped handle is deliberate.
+    test: T(/^\s*(?:tokio::)?(?:task::)?spawn\(/, (c) => !spawnUsesChannel(c)),
+  }),
   R('rasync-spawn-blocking-awaits', 'spawn_blocking contains an .await, which cannot run on a blocking thread', /\bspawn_blocking\(/, 'let v = tokio::task::spawn_blocking(move || {\n    cache.lock().await.get(k)\n});', 'let v = tokio::task::spawn_blocking(move || compute(k)).await?;', {
-    test: (line, ctx) => /\bspawn_blocking\(/.test(line) && /\.await\b/.test(after(ctx, 8)),
+    // Only an .await INSIDE the closure is wrong; spawn_blocking(..).await after it is the correct use.
+    test: (line, ctx) => /\bspawn_blocking\(/.test(line) && /\.await\b/.test(callSpan(ctx, /\bspawn_blocking\(/)),
   }),
   R('rasync-block-on-in-async', 'block_on is called inside an async fn (it nests runtimes and can deadlock)', /\bblock_on\(/, 'async fn fetch() {\n    let x = futures::executor::block_on(load());\n}', 'async fn fetch() {\n    let x = load().await;\n}', {
     test: (line, ctx) => /\bblock_on\(/.test(line) && inAsyncFn(ctx),
@@ -276,12 +444,18 @@ export const ASYNC = [
     },
   }),
   LIBR('rasync-main-in-library', 'a library defines a #[tokio::main] entry point, which takes over its callers runtime', /#\[(?:tokio|async_std)::main\]/, '#[tokio::main]\nasync fn serve() {}', 'pub async fn serve() {}'),
-  R('rasync-thread-spawn-discarded', 'thread::spawn is called as a statement, so the thread is never joined', /^\s*(?:std::)?thread::spawn\(/, 'thread::spawn(move || worker(rx));', 'let h = thread::spawn(move || worker(rx));'),
+  R('rasync-thread-spawn-discarded', 'thread::spawn is called as a statement, so the thread is never joined', /^\s*(?:std::)?thread::spawn\(/, 'thread::spawn(move || worker(job));', 'let h = thread::spawn(move || worker(job));', {
+    test: T(/^\s*(?:std::)?thread::spawn\(/, (c) => !threadUsesChannel(c)),
+  }),
   R('rasync-global-mutable-state', 'a global lazy lock holds mutable state shared by every caller (review the scope)', /\bstatic\s+\w+\s*:\s*(?:Lazy|LazyLock|OnceLock|once_cell::sync::Lazy)<\s*(?:std::sync::)?(?:Mutex|RwLock)</, 'static CACHE: Lazy<Mutex<HashMap<String, u32>>> = Lazy::new(|| Mutex::new(HashMap::new()));', 'static LIMIT: u32 = 64;'),
   R('rasync-reqwest-no-timeout', 'a reqwest client is built with no timeout, so a stalled server hangs the caller forever', /\breqwest::Client::new\(\)|\bClient::builder\(\)\.build\(\)/, 'let http = reqwest::Client::new();', 'let http = reqwest::Client::builder().timeout(Duration::from_secs(10)).build()?;', {
     test: (line, ctx) => /\breqwest::Client::new\(\)|\bClient::builder\(\)\.build\(\)/.test(line) && /\breqwest\b/.test(ctx.text) && !/timeout/.test(ctx.text),
   }),
-  R('rasync-runtime-built-per-call', 'a tokio runtime is built where it is used (build it once and share it; informational)', /\bRuntime::new\(\)|\bBuilder::new_(?:multi|current)_thread\(\)/, 'fn handle(req: Req) -> Resp {\n    let rt = tokio::runtime::Runtime::new().unwrap();\n    rt.block_on(run(req))\n}', 'static RUNTIME: OnceLock<Runtime> = OnceLock::new();', { severity: 'info' }),
+  R('rasync-runtime-built-per-call', 'a tokio runtime is built where it is used (build it once and share it; informational)', /\bRuntime::new\(\)|\bBuilder::new_(?:multi|current)_thread\(\)/, 'fn handle(req: Req) -> Resp {\n    let rt = tokio::runtime::Runtime::new().unwrap();\n    rt.block_on(run(req))\n}', 'static RUNTIME: OnceLock<Runtime> = OnceLock::new();', {
+    severity: 'info',
+    // A one-time entry point (fn main, run_cli) builds its runtime once by design.
+    test: T(/\bRuntime::new\(\)|\bBuilder::new_(?:multi|current)_thread\(\)/, (c) => !/^(?:main|run_cli)$/.test(fnNameOf(c))),
+  }),
   R('rasync-std-command-in-async', 'std::process::Command runs inside an async fn, so it blocks the runtime thread', /(?<![\w:])(?:std::process::|process::)?Command::new\(/, 'async fn version() -> String {\n    let out = std::process::Command::new("git").arg("-V").output().unwrap();\n}', 'async fn version() -> String {\n    let out = tokio::process::Command::new("git").arg("-V").output().await;\n}', {
     test: (line, ctx) => /(?<![\w:])(?:std::process::|process::)?Command::new\(/.test(line) && inAsyncFn(ctx) && !/tokio::process/.test(ctx.text),
   }),
@@ -289,7 +463,8 @@ export const ASYNC = [
     test: (line, ctx) => /\.blocking_(?:lock|send|recv)\(\)/.test(line) && inAsyncFn(ctx),
   }),
   R('rasync-sync-recv-in-async', 'a recv() with no .await runs inside an async fn (a std receiver blocks the thread)', /\b\w+\.recv\(\)/, 'async fn drain(rx: Receiver<u32>) {\n    while let Ok(v) = rx.recv() {\n        sink(v);\n    }\n}', 'async fn drain(mut rx: Receiver<u32>) {\n    while let Some(v) = rx.recv().await {\n        sink(v);\n    }\n}', {
-    test: (line, ctx) => /\b\w+\.recv\(\)/.test(line) && !/\.await\b/.test(line) && inAsyncFn(ctx),
+    // A select! branch (pattern = rx.recv(), if guard =>) is awaited by the macro.
+    test: (line, ctx) => /\b\w+\.recv\(\)/.test(line) && !/\.await\b/.test(line) && !/^\s*(?:Some\(\w+\)|Ok\(\w+\)|\w+|_)\s*=\s*[\w.]+\.recv\(\)\s*(?:,.*)?=>/.test(line) && inAsyncFn(ctx),
   }),
   R('rasync-stdin-read-in-async', 'stdin is read with the blocking std API inside an async fn', /\bstdin\(\)\.(?:read_line|read_to_string|lines)\(/, 'async fn prompt() -> String {\n    let mut s = String::new();\n    std::io::stdin().read_line(&mut s).unwrap();\n    s\n}', 'async fn prompt() -> String {\n    let mut line = String::new();\n    BufReader::new(tokio::io::stdin()).read_line(&mut line).await.ok();\n    line\n}', {
     test: (line, ctx) => /\bstdin\(\)\.(?:read_line|read_to_string|lines)\(/.test(line) && inAsyncFn(ctx),
@@ -298,7 +473,7 @@ export const ASYNC = [
 
 // ---------------------------------------------------------------- Performance and style (rp-perf-style)
 export const PERF_STYLE = [
-  R('rperf-len-compare-zero', 'len() is compared with 0 (use is_empty, which states the intent)', /\.len\(\)\s*(?:==\s*0\b|!=\s*0\b|>\s*0\b)/, 'if items.len() == 0 {', 'if items.is_empty() {'),
+  R('rperf-len-compare-zero', 'len() is compared with 0 (use is_empty, which states the intent)', /\.len\(\)\s*(?:==\s*0\b|!=\s*0\b|>\s*0\b)/, 'if items.len() == 0 {', 'if items.is_empty() {', { test: T(/\.len\(\)\s*(?:==\s*0\b|!=\s*0\b|>\s*0\b)/, (c) => !metadataLen(c)) }),
   R('rperf-format-to-string-arg', 'format!("{}", x.to_string()) allocates twice (use the value directly)', /\bformat!\(\s*"\{\}"\s*,\s*[\w.]+\.to_string\(\)\s*\)/, 'let s = format!("{}", name.to_string());', 'let s = name.to_string();'),
   R('rperf-format-no-args', 'format! has no arguments (use String::from or to_owned)', /\bformat!\(\s*"[^"{}\n]{0,200}"\s*\)/, 'let s = format!("ready");', 'let s = String::from("ready");'),
   R('rperf-push-str-format', 'push_str(&format!(..)) allocates a temporary String (write! into the buffer instead)', /\.push_str\(\s*&format!\(/, 'out.push_str(&format!("{}={}", k, v));', 'write!(out, "{}={}", k, v)?;'),
@@ -306,11 +481,17 @@ export const PERF_STYLE = [
   R('rperf-iter-count', 'iter().count() walks the whole collection (len() is O(1) when it exists)', /\.iter(?:_mut)?\(\)\.count\(\)/, 'let n = items.iter().count();', 'let n = items.len();'),
   R('rperf-nth-zero', 'nth(0) is written instead of next()', /\.nth\(\s*0\s*\)/, 'let first = lines.nth(0);', 'let first = lines.next();'),
   R('rperf-map-identity', 'map(|x| x) does nothing (remove the map)', /\.map\(\s*\|\s*(\w+)\s*\|\s*\1\s*\)/, 'let v: Vec<u8> = raw.iter().map(|b| b).copied().collect();', 'let v: Vec<u8> = raw.iter().copied().collect();'),
-  R('rperf-bool-eq-literal', 'a bool is compared with == true or == false', /[=!]=\s*(?:true|false)\b/, 'if ready == true {', 'if ready {'),
+  R('rperf-bool-eq-literal', 'a bool is compared with == true or == false', /[=!]=\s*(?:true|false)\b/, 'if ready == true {', 'if ready {', { test: T(/[=!]=\s*(?:true|false)\b/, (c) => boolEqPlain(c.lines[c.index])) }),
   R('rperf-index-range-loop', 'a loop indexes a vector by position over 0..len (iterate the items instead)', undefined, 'for i in 0..v.len() {\n    total += v[i];\n}', 'for x in v.iter() {\n    total += x;\n}', {
     test: (line, ctx) => {
       const m = /^\s*for\s+(\w+)\s+in\s+0\.\.(\w+)\.len\(\)/.exec(line)
-      return !!m && new RegExp(`\\b${m[2]}\\[${m[1]}\\]`).test(after(ctx, 6))
+      if (!m || !new RegExp(`\\b${m[2]}\\[${m[1]}\\]`).test(after(ctx, 6))) return false
+      // The index is needed when it bounds a slice range or the element is changed through it.
+      const [, i, v] = m
+      const body = loopBody(ctx)
+      const slice = new RegExp(`\\[[^\\]\\n]*\\b${i}\\b[^\\]\\n]*\\.\\.|\\[[^\\]\\n]*\\.\\.[^\\]\\n]*\\b${i}\\b`)
+      const mutated = new RegExp(`\\b${v}\\[${i}\\]\\s*(?:[-+*/%|&^]|<<|>>)?=(?!=)|&mut\\s+${v}\\[${i}\\]|\\b${v}\\[${i}\\]\\.(?:push|push_str|insert|clear|extend|sort\\w*|remove|retain|truncate|swap|iter_mut|as_mut|get_mut)\\(`)
+      return !slice.test(body) && !mutated.test(body)
     },
   }),
   R('rperf-ref-vec-or-string-param', 'a function takes &Vec or &String (take &[T] or &str, which accept more)', /\bfn\s+\w+[^{;\n]{0,200}:\s*&(?!mut\b)(?:Vec<|String\b)/, 'fn total(items: &Vec<u32>) -> u32 {', 'fn total(items: &[u32]) -> u32 {'),
@@ -319,7 +500,7 @@ export const PERF_STYLE = [
   R('rperf-sort-float-partial-unwrap', 'floats are sorted with partial_cmp().unwrap(), which panics on NaN (total_cmp does not)', /\.partial_cmp\([^)\n]{0,80}\)\.unwrap\(\)/, 'scores.sort_by(|a, b| a.partial_cmp(b).unwrap());', 'scores.sort_by(|a, b| a.total_cmp(b));'),
   R('rperf-unwrap-or-new-container', 'unwrap_or(Vec::new()) builds the default every time (use unwrap_or_default)', /\.unwrap_or\(\s*(?:Vec|String|HashMap|BTreeMap|HashSet|BTreeSet)::new\(\)\s*\)/, 'let tags = map.get(k).cloned().unwrap_or(Vec::new());', 'let tags = map.get(k).cloned().unwrap_or_default();'),
   R('rperf-regex-compiled-per-call', 'Regex::new runs inside a function, so the pattern is compiled on every call', /\bRegex::new\(/, 'fn is_slug(s: &str) -> bool {\n    let re = Regex::new(r"^[a-z-]+$").unwrap();\n    re.is_match(s)\n}', 'static SLUG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z-]+$").unwrap());', {
-    test: T(/\bRegex::new\(/, (c) => !inTestBlock(c) && !/LazyLock|Lazy::new|OnceLock|OnceCell|lazy_static|Lazy</.test(before(c, 3) + '\n' + c.lines[c.index])),
+    test: T(/\bRegex::new\(/, (c) => !inTestBlock(c) && !regexCached(c)),
   }),
   R('rperf-println-in-library', 'a library prints to stdout or stderr (the caller cannot silence or capture it)', /(?<![\w:])(?:e?println|e?print)!\s*\(/, 'println!("loaded {} items", n);', 'log::info!("loaded {} items", n);', {
     files: LIB,
@@ -341,7 +522,7 @@ export const PERF_STYLE = [
   }),
   R('rperf-match-bool-literals', 'a match on a bool with true and false arms (use if else)', /\btrue\s*=>\s*[^,\n]{1,120},\s*false\s*=>/, 'let s = match ok { true => "yes", false => "no" };', 'let s = if ok { "yes" } else { "no" };'),
   R('rperf-vec-new-in-loop', 'a Vec is created with Vec::new inside a loop that pushes into it (size it once, or hoist it)', undefined, 'for row in rows {\n    let mut cells = Vec::new();\n    cells.push(row.a);\n}', 'let mut cells = Vec::with_capacity(rows.len());\nfor row in rows {\n    cells.push(row.a);\n}', {
-    test: (line, ctx) => /let\s+mut\s+\w+\s*(?::\s*Vec<[^>\n]{0,60}>)?\s*=\s*Vec::new\(\)\s*;/.test(line) && /\bfor\b/.test(before(ctx, 2)) && !/with_capacity/.test(line),
+    test: (line, ctx) => /let\s+mut\s+\w+\s*(?::\s*Vec<[^>\n]{0,60}>)?\s*=\s*Vec::new\(\)\s*;/.test(line) && inLoopBody(ctx) && !/with_capacity/.test(line),
   }),
 ]
 
@@ -446,6 +627,8 @@ export const API_FFI_WASM = [
   LIBR('rapi-pub-type-undocumented', 'a public struct, enum or trait has no /// doc comment above it', PUB_TYPE, 'pub struct Config {\n    pub depth: u8,\n}', '/// Settings.\npub struct Config {\n    pub depth: u8,\n}', (c) => !hasDocAbove(c)),
   LIBR('rapi-missing-debug-derive', 'a public type does not derive or implement Debug (it cannot be printed in a log or a test failure)', PUB_TYPE, '/// Settings.\npub struct Config {\n    pub depth: u8,\n}', '/// Settings.\n#[derive(Debug, Clone)]\npub struct Config {\n    pub depth: u8,\n}', (c) => {
     const name = PUB_TYPE.exec(c.lines[c.index])?.[1] ?? ''
+    // Debug does not apply to a trait.
+    if (/^\s*pub\s+trait\b/.test(c.lines[c.index])) return false
     return !/\bDebug\b/.test(before(c, 4)) && !new RegExp(`impl(?:<[^>]*>)?\\s+(?:std::fmt::|fmt::)?Debug\\s+for\\s+${name}\\b`).test(c.text)
   }),
   LIBR('rapi-glob-reexport', 'a glob re-export (pub use x::*) exposes whatever the module adds later', /^\s*pub\s+use\s+[\w:]+::\*\s*;/, 'pub use parser::*;', 'pub use parser::{parse, Config};'),
@@ -462,7 +645,7 @@ export const API_FFI_WASM = [
   R('rapi-js-eval', 'JavaScript source is evaluated from Rust (js_sys::eval or Function::new_*_args)', /\bjs_sys::eval\(|\bFunction::new_(?:no|with)_args\(/, 'let v = js_sys::eval(&code)?;', 'let v = JsValue::from_str(&code);'),
   R('rapi-wasm-unchecked-cast', 'a JS value is cast without a type check (unchecked_into or unchecked_ref)', /\.unchecked_(?:into|ref)\b/, 'let el = value.unchecked_into::<HtmlElement>();', 'let el = value.dyn_into::<HtmlElement>()?;'),
   LIBR('rapi-wasm-no-panic-hook', 'a wasm_bindgen crate sets no panic hook, so Rust panics show as an unhelpful JS error', undefined, '#[wasm_bindgen]\npub fn run() {}', '#[wasm_bindgen(start)]\npub fn start() {\n    console_error_panic_hook::set_once();\n}', undefined, {
-    test: (line, ctx) => ctx.index === 0 && /#\[wasm_bindgen/.test(ctx.text) && !/set_panic_hook|console_error_panic_hook/.test(ctx.text),
+    test: (line, ctx) => ctx.index === firstCodeLine(ctx) && /#\[wasm_bindgen/.test(ctx.text) && !/set_panic_hook|console_error_panic_hook/.test(ctx.text),
   }),
   R('rapi-serde-json-unwrap', 'serde_json parses external input with unwrap or expect (a bad document panics)', /\bserde_json::from_(?:str|slice|reader|value)\b[^\n]{0,200}\)\s*\.(?:unwrap|expect)\(/, 'let cfg: Cfg = serde_json::from_str(body).unwrap();', 'let cfg: Cfg = serde_json::from_str(body)?;'),
   R('rapi-secret-field-serialized', 'a secret field is Serialize with no skip_serializing (it is written into responses and logs)', undefined, '#[derive(Serialize)]\npub struct Login {\n    pub user: String,\n    pub password: String,\n}', '#[derive(Serialize)]\npub struct Login {\n    pub user: String,\n    #[serde(skip_serializing)]\n    pub password: String,\n}', {

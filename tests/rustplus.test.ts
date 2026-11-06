@@ -224,3 +224,25 @@ describe('house style', () => {
     }
   })
 })
+
+describe('rapi-wasm-no-panic-hook reports on the first code line', () => {
+  const subOf = (src: string) => {
+    const dir = tempDir({ 'Cargo.toml': CLEAN_CRATE['Cargo.toml'], 'src/lib.rs': src })
+    const env = { ...process.env, MEERKAT_FINDINGS: 'all' }
+    const out = execFileSync(process.execPath, [SCRIPT, 'rp-api-ffi-wasm', '--root', dir], { cwd: ROOT, stdio: 'pipe', encoding: 'utf8', env }).toString()
+    return out
+  }
+  const run = (src: string) => {
+    try {
+      return subOf(src)
+    } catch (e: any) {
+      return String(e.stdout ?? '')
+    }
+  }
+  test('a file that starts with a comment line is still flagged', () => {
+    expect(run('// comment\n#[wasm_bindgen]\npub fn run() {}\n')).toMatch(/MEERKAT-SUB FAIL rapi-wasm-no-panic-hook/)
+  })
+  test('a file that sets a panic hook is not flagged', () => {
+    expect(run('// comment\n#[wasm_bindgen(start)]\npub fn start() {\n    console_error_panic_hook::set_once();\n}\n')).not.toMatch(/MEERKAT-SUB FAIL rapi-wasm-no-panic-hook/)
+  })
+})
