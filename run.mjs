@@ -12,6 +12,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { changedFiles as gitChangedFiles, inScopeFile, scopedFiles } from './lib/changed.mjs'
 import { appDirOf, appProblem, repoRootOf } from './lib/paths.mjs'
+import { loadOrder } from './lib/testorder.mjs'
 import { applyProfile } from './lib/profiles.mjs'
 import { defaultParallel, lowerPriority, priorityProblem } from './lib/priority.mjs'
 import { createProgress } from './lib/progress.mjs'
@@ -417,7 +418,13 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     status.stop()
   } else {
     splash.step('Choosing the checks to run')
-    const sel = selectChecks(checks, { tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, windows: chosen.preset?.windows !== false || env.MEERKAT_WINDOWS === '1', skipCompile: chosen.preset?.skipCompile === true })
+    const order = loadOrder([appDir, repoRoot])
+    if (order.error) {
+      settleSplash()
+      fail(order.error)
+      return 2
+    }
+    const sel = selectChecks(checks, { kindOrder: order.kinds ?? null, tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, windows: chosen.preset?.windows !== false || env.MEERKAT_WINDOWS === '1', skipCompile: chosen.preset?.skipCompile === true })
     settleSplash()
     if (opts.estimate) {
       // How long this run should take on this PC: the learned times, run through the same scheduling rules (lib/eta.mjs).

@@ -32,6 +32,73 @@ The run itself returns one of three codes:
 
 Code 75 is not returned by the run. A single check uses 75 to say "I could not run" (a tool or setting is missing); Meerkat turns that into a NOT RUN result, and the run then exits 1. A NOT RUN is never a pass.
 
+## Every command an AI can run
+
+All of these print results on stdout and progress or errors on stderr. Add `--json` where the table says JSON. Exit codes (the same for every command, also in `meerkat describe`): **0** done and everything passed, **1** a check failed or could not run (NOT RUN), **2** a usage or configuration error (the message says what to change, including a wrong `meerkat.order.json`), **3** nothing to run (the preset selected no checks here), **130** interrupted. `[folder]` is a path or a project name; leave it off for the current folder.
+
+| Command | What it returns | Exit codes |
+|---|---|---|
+| `meerkat describe` | JSON: every command, option, exit code, output field and preset. The full, current list; this table is the short version. | 0 |
+| `meerkat tests [folder] --json` | JSON: the test catalog (see "Test catalog and order" below). | 0, 2 (bad order file) |
+| `meerkat verify [folder]` (also `test`, `quick`, `run quick`) | Runs the quick preset. Result line, or the run summary with `--json`. Writes a run folder. | 0, 1, 2, 3, 130 |
+| `meerkat full [folder]` (also `run full`) | Runs every check, the slow ones too. Same output as verify. | 0, 1, 2, 3, 130 |
+| `meerkat run <preset> [folder]` | Runs any preset from `meerkat presets`. With `--json` the run summary is one JSON object on stdout. | 0, 1, 2, 3, 130 |
+| `meerkat check <id\|suite\|suite/check\|suite/check/sub>... [folder]` | Runs only those checks. Same output as verify. | 0, 1, 2, 3, 130 |
+| `meerkat self-test [folder]` | Runs each check against a broken sample to prove it can fail. | 0, 1, 2 |
+| `meerkat list [folder]` | The checks a run would use, one line each. Runs nothing. | 0, 2 |
+| `meerkat check list [folder] --json` | JSON list of checks: id, kind, tier, lane, weight, seconds, title, optIn, pack, suite, subChecks, origin. | 0, 2 |
+| `meerkat check show <id> --json` | JSON for one check: the row above plus timeout, needs, install hint, paths, dependencies, whether it has a self-test. | 0, 2 |
+| `meerkat suite list\|show <name> --json` | JSON: suites, with how many checks and sub-checks apply here and in total. | 0, 2 |
+| `meerkat presets`, `meerkat preset list\|show <name> --json` | The presets: tier, kinds, what each does, which checks it would run. | 0, 2 |
+| `meerkat doctor [folder] --json` | What would run here, what is missing and how to fix it. | 0, 1, 2 |
+| `meerkat tools [folder] --json` | Which outside tools are installed, and how to install the missing ones. | 0, 2 |
+| `meerkat discover [folder] --json` | The project's own tests that the deep presets would also run. Runs nothing. | 0, 2 |
+| `meerkat findings [folder\|run-id] --json` | JSON: every finding of a run (severity, file, line, rule, check, fix, new or known). Filters: `--severity`, `--suite`, `--check`, `--new`, `--fixed`, `--limit`. `--fail-on <severity>` exits 1 when one at or above it exists. `--export sarif\|md\|json`. | 0, 1, 2 |
+| `meerkat finding <id> [run-id]` | One finding in full: evidence, who detected it, the log and how to fix it. | 0, 2 |
+| `meerkat prompt [folder\|run-id]` | A ready-made prompt for an AI from a run's findings. | 0, 2 |
+| `meerkat last` | The newest run's `report.md`. | 0, 2 |
+| `meerkat why <check> [run-id]` | One check's log header and the end of its output. | 0, 2 |
+| `meerkat run list\|show <id>\|log <check>` | Past runs (JSON with `--json`), one run, or one check's log from a run. | 0, 2 |
+| `meerkat logs` | The folder where logs are kept. | 0 |
+| `meerkat recommend [folder]` | Tests the project could run that no check covers yet. Writes nothing. | 0, 2 |
+| `meerkat mcp serve` | Starts the MCP server (six tools, below). | 0 |
+
+Commands that change files exist too (`check new\|edit\|remove`, `preset new\|edit\|delete`, `pack enable\|disable`, `init`, `mcp install`, `update`). They need `--yes` when there is no terminal, `--dry-run` shows what they would do, and an agent should not use them to turn a check off to make a run pass (see the rules at the end).
+
+## Test catalog and order
+
+`meerkat tests --json` lists every kind of test and every family of check. It is generated from the check registry (the bundled packs, `lib/suites.mjs` and `lib/presets.mjs`), never typed by hand, and a test fails if a check exists in the registry but not in the catalog. Top-level fields:
+
+| Field | What it holds |
+|---|---|
+| `schema` | Catalog format version (1). |
+| `triggerMeaning`, `costMeaning` | What each trigger and cost word means. |
+| `order` | `file` (`meerkat.order.json`), `kinds` (default order), `inUse` (the order this folder uses), `source` (`file` or `default`), `error` (a wrong file), `how`. |
+| `presets[]` | Each preset: `name`, `trigger`, `tier`, `kinds`, `include`, `about`. |
+| `totals` | `kinds`, `families`, `checks`. |
+| `kinds[]` | The five kinds (`security`, `functionality`, `ui`, `performance`, `refactor`). |
+| `families[]` | The suites, such as `secrets` or `accessibility`. |
+| `checks[]` | Every check. |
+
+Each entry in `kinds`, `families` and `checks` has:
+
+- `proves`: what it shows is true when it passes.
+- `triggers`: any of `commit` (quick, fast), `pr` (ci), `gate` (full, thorough, detectors), `promote` (release) and `manual` (any other preset, `meerkat check`, `--only`). Worked out by selecting the checks of each built-in preset, so a preset change moves them. A check also lists the exact `presets`.
+- `cost`: `fast` (about 10 seconds or less), `medium` (up to a minute) or `slow` (longer). A kind or family shows its slowest member plus `costCounts` and `seconds`.
+- `needs`: `tools` (programs on the PATH), `network` (reaches out, for example an advisory database or the AI review) and `app` (opens a window or a running app).
+- how to add or reorder: `add` (for a kind or family) and `reorder`; a check also has `run` (the command that runs just it).
+
+To add a test: add a check to a pack (docs/writing-checks.md), or for one project `meerkat check new`; it appears in the catalog at once. To reorder: edit `meerkat.order.json`, in the project folder or the repository root:
+
+```json
+{
+  "version": 1,
+  "kinds": ["security", "functionality", "ui", "performance", "refactor"]
+}
+```
+
+`kinds` is the order in which kinds start in a run. A kind left out starts after the listed ones, in the default order. With no file, Meerkat starts the longest work first, as before. Inside a kind the speed order is kept, and dependencies, lane limits and the machine budget are still enforced, so the file only changes what starts first, never what runs. An unknown kind, a repeated kind, an unknown key or bad JSON stops the run with exit code 2 and a plain message, for example: `meerkat.order.json: unknown kind "speed". Kinds: security, functionality, ui, performance, refactor`.
+
 ## Where the logs are
 
 Every run writes a folder, by default `~/.meerkat/logs/runs/<date>-<time>-<tier>/`. Set `MEERKAT_LOG_DIR` to put the logs elsewhere. `latest.json` in the log folder points at the newest run.
@@ -114,6 +181,8 @@ The server's working folder is the default `folder` for the tools. Replace `<pat
 | `meerkat_last` | none | Returns the newest run's `report.md`. |
 | `meerkat_why` | `check`, `lines?` | Returns one check's log header and the end of its output from the newest run. |
 | `meerkat_self_test` | `folder?`, `only?` | Runs each check against a deliberately broken sample to prove it can catch problems. Same result shape as `meerkat_run`. |
+
+There is no separate gate tool: to run the merge gate through MCP, call `meerkat_run` with `preset: "full"`; to read the catalog, run `meerkat tests --json` in a shell.
 
 Running a check runs the project's own commands: its `meerkat.config.json` can add checks that run any command. Only point the tools at projects the person trusts.
 
