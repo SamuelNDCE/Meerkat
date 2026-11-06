@@ -1,7 +1,7 @@
 ---
 name: meerkat-before-pr
 description: |-
-  Use when you are about to open or update a pull request, or about to post anything public about a change (a PR body, a comment, an issue, release notes).
+  Use when you are about to open or update a pull request, about to run git push or gh pr create, or about to post anything public about a change (a PR body, a comment, an issue, release notes).
   Runs the full Meerkat gate against the base branch, then a secrets and personal-data scan of the diff, and writes the PR summary from the run's report.
   The check you state is "no secrets, no personal paths".
 ---

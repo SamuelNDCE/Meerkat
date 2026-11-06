@@ -1,7 +1,7 @@
 ---
 name: meerkat-click-through
 description: |-
-  Use when a web or desktop app needs a UI walkthrough: open it, visit every page, press every control, and fail if a page crashes or a control does nothing.
+  Use when you have built or changed a web or desktop screen and need to know that every page opens and every button does something, before you say the UI works.
   Status: PLANNED. The click-through guide is being written by another worker, so this skill only points at it and invents no commands.
   Until the guide is finished, read docs/click-through.md and do not guess flags.
 ---

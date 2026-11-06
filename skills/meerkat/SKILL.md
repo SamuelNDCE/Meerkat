@@ -1,9 +1,8 @@
 ---
 name: meerkat
 description: |-
-  Meerkat runs a project's checks (build, tests, security, UI, speed) and saves a plain report. Use it:
-  before a commit or pull request (gate: `node lib/gate.mjs gate`, the `meerkat gate` word is not wired yet); after an edit, to see what it affects (meerkat blast <file>);
-  before a release (full preset); on an unfamiliar codebase or refactor (meerkat map); to check Meerkat works (smoke: `node lib/gate.mjs smoke`); to list checks (meerkat tests --json).
+  Use when you start on a project and want to know which Meerkat check fits, or when any of these is about to happen: you are about to commit, you are about to open a pull request, you are about to edit a function that has callers, you are about to post a log or a secret, you are reading code you do not know, you changed docs, or you just added a feature.
+  This is the overview: every command, exit code and preset. Each trigger has its own skill (meerkat-before-commit, meerkat-before-pr, meerkat-blast-before-edit, meerkat-secrets-before-post, meerkat-map-unfamiliar-code, meerkat-docs-check).
 ---
 
 # Meerkat
@@ -14,11 +13,11 @@ Meerkat is one command that checks a project and saves a report. Replace `<folde
 
 | Situation | Run |
 |---|---|
-| Before committing or opening a pull request | `node lib/gate.mjs gate` (the `meerkat gate` word is not wired yet; add `--staged` in a pre-commit hook, or `--base <ref>` for a pull request) |
+| Before committing or opening a pull request | `meerkat gate` (add `--staged` in a pre-commit hook, or `--base <ref>` for a pull request) |
 | After a code change, to see what it affects | `meerkat blast <file>` or `meerkat blast <file>#<symbol>` |
 | Before promoting or releasing | `meerkat full` for the merge gate, `meerkat run release` before shipping |
 | Checking an unfamiliar codebase or planning a refactor | `meerkat map --app <folder>`, then `meerkat blast` on the files you will change |
-| Checking that Meerkat itself works | `node lib/gate.mjs smoke` (not wired as `meerkat smoke` yet; it tests the tool, not your project) |
+| Checking that Meerkat itself works | `meerkat smoke` (it tests the tool, not your project) |
 | Finding out which checks exist and what they prove | `meerkat tests --json` |
 | A quick check of the whole project | `meerkat verify` |
 
@@ -39,8 +38,8 @@ A NOT RUN is never a pass. Report what is missing.
 
 | Command | What it does |
 |---|---|
-| `node lib/gate.mjs gate` | Runs only the checks whose paths match files changed since the base ref (`--staged`, `--base <ref>`, `--against <ref>`, `--json`, `--thorough`). |
-| `node lib/gate.mjs smoke` | Runs each selected check on the changed files with a tiny time limit. It fails when the tool misbehaves, not when your project has problems. |
+| `meerkat gate` | Runs only the checks whose paths match files changed since the base ref (`--staged`, `--base <ref>`, `--against <ref>`, `--json`, `--thorough`). |
+| `meerkat smoke` | Runs each selected check on the changed files with a tiny time limit. It fails when the tool misbehaves, not when your project has problems. |
 | `meerkat blast <file>[#symbol]` | Importers, modules, tests that reach the target, and unresolved imports (never counted as safe). `--json` for the full result. |
 | `meerkat map --app <folder>` | Writes `codemap.json` and `codemap.md` into a run folder: entry points, modules, most imported files. |
 | `meerkat verify` / `meerkat full` / `meerkat run <preset>` | Run the quick preset, every check, or any preset. `--json` prints the run summary. |
@@ -73,7 +72,7 @@ There is no gate or blast MCP tool. For the merge gate call `meerkat_run` with `
 
 1. `meerkat map --app <folder>` once, if the codebase is new to you.
 2. Edit the code. Run `meerkat blast <file>` to see importers and tests.
-3. `node lib/gate.mjs gate` before committing. Fix the cause of any failure. If a check says NOT RUN, report what is missing.
+3. `meerkat gate` before committing. Fix the cause of any failure. If a check says NOT RUN, report what is missing.
 4. Read details with `meerkat why <check>` or `meerkat findings --json`. After a fix, rerun only that check: `meerkat check <id>`.
 5. `meerkat full` before merging, and `meerkat run release` before shipping.
 

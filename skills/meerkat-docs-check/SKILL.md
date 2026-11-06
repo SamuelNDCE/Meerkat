@@ -1,7 +1,7 @@
 ---
 name: meerkat-docs-check
 description: |-
-  Use when a README, a doc or a changelog changed, or when a feature, command, flag, environment variable or file path was added, renamed or removed.
+  Use when a README, a doc or a changelog changed, when you are about to write documentation, or when a feature, command, flag, environment variable or file path was added, renamed or removed (for example right after you add a feature).
   Runs the doc-drift checks so the words match the code, then fixes whichever side is wrong.
   Also use before a release, when the docs must be true.
 ---

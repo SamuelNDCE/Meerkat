@@ -114,6 +114,7 @@ async function main() {
       return r.ok ? 0 : 1
     }
     case 'ai': {
+      if (plan.action === 'hooks') { const h = await import('../lib/aihooks.mjs'); out(h.hooksText()); process.stderr.write(h.hooksNotes() + '\n'); return 0 }
       const { aiStatus, aiTest, aiUse } = await aiMod()
       const r = plan.action === 'status' ? { ok: true, text: aiStatus(env) } : plan.action === 'use' ? aiUse(plan.args, env) : plan.action === 'test' ? await aiTest(env) : { ok: false, text: 'usage: meerkat ai status | use <claude|openai|openrouter> [model] | test' }
       out(plan.json ? JSON.stringify({ ok: r.ok, text: r.text }, null, 2) : r.text)

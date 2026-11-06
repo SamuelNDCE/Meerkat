@@ -1,7 +1,7 @@
 ---
 name: meerkat-secrets-before-post
 description: |-
-  Use when you are about to post, publish, upload, paste or share text, a file, a repo or a snippet anywhere outside this machine (a chat, an issue, a gist, a forum, a bug report, a public repo, an AI prompt).
+  Use when you are about to post, publish, upload, paste or share text, a file, a repo, a log or a snippet anywhere outside this machine (a chat, an issue, a gist, a forum, a bug report, a public repo, an AI prompt), or when you are about to paste a secret, token or key into anything.
   Runs the secrets and personal-data checks on exactly what will be posted, and posts nothing until they are clean.
   Applies even to "just a log" or "just a config".
 ---
