@@ -57,13 +57,14 @@ describe('protocol', () => {
     expect(d.result.protocolVersion).toBe('2024-11-05')
   })
 
-  test('tools/list names six tools, each with an input schema', async () => {
+  test('tools/list names sixteen tools, each with an input schema and a two line description', async () => {
     const { ctx } = makeCtx()
     const r = await handleMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, ctx)
-    expect(r.result.tools.map((t: { name: string }) => t.name)).toEqual(['meerkat_run', 'meerkat_list', 'meerkat_presets', 'meerkat_last', 'meerkat_why', 'meerkat_self_test'])
+    expect(r.result.tools.map((t: { name: string }) => t.name)).toEqual(['meerkat_run', 'meerkat_list', 'meerkat_presets', 'meerkat_last', 'meerkat_why', 'meerkat_self_test', 'meerkat_gate', 'meerkat_smoke', 'meerkat_blast', 'meerkat_map', 'meerkat_tests', 'meerkat_findings', 'meerkat_finding', 'meerkat_redtest', 'meerkat_dismiss', 'meerkat_baseline'])
     for (const t of TOOLS) {
       expect(t.inputSchema.type).toBe('object')
       expect(t.description.length).toBeGreaterThan(20)
+      expect(t.description.split('\n')).toHaveLength(2)
       expect(`${t.name}${t.description}`).not.toContain('—')
     }
   })
@@ -342,7 +343,7 @@ describe('stdio smoke test', () => {
       const a = JSON.parse(lines[0])
       const b = JSON.parse(lines[1])
       expect(a.result.serverInfo.name).toBe('meerkat')
-      expect(b.result.tools).toHaveLength(6)
+      expect(b.result.tools).toHaveLength(16)
     } finally {
       child.kill()
     }
