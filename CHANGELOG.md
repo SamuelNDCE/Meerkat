@@ -2,7 +2,7 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
-## 0.5.2 (2026-11-06)
+## 0.5.1 (2026-11-06)
 
 A hotfix release. Items marked unverified were not proven against a real newer release or a live client.
 
