@@ -160,12 +160,23 @@ describe('report honesty', () => {
     const text = renderReport({ stack, findings: [], snapshot: loadSnapshot(SNAP)!, now: new Date('2027-03-01T00:00:00Z') })
     expect(text).toMatch(/STALE/)
     expect(text).toMatch(/1 package was not in the snapshot/)
-    expect(text).toMatch(/^No known vulnerabilities found/)
+    expect(text).toMatch(/^No known vulnerabilities found in the \d+ packages? that were checked\. 1 could not be checked\./)
   })
   test('no snapshot means nothing was checked, and the report says so', () => {
     const r = scanAdvisories(PHP, { snapshotPath: join(ROOT, 'fixtures/advisory/none.json') })
     expect(r.findings).toEqual([])
     expect(r.report).toMatch(/No advisory snapshot found, so nothing could be checked/)
+  })
+  test('no snapshot: the headline says nothing was checked and never claims zero vulnerabilities', () => {
+    const r = scanAdvisories(PHP, { snapshotPath: join(ROOT, 'fixtures/advisory/none.json') })
+    expect(r.report.split('\n')[0]).toMatch(/^Nothing was checked/)
+    expect(r.report).not.toMatch(/No known vulnerabilities found/)
+  })
+  test('every package queried and none matched: the no known vulnerabilities headline', () => {
+    const stack = detectStack(PHP)
+    const snapshot = { format: 'meerkat-advisory-snapshot', version: 1, source: 'osv.dev', fetchedAt: NOW.toISOString(), queried: stack.packages.map((p) => ({ ecosystem: p.ecosystem, name: p.name })), advisories: [] }
+    const text = renderReport({ stack, findings: [], snapshot, now: NOW })
+    expect(text.split('\n')[0]).toBe('No known vulnerabilities found in the declared packages.')
   })
 })
 
