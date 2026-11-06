@@ -52,7 +52,7 @@ describe('click-through runner', () => {
 
   test('a step that hangs is stopped at its timeout', () => {
     const dir = tmp()
-    const sc = { name: 'hang', driver: { cmd: process.execPath, args: [join(FIX, 'hang-driver.mjs')] }, steps: [{ type: 'open', url: 'http://x.test/', timeoutMs: 300 }] }
+    const sc = { name: 'hang', driver: { cmd: process.execPath, args: [join(FIX, 'hang-driver.mjs')], protocol: 1 }, steps: [{ type: 'open', url: 'http://x.test/', timeoutMs: 300 }] }
     writeFileSync(join(dir, 'hang.json'), JSON.stringify(sc))
     const t = Date.now()
     const r = exec('hang.json', dir, tmp())
