@@ -127,6 +127,32 @@ claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs
 | Find what exists | `meerkat tests`, `meerkat suite list`, `meerkat doctor` |
 | Set up | `meerkat init`, `meerkat tools`, `meerkat mcp install`, `meerkat hook install` |
 
+## Using Meerkat to build NeuralVault and the Perpetual Technologies website
+
+**Why.** Samuel wants Meerkat used whenever anyone, human or AI agent, builds or works on NeuralVault and on the Perpetual Technologies website. Meerkat finds bugs in code, checks docs against code, and maps what a change affects, so problems are caught before they ship.
+
+**How.** Legend: OK works on `main` / PARTIAL works only on a branch or by a longer command / PLANNED not wired yet.
+
+| Moment | What to run | Status |
+|---|---|---|
+| Before a commit or PR | `meerkat verify` (quick) or `meerkat full` | OK on `main` |
+| Before a commit or PR, only the files you changed | `meerkat gate --base <ref>` | PARTIAL: `node lib/gate.mjs gate --base <ref>` on this branch; the `meerkat gate` word is on the `wire-gate` branch, not merged |
+| After an edit | `meerkat blast <file>` | PARTIAL: on the release branch, not on `main` |
+| Before a release | `meerkat full` (or `meerkat run release`) | OK on `main` |
+| Unfamiliar codebase or a refactor | `meerkat map` | PARTIAL: on the release branch, not on `main` |
+| Check Meerkat itself | `meerkat smoke` | PARTIAL: `node lib/gate.mjs smoke` on this branch; the `meerkat smoke` word is on `wire-gate`, not merged. `meerkat self-test` is OK on `main` |
+| AI agents | `meerkat mcp serve` | OK on `main`: six tools (`meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_self_test`), plus resources and prompts |
+
+There is no gate, blast or map MCP tool. Agents call `meerkat_run` with `preset: "full"` for the merge gate and use the shell commands for the rest. `meerkat mcp install` registers the server with Claude Code. Full agent guide: [docs/ai.md](docs/ai.md).
+
+`blast` exits 75 when the file is not in the code map. `gate` and `smoke` exit 75 when they could not run. Exit 75 is not a pass.
+
+**Known limits.** Treat Rust findings as leads to check, not verdicts.
+- Rust rules, default run: about 97.5% of planted defects found (target 99.5%).
+- False alarms on real code: about 14% (target under 5%).
+
+**Read more.** [docs/features.md](docs/features.md) (every feature and its status), [docs/ai.md](docs/ai.md) (for AI agents), [docs/adding-tests.md](docs/adding-tests.md) (adding a check), [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## CI, privacy, updates
 
 Meerkat exits non-zero on any failure or NOT RUN and writes `summary.json` and SARIF for every run: `node run.mjs --preset ci --json meerkat.json` in a build job. It has no telemetry and never uploads your code or results; its one network call of its own is a once-a-day version look-up (`meerkat update off` turns it off). Versions follow [semantic versioning](https://semver.org); the version lives in `package.json` and [CHANGELOG.md](CHANGELOG.md) says what changed.
