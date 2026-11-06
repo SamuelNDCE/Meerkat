@@ -83,3 +83,87 @@ describe('click-through runner', () => {
     expect(c.run.args).toContain('scenarios/demo.json')
   })
 })
+
+describe('click-through runner, protocol 2 (persistent driver)', () => {
+  const PD = join(FIX, 'fake-persistent-driver.mjs')
+  const steps = (extra: any[] = []) => [
+    { type: 'open', url: 'http://x.test/' },
+    { type: 'assert', text: 'Welcome' },
+    { type: 'click', text: 'Save' },
+    { type: 'assert', text: 'Saved' },
+    { type: 'screenshot', name: 'done' },
+    ...extra,
+  ]
+  function runPd(env: Record<string, string>, stepList: any[] = steps()) {
+    const dir = tmp()
+    writeFileSync(join(dir, 'sc.json'), JSON.stringify({ name: 'pd', driver: { cmd: process.execPath, args: [PD], env }, steps: stepList }))
+    const out = tmp()
+    const t = Date.now()
+    const r = exec('sc.json', dir, out)
+    const run = join(out, readdirSync(out)[0])
+    return { code: r.status, stdout: r.stdout, ms: Date.now() - t, run, result: JSON.parse(readFileSync(join(run, 'result.json'), 'utf8')) }
+  }
+
+  test('a passing scenario speaks protocol 2 and saves a screenshot', () => {
+    const r = runPd({})
+    expect(r.code).toBe(0)
+    expect(r.result.protocol).toBe(2)
+    expect(r.result.capabilities).toContain('click')
+    expect(r.result.steps.every((s: any) => s.ok)).toBe(true)
+    expect(existsSync(r.result.screenshots[0])).toBe(true)
+  })
+
+  test('a failing scenario names the step with expected and actual', () => {
+    const r = runPd({ MEERKAT_FAKE_BREAK_SAVE: '1' })
+    expect(r.code).toBe(1)
+    expect(r.result.failed.n).toBe(4)
+    expect(r.result.failed.expected).toContain('text "Saved" is present')
+    expect(r.result.failed.actual).toContain('page shows: Welcome, Save')
+    expect(r.result.steps[4].skipped).toBe(true)
+    expect(r.stdout).toContain('FAIL step 4')
+  })
+
+  test('a driver that never replies to one step fails that step at its timeout', () => {
+    const list = steps().map((s, i) => (i === 2 ? { ...s, timeoutMs: 300 } : s))
+    const r = runPd({ MEERKAT_FAKE_HANG_STEP: '3' }, list)
+    expect(r.code).toBe(1)
+    expect(r.result.failed.n).toBe(3)
+    expect(r.result.failed.actual).toBe('no answer within 300 ms')
+    expect(r.stdout).toContain('FAIL step 3')
+    expect(r.ms).toBeLessThan(15_000)
+  })
+
+  test('a driver that exits before ready ends the run with 75', () => {
+    const r = runPd({ MEERKAT_FAKE_NO_READY: '1' })
+    expect(r.code).toBe(75)
+    expect(r.result.status).toBe('cannot-start')
+    expect(r.result.note).toContain('before ready')
+  })
+
+  test('a driver that answers ready with ok false ends the run with 75 and its detail', () => {
+    const r = runPd({ MEERKAT_FAKE_NOT_OK: '1' })
+    expect(r.code).toBe(75)
+    expect(r.result.note).toContain('no display here')
+  })
+
+  test('the driver is started once for a multi-step scenario and logs stderr to driver.log', () => {
+    const r = runPd({})
+    expect(r.result.steps.length).toBeGreaterThan(4)
+    const starts = readFileSync(join(r.run, 'session', 'starts.log'), 'utf8').trim().split('\n')
+    expect(starts).toHaveLength(1)
+    expect(existsSync(join(r.run, 'driver.log'))).toBe(true)
+  })
+
+  test('readLines splits on newlines across chunks and flushes the last partial line', async () => {
+    const { PassThrough } = await import('node:stream')
+    const { readLines } = await import('../lib/clickthrough.mjs')
+    const s = new PassThrough()
+    const got: string[] = []
+    readLines(s, (l: string) => got.push(l))
+    s.write('{"a":1}\r\n{"b"')
+    s.write(':2}\nlast')
+    s.end()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(got).toEqual(['{"a":1}', '{"b":2}', 'last'])
+  })
+})
