@@ -26,17 +26,17 @@ function ctx(over: Record<string, unknown> = {}) {
 const rpc = (c: unknown, method: string, params?: unknown) => handleMessage({ jsonrpc: '2.0', id: 1, method, params }, c)
 
 describe('capabilities and tools', () => {
-  test('initialize advertises resources and prompts, and there are still six tools', async () => {
+  test('initialize advertises resources and prompts, and there are sixteen tools', async () => {
     const r = await rpc(ctx(), 'initialize', { protocolVersion: '2025-11-25' })
     expect(r.result.capabilities).toEqual({ tools: {}, resources: {}, prompts: {} })
-    expect(TOOLS).toHaveLength(6)
+    expect(TOOLS).toHaveLength(16)
   })
 })
 
 describe('resources', () => {
   test('resources/list and templates/list', async () => {
     const l = await rpc(ctx(), 'resources/list')
-    expect(l.result.resources.map((x: { uri: string }) => x.uri)).toEqual(['meerkat://run/latest/findings', 'meerkat://run/latest/report'])
+    expect(l.result.resources.map((x: { uri: string }) => x.uri)).toEqual(['meerkat://run/latest/findings', 'meerkat://run/latest/report', 'meerkat://map/latest', 'meerkat://tests/catalog'])
     expect(l.result.resources).toEqual(RESOURCES)
     const t = await rpc(ctx(), 'resources/templates/list')
     expect(t.result.resourceTemplates).toEqual(RESOURCE_TEMPLATES)
@@ -74,9 +74,9 @@ describe('resources', () => {
 })
 
 describe('prompts', () => {
-  test('prompts/list names the three jobs', async () => {
+  test('prompts/list names the nine jobs', async () => {
     const r = await rpc(ctx(), 'prompts/list')
-    expect(r.result.prompts.map((p: { name: string }) => p.name)).toEqual(['triage_newest_run', 'check_one_fix', 'scan_diff'])
+    expect(r.result.prompts.map((p: { name: string }) => p.name)).toEqual(['triage_newest_run', 'check_one_fix', 'scan_diff', 'pre_commit_check', 'pre_pr_check', 'scan_for_secrets', 'blast_before_edit', 'map_unfamiliar_repo', 'red_test_scenario'])
     expect(r.result.prompts).toEqual(PROMPTS)
   })
 
