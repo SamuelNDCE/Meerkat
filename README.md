@@ -114,6 +114,38 @@ claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs
 - Silence a known finding with a reason: `meerkat dismiss <id> --reason "..."`.
 - Settings live in `meerkat.config.json` (`meerkat init` writes one): [docs/customizing.md](docs/customizing.md).
 
+## Extend Meerkat
+
+You can add your own checks, packs, presets and click-through steps. The full how-to is [docs/adding-tests.md](docs/adding-tests.md).
+
+Legend: OK works / PARTIAL works with limits / PLANNED not built.
+
+| I want to | How | Status |
+|---|---|---|
+| Run one project command as a check, no JavaScript | `customChecks` in `meerkat.config.json` (`cmd`, `args`, `suite`, `group`, `tier`, `cwd`, `timeoutSeconds`, `weight`, `needs`, `install`). Code: `lib/customchecks.mjs` | OK |
+| Write a check in JavaScript | A pack file: a `.mjs` whose default export is an array of checks. Example: `packs/a11y/a11y.mjs` | OK |
+| Add a pack | `meerkat pack add <folder>`, then `meerkat pack enable <name>` | OK |
+| Choose which groups and packs run | `meerkat preset new`. A preset selects checks, it does not register them | OK |
+| See my check under a suite | Set the check's `suite` field, or add it to `lib/suites.mjs` (`CHECK_SUITE` or `PACK_SUITE`). Otherwise it is listed under "other" | OK |
+| Click through my app's UI | Write your own steps as a window check (lane `electron` or `windows`). Meerkat has no generic built-in UI click-through | PARTIAL |
+| Let Meerkat find my scripts | `meerkat discover` reads `package.json` scripts, Makefile, Playwright and Cypress configs and `scripts/` | OK |
+| See my checks over MCP | `meerkat_list` should show checks from packs and config. Check with `meerkat_list` | PARTIAL |
+
+A check has these required fields (validated in `lib/load-checks.mjs`): `id` (kebab-case), `group` (security, functionality, ui, performance or refactor), `tier` (fast or thorough), `lane` (free, cargo, electron or windows), `title` and `run` (a function, or `{cmd}`). Optional: `weight`, `suite`, `subs`, `scale`, `severity`, `fix`.
+
+```js
+export default [{
+  id: 'no-todo-left', group: 'functionality', tier: 'fast', lane: 'free',
+  title: 'No TODO markers in src',
+  run: { cmd: 'node', args: ['scripts/no-todo.mjs'], cwd: 'repo' },
+  selfTest: { cmd: 'node', args: ['scripts/no-todo.mjs', '--fixtures'], cwd: 'repo', expectFail: true, expectMatch: 'TODO' },
+}]
+```
+
+Click-through steps: you write the click path for your app, Meerkat runs it and reports. A window check runs only with `--include windows` or `MEERKAT_WINDOWS=1` (`lib/runner.mjs`, [docs/reference.md](docs/reference.md)). The worked example, specific to NeuralVault, is `examples/neuralvault/screens-checks.mjs`.
+
+Prove a new check with a `selfTest` on a broken sample, then run `node run.mjs --self-test`. A PASS means the broken case was caught.
+
 ## Commands
 
 `meerkat help` lists every command and `meerkat <command> --help` explains one. The full table is [docs/commands.md](docs/commands.md); `meerkat describe` prints all of it as JSON.
@@ -137,9 +169,9 @@ claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs
 |---|---|---|
 | Before a commit or PR | `meerkat verify` (quick) or `meerkat full` | OK on `main` |
 | Before a commit or PR, only the files you changed | `meerkat gate --base <ref>` | PARTIAL: `node lib/gate.mjs gate --base <ref>` on this branch; the `meerkat gate` word is on the `wire-gate` branch, not merged |
-| After an edit | `meerkat blast <file>` | PARTIAL: on the release branch, not on `main` |
+| After an edit | `meerkat blast <file>` | PARTIAL: on the `meerkat-040-integration` branch, not yet merged to `main` |
 | Before a release | `meerkat full` (or `meerkat run release`) | OK on `main` |
-| Unfamiliar codebase or a refactor | `meerkat map` | PARTIAL: on the release branch, not on `main` |
+| Unfamiliar codebase or a refactor | `meerkat map` | PARTIAL: on the `meerkat-040-integration` branch, not yet merged to `main` |
 | Check Meerkat itself | `meerkat smoke` | PARTIAL: `node lib/gate.mjs smoke` on this branch; the `meerkat smoke` word is on `wire-gate`, not merged. `meerkat self-test` is OK on `main` |
 | AI agents | `meerkat mcp serve` | OK on `main`: six tools (`meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_self_test`), plus resources and prompts |
 
@@ -148,8 +180,7 @@ There is no gate, blast or map MCP tool. Agents call `meerkat_run` with `preset:
 `blast` exits 75 when the file is not in the code map. `gate` and `smoke` exit 75 when they could not run. Exit 75 is not a pass.
 
 **Known limits.** Treat Rust findings as leads to check, not verdicts.
-- Rust rules, default run: about 97.5% of planted defects found (target 99.5%).
-- False alarms on real code: about 14% (target under 5%).
+- Recall and false-alarm rates for the Rust rules are not stated here. They change with every run: see [docs/accuracy.md](docs/accuracy.md), which gives each figure with its date and the command that produced it. The Rust measuring scripts (`benchmarks/real-rust/measure.mjs`, `tools/corpus/measure.mjs`) are not on this branch.
 
 **Read more.** [docs/features.md](docs/features.md) (every feature and its status), [docs/ai.md](docs/ai.md) (for AI agents), [docs/adding-tests.md](docs/adding-tests.md) (adding a check), [CONTRIBUTING.md](CONTRIBUTING.md).
 
