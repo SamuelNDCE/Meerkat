@@ -1,0 +1,15 @@
+{
+  "name": "fake-pass",
+  "driver": { "cmd": "node", "args": ["fake-driver.mjs"] },
+  "defaultTimeoutMs": 5000,
+  "steps": [
+    { "type": "open", "url": "http://app.test/home" },
+    { "type": "assert", "text": "Welcome" },
+    { "type": "type", "selector": "#name", "value": "Ada" },
+    { "type": "click", "text": "Save" },
+    { "type": "wait-for", "text": "Saved" },
+    { "type": "assert", "urlMatches": "/home$" },
+    { "type": "screenshot", "name": "after-save" },
+    { "type": "stop" }
+  ]
+}
