@@ -3,6 +3,7 @@
 // Exit codes: 0 passed, 1 a check failed or could not run, 2 a usage or configuration error, 3 nothing to run, 130 interrupted.
 // Results go to stdout; notes, progress and errors go to stderr.
 import { helpText, loadPresets, packAdd, packRemove, planCommand, presetsText, rootCommand } from '../lib/cli.mjs'
+import { EXTRA_WORDS, runExtra } from '../lib/extras-cli.mjs'
 import { buildBugReport } from '../lib/bugreport.mjs'
 import { execute } from '../lib/commands.mjs'
 import { afterRun, runMenu, spawnRun } from '../lib/menu.mjs'
@@ -31,6 +32,11 @@ const err = (t) => process.stderr.write(`${t}\n`)
 const version = () => VERSION // lib/version.mjs: package.json, read once
 
 async function main() {
+  // The accepted-findings, history, suggestion and CI commands (lib/extras-cli.mjs) are handled before the older parser sees them.
+  if (EXTRA_WORDS.includes(argv[0])) {
+    const code = runExtra(argv, { env, cwd, out, err })
+    if (code !== null) return code
+  }
   const presets = loadPresets({ cwd, env })
   const plan = planCommand(argv, { cwd, env, interactive, presets })
   const ctx = { out, err, env, cwd, interactive, presets, version: version() }

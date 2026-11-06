@@ -8,6 +8,18 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+- accepted findings: `meerkat dismiss <id> --reason "..."` accepts one finding (kept with its reason in the home folder, never in the project); `meerkat undismiss`, and `meerkat dismissals` (or `--stats` for each rule across every project, so a rule dismissed again and again shows as a review candidate). A check whose every finding is accepted passes, and the run records what was accepted in `accepted.json`
+- `meerkat baseline` accepts the newest run's findings as they are; `meerkat run --ratchet` then fails only on findings that are not in the baseline
+- project integrity: a check that writes into the project now fails the run (`project-integrity`), listing the files. Intended writes can be allowed with `"allowWrites": [globs]` in meerkat.config.json
+- result cache: a check that passed on the exact same project (file snapshot, commit, tier, version) within six hours is reused and marked as cached; `--no-cache` runs everything again. Only passes are cached
+- `--format github` prints GitHub Actions annotations for open findings
+- `meerkat pr-comment` prints a markdown summary of the newest run for a pull request; `meerkat hook install|remove` manages a pre-push hook (quick preset, --ratchet)
+- `meerkat suggest` prints suggested commands for findings (cargo-audit advisories get `cargo update -p <crate>`); Meerkat never runs them
+- `meerkat trend` lists recent runs: findings by severity, new and fixed
+- data rules: a language can be covered by JSON rules with a bad and a good sample each (`meerkat rules test <file.json>` checks them). New pack `c-cpp` (off by default): gets, strcpy, strcat, sprintf, system, unbounded scanf, rand for secrets
+- doctor lists missing tools with the number of checks each would unlock, most useful first
+- an Electron install that is damaged in node_modules is NOT RUN with the fix, not a failed window check
+
 - smoke: a new preset, `meerkat smoke`, that answers "does my change break anything": the build, the type check, the lints and the quick tests, for any project. It is the same checks as `functionality-fast` under a clearer name; use it after changing code, with `--changed` or `--scope` to narrow it
 - scope: `--scope <folder>` works with any preset (repeatable, or comma separated). It runs only the checks that read files in that folder and keeps only the findings inside it. A failing check whose findings are all outside the folder passes for that run. Repo-wide checks (git history, commit messages, dependency counts) still run and are not limited by it. `--changed` and `--scope` cannot be combined
 - scope: the verdict of a check is taken from its findings inside the scope, read from the structured findings or the file paths in its saved output, so the scoped verdict and the findings file agree
