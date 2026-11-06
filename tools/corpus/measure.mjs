@@ -12,6 +12,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { baseTree } from './base-project.mjs'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const arg = (name, dflt) => {
@@ -37,6 +38,8 @@ if (Number.isFinite(LIMIT) && LIMIT < defects.length) {
   defects = Array.from({ length: LIMIT }, (_, i) => defects[Math.floor(i * step)])
 } else defects = defects.slice(OFFSET)
 
+// --no-base writes the planted file alone (the first version of this measurement): single-file projects trip checks that need a whole project.
+const WITH_BASE = !process.argv.includes('--no-base')
 const ELECTRON_PKG = '{\n  "name": "sample",\n  "devDependencies": { "electron": "41.0.0" }\n}\n'
 
 function runCheck(d, side) {
@@ -46,9 +49,16 @@ function runCheck(d, side) {
     // A bare package.json fragment is the sample of a rule, not the project's manifest: keep it one folder down, beside a real Electron manifest.
     const rel = d.family === 'electron-plus' && d.file === 'package.json' ? 'sample/package.json' : d.file
     const target = join(dir, ...rel.split('/'))
+    // The complete clean base project first (licence, security policy, README, manifest, lockfile, CI, tests), then the sample replaces one file.
+    if (WITH_BASE && d.base) {
+      for (const [r, text] of Object.entries(baseTree(d.base))) {
+        const p = join(dir, ...r.split('/'))
+        mkdirSync(dirname(p), { recursive: true })
+        writeFileSync(p, text)
+      }
+    } else if (d.family === 'electron-plus') writeFileSync(join(dir, 'package.json'), ELECTRON_PKG)
     mkdirSync(dirname(target), { recursive: true })
     writeFileSync(target, copy)
-    if (d.family === 'electron-plus') writeFileSync(join(dir, 'package.json'), ELECTRON_PKG)
     const child = spawn(process.execPath, [join(REPO, 'thorough', d.script), d.check, '--root', dir], { stdio: ['ignore', 'pipe', 'pipe'], env: ENV })
     let out = ''
     let timedOut = false
@@ -119,12 +129,30 @@ const missed = results.filter((r) => r.status !== 'caught')
 console.log(`\nMissed defects: ${missed.length}`)
 for (const r of missed.slice(0, Number(arg('show', '60')))) console.log(`  [${r.status}] ${r.d.id}  ${r.d.file}:${r.d.line}  ${r.d.description}`)
 if (missed.length > Number(arg('show', '60'))) console.log(`  ... ${missed.length - Number(arg('show', '60'))} more (use --out to write them all)`)
+// Every rule that fails on a clean twin, with how often and one example. On a complete-base twin each of these is a real false-alarm candidate.
+const alarmsOf = (r) => [...(r.falseAlarm ? [r.d.rule] : []), ...r.otherAlarms]
+const withAlarm = results.filter((r) => alarmsOf(r).length)
+console.log(`\nClean twins with any rule failing: ${withAlarm.length} of ${total} (${pct(withAlarm.length, total)})${WITH_BASE ? ' (complete base project)' : ' (single file, no base)'}`)
+for (const key of ['family', 'check']) {
+  const g = {}
+  for (const r of results) {
+    const x = (g[r.d[key]] ??= { n: 0, a: 0 })
+    x.n++
+    if (alarmsOf(r).length) x.a++
+  }
+  console.log(`  by ${key}: ` + Object.entries(g).sort().map(([k, x]) => `${k} ${x.a}/${x.n} (${pct(x.a, x.n)})`).join(', '))
+}
+// A twin that REPLACES a project config or manifest with a sample fragment (forge.config.js, electron-builder.json, Cargo.toml, a plist...) is clean for
+// the rule it was made for but is no longer a complete config, so other rules about that file fire. Counted apart from twins that are ordinary source files.
+const CONFIG_FRAGMENT = /(^|\/)(forge\.config\.[cm]?js|electron-builder\.(json|ya?ml)|Cargo\.toml|package\.json|tauri\.conf\.json|[\w.-]*\.plist|[\w.-]*\.entitlements|forge\.config\.ts)$/
+const fragAlarm = withAlarm.filter((r) => CONFIG_FRAGMENT.test(r.d.file))
+console.log(`  of which the twin is a replaced config or manifest fragment: ${fragAlarm.length}; an ordinary source file: ${withAlarm.length - fragAlarm.length} (these are the real false-alarm candidates)`)
 const tally = {}
-for (const r of results) for (const o of r.otherAlarms) tally[`${r.d.check}: ${o}`] = (tally[`${r.d.check}: ${o}`] ?? 0) + 1
-console.log('\nOther-rule alarms on clean twins, by rule (a rule of the same check fired on a file made for a different rule):')
-for (const [k, n] of Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 12)) console.log(`  ${String(n).padStart(3)}  ${k}`)
+for (const r of withAlarm) for (const o of alarmsOf(r)) (tally[`${r.d.check}: ${o}`] ??= { n: 0, example: `${r.d.id} (${r.d.file})` }).n++
+console.log('\nRules that fail on a clean twin (count, check: rule, one example):')
+for (const [k, x] of Object.entries(tally).sort((a, b) => b[1].n - a[1].n)) console.log(`  ${String(x.n).padStart(4)}  ${k}  e.g. ${x.example}`)
 const fas = results.filter((r) => r.falseAlarm)
-console.log(`\nFalse alarms (clean twin flagged for the same rule): ${fas.length}`)
+console.log(`\nOf which the SAME rule as the planted defect (clean twin flagged for the rule it was made for): ${fas.length}`)
 for (const r of fas.slice(0, 30)) console.log(`  ${r.d.id}  ${r.d.description}`)
-if (OUT_JSON) writeFileSync(OUT_JSON, JSON.stringify({ total, caught, falseAlarms: fa, results: results.map((r) => ({ id: r.d.id, check: r.d.check, family: r.d.family, rule: r.d.rule, status: r.status, falseAlarm: r.falseAlarm, otherAlarms: r.otherAlarms, ops: r.d.ops, description: r.d.description })) }, null, 1) + '\n')
+if (OUT_JSON) writeFileSync(OUT_JSON, JSON.stringify({ total, caught, falseAlarms: fa, results: results.map((r) => ({ id: r.d.id, check: r.d.check, family: r.d.family, rule: r.d.rule, status: r.status, falseAlarm: r.falseAlarm, otherAlarms: r.otherAlarms, file: r.d.file, ops: r.d.ops, description: r.d.description })) }, null, 1) + '\n')
 process.exit(0)

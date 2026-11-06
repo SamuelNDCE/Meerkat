@@ -5,13 +5,15 @@
 //   node tools/corpus/gen-planted.mjs [--out corpus/planted] [--seed 20261106] [--per-rule 4]
 //
 // Layout: <out>/<defect-id>/bad/<file> and <out>/<defect-id>/good/<file>, and <out>/manifest.json (one entry per defect:
-// id, check, script, family, rule, file, line, description, ops, twin).
+// id, check, script, family, rule, file, line, description, ops, base, twin). `base` names the complete clean project (tools/corpus/base-project.mjs)
+// the measurement writes the file into; the corpus folder itself holds only the planted file and its clean twin.
 // Variants are built from the rule's own bad/good samples with changes that keep the defect a defect: harmless surrounding code,
 // indentation, line endings and renamed local variables. Variant 0 is the sample unchanged (it is what the check's selfTest already proves),
 // so the measurement reports it apart from the varied ones.
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { baseFor } from './base-project.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '..', '..')
@@ -206,6 +208,7 @@ for (const [family, script, mod] of SOURCES) {
           ops: opNames,
           canonical: v === 0,
           severity: rule.severity ?? null,
+          base: baseFor(family, file),
           defect: `${id}/bad/${file}`,
           twin: `${id}/good/${file}`,
         })
