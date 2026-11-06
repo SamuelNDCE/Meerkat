@@ -51,3 +51,16 @@ Exit codes: 0 precision at or above the baseline, 1 precision below the baseline
 ## Use it as a gate
 
 Run `node benchmarks/real-rust/measure.mjs <tree folder>` after each change to a Rust rule. A change must not lower precision. When it raises precision on purpose, write a new baseline in the same pull request and say so in the changelog notes.
+
+## Rules promoted to the default run, and what they still get wrong
+
+All 79 pedantic Rust rules that have a labelled sample are in the default run (`PROMOTED_RUST_RULES` in `lib/rollup.mjs`). In the November 2026 narrowing pass the labelled false alarms fell from 20 to 6 of 130 labelled findings (4.6%) with no labelled TRUE finding lost. The six that remain cannot be removed without losing a labelled TRUE finding of the same shape:
+
+| Rule | Remaining false alarm | Why it stays |
+|---|---|---|
+| `rerr-len-narrowing-cast` | `.count() as u32` on an in-memory filter | a labelled TRUE has the same `.count() as u32` shape (`fs_tools/diff.rs`) |
+| `rerr-unit-error-type` | private fn whose doc says `Err` means no answer | labelled TRUEs are private fns with the same doc line |
+| `rerr-error-no-display` | serialized wire enum | a labelled TRUE is a serialized enum too |
+| `rasync-global-mutable-state` | a cache in a `OnceLock<Mutex<..>>` | every labelled TRUE is the same static shape |
+| `rerr-lock-unwrap-poison` | `live.lock().unwrap().clone()` | no labelled TRUE to separate it from |
+| `rperf-vec-new-in-loop` | per-root dedup `Vec` that is only `contains`/`push`ed | a labelled TRUE (`emitted`) has the same shape |

@@ -32,14 +32,14 @@ describe('rollup', () => {
     expect(m.size).toBe(3)
   })
   test('pedantic Rust style and markup nitpicks are counted and hidden; a security rule is not', () => {
-    const m = map([f('rapi-pub-fn-undocumented', 'a.rs', 1, 'low'), f('rapi-pub-fn-undocumented', 'a.rs', 2, 'low'), f('markdown-code-fences', 'a.md', 3, 'medium'), f('rerr-lock-unwrap-poison', 'a.rs', 4, 'medium'), f('jwt-weak', 'a.ts', 5, 'high'), f('pii-in-logs', 'b.ts', 6, 'high')])
+    const m = map([f('rapi-example-not-promoted', 'a.rs', 1, 'low'), f('rapi-example-not-promoted', 'a.rs', 2, 'low'), f('markdown-code-fences', 'a.md', 3, 'medium'), f('rerr-example-not-promoted', 'a.rs', 4, 'medium'), f('jwt-weak', 'a.ts', 5, 'high'), f('pii-in-logs', 'b.ts', 6, 'high')])
     const r = applyRollup(m, { all: false, fingerprint })
     expect([...m.values()].map((x: any) => x.rule).sort()).toEqual(['jwt-weak', 'pii-in-logs'])
-    expect(r.hidden).toEqual(expect.arrayContaining([{ rule: 'rapi-pub-fn-undocumented', count: 2 }, { rule: 'markdown-code-fences', count: 1 }, { rule: 'rerr-lock-unwrap-poison', count: 1 }]))
+    expect(r.hidden).toEqual(expect.arrayContaining([{ rule: 'rapi-example-not-promoted', count: 2 }, { rule: 'markdown-code-fences', count: 1 }, { rule: 'rerr-example-not-promoted', count: 1 }]))
     expect(r.hiddenIds.size).toBe(4)
   })
   test('MEERKAT_FINDINGS=all keeps the style findings (the size measures still roll up)', () => {
-    const m = map([f('rapi-pub-fn-undocumented', 'a.rs', 1, 'low'), f('line-length', 'a.ts', 1), f('line-length', 'a.ts', 2)])
+    const m = map([f('rapi-example-not-promoted', 'a.rs', 1, 'low'), f('line-length', 'a.ts', 1), f('line-length', 'a.ts', 2)])
     const r = applyRollup(m, { all: true, fingerprint })
     expect(m.size).toBe(2)
     expect(r.hidden).toEqual([])
@@ -58,8 +58,9 @@ describe('pedantic rules are not even evaluated by default', () => {
   test('isPedanticRule matches the hidden-by-default set, and a security rule never', async () => {
     // @ts-ignore plain .mjs module
     const { isPedanticRule } = await import('../lib/rollup.mjs')
-    expect(isPedanticRule('rapi-pub-fn-undocumented', 'low')).toBe(true)
-    expect(isPedanticRule('rerr-lock-unwrap-poison', 'medium')).toBe(true) // the whole Rust style family is off by default
+    expect(isPedanticRule('rapi-example-not-promoted', 'low')).toBe(true)
+    expect(isPedanticRule('rerr-example-not-promoted', 'medium')).toBe(true) // a Rust style rule that is not promoted is off by default
+    expect(isPedanticRule('rerr-lock-unwrap-poison', 'medium')).toBe(false) // a promoted rule is on
     expect(isPedanticRule('jwt-weak', 'high')).toBe(false)
   })
 })
@@ -71,6 +72,7 @@ describe('security-relevant Rust rules stay on', () => {
     for (const rule of ['rapi-wasm-inner-html-format', 'rapi-wasm-html-sink', 'rapi-js-eval', 'rapi-secret-field-serialized', 'rapi-debug-secret-field', 'rapi-cstr-from-ptr-unchecked', 'rapi-wasm-unchecked-cast', 'rasync-reqwest-no-timeout', 'rerr-sql-format']) {
       expect(hidden({ rule, severity: 'medium' })).toBe(false)
     }
-    for (const rule of ['rapi-serde-json-unwrap', 'rerr-lock-unwrap-poison', 'rapi-pub-fn-undocumented']) expect(hidden({ rule, severity: 'medium' })).toBe(true)
+    for (const rule of ['rerr-example-not-promoted', 'rapi-example-not-promoted']) expect(hidden({ rule, severity: 'medium' })).toBe(true)
+    for (const rule of ['rapi-serde-json-unwrap', 'rerr-lock-unwrap-poison', 'rapi-pub-fn-undocumented']) expect(hidden({ rule, severity: 'medium' })).toBe(false)
   })
 })
