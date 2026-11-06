@@ -17,7 +17,7 @@ Status here follows [features.md](features.md): the gate and smoke self-check ru
 | A quick check of the whole project | `meerkat verify` |
 | After a fix, did it work | `meerkat check <id>` on only the check that failed |
 
-## The six MCP tools
+## The 16 MCP tools
 
 `meerkat mcp serve` (or `node bin/meerkat-mcp.mjs`) serves these over stdio and nothing else. Register it with `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs` or `meerkat mcp install`.
 
