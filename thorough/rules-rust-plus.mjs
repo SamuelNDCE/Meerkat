@@ -120,19 +120,43 @@ const tomlBody = (text, name) => {
   return out.join('\n')
 }
 
-// Rust source rule: outside string literals, skipping comment lines, test paths (TEST_OUT) by default.
-const R = (id, title, re, bad, good, extra = {}) => ({
-  id,
-  title,
-  ext: extra.files ? undefined : ['rs'],
-  skipLine: SLASH_SKIP,
-  notIn: TEST_OUT,
-  bad,
-  good,
-  ...(re ? { re } : {}),
-  ...(re && !extra.test ? { test: outsideStrings(re) } : {}),
-  ...extra,
-})
+// RUNTIME rules: they describe what happens when the program runs (a panic, an unwrap, a blocking call, a spawn, a channel, a lock, a
+// swallowed error). Code inside a #[cfg(test)] module or a #[test] function is not shipped and may panic on purpose, so these rules skip it
+// (found by matching braces from the attribute, see rustInTest in kit.mjs). Documentation, Debug, readability, unsafe-soundness and manifest
+// rules are NOT in this list: they keep reporting inside test code exactly as before.
+export const RUNTIME_RULES = new Set([
+  'rerr-expect-empty-message', 'rerr-expect-generic-message', 'rerr-let-underscore-result', 'rerr-ok-discards-error', 'rerr-map-err-discards-source',
+  'rerr-map-err-to-string', 'rerr-lock-unwrap-poison', 'rerr-parse-unwrap', 'rerr-env-var-unwrap', 'rerr-match-err-swallowed', 'rerr-unwrap-in-drop',
+  'rasync-blocking-thread-sleep', 'rasync-blocking-fs', 'rasync-blocking-net', 'rasync-reqwest-blocking', 'rasync-std-mutex-across-await',
+  'rasync-spawn-handle-dropped', 'rasync-spawn-blocking-awaits', 'rasync-block-on-in-async', 'rasync-unbounded-channel', 'rasync-zero-sleep-busy-loop',
+  'rasync-std-mpsc-in-async-file', 'rasync-future-call-discarded', 'rasync-thread-spawn-discarded', 'rasync-global-mutable-state', 'rasync-reqwest-no-timeout',
+  'rasync-runtime-built-per-call', 'rasync-std-command-in-async', 'rasync-blocking-lock-in-async', 'rasync-sync-recv-in-async', 'rasync-stdin-read-in-async',
+  'rperf-sort-float-partial-unwrap', 'rperf-is-some-then-unwrap', 'rperf-regex-compiled-per-call',
+  'rapi-cstring-unwrap', 'rapi-serde-json-unwrap',
+  // The library rules (LIBR) already skip test code on their own: rerr-panic-in-library, rerr-unreachable-in-library, rerr-assert-in-library,
+  // rerr-process-exit-in-library, rerr-catch-unwind-in-library, rerr-anyhow-in-library, rasync-main-in-library, rsafe-env-set-var.
+])
+
+// Rust source rule: outside string literals, skipping comment lines, test paths (TEST_OUT) by default. A RUNTIME rule also skips test code in the file.
+const R = (id, title, re, bad, good, extra = {}) => {
+  const rule = {
+    id,
+    title,
+    ext: extra.files ? undefined : ['rs'],
+    skipLine: SLASH_SKIP,
+    notIn: TEST_OUT,
+    bad,
+    good,
+    ...(re ? { re } : {}),
+    ...(re && !extra.test ? { test: outsideStrings(re) } : {}),
+    ...extra,
+  }
+  if (RUNTIME_RULES.has(id) && rule.test) {
+    const base = rule.test
+    rule.test = (line, ctx) => !rustInTest(ctx) && base(line, ctx)
+  }
+  return rule
+}
 // Library rule: src files only, and not inside a #[cfg(test)] block.
 const LIBR = (id, title, re, bad, good, more, extra = {}) =>
   R(id, title, re, bad, good, { files: LIB, sample: 'src/lib.rs', test: re ? T(re, (c) => !inTestBlock(c) && (more ? more(c) : true)) : undefined, ...extra })
