@@ -1,0 +1,8 @@
+{
+  "rule": "many-parameters",
+  "runner": "thorough/refactor.mjs",
+  "check": "many-parameters",
+  "why": "A struct names each field at the call site, where seven positional arguments of the same type are easy to swap.",
+  "bad": "bad/src/invoice.rs",
+  "good": "good/src/invoice.rs"
+}

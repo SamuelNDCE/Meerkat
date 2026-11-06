@@ -1,0 +1,8 @@
+{
+  "rule": "js-new-buffer",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-js",
+  "why": "new Buffer(n) can hand back old memory, while Buffer.alloc(n) is zero-filled and says what it does.",
+  "bad": "bad/frame.js",
+  "good": "good/frame.js"
+}

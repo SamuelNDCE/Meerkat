@@ -1,0 +1,8 @@
+{
+  "rule": "many-parameters",
+  "runner": "thorough/refactor.mjs",
+  "check": "many-parameters",
+  "why": "One options object names every value at the call site, where seven positional arguments are easy to swap by mistake.",
+  "bad": "bad/invoice.ts",
+  "good": "good/invoice.ts"
+}

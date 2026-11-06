@@ -1,0 +1,8 @@
+{
+  "rule": "py-subprocess-string",
+  "runner": "thorough/code-patterns.mjs",
+  "check": "cp-python",
+  "why": "A list of arguments needs no shell parsing, so spaces and quotes in a value cannot change the command.",
+  "bad": "bad/listing.py",
+  "good": "good/listing.py"
+}

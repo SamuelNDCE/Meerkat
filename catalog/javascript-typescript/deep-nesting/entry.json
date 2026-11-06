@@ -1,0 +1,8 @@
+{
+  "rule": "deep-nesting",
+  "runner": "thorough/refactor.mjs",
+  "check": "deep-nesting",
+  "why": "Guard clauses keep the happy path at one level, so a reader never has to hold eight open conditions in their head.",
+  "bad": "bad/ship.js",
+  "good": "good/ship.js"
+}
