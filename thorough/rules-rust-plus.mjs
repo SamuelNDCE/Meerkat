@@ -61,20 +61,39 @@ import { rustInTest, rustBlank } from './kit.mjs'
 
 // Test code beyond what rustInTest sees: any item or bare block under a #[cfg(test)] attribute (a fn, an impl, a `{ .. }` block, with comments between),
 // a file that a parent module declares as a test module (also through an intermediate module), and test-support files (stubs, fakes, mocks).
+const CFG_TEST_LINE = /^[ \t]*#\[cfg\(test\)\][ \t]*\r?$/
+const BLANK_LINE = /^[ \t]*\r?$/
+const ATTR_LINE = /^[ \t]*#\[[^\]]*\][ \t]*\r?$/
+const RUST_IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/
 const cfgItemCache = new WeakMap()
-const cfgTestItems = (ctx) => {
+export const cfgTestItems = (ctx) => {
   let ranges = cfgItemCache.get(ctx.lines)
   if (ranges) return ranges
   ranges = []
   const text = ctx.text ?? ctx.lines.join('\n')
   if (text.includes('cfg(test)')) {
     const blanked = rustBlank(text)
-    for (const m of blanked.matchAll(/^[ \t]*#\[cfg\(test\)\][ \t]*\r?\n(?:[ \t]*(?:#\[[^\]\n]*\])?[ \t]*\r?\n)*[^\n;{]*\{/gm)) {
+    const blines = blanked.split('\n')
+    const starts = []
+    let off = 0
+    for (const l of blines) {
+      starts.push(off)
+      off += l.length + 1
+    }
+    // Linear scan (a backtracking regex over blank lines is a ReDoS risk): after a #[cfg(test)] line skip blank and attribute lines,
+    // then the item header runs to its opening brace on one line (a `;` first means no block).
+    for (let i = 0; i < blines.length; i++) {
+      if (!CFG_TEST_LINE.test(blines[i])) continue
+      let j = i + 1
+      while (j < blines.length && (BLANK_LINE.test(blines[j]) || ATTR_LINE.test(blines[j]))) j++
+      if (j >= blines.length) continue
+      const brace = blines[j].indexOf('{')
+      if (brace < 0 || blines[j].slice(0, brace).includes(';')) continue
       let depth = 0
-      for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
-        if (blanked[i] === '{') depth++
-        else if (blanked[i] === '}' && --depth === 0) {
-          ranges.push([blanked.slice(0, m.index).split('\n').length, blanked.slice(0, i).split('\n').length])
+      for (let k = starts[j] + brace; k < blanked.length; k++) {
+        if (blanked[k] === '{') depth++
+        else if (blanked[k] === '}' && --depth === 0) {
+          ranges.push([i + 1, blanked.slice(0, k).split('\n').length])
           break
         }
       }
@@ -86,7 +105,7 @@ const cfgTestItems = (ctx) => {
 const TEST_SUPPORT_FILE = /(^|\/)(?:stub|fake|mock|testing|test_support)\.rs$|(^|\/)[^/]*_(?:fake|mock|stub)s?\.rs$|(^|\/)(?:fake|mock|stub)_[^/]*\.rs$/
 const testModuleCache = new WeakMap()
 // Is `file` a module that its parent declares under #[cfg(test)], or whose parent is itself such a module (at most four levels up)?
-const testModuleFile = (project, file, depth = 0) => {
+export const testModuleFile = (project, file, depth = 0) => {
   if (!project?.read || !project.files || depth > 4) return false
   let memo = testModuleCache.get(project)
   if (!memo) testModuleCache.set(project, (memo = new Map()))
@@ -105,9 +124,10 @@ const testModuleFile = (project, file, depth = 0) => {
     }
     const pre = dir ? `${dir}/` : ''
     if (/^\s*#!\[cfg\(test\)\]/m.test(own)) result = true
-    else if (name && !/^(?:lib|main)$/.test(name)) {
-      const decl = new RegExp(`#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]\\n]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+${name}\\s*;`)
-      const any = new RegExp(`\\bmod\\s+${name}\\s*;`)
+    else if (name && !/^(?:lib|main)$/.test(name) && RUST_IDENT.test(name)) {
+      const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const decl = new RegExp(`#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]\\n]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+${esc}\\s*;`)
+      const any = new RegExp(`\\bmod\\s+${esc}\\s*;`)
       for (const p of [`${pre}mod.rs`, `${pre}lib.rs`, `${pre}main.rs`, ...(dir ? [`${dir}.rs`] : [])]) {
         if (p === file || !project.files.includes(p)) continue
         const text = project.read(p) ?? ''
