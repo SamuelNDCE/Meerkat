@@ -284,3 +284,31 @@ describe('the last group of tools: each rejects a bad argument and builds the ri
     expect(cli).toHaveLength(2)
   })
 })
+
+describe('hook install cannot be used for command injection', () => {
+  test('the hook tool refuses a folder with a shell metacharacter, before running anything', async () => {
+    const { ctx, cli } = makeCtx()
+    for (const bad of ['a$b', 'a`b', 'a"b', 'a;b', 'a&b', 'a|b', 'a<b', 'a>b', 'a\nb', 'a$(touch x)']) {
+      const r = await call(ctx, 'meerkat_hook', { folder: `${HERE}/${bad}`, action: 'install' })
+      expect(isErr(r), JSON.stringify(bad)).toBe(true)
+    }
+    expect(cli).toHaveLength(0)
+  })
+
+  test('unsafeForShell flags a backslash outside a drive path and allows normal paths', async () => {
+    // @ts-expect-error plain .mjs module
+    const { unsafeForShell } = await import('./mcpmore.mjs')
+    expect(unsafeForShell(String.raw`/a/b\c`)).toBe(true)
+    expect(unsafeForShell('/work/my-app_1.2')).toBe(false)
+    expect(unsafeForShell(String.raw`C:\Users\me\app`)).toBe(false)
+  })
+
+  test('the generated hook block quotes the app folder in single quotes, so nothing expands', async () => {
+    // @ts-expect-error plain .mjs module
+    const { prePushBlock, shq } = await import('./ci-output.mjs')
+    const block = prePushBlock('/m/run.mjs', `--app ${shq('/work/my app')} --preset quick --ratchet --plain`)
+    expect(block).toContain("--app '/work/my app' --preset quick")
+    expect(block).not.toMatch(/--app "/)
+    expect(shq("/w/it's$(x)`y`")).toBe(String.raw`'/w/it'\''s$(x)` + '`y`\'')
+  })
+})
