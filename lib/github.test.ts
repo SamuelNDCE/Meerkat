@@ -152,7 +152,7 @@ describe('pull request comment', () => {
 })
 
 describe('the example workflow', () => {
-  const text = readFileSync(new URL('../examples/github/meerkat.yml', import.meta.url), 'utf8')
+  const text = readFileSync(new URL('../examples/github/meerkat.yml', import.meta.url), 'utf8').replaceAll('\r\n', '\n')
   test('has no tabs and parses as plain block YAML (spaces only, key: value lines)', () => {
     expect(text).not.toMatch(/\t/)
     for (const l of text.split('\n')) {
