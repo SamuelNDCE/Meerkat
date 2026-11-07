@@ -8,7 +8,7 @@ The full manual: every command, preset, setting and variable. Start with the [RE
 
 "Is this safe to push?" usually means running ten commands in the right order and remembering which needs which. Meerkat is one command, built on four rules:
 
-1. **It never passes quietly.** A tool that is not installed, a budget that is not set, a check that cannot start: each is reported as **NOT RUN**, and a run with a failure or a NOT RUN exits with an error.
+1. **It never passes quietly.** A tool that is not installed, a budget that is not set, a check that cannot start: each is reported as **NOT RUN**, and a run with a failure or a NOT RUN exits with an error. A check with nothing to look at in your project is different: a style tool the project never configured (eslint, prettier, stylelint with no configuration of their own) is **SKIPPED** with the reason on the same line ("no eslint configuration in this project"). SKIPPED is not a failure and not a pass, it does not change the exit code, and it is counted apart from NOT RUN in the summary line, `summary.json` (`counts.skipped`) and `findings.json` (`skipped[]`). A tool that is configured but cannot run (not installed, timed out) stays NOT RUN.
 2. **It proves its own checks.** `--self-test` gives every check a deliberately broken case and expects a failure, for the right reason. A check that quietly stopped working is caught.
 3. **It is gentle on your PC.** Light checks run together, heavy ones run alone, and only one Rust build runs at a time.
 4. **It keeps the evidence.** Every check's command, exit code, timing and full output is saved, so a failure can be understood later, by you or by an AI.
@@ -495,7 +495,7 @@ Everything is a plain file. Mistakes in a file are printed as notes and never st
 | `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `override`, `budget`, `presets` |
 | `.meerkat-budgets.json` | numbers some checks need: performance budgets, hygiene, static and refactor limits |
 | `.meerkat-secrets-allow` | secret-scan findings you have accepted (a path, or `rule: text`) |
-| `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`) |
+| `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`, optionally followed by ` # reason`). Read from the project's own folder; every risky-code finding prints the exact line to paste, for example `src/view.js:118 # reason: say why it is safe` |
 | `.meerkat-env-allow` | environment variables you do not want documented |
 | `.meerkat-imports-allow` | imports the broken-imports check should ignore (a path, or `path:line`) |
 | `.meerkat-dead-allow` | exported names the dead-code check should ignore |
@@ -676,7 +676,7 @@ Each fallback proves itself in `meerkat self-test` against a bad sample in `fixt
 
 ## When a check is still NOT RUN
 
-The reason is one line, for example `needs prettier: meerkat tools install`. Checks with no honest plain-Node substitute (eslint, prettier, tsc, madge, hadolint, actionlint) stay NOT RUN until the tool is installed.
+The reason is one line, for example `needs prettier: meerkat tools install`. (A project with no eslint, prettier or stylelint configuration is not NOT RUN but SKIPPED, whether or not the tool is installed.) Checks with no honest plain-Node substitute (eslint, prettier, tsc, madge, hadolint, actionlint) stay NOT RUN until the tool is installed.
 
 ## Publishing the npm package (maintainers)
 

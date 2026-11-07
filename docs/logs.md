@@ -85,7 +85,7 @@ For a program or an AI to read. `schema` is 1.
 |---|---|
 | `project` | `{ name, path }`: what the run was on (the name is the one in the folder name). `latest.json` carries it too |
 | `version`, `tier`, `preset`, `argv` | what was run, with which Meerkat |
-| `summary`, `exitCode`, `counts` | the one-line result, the exit code, passes, failures and NOT RUNs |
+| `summary`, `exitCode`, `counts` | the one-line result, the exit code, passes, failures, NOT RUNs and SKIPPED checks (`counts.pass`, `fail`, `notRun`, `skipped`) |
 | `startedAt`, `endedAt`, `ms` | when, and how long the whole run took |
 | `machine`, `freeMemGBAtStart` | operating system, threads, memory, Node version; free memory when the run began |
 | `git` | `commit`, `branch`, `changedFiles` (uncommitted files) |

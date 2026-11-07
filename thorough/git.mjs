@@ -97,13 +97,44 @@ const allowed = (allow, id, value, hash = false) => {
   return hash && [...set].some((e) => e.length >= 7 && value.startsWith(e))
 }
 
-// ---- commit-message-format: the last 100 subjects are sane (merges are skipped, their subjects are generated)
+// ---- commit-message-format: the subjects of the commits that are not yet on the default branch (merges are skipped, their subjects are generated)
+// Old commits already on the default branch cannot be changed by the person who is running the check, so they are not judged. The base is
+// origin/HEAD, then origin/main, origin/master, main, master. With none of those, or when HEAD is the local default branch itself and
+// nothing says what is already published, the last 20 commits are checked and the result says so.
 const BAD_SUBJECT = /^(wip\b|fixup!|squash!|amend!)/i
+const FALLBACK_COMMITS = 20
+function defaultBase(root) {
+  const head = git(root, ['symbolic-ref', '-q', '--short', 'refs/remotes/origin/HEAD'])?.trim()
+  const candidates = [head, 'origin/main', 'origin/master', 'main', 'master'].filter(Boolean)
+  for (const ref of candidates) {
+    if (git(root, ['rev-parse', '--verify', '-q', `${ref}^{commit}`]) !== null) return ref
+  }
+  return null
+}
+function commitsToCheck(root) {
+  const fields = '%H%x1f%P%x1f%an%x1f%ae%x1f%s'
+  const base = defaultBase(root)
+  if (base) {
+    const remote = base.startsWith('origin/')
+    const same = git(root, ['rev-parse', base])?.trim() === git(root, ['rev-parse', 'HEAD'])?.trim()
+    // A local default branch that HEAD sits on says nothing about what is published: fall back. A remote ref does: nothing ahead means nothing to judge.
+    if (!(same && !remote)) {
+      const out = git(root, ['log', `--format=${fields}%x1e`, `${base}..HEAD`])
+      if (out === null) return null
+      return { rows: parseRows(out), note: `not yet on ${base}`, what: `commit(s) not yet on ${base}` }
+    }
+  }
+  const rows = recent(root, FALLBACK_COMMITS, fields)
+  return rows ? { rows, note: `no default branch to compare with, so the last ${FALLBACK_COMMITS} commits were checked`, what: `of the last ${FALLBACK_COMMITS} commit(s)`, fallback: true } : null
+}
+const parseRows = (out) => out.split('\x1e').map((r) => r.replace(/^\n+/, '')).filter((r) => r.trim() !== '').map((r) => r.split('\x1f'))
 function commitMessageFormat(root) {
   const skip = gate(root)
   if (skip !== null) return skip
-  const rows = recent(root, 100, '%H%x1f%P%x1f%an%x1f%ae%x1f%s')
-  if (!rows) return notRun('could not read the commit log')
+  const picked = commitsToCheck(root)
+  if (!picked) return notRun('could not read the commit log')
+  const { rows, note, what, fallback } = picked
+  if (fallback) console.log(`commit-message-format: ${note}`)
   const max = budget(root, 'maxSubjectLength', 72)
   const allow = allowList(root)
   const f = []
@@ -118,7 +149,7 @@ function commitMessageFormat(root) {
     if (s.endsWith('.')) f.push(`${label} ends with a period`)
     if (BAD_SUBJECT.test(s)) f.push(`${label} is a WIP, fixup! or squash! commit left in the history`)
   }
-  return finish('commit-message-format', f, `the last 100 commit subjects are well formed (at most ${max} characters)`)
+  return finish('commit-message-format', f, rows.length ? `${rows.length} ${what} checked, all well formed (at most ${max} characters)` : `no commits ${note}, so there is nothing to judge`)
 }
 
 // ---- merge-commit-noise: too many "Merge branch" commits in the last 200

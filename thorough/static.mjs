@@ -9,7 +9,8 @@ import { finding, finish, isFixture, isTestFile, isText, main, readBudgets, read
 const cfg = (root) => readBudgets(root)?.static ?? {}
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|cs|svelte|vue)$/i
 const TESTISH = /(^|\/)(tests?|__tests__|fixtures?|spec|examples?|docs?)\/|\.(test|spec)\.[a-z]+$/i
-const allowList = (root, name) => new Set(readText(root, name).split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')))
+// One entry per line: a file, or file:line. A reason may follow after " # " ("src/view.js:118 # escaped by esc() above"); it is for the reader and is not part of the entry.
+const allowList = (root, name) => new Set(readText(root, name).split('\n').map((l) => l.trim().replace(/\s+#.*$/, '')).filter((l) => l && !l.startsWith('#')))
 const lineOf = (text, index) => text.slice(0, index).split('\n').length
 
 // ---- whitespace: a byte-order mark, or lines ended two different ways in one file
@@ -722,7 +723,8 @@ const riskyCode = (root) => {
           }
         }
         if (!allow.has(`${x}:${lineOf(t, m.index)}`)) {
-          f.push(`${x}:${lineOf(t, m.index)} ${why}`)
+          // The finding carries the exact line that records the decision, so accepting it is a paste (the file is read from the project's own folder).
+          f.push(`${x}:${lineOf(t, m.index)} ${why}  [if it is safe, accept it by adding this line to .meerkat-risky-allow: ${x}:${lineOf(t, m.index)} # reason: say why it is safe]`)
           // Every hit is reported with its own severity: innerHTML with a value the code does not show to be safe is a medium risk (it depends on where the
           // value comes from), the other calls keep the check's own severity (high).
           // A plain variable on the right (el.innerHTML = icon) only says "check where it comes from": low. Built text (concatenation, a template with a

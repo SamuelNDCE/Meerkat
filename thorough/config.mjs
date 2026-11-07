@@ -236,8 +236,9 @@ const gitattributesEol = (root) => {
   if (!by.CRLF.length || !by.LF.length) return finish('gitattributes-eol', [], 'the text files all use one line-ending style')
   const major = by.CRLF.length >= by.LF.length ? 'CRLF' : 'LF'
   const minor = major === 'CRLF' ? 'LF' : 'CRLF'
-  const f = [`${by.CRLF.length} text file(s) use CRLF and ${by.LF.length} use LF, and there is no .gitattributes to make git store one style`]
-  for (const x of by[minor]) f.push(`${x} uses ${minor}, while most text files use ${major}`)
+  // Mixed line endings are a style choice, not a defect (found in a real run, 2026-11): the message says so and names the two ways to settle it.
+  const f = [`${by.CRLF.length} text file(s) use CRLF and ${by.LF.length} use LF. This is a style choice, not a defect. To settle it, add a .gitattributes entry such as "* text=auto" (or "*.sh text eol=lf" for files that must stay LF), or accept mixed line endings with a "gitattributes-eol <file>" line in .meerkat-config-allow`]
+  for (const x of by[minor]) f.push(`${x} uses ${minor}, while most text files use ${major} (a style choice, not a defect: set it in .gitattributes, or allow it in .meerkat-config-allow)`)
   return finish('gitattributes-eol', f, 'the text files all use one line-ending style')
 }
 

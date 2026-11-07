@@ -86,3 +86,22 @@ describe('the config pack', () => {
     expect(checks.map((c) => c.id).sort()).toEqual([...ALL].sort())
   })
 })
+
+describe('gitattributes-eol calls mixed line endings a style choice', () => {
+  test('the message says style, names the .gitattributes option and the allow file, and the severity is low', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'meerkat-eol-'))
+    made.push(dir)
+    for (const [name, body] of [['a.js', 'a\r\nb\r\n'], ['b.js', 'a\r\nb\r\n'], ['c.js', 'a\nb\n']]) writeFileSync(join(dir, name), body)
+    execFileSync('git', ['init', '-q'], { cwd: dir, stdio: 'ignore' })
+    execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+    const r = runCheck(['gitattributes-eol', '--root', dir])
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('c.js uses LF')
+    expect(r.out).toMatch(/style choice, not a defect/)
+    expect(r.out).toContain('.gitattributes')
+    expect(r.out).toContain('text=auto')
+    expect(r.out).toContain('.meerkat-config-allow')
+    const { defaultSeverity } = await import('../lib/findings.mjs')
+    expect(defaultSeverity({ id: 'gitattributes-eol', group: 'functionality' })).toBe('low')
+  })
+})

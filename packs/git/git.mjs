@@ -16,7 +16,7 @@ const make = (id, title) => ({
 })
 
 export default [
-  make('commit-message-format', 'Recent commit subjects are short, not empty, not ending in a period, and free of WIP or fixup!'),
+  make('commit-message-format', 'Subjects of the commits not yet on the default branch are short, not empty, not ending in a period, and free of WIP or fixup!'),
   make('merge-commit-noise', 'Recent history does not fill up with "Merge branch" commits'),
   make('large-commits', 'No recent commit touches more files than the budget allows'),
   make('binary-in-history', 'No file over the size budget was added in the recent history'),
