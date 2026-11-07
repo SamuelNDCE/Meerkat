@@ -75,7 +75,7 @@ Each example was run on a small test project. Counts of tools and checks are not
 |---|---|---|
 | Gate, scoped | Checks the files you changed; failures elsewhere are listed, not blocking. `--all` blocks on everything, `--no-cache` re-runs every check | `meerkat gate --base origin/main` |
 | Pre-commit | Call the gate from your own `.git/hooks/pre-commit`. `meerkat hook install` writes a pre-push hook (quick preset, ratchet), not a pre-commit one | `meerkat gate --staged` |
-| Brief | One call before an edit: callers, tests, last-run findings, churn, risk tier | `meerkat brief src/app.ts#start` |
+| Brief | One call before an edit: callers, tests, last-run findings, churn, risk tier | `meerkat brief src/app.ts#createApp` |
 | Blast radius | What imports a file or symbol and which tests reach it | `meerkat blast src/app.ts` |
 | Map | Writes `codemap.json` and `codemap.md`; `--check` exits 1 when the saved map is stale; `blast`, `brief` and the MCP map tool re-read stale files first | `meerkat map --check` |
 | Ratchet | Accept today's findings, then fail only on new ones | `meerkat baseline`, then `meerkat run quick --ratchet` |
