@@ -98,6 +98,7 @@ describe('brief honest answers', () => {
     const j = run(['src/core/calc.js#add', '--app', 'app', '--json']).json()
     expect(j.findings.available).toBe(false)
     expect(j.findings.note).toContain('no saved run')
+    expect(j.findings.note).toContain('meerkat verify')
     expect(existsSync(join(tmp, 'logs', 'runs'))).toBe(false)
     expect(run(['src/core/calc.js#add', '--app', 'app']).text).toContain('findings: no saved run')
   })
