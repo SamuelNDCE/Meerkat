@@ -123,7 +123,7 @@ Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 - **What it is:** Meerkat attacking itself with throwaway projects.
 - **Why it is good:** it proves the checks still catch real defects and do not cry wolf, so a pass can be trusted.
 - **What it does:** planted bugs (recall per family), injected faults (a check that throws or hangs, a missing program), odd inputs (empty folder, huge file, symlink loop), one test per past fixed bug, and clean twins that must give no false alarms. Known gaps are recorded in [lib/redtest/README.md](../lib/redtest/README.md).
-- **What it does NOT do:** exist as a `meerkat` command word, or touch any folder the test did not create. It needs a repository checkout.
+- **What it does NOT do:** touch any folder the test did not create, or work without a repository checkout (`meerkat redtest` needs the development install, vitest).
 - **Command or tool:** `meerkat redtest --kind mutation|faults|adversarial|regression|cleantwin|all` (the same as `node lib/redtest/run.mjs --kind ...`); MCP `meerkat_redtest`.
 
 ## Catalog and tests command

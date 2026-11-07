@@ -33,7 +33,7 @@ The gate runs in CI on every pull request (job `release gate` in `.github/workfl
 
 `npm pack --dry-run --json` lists the tarball, and every path must pass:
 
-- top-level folders: `bin`, `lib`, `packs`, `thorough`, `fixtures`, `examples`; top-level files: `package.json`, README, LICENSE, `CHANGELOG.md`, `llms.txt`, `run.mjs`, `meerkat.config.json`
+- top-level folders: `bin`, `lib`, `packs`, `thorough`, `profiles`, `fixtures`, `examples`; top-level files: `package.json`, README, LICENSE, `CHANGELOG.md`, `llms.txt`, `run.mjs`, `meerkat.config.json`
 - fixtures only under `fixtures/` or `examples/<name>/fixtures/`. The package ships those on purpose, because `meerkat self-test` reads the planted-defect folders at run time; a fixture anywhere else fails
 - never: `.env` files (`.env.example` and `.env.sample` are fine), `.pem`, `.key`, `.p12`, `.pfx`, `.jks` files, `id_rsa` style names, `.npmrc`, files named `credentials` or `secrets`, test files (`*.test.*`, `*.spec.*`) and `tests/` folders
 

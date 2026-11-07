@@ -546,7 +546,7 @@ Meerkat is a clone of this repository, so updating is a fast-forward from GitHub
 | `meerkat update off` | no daily lookup and no bar (except after a manual `meerkat update --check`) |
 | `meerkat update status` | shows the mode, the newest version it knows about and when it was checked |
 
-An update is refused if you have local changes or it would not be a fast-forward. This is the only code in Meerkat that contacts the network by itself. It sends nothing about you or your project.
+An update first saves your uncommitted changes to tracked files as a patch file in the log folder, tries the new version in a temporary copy that carries your changes, and moves your folder only if that works. It is refused, with the files named and nothing touched, when a file you changed is also changed by the update and the two cannot be combined. PLACEHOLDER: this path is covered by unit tests (lib/smartupdate.test.ts, lib/updatedirty.test.ts) but has not been run against a real newer published release. This is the only code in Meerkat that contacts the network by itself. It sends nothing about you or your project.
 
 ## Privacy
 
