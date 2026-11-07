@@ -51,3 +51,5 @@ ae67ff8 tests/fp-detectors-2026-11.test.ts
 da6a88f tests/gap-rules-2026-11.test.ts
 da6a88f thorough/gap-rules.mjs
 e475a7c .meerkat/.meerkat-secrets-allow
+# Accepted: d8ffda2 added this allow file, which names a made-up AKIA sample so the rule can be shown the bad case. Not a live credential; history cannot be rewritten (FIXTURE).
+d8ffda2 .meerkat/.meerkat-supply-allow

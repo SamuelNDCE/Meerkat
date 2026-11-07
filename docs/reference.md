@@ -495,7 +495,7 @@ Everything is a plain file. Mistakes in a file are printed as notes and never st
 | `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `override`, `budget`, `presets` |
 | `.meerkat-budgets.json` | numbers some checks need: performance budgets, hygiene, static and refactor limits |
 | `.meerkat-secrets-allow` | secret-scan findings you have accepted (a path, or `rule: text`) |
-| `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`, optionally followed by ` # reason`). Read from the project's own folder; every risky-code finding prints the exact line to paste, for example `src/view.js:118 # reason: say why it is safe` |
+| `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`, optionally followed by a `#` and a reason). Read from the project's own folder; every risky-code finding prints the exact line to paste, for example `src/view.js:118 # reason: say why it is safe` |
 | `.meerkat-env-allow` | environment variables you do not want documented |
 | `.meerkat-imports-allow` | imports the broken-imports check should ignore (a path, or `path:line`) |
 | `.meerkat-dead-allow` | exported names the dead-code check should ignore |
@@ -584,6 +584,8 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 | `MEERKAT_CARGO_LOCK`, `MEERKAT_CARGO_LOCK_DIR`, `MEERKAT_LOCK_MAX_WAIT` (older name `CARGO_LOCK_MAX_WAIT`) | use your own cargo lock script; move the built-in lock; how long a job waits for it (seconds, default 900) |
 | `MEERKAT_SECRET_SCAN_MAX` | the largest file in bytes the secret scan reads (default 50000000); a bigger file is not read at all |
 | `MEERKAT_SECRET_SCAN_CHUNK` | how many bytes of a file the secret scan reads at a time (default 1000000, minimum 64); lower it only to test the chunk boundary |
+| `MEERKAT_NO_INPROC`, `MEERKAT_INPROC_WORKERS` | `MEERKAT_NO_INPROC=1` runs every thorough check as its own process instead of in a reused worker thread (slower, same results); `MEERKAT_INPROC_WORKERS` sets how many worker threads (default: the number of CPUs) |
+| `MEERKAT_SPAWN_LOG` | a file path: one line is appended for each child process Meerkat starts, so a run's process count can be measured (a counter only, it changes nothing) |
 | `MEERKAT_FONT` | a `.ttf` file for `tools/screenshot.py`, which draws the board's pictures |
 | `MEERKAT_AI_CMD`, `MEERKAT_AI_BASE` | the model command for the AI checks (a JSON array); the branch the diff review compares with |
 | `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `MEERKAT_AI_KEY` | a key for the AI checks (see [AI checks](#ai-checks)); `MEERKAT_AI_MODEL` and `MEERKAT_AI_BASE_URL` change the model and the service |

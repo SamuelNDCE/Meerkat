@@ -65,7 +65,7 @@ describe('in-process checks match their process', () => {
   test('text read in one run is never served after the file changed', async () => {
     const before = await run('hygiene.mjs', 'markers', true)
     expect(before.code).toBe(1)
-    put('a.js', 'export const a = 1\n') // the FIXME is gone, and the size changed
+    put('a.js', 'export const a = 1\n') // the note is gone, and the size changed
     const after = await run('hygiene.mjs', 'markers', true)
     expect(after.code).toBe(0)
     put('a.js', '// FIXME: back again\nexport const a = 1\n')

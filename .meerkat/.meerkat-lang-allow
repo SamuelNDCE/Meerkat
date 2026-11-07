@@ -38,3 +38,5 @@ js-await-in-loop lib/gate.mjs
 js-await-in-loop tools/corpus/gen-planted.mjs
 js-await-in-loop tools/corpus/measure.mjs
 js-await-in-loop tools/gen-accuracy-results.mjs
+# lib/inproc-worker.mjs copies the scanned run's environment into process.env inside a worker; process.env is not a plain object that reaches Object.prototype (DELIBERATE).
+js-prototype-pollution lib/inproc-worker.mjs
