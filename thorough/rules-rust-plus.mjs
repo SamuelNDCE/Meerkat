@@ -418,7 +418,7 @@ export const RUNTIME_RULES = new Set([
   'rasync-std-mpsc-in-async-file', 'rasync-future-call-discarded', 'rasync-thread-spawn-discarded', 'rasync-global-mutable-state', 'rasync-reqwest-no-timeout',
   'rasync-runtime-built-per-call', 'rasync-std-command-in-async', 'rasync-blocking-lock-in-async', 'rasync-sync-recv-in-async', 'rasync-stdin-read-in-async',
   'rperf-sort-float-partial-unwrap', 'rperf-is-some-then-unwrap', 'rperf-regex-compiled-per-call', 'rperf-vec-new-in-loop', 'rerr-len-narrowing-cast',
-  'rapi-cstring-unwrap', 'rapi-serde-json-unwrap',
+  'rapi-cstring-unwrap', 'rapi-serde-json-unwrap', 'rerr-swallowed-read-then-write',
   // The library rules (LIBR) already skip test code on their own: rerr-panic-in-library, rerr-unreachable-in-library, rerr-assert-in-library,
   // rerr-process-exit-in-library, rerr-catch-unwind-in-library, rerr-anyhow-in-library, rasync-main-in-library, rsafe-env-set-var.
 ])
@@ -513,6 +513,33 @@ export const SAFETY = [
 ]
 
 // ---------------------------------------------------------------- Errors (rp-errors)
+// rerr-swallowed-read-then-write: the text of the function from this line to its closing brace (at most 200 lines).
+const fnTail = (ctx) => {
+  let depth = 0
+  const out = []
+  for (let i = ctx.index; i < ctx.lines.length && i < ctx.index + 200; i++) {
+    const l = ctx.lines[i]
+    out.push(l)
+    for (const c of l) {
+      if (c === '{') depth++
+      else if (c === '}' && --depth < 0) return out
+    }
+  }
+  return out
+}
+const SWALLOWED_READ = /\b(?:fs::)?read_to_string\([^\n]{0,200}\)\s*\.(?:unwrap_or_default\(\)|unwrap_or\(\s*String::new\(\)\s*\)|unwrap_or_else\(\s*\|[^|\n]{0,20}\|\s*String::new\(\)\s*\))/
+const swallowedReadThenWrite = (line, ctx) => {
+  if (!SWALLOWED_READ.test(line)) return false
+  const name = /\blet\s+(?:mut\s+)?(\w+)\s*(?::[^=\n]{1,60})?=/.exec(line)?.[1]
+  if (!name) return false
+  const tail = fnTail(ctx)
+  const w = tail.findIndex((l, k) => k > 0 && /\b(?:std::)?fs::write\(/.test(l))
+  if (w < 0) return false
+  const text = tail.join('\n')
+  // The read result must reach the write (any use of it between the read and the write), and the function must not write a temp file and rename it, nor tell a missing file from a real error.
+  return new RegExp(`\\b${name}\\b`).test(tail.slice(1, w + 1).join('\n')) && !/\brename\(/.test(text) && !/ErrorKind::NotFound/.test(text)
+}
+
 export const ERRORS = [
   R('rerr-expect-empty-message', 'expect is called with an empty message, so a panic says nothing', /\.expect\(\s*""\s*\)/, 'let cfg = load().expect("");', 'let cfg = load().expect("config file is required");'),
   R('rerr-expect-generic-message', 'expect is called with a generic word ("failed", "error") instead of what failed', /\.expect\(\s*"(?:failed|error|oops|should work|unwrap|panic|todo|msg|unexpected)"\s*\)/i, 'let p = open().expect("failed");', 'let p = open().expect("config file opens");'),
@@ -563,6 +590,9 @@ export const ERRORS = [
     // In exists/is_/try_/has_ functions a failed call means "not there", so ignoring the error is the answer.
     // An or-pattern with Ok, a catch-all after an earlier guarded Err arm, or a metadata probe ("not there") also mean the error is handled.
     test: T(/\bErr\(\s*_\s*\)\s*=>\s*(?:\{\s*\}|\(\))/, (c) => !/^(?:exists|is_|try_|has_)|_exists$/.test(fnNameOf(c)) && !errArmIntended(c)),
+  }),
+  R('rerr-swallowed-read-then-write', 'a read that swallows its error (unwrap_or_default) feeds a file written with fs::write in the same function: a failed read becomes an empty file that overwrites the real one, and a crash mid-write truncates it (heuristic)', undefined, 'fn add_card(path: &Path, card: &str) -> Result<(), String> {\n    let text = std::fs::read_to_string(path).unwrap_or_default();\n    let board = format!("{text}\\n{card}");\n    std::fs::write(path, board).map_err(|e| e.to_string())\n}', 'fn add_card(path: &Path, card: &str) -> Result<(), String> {\n    let text = match std::fs::read_to_string(path) {\n        Ok(t) => t,\n        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),\n        Err(e) => return Err(e.to_string()),\n    };\n    let board = format!("{text}\\n{card}");\n    let tmp = path.with_extension("tmp");\n    std::fs::write(&tmp, board).map_err(|e| e.to_string())?;\n    std::fs::rename(&tmp, path).map_err(|e| e.to_string())\n}', {
+    test: swallowedReadThenWrite,
   }),
   R('rerr-unwrap-in-drop', 'a Drop impl calls unwrap or expect, so a panic can happen during unwinding', /^\s*impl(?:<[^>]*>)?\s+Drop\s+for\b/, 'impl Drop for Conn {\n    fn drop(&mut self) {\n        self.flush().unwrap();\n    }\n}', 'impl Drop for Conn {\n    fn drop(&mut self) {\n        let _ = self.close();\n    }\n}', {
     test: (line, ctx) => /^\s*impl(?:<[^>]*>)?\s+Drop\s+for\b/.test(line) && /\.(?:unwrap|expect)\(/.test(after(ctx, 12)),
@@ -795,6 +825,22 @@ export const CARGO_RULES = [
 const PUB_FN = /^\s*pub\s+(?:async\s+|const\s+|unsafe\s+)*fn\s+\w+/
 const PUB_TYPE = /^\s*pub\s+(?:struct|enum|trait)\s+(\w+)/
 const SECRET_FIELD = /^\s*pub\s+(?:password|passwd|secret|token|api_key|private_key|access_token|refresh_token|client_secret)\s*:/
+// A secret-named field written inside an enum variant, `Claude { api_key: String }`. Variant fields carry no `pub`, so rapi-debug-secret-field never sees them.
+const ENUM_SECRET_FIELD = /(?:^|[{,]\s*)(?:pub\s+)?(?:password|passwd|secret|token|api_key|private_key|access_token|refresh_token|client_secret)\s*:/
+const ITEM_HEADER = /^\s*(?:pub(?:\([^)]*\))?\s+)?(enum|struct|union|impl|fn|trait|mod)\b/
+// True when the variant field on this line sits in an enum that derives Debug (the nearest item header above is the enum, its attributes carry the derive).
+const secretInDebugEnum = (ctx) => {
+  for (let i = ctx.index; i >= 0 && i >= ctx.index - 80; i--) {
+    const h = ITEM_HEADER.exec(ctx.lines[i])
+    if (!h) continue
+    if (h[1] !== 'enum') return false
+    const attrs = []
+    for (let j = i - 1; j >= 0 && j >= i - 8 && !/[};{]\s*$/.test(ctx.lines[j]); j--) attrs.push(ctx.lines[j])
+    return /derive\([^)]{0,200}\bDebug\b/.test(attrs.join('\n')) && !/skip|redact/i.test(before(ctx, 3))
+  }
+  return false
+}
+
 export const API_FFI_WASM = [
   LIBR('rapi-missing-docs-lint', 'the library has public items but no #![deny(missing_docs)] or #![warn(missing_docs)]', undefined, 'pub fn parse(s: &str) -> u32 {\n    0\n}', '#![deny(missing_docs)]\n\n/// Parses.\npub fn parse(s: &str) -> u32 {\n    0\n}', undefined, {
     sample: 'src/lib.rs',
@@ -833,6 +879,9 @@ export const API_FFI_WASM = [
   }),
   R('rapi-debug-secret-field', 'a secret field sits in a type that derives Debug with no skip (secrets end up in logs)', undefined, '#[derive(Debug)]\npub struct Session {\n    pub token: String,\n}', '#[derive(Debug)]\npub struct Session {\n    #[debug(skip)]\n    pub token: String,\n}', {
     test: (line, ctx) => SECRET_FIELD.test(line) && /derive\([^)\n]{0,120}\bDebug\b/.test(ctx.text) && !/skip|redact/i.test(before(ctx, 3)),
+  }),
+  R('rapi-debug-secret-enum-field', 'an enum variant holds a secret field and the enum derives Debug (a stray {:?} prints the key; write Debug by hand)', undefined, '#[derive(Clone, Debug)]\npub enum Backend {\n    Local,\n    Claude { api_key: String, model: String },\n}', 'pub enum Backend {\n    Local,\n    Claude { api_key: String, model: String },\n}\n\nimpl std::fmt::Debug for Backend {\n    fn fmt(&self, f: &mut std::fmt::Formatter<\'_>) -> std::fmt::Result {\n        f.write_str("Backend")\n    }\n}', {
+    test: (line, ctx) => ENUM_SECRET_FIELD.test(line) && secretInDebugEnum(ctx),
   }),
   R('rapi-serde-untagged', 'serde untagged enums guess the variant from the shape of the data (ambiguous input is accepted)', /#\[serde\([^\]\n]{0,120}\buntagged\b/, '#[serde(untagged)]\npub enum Value {', '#[serde(tag = "kind")]\npub enum Value {'),
   R('rapi-extern-block-no-link', 'an extern "C" block has no #[link] attribute (informational: which library provides it?)', /^\s*extern\s+"C"\s*\{/, 'extern "C" {\n    fn strlen(s: *const c_char) -> usize;\n}', '#[link(name = "z")]\nextern "C" {\n    fn zlibVersion() -> *const c_char;\n}', {

@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**395 checks** in 50 suites with 1433 sub-checks (a check that declares no rules counts as one), across 51 packs: 350 quick, 45 thorough, 38 opt-in. [Security 123](#security-checks) · [Functionality 217](#functionality-checks) · [UI 25](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
+**395 checks** in 50 suites with 1438 sub-checks (a check that declares no rules counts as one), across 51 packs: 350 quick, 45 thorough, 38 opt-in. [Security 123](#security-checks) · [Functionality 217](#functionality-checks) · [UI 25](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -12,7 +12,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | Suite | Name | Checks | Sub-checks | What it covers |
 |---|---|---|---|---|
 | `secrets` | Secrets | 4 | 285 | Keys, tokens, passwords and private files that must never be committed. |
-| `risky-calls` | Risky code | 7 | 95 | Dangerous calls: eval, shell strings, disabled TLS checks, weak hashes, plain http. |
+| `risky-calls` | Risky code | 7 | 98 | Dangerous calls: eval, shell strings, disabled TLS checks, weak hashes, plain http. |
 | `injection-patterns` | Injection patterns | 7 | 71 | Code shapes that lead to SQL injection, path traversal, open redirects, regex DoS and XXE. |
 | `crypto-and-auth` | Crypto and auth | 2 | 2 | Weak JWT settings and weak encryption modes. |
 | `supply-chain` | Supply chain | 8 | 24 | Dependency pinning, lockfile integrity, known-vulnerable packages, install scripts and look-alike names. |
@@ -45,7 +45,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `dependencies` | Dependencies | 15 | 15 | Lockfile in sync, unused, duplicate, wildcard or misplaced dependencies. |
 | `performance` | Performance | 11 | 11 | Size, start-up, memory, response time, load and build time against budgets. |
 | `node` | Node and TypeScript tools | 9 | 9 | ESLint, tsc, Prettier, circular imports, engines and tsconfig strictness. |
-| `rust` | Rust | 16 | 155 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
+| `rust` | Rust | 16 | 157 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
 | `python` | Python | 8 | 8 | ruff, mypy, pytest, bandit and dead code. |
 | `go` | Go | 4 | 4 | go vet and go test. |
 | `java` | Java | 3 | 3 | Maven validate, compile and test. |
@@ -91,7 +91,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `cp-dotnet-php-ruby` | fast | tiny | 1 s | C#, PHP and Ruby: no unsafe deserialization, no eval of input, no disabled checks, no unscoped params | code-patterns |
 | `cp-go` | fast | tiny | 1 s | Go: no hardcoded secrets, no unbounded servers, no command or path from requests, no weak crypto | code-patterns |
 | `cp-java` | fast | tiny | 1 s | Java: no runtime exec or object deserialization from untrusted input, no trust-all TLS, no expression injection | code-patterns |
-| `cp-js` | fast | tiny | 1 s | JavaScript and TypeScript: no command or require built from variables, no timing-unsafe secret checks, no hidden characters | code-patterns |
+| `cp-js` | fast | tiny | 1 s | JavaScript and TypeScript: no command or require built from variables, no timing-unsafe secret checks, no hidden characters, no duplicate imports, no raw error text from a Deno handler, no unguarded fetch after a debit | code-patterns |
 | `cp-python` | fast | tiny | 1 s | Python: no shell or process call from variables, no unsafe loads, no disabled TLS, no weak modes | code-patterns |
 | `cp-rust` | fast | tiny | 1 s | Rust: unsafe blocks carry a SAFETY note, no weak hashes, no secrets printed | code-patterns |
 | `credentials-in-urls` | fast | tiny | 1 s | No user name and password written into a web address | security-plus |
