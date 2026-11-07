@@ -134,6 +134,7 @@ const EXAMPLES: Record<string, Example> = {
   // Other documented words
   menu: { args: ['menu'], codes: [2], why: 'the menu needs a terminal; with none it must say so and exit 2' },
   version: { args: ['version'] },
+  memory: { args: ['memory', '--dry-run'], codes: [2], why: 'needs a memory adapter named in meerkat.config.json; the fixture has none, so it must say so and exit 2' },
   help: { args: ['help', 'gate'] },
 }
 

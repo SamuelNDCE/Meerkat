@@ -129,7 +129,7 @@ The driver protocol is built and Meerkat schedules, times and reports a driver l
 ## ⚠ Known limits
 
 - Rust findings are leads to check, not verdicts; the false-alarm figure is from one project.
-- PLACEHOLDER: the smoke suite and the red suite on the `smoke-red-2026-11` branch are not merged into this branch, so nothing here is claimed about their results; `meerkat smoke` and `meerkat redtest` run what is in this branch.
+- The smoke and red test files (`tests/smoke-*.test.ts`, `tests/red-failures.test.ts`) run in `npm test` on a copy of a small fixture project, not on your project; they check that every command and MCP tool starts, finishes and fails cleanly, not that checks find the right things. See [docs/ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md#smoke-and-red-suites).
 - PLACEHOLDER: `meerkat update` (verify the new version in a copy, keep local changes, save a patch) and the trusted-publishing workflow are unit-tested but have not been run against a real newer published release.
 - Red testing, the real-code benchmark and the release tools (`tools/release`) run from a repository checkout; the advisory scan is a library with no command yet.
 - Recall on planted bugs measures what was planted, not real-world accuracy.

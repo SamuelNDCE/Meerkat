@@ -25,6 +25,15 @@ export function git(cwd, args, env = process.env) {
   return r.stdout.trim()
 }
 
+// A Windows checkout with core.autocrlf turns the fixture into CRLF text; the tests append LF text and expect a clean file, so the copy is made LF.
+function lfOnly(dir) {
+  for (const n of readdirSync(dir)) {
+    const p = join(dir, n)
+    if (statSync(p).isDirectory()) lfOnly(p)
+    else if (/\.(js|mjs|json|md|txt|ts)$/.test(n) || n === '.gitignore') writeFileSync(p, readFileSync(p, 'utf8').replace(/\r\n/g, '\n'))
+  }
+}
+
 // A sandbox: <root>/app (copy of the fixture, a git repo with one commit), <root>/home, <root>/logs, <root>/outside (a sentinel folder next to the app).
 export function makeSandbox({ copy = true, commit = true, label = 'smoke' } = {}) {
   const base = mkdtempSync(join(tmpdir(), `mk-${label}-`))
@@ -35,7 +44,10 @@ export function makeSandbox({ copy = true, commit = true, label = 'smoke' } = {}
   mkdirSync(home, { recursive: true })
   mkdirSync(join(root, 'outside'), { recursive: true })
   writeFileSync(join(root, 'outside', 'sentinel.txt'), 'untouched\n')
-  if (copy) cpSync(FIXTURE, app, { recursive: true })
+  if (copy) {
+    cpSync(FIXTURE, app, { recursive: true })
+    lfOnly(app)
+  }
   else mkdirSync(app, { recursive: true })
   const env = {
     ...process.env,
