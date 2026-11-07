@@ -174,3 +174,6 @@ commit-message-format 6f0042e
 commit-message-format 52b6cbf
 commit-message-format 7aa1304
 commit-message-format b3ceecd
+# Subjects of the integration-6 commits that carry a list in the body; history is not rewritten (HISTORY).
+commit-message-format f71d888
+commit-message-format 8769429
