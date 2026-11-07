@@ -95,7 +95,26 @@ export function applyMeerkatIgnore(root, list) {
   return kept
 }
 
+// In a worker (lib/inproc-worker.mjs) the file list of a folder is made once per run: the git index is checked (size and modified time) before the list is
+// reused, and the worker is gone at the end of the run. A process makes it every time, as before.
+const listCache = new Map()
 export function listTrackedFiles(root) {
+  if (!globalThis.__meerkatReadCache) return makeTrackedList(root)
+  let stamp = ''
+  try {
+    const st = statSync(join(root, '.git', 'index'))
+    stamp = `${st.mtimeMs}:${st.size}`
+  } catch {
+    /* no index to compare: the list is still reused for this run */
+  }
+  const hit = listCache.get(root)
+  if (hit && hit.stamp === stamp) return hit.list.slice()
+  const list = makeTrackedList(root)
+  listCache.set(root, { stamp, list })
+  return list.slice()
+}
+
+function makeTrackedList(root) {
   try {
     const out = execFileSync('git', ['-C', root, 'ls-files', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 256 * 2 ** 20 })
     return out.split('\0').filter(Boolean).filter((f) => existsSync(join(root, f)))
@@ -360,10 +379,27 @@ export const isPlaceholderValue = (value) => {
 const CONFIG_NAME = /^\.meerkat-(?:budgets\.json|[a-z-]+-allow)$/
 export const configPath = (root, f) => (CONFIG_NAME.test(f) && existsSync(join(root, '.meerkat', f)) ? join(root, '.meerkat', f) : join(root, f))
 
+// In a worker (lib/inproc-worker.mjs) a file is read once per run and shared by every check that asks for it. An entry is only used while the file's
+// size and modified time are unchanged, and the worker is gone at the end of the run, so a later run never sees old text. A process keeps no cache.
+const textCache = new Map()
+let textCacheBytes = 0
+const TEXT_CACHE_MAX_BYTES = 256 * 2 ** 20
+const TEXT_CACHE_MAX_FILE = 2 * 2 ** 20
 export const readText = (root, f) => {
   progress.file(f)
+  const p = configPath(root, f)
   try {
-    return readFileSync(configPath(root, f), 'utf8')
+    if (!globalThis.__meerkatReadCache) return readFileSync(p, 'utf8')
+    const st = statSync(p)
+    const hit = textCache.get(p)
+    if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.text
+    const text = readFileSync(p, 'utf8')
+    if (st.size <= TEXT_CACHE_MAX_FILE && textCacheBytes + st.size <= TEXT_CACHE_MAX_BYTES) {
+      if (hit) textCacheBytes -= hit.size
+      textCache.set(p, { mtimeMs: st.mtimeMs, size: st.size, text })
+      textCacheBytes += st.size
+    }
+    return text
   } catch {
     return ''
   }
@@ -442,6 +478,8 @@ export const sizeOf = (p) => {
 }
 
 export async function main(checks, argv = process.argv) {
+  // Run inside a worker thread (lib/inproc-worker.mjs): hand the checks over instead of running one and exiting.
+  if (globalThis.__meerkatRegister) return globalThis.__meerkatRegister(checks)
   const a = parseArgs(argv)
   const check = checks[a.check]
   if (!check) {
