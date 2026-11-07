@@ -203,7 +203,7 @@ const SQL_FORMAT = /\b(?:query|execute\w*|executemany|raw|exec|prepare|queryRaw\
 // A line holding a whole SQL statement shape in a string literal that is joined to a value on the same line (+, %, .format, an f-string,
 // $"...{x}", a template, "...$x", "...#{x}", Sprintf, String.format) or that ends in a + or . so the value comes on the next line.
 const SQL_SHAPE = /\b(?:SELECT\b[^"'\x60\n]{1,200}\bFROM|INSERT\s+INTO|UPDATE\s+[\w.\x60"\[\]]{1,60}\s+SET|DELETE\s+FROM)\b/i
-const SQL_JOIN = /["'\x60]\s*(?:\+|%\s*[\w(]|\.format\s*\(|\.\s*\$|\.\s*$|\.\s*[A-Za-z_]\w*\s*\.)|\bf["'][^"'\n]*\{|\$@?"[^"\n]*\{|\x60[^\x60\n]*\$\{|"[^"\n]*(?:\$\w|#\{)|\b(?:fmt\.Sprintf|String\.format|format!|sprintf|Format)\s*\(/
+const SQL_JOIN = /["'\x60]\s*(?:\+|%\s*[\w(]|\.format\s*\(|\.\s*\$|\.\s*$|\.\s*[A-Za-z_]\w*\s*\.)|\bf["'][^"'\n]*\{|\$@?"[^"\n]*\{|\x60[^\x60\n]*\$\{|"[^"\n]*(?:\$[A-Za-z_]|#\{)|\b(?:fmt\.Sprintf|String\.format|format!|sprintf|Format)\s*\(/
 // 'Select a file from the list: ' is a sentence, not a statement: a capitalised Select, then words with no comma, star, bracket or dot, then a lower-case from.
 const PROSE_SELECT = /\bSelect\s+[A-Za-z]+(?:\s+[A-Za-z]+)+\s+from\b/
 const RB_SQL_INTERP = /\.(?:where|having|order|group|joins|find_by_sql|select|pluck|exists\?|delete_all|update_all|execute|exec_query)\s*\(\s*"[^"\n]{0,200}#\{/

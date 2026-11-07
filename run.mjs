@@ -2,7 +2,7 @@
 //   npm --prefix apps/desktop-electron run verify            (fast tier)
 //   npm --prefix apps/desktop-electron run verify -- --thorough
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { cpus, freemem } from 'node:os'
 import { diffSnapshots, snapshotDigest, snapshotTree, violationText } from './lib/integrity.mjs'
 import { cacheFile, cacheHit, cacheKey, readCache, saveCache, updatedCache } from './lib/resultcache.mjs'
@@ -261,7 +261,16 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const readOnly = opts.init || opts.logs || opts.last || opts.why || opts.list || opts.listJson || opts.listPresets || opts.estimate
   if (!readOnly && !opts.force && env.MEERKAT_NO_PROJECT_GATE !== '1') {
     const gate = projectCheck(appDir)
-    if (!gate.ok && !gate.unreadable) {
+    if (gate.unreadable) {
+      // A missing folder, a file given as the folder, or a folder that cannot be read: stop here (exit 2) instead of running every check against it and reporting hundreds of false failures.
+      let why = 'does not exist'
+      if (existsSync(appDir)) why = statSync(appDir).isDirectory() ? 'cannot be read (check its permissions)' : 'is a file, not a folder'
+      fail(`${appDir} ${why}; pass the project folder to check, or run Meerkat from inside it`)
+      if (opts.jsonStdout) (givenLog ?? ((l) => process.stdout.write(`${l}
+`)))(JSON.stringify({ ok: false, error: 'bad-folder', folder: appDir, message: `${appDir} ${why}`, exitCode: 2 }, null, 2))
+      return 2
+    }
+    if (!gate.ok) {
       fail(notProjectMessage(appDir))
       if (opts.jsonStdout) (givenLog ?? ((l) => process.stdout.write(`${l}\n`)))(JSON.stringify(notProjectJson(appDir), null, 2))
       return 2
