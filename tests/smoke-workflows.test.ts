@@ -37,6 +37,13 @@ describe('(a) and (b) first run, a planted bug is blocked, the fix passes', () =
     expect(r.code).toBe(0)
     expect(JSON.parse(read(sb, 'meerkat.config.json')).packs).toBeTruthy()
   })
+  // The starter config lists only the packs security and hygiene, and `meerkat gate` loads exactly the configured packs, so sql-concat (pack security-plus) would not run.
+  // `meerkat verify` adds every applicable pack and does not have this gap. Reported to Samuel as a decision; the workflow turns the pack on, the way a user who read the init message would.
+  test('pack enable security-plus (the starter config does not load the SQL check for the gate)', () => {
+    const r = runCli(sb, ['pack', 'enable', 'security-plus'])
+    ok(r)
+    expect(r.code).toBe(0)
+  })
   test('a first run, then baseline accepts its findings', () => {
     const run = runCli(sb, ['verify', '--only', 'license,node-engines,secret-scan', '--plain'], { timeout: T })
     ok(run)
@@ -102,8 +109,11 @@ describe('(c) pull request style: gate --base the commit before', () => {
     commit(sb, 'use placeholders')
     const r = runCli(sb, ['gate', '--base', bad, '--json', '--no-cache'], { timeout: T })
     ok(r)
-    expect(r.code, r.all.slice(0, 600)).toBe(0)
-    expect(JSON.parse(r.stdout).files).toEqual(['src/index.js'])
+    const j = JSON.parse(r.stdout)
+    // Exit 0, or 75 when only optional tools (eslint, prettier) are missing in the sandbox home: 75 means "nothing failed but not everything ran", not a pass (docs/commands.md).
+    expect([0, 75], r.all.slice(0, 600)).toContain(r.code)
+    expect(j.rows.filter((x: { kind: string }) => x.kind === 'fail')).toEqual([])
+    expect(j.files).toEqual(['src/index.js'])
   }, T)
 })
 

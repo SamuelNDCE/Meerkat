@@ -137,6 +137,7 @@ export function parseArgs(argv) {
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
     else if (a === '--plain') o.plain = true
+    else if (a === '--no-input') o.noInput = true // a global option (meerkat describe): run.mjs never asks anything, so it changes nothing here, but it must be accepted by init, list and self-test
     else if (a === '--flat') o.grouped = false
     else if (a === '--grouped') o.grouped = true
     else if (a === '--config') o.config = next()
@@ -318,6 +319,23 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // The project's own settings (meerkat.config.json, lib/config.mjs): checks turned off or swapped, tools changed, the budget. Every
   // note and every turned-off check is printed, so nothing is changed silently.
   const configFile = opts.noConfig ? null : findConfig({ explicit: opts.config, appDir, repoRoot })
+  // A config file the person NAMED must exist and be JSON: running on with defaults would check something other than what they asked for (exit 2, like any usage error).
+  if (opts.config && !opts.noConfig) {
+    const named = resolve(opts.config)
+    let why = null
+    if (!existsSync(named)) why = 'does not exist'
+    else {
+      try {
+        JSON.parse(readFileSync(named, 'utf8'))
+      } catch (e) {
+        why = `is not valid JSON (${String(e.message).slice(0, 120)})`
+      }
+    }
+    if (why) {
+      fail(`--config ${named} ${why}; pass the path of a meerkat.config.json, or leave --config off to use the one in the project`)
+      return 2
+    }
+  }
   // With no config file, the packs that fit the folder (lib/init.mjs) are used, so a bare `node run.mjs` still checks something.
   const read = configFile ? readConfig(configFile) : { config: { packs: detect(appDir).config.packs, extraChecks: [], disable: [], override: {}, budget: null, presets: {} }, notes: [] }
   // The person's settings (~/.meerkat.json): personal presets and extra folders of packs. Read before the presets, since a preset can bring packs.
@@ -380,6 +398,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
 
   const ctx = { timeoutScale: opts.timeoutScale ?? 1, control: createControl(), noIdleKill: opts.noIdleKill === true, repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, scope: opts.scope ?? [], disabledSubs: subsOffMap(applied.disabledSubs), findingsSink: new Map(), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier, new Date(), undefined, appDir, opts.selfTest ? null : opts.preset) }
   onControl?.(ctx.control)
+  if (!ctx.logDir && !opts.list && !opts.estimate) log(`note: this run's logs cannot be saved (${logRoot(env)} is not a folder Meerkat can write to), so meerkat last, findings and baseline will not see it. Set MEERKAT_LOG_DIR to a writable folder.`)
   let mode = opts.all || (tier === 'thorough' && !opts.changed) ? 'all' : 'changed'
   if (mode === 'changed') splash.step('Finding what changed against the base branch')
   if (mode === 'changed') ctx.changedFiles = gitChangedFiles(repoRoot, env)
