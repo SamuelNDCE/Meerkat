@@ -19,7 +19,7 @@ function fixRust(text, ruleId, file) {
       // A type holding a secret gets a hand-written Debug that prints no field; the derive would print the secret (another rule).
       if ((kind === 'struct' || kind === 'enum') && SECRET_FIELD.test(lines.slice(i, i + 12).join('\n'))) {
         if (!/impl\s+(?:std::fmt::|fmt::)?Debug\s+for/.test(text) && !block.some((l) => /\bDebug\b/.test(l))) later.push(`\nimpl std::fmt::Debug for ${m[3]} {\n${ind}    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {\n${ind}        f.write_str("${m[3]}")\n${ind}    }\n${ind}}`)
-      } else if ((kind === 'struct' || kind === 'enum') && ruleId !== 'rapi-debug-secret-field') {
+      } else if ((kind === 'struct' || kind === 'enum') && ruleId !== 'rapi-debug-secret-field' && ruleId !== 'rapi-debug-secret-enum-field') {
         const d = block.findIndex((l) => /^\s*#\[derive\(/.test(l))
         if (d >= 0) {
           if (!/\bDebug\b/.test(block[d])) block[d] = block[d].replace(/derive\(/, 'derive(Debug, ')
