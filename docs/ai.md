@@ -32,7 +32,7 @@ Everything an AI needs to use Meerkat. This page agrees with [skills/meerkat/SKI
 | `meerkat_smoke` | Prove each selected check starts, runs and stops in time. Same file selection as the gate, plus a timeout. | gate inputs, `timeout` (1 to 600 s, default 5) |
 | `meerkat_blast` | Blast radius of a file or symbol: what imports it, what it imports, what could break. `found: false` means the file is not in the code map. | `target` (required, `src/a.js` or `src/a.js#name`), `folder` |
 | `meerkat_brief` | Pre-edit brief for a file or symbol: declaration (line, signature, exported), callers (count and the first 10 with the calling function), tests that reference it, findings from the last saved run, git churn, a risk tier with its reasons, and a before-you-edit checklist. Starts no scan. The text is markdown; the structured result has a `version` field. | `target` (required, `src/a.js` or `src/a.js#name`), `folder` |
-| `meerkat_map` | Build the code map (files, exports, imports, most imported files) and save `codemap.json` and `codemap.md` in a new run folder. | `folder` |
+| `meerkat_map` | Build the code map (files with functions and line numbers, exports, imports, routes, tests, most imported files) and save `codemap.json` and `codemap.md`. Only changed files are re-read. | `folder` |
 | `meerkat_tests` | The catalog of everything Meerkat can check: kinds, families, each check, what it proves, cost and when it runs. | `detail` (`summary` or `full`) |
 | `meerkat_findings` | List the newest run's findings, most severe first. Reads files only. | `severity`, `check`, `suite`, `status` (`new` or `known`), `limit` (1 to 500, default 50) |
 | `meerkat_finding` | One finding in full: what, where, evidence, check, log and a fix hint. Reads files only. | `id` (required, first 4 or more characters are enough) |
@@ -65,7 +65,7 @@ Resources (read only, from the newest run):
 | `meerkat://run/latest/findings` | JSON: `run`, `counts`, and `findings[]` with id, severity, rule, check, suite, file, line, status, message and evidence. |
 | `meerkat://run/latest/report` | The run's `report.md`. |
 | `meerkat://run/latest/log/{check}` | The log header and the end of one check's output, for example `.../log/build`. |
-| `meerkat://map/latest` | `codemap.md` from the newest `meerkat_map`. Call `meerkat_map` first if none exists. |
+| `meerkat://map/latest` | `codemap.md` of this project from the newest `meerkat_map` (it starts with the schema version, counts and the commit it was built from). Call `meerkat_map` first if none exists; it refreshes a stale map. |
 | `meerkat://tests/catalog` | The full catalog of kinds, families and checks (same as `meerkat_tests` with `detail: "full"`). |
 
 Prompts (text for the person to pick; they run nothing): `triage_newest_run` (go through the findings worst first), `check_one_fix` (argument `check`, optional `folder`: rerun only that check and confirm its finding is gone), `scan_diff` (optional `folder`: run `quick` and keep only findings in the files changed), `pre_commit_check` (gate the staged files), `pre_pr_check` (optional `base`: gate the branch against the base ref), `scan_for_secrets`, `blast_before_edit` (argument `target`), `map_unfamiliar_repo`, `red_test_scenario` (argument `kind`).

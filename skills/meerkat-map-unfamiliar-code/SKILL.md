@@ -18,7 +18,7 @@ meerkat map --app <folder>
 
 Leave `--app <folder>` off to use the current folder. Add `--json` for a machine-readable result.
 
-2. The command writes `codemap.json` and `codemap.md` into a run folder. Read the path it prints, or print the folder with `meerkat logs`. Open `codemap.md`.
+2. The command writes `codemap.json` and `codemap.md` into a run folder (only files changed since the last map are re-read; run `meerkat map --check` to see whether the saved map is current). `codemap.md` starts with the schema version, counts, the commit and the routes, then lists each file with its purpose and functions with line numbers, and which tests cover it. Read the path it prints, or print the folder with `meerkat logs`. Open `codemap.md`.
 
 3. Read in this order:
    1. The entry points: where the program starts. Open these files first.

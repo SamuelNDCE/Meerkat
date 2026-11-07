@@ -56,7 +56,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat trend` | one line per recent run: findings by severity, new and fixed | |
 | `meerkat suggest` | suggested commands for the newest run's findings (never run for you) | |
 | `meerkat pr-comment [--run-url <url>]` | markdown for a pull request comment | pipe it to `gh pr comment` |
-| `meerkat map` / `meerkat blast <file>[#symbol]` | a map of the codebase, and the blast radius of a file or symbol | blast: exit 75 when the file is not in the map |
+| `meerkat map [--check] [--quiet]` / `meerkat blast <file>[#symbol]` | a map of the codebase (`--check`: exit 1 if it is stale), and the blast radius of a file or symbol | map --check: exit 1 when stale; blast: exit 75 when the file is not in the map |
 | `meerkat brief <file>[#symbol]` | a pre-edit brief: callers, tests, last-run findings, churn, risk tier and checklist | exit 2 on an unknown symbol, 75 when the file is not in the map |
 
 ## Checks, presets, packs
