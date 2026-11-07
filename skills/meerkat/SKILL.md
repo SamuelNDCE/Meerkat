@@ -55,7 +55,7 @@ Presets are listed by `meerkat presets`. `quick` runs before a push, `ci` on a p
 
 ## MCP tools
 
-`bin/meerkat-mcp.mjs` serves six tools over stdio and nothing else. Add it with `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs`.
+`bin/meerkat-mcp.mjs` serves 29 tools over stdio (list them with a `tools/list` request; the table below shows the core ones). Add it with `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs`.
 
 | Tool | Use |
 |---|---|
@@ -65,10 +65,14 @@ Presets are listed by `meerkat presets`. `quick` runs before a push, `ci` on a p
 | `meerkat_last` | The newest run's `report.md`. |
 | `meerkat_why` | One check's log header and the end of its output. |
 | `meerkat_self_test` | Run each check on a broken sample to prove it can fail. |
+| `meerkat_gate` | Run only the checks that cover the files you changed. |
+| `meerkat_smoke` | Prove each selected check starts, runs and stops quickly. |
+| `meerkat_blast` | Blast radius of a file or symbol (`meerkat_brief` gives the short pre-edit brief). |
+| `meerkat_map` | Build the code map of a project. |
 
 Resources (read only, from the newest run): `meerkat://run/latest/findings`, `meerkat://run/latest/report`, and the template `meerkat://run/latest/log/{check}`. Prompts: `triage_newest_run`, `check_one_fix`, `scan_diff`.
 
-There is no gate or blast MCP tool. For the merge gate call `meerkat_run` with `preset: "full"`. For blast, gate, map and the catalog use the shell commands above.
+Gate, smoke, blast and map all have MCP tools (`meerkat_gate`, `meerkat_smoke`, `meerkat_blast`, `meerkat_map`), as do findings, dismissals, baseline, doctor, trend and the catalog (`meerkat_tests`). For the merge gate call `meerkat_run` with `preset: "full"`. The shell commands above do the same jobs.
 
 ## The order a run should go in
 
