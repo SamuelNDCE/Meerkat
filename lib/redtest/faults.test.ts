@@ -37,7 +37,8 @@ describe('fault injection', () => {
     expect(run.timedOut).toBe(false)
     expect(run.summary, run.out.slice(-2000)).not.toBeNull()
     expect(run.code).toBe(1)
-    expect(run.results.length).toBe(7)
+    // names, not a count: a count rots whenever a check is added (it did: 7 became 8)
+    for (const id of ["rt-ok", "rt-throws", "rt-hangs", "rt-missing-bin", "rt-bad-cmd", "rt-deletes", "rt-reads-gone"]) expect(run.results.map((r: any) => r.id), id).toContain(id)
   })
 
   test('a check that throws is a FAIL that carries the error, and the others still run', () => {

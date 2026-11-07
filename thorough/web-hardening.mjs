@@ -25,6 +25,10 @@ const allowSet = (root) => new Set(readText(root, '.meerkat-webhardening-allow')
 
 // Every path in the folder, including ignored build output (a deployed folder is what matters here). A nested .git is reported
 // as its config and HEAD files, so it can be matched. Walk depth and size are capped so a huge tree cannot hang the check.
+// Build and tool caches hold copies of files that are never published (a webpack or Next.js cache is full of .map files); they are not a published folder.
+const CACHE_DIRS = new Set(['.cache', '.next-cache', '.turbo', '.parcel-cache', '.vite', '.wrangler', '.nx', '.angular', '.svelte-kit', '.nuxt', '.gradle', '.pytest_cache', '.mypy_cache', '.tox', '.venv', 'venv', '__pycache__', 'coverage', '.eslintcache'])
+// The folder a path was counted under: through the published folder name when it has one (apps/web/dist), else its first folder.
+const countedUnder = (p) => /^((?:.*?\/)?(?:public|static|dist|build|out|www|htdocs|wwwroot))\//i.exec(p)?.[1] ?? (p.includes('/') ? p.split('/')[0] : '.')
 export function allPaths(root) {
   const out = []
   const walk = (dir, rel, depth) => {
@@ -38,7 +42,7 @@ export function allPaths(root) {
     for (const e of entries) {
       const r = rel ? `${rel}/${e.name}` : e.name
       if (e.isDirectory()) {
-        if (e.name === 'node_modules' || e.name === 'target') continue
+        if (e.name === 'node_modules' || e.name === 'target' || CACHE_DIRS.has(e.name) || (e.name === 'cache' && /(^|\/)\.next$/.test(rel))) continue
         if (e.name === '.git') {
           for (const g of ['config', 'HEAD']) if (existsSync(join(dir, e.name, g))) out.push(`${rel ? `${rel}/` : ''}.git/${g}`)
           continue
@@ -59,6 +63,8 @@ const blank = (t) => t.replace(COMMENTS, (m) => m.replace(/[^\r\n]/g, ' '))
 // Express's helmet() sets these headers by default, so a project that calls it is not missing them.
 const HELMET_SETS = new Set(['hsts-missing', 'xfo-missing', 'frame-ancestors-missing', 'xcto-missing', 'referrer-policy-missing', 'coop-missing', 'corp-missing'])
 
+// A `whole` rule may return a string instead of true: it is shown after the rule's title (for example which package, and who pulls it in).
+const DETAIL = new Map()
 export function hitsIn(rule, file, text) {
   if (rule.when && !rule.when.test(text)) return null
   if (rule.sample === 'index.html' && !rule.id.startsWith('comment-') && /<!--|\{%-?\s*(comment|doc)|\{#|\{\{!--/.test(text)) text = blank(text)
@@ -75,7 +81,11 @@ export function hitsIn(rule, file, text) {
     }
     return out
   }
-  if (rule.whole) return rule.whole(text, file) ? [file] : []
+  if (rule.whole) {
+    const w = rule.whole(text, file)
+    if (typeof w === 'string' && w) DETAIL.set(`${rule.id} ${file}`, w)
+    return w ? [file] : []
+  }
   if (rule.lacks) return rule.lacks.test(text) ? [] : [file]
   return []
 }
@@ -125,8 +135,15 @@ export function runTable(name, root, rules, { walk = false } = {}) {
     if (na) console.log(`MEERKAT-SUB NA ${r.id} ${reason}`)
     else if (found.length) {
       total += found.length
-      console.log(`MEERKAT-SUB FAIL ${r.id} ${found.length} found: ${reason}`)
-      for (const f of found) lines.push(`${f} ${r.title}`)
+      // A path rule says which folders it counted in, so a count can be checked against the disk.
+      const byFolder = new Map()
+      if (r.path) for (const h of found) byFolder.set(countedUnder(h), (byFolder.get(countedUnder(h)) ?? 0) + 1)
+      const where = byFolder.size ? ` in ${[...byFolder].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([d, n]) => `${d}/ (${n})`).join(', ')}${byFolder.size > 4 ? `, +${byFolder.size - 4} more` : ''}` : ''
+      console.log(`MEERKAT-SUB FAIL ${r.id} ${found.length} found${where}: ${reason}`)
+      for (const f of found) {
+        const more = DETAIL.get(`${r.id} ${f.replace(/:\d+$/, '')}`)
+        lines.push(`${f} ${r.title}${more ? `: ${more}` : ''}`)
+      }
     } else console.log(`MEERKAT-SUB PASS ${r.id} ${reason}`)
   }
   if (!total) {

@@ -5,6 +5,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
+import { BUGS_EXCLUDED_CHECKS, BUGS_EXCLUDED_SUBS } from '../lib/bugs-preset.mjs'
 import { isAlone } from '../lib/runner.mjs'
 import { declaredSubs, groupBySuite, suiteIdOf } from '../lib/suites.mjs'
 
@@ -39,7 +40,9 @@ const sections = KINDS.map(([kind, label, about]) => {
 
 const suiteRows = groupBySuite(rows.map((r) => ({ ...r.c, pack: r.pack }))).map((sx) => `| \`${sx.id}\` | ${esc(sx.label)} | ${sx.checks.length} | ${sx.checks.reduce((n, c) => n + declaredSubs(c), 0)} | ${esc(sx.purpose)} |`)
 const suiteTable = ['## Suites', '', 'You pick a suite; it runs its checks, and each check reports its own sub-checks. See docs/suites.md.', '', '| Suite | Name | Checks | Sub-checks | What it covers |', '|---|---|---|---|---|', ...suiteRows].join('\n')
-const blockFor = (file) => (file === 'README.md' ? `<!-- checks:start -->\n${summary}\n\n${sections.join('\n\n')}\n<!-- checks:end -->` :`<!-- checks:start -->\n${summary}\n\n${suiteTable}\n\n${sections.join('\n\n')}\n<!-- checks:end -->`)
+const bugsRow = (kind) => ([id, why]) => '| `' + id + '` | ' + kind + ' | ' + esc(why) + ' |'
+const bugsTable = ['## The bugs preset: what it leaves out', '', 'The `bugs` preset runs the quick checks without the checks and rules below, which are style, documentation, formatting or housekeeping. The list lives in `lib/bugs-preset.mjs`; a test fails if an entry stops existing.', '', '| Left out | Kind | Reason |', '|---|---|---|', ...Object.entries(BUGS_EXCLUDED_CHECKS).map(bugsRow('check')), ...Object.entries(BUGS_EXCLUDED_SUBS).map(bugsRow('rule'))].join('\n')
+const blockFor = (file) => (file === 'README.md' ? `<!-- checks:start -->\n${summary}\n\n${sections.join('\n\n')}\n<!-- checks:end -->` :`<!-- checks:start -->\n${summary}\n\n${suiteTable}\n\n${sections.join('\n\n')}\n\n${bugsTable}\n<!-- checks:end -->`)
 
 const patch = (file) => {
   const block = blockFor(file)

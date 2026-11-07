@@ -1,0 +1,3 @@
+# docs/accuracy-results.md lists planted-defect ids such as easy-md-typo-recieve and xi-txt-typo-teh, and the tier table lists the same ids: the misspelling is part of an id (FIXTURE).
+spell-common-typos docs/accuracy-results.md
+spell-common-typos tools/accuracy-tier-fragments/legacy.txt

@@ -70,6 +70,10 @@ const deadCode = (root) => {
   const files = trackedFiles(root).filter((x) => /\.(m?[jt]sx?|svelte|vue)$/.test(x) && !/(^|\/)(node_modules|dist|build)\//.test(x))
   const texts = new Map(files.map((x) => [x, readText(root, x)]))
   const all = [...texts.values()].join('\n')
+  // How often each name appears as a whole word, counted in one pass over all the text. A whole-word match of a plain name is one maximal run of [\w$]
+  // equal to it, so this gives the same count as one regex scan per name (that scan, names x all the text, was the cost of this check).
+  const wordCount = new Map()
+  for (const m of all.matchAll(/[\w$]+/g)) wordCount.set(m[0], (wordCount.get(m[0]) ?? 0) + 1)
   const f = []
   for (const [x, t] of texts) {
     if (/\.(test|spec)\./.test(x) || /(^|\/)(index|main|entry)\.[a-z]+$/.test(x) || /(^|\/)(pages|routes|app)\//.test(x)) continue
@@ -78,7 +82,8 @@ const deadCode = (root) => {
     for (const m of t.matchAll(/^\s*export\s*\{([^}]+)\}/gm)) for (const n of m[1].split(',')) names.add(n.trim().split(/\s+as\s+/).pop())
     for (const n of names) {
       if (!n || allow.has(n) || allow.has(`${x}:${n}`)) continue
-      const uses = all.match(new RegExp(`(?<![\\w$])${n.replace(/\$/g, '\\$')}(?![\\w$])`, 'g'))?.length ?? 0
+      // A plain name is counted from the one-pass table above (same count as the regex scan); anything else keeps the regex scan.
+      const uses = /^[A-Za-z_$][\w$]*$/.test(n) ? (wordCount.get(n) ?? 0) : (all.match(new RegExp(`(?<![\\w$])${n.replace(/\$/g, '\\$')}(?![\\w$])`, 'g'))?.length ?? 0)
       if (uses <= 1) f.push(`${x}: "${n}" is exported but nothing else mentions it`)
     }
   }
@@ -220,7 +225,19 @@ function splitParams(inner) {
 }
 
 // Every function in one source text: { name, startLine, endLine, params, body, fam }. Lines are 1-based.
+// findFunctions is a pure function of the text, and long-functions, many-parameters and cyclomatic-complexity each ask it about every file: the answer is kept
+// (the key is the whole text, so a changed file can never get an old answer). Bounded, so a huge project cannot fill memory.
+const functionsMemo = new Map()
 function findFunctions(text, ext) {
+  const key = `${ext}:${text}`
+  const hit = functionsMemo.get(key)
+  if (hit) return hit
+  const found = findFunctionsUncached(text, ext)
+  if (functionsMemo.size >= 4000) functionsMemo.clear()
+  functionsMemo.set(key, found)
+  return found
+}
+function findFunctionsUncached(text, ext) {
   const fam = FAMILY[ext]
   if (!fam) return []
   const s = mask(text, ext)

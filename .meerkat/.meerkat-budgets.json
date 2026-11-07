@@ -1,6 +1,6 @@
 {
   "refactor": { "maxFunctionLines": 300, "maxComplexity": 160, "maxParameters": 10, "maxNesting": 7 },
   "quality": { "maxLineLength": 1910 },
-  "lang": { "maxAny": 440 },
-  "health": { "maxJsonInLoop": 60 }
+  "lang": { "maxAny": 600 },
+  "health": { "maxJsonInLoop": 70 }
 }

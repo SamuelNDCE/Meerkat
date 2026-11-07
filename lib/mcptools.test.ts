@@ -69,6 +69,23 @@ describe('gate and smoke', () => {
   })
 })
 
+const cli_: string[][] = []
+
+describe('brief', () => {
+  const briefJson = { version: 1, found: true, symbolFound: true, target: { file: 'lib/a.mjs', symbol: 'run', language: 'javascript', lines: 9, module: 'lib', exported: true, kind: 'function', line: 2, endLine: 9, signature: 'export function run() {' }, callers: { files: 0, list: [], more: 0, unresolved: 0, unknownMention: 0, modules: [] }, tests: { count: 0, files: [] }, findings: { available: false, note: 'no saved run, so no findings' }, churn: { available: false, note: 'not a git repository, so no churn figure' }, risk: { tier: 'medium', score: 3, scale: 's', reasons: ['r'] }, checklist: ['c'] }
+  test('brief runs the brief command with --json and returns markdown plus the structured facts; a bad target is refused', async () => {
+    const { ctx } = makeCtx({ runCli: async (argv: string[]) => (cli_.push(argv), { code: 0, stdout: JSON.stringify(briefJson), stderr: '', timedOut: false }) })
+    const r = await call(ctx, 'meerkat_brief', { target: 'lib/a.mjs#run' })
+    expect(isErr(r)).toBe(false)
+    expect(cli_[0]).toEqual(['brief', 'lib/a.mjs#run', '--app', HERE, '--json'])
+    expect(r.result.content[0].text).toContain('# brief: lib/a.mjs#run')
+    expect(r.result.structuredContent.version).toBe(1)
+    expect(isErr(await call(ctx, 'meerkat_brief', { target: '--app' }))).toBe(true)
+    expect(isErr(await call(ctx, 'meerkat_brief', {}))).toBe(true)
+    expect(cli_).toHaveLength(1)
+  })
+})
+
 describe('blast and map', () => {
   test('blast runs the blast command; a flag-like or empty target is refused', async () => {
     const { ctx, cli } = makeCtx()

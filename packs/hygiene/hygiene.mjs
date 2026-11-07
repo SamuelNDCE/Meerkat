@@ -4,7 +4,8 @@ import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
 
 const S = `${MK}/thorough/hygiene.mjs`
 const ST = `${MK}/thorough/static.mjs`
-const mk = (id, group, title, tier = 'fast', script = S) => ({
+const GR = `${MK}/thorough/gap-rules.mjs`
+const mk = (id, group, title, tier = 'fast', script = S, expectMatch = undefined) => ({
   id,
   group,
   tier,
@@ -14,7 +15,7 @@ const mk = (id, group, title, tier = 'fast', script = S) => ({
   estSeconds: 1,
   needs: ['node'],
   run: { cmd: 'node', args: [script, id], cwd: 'repo' },
-  selfTest: { cmd: 'node', args: [script, id, '--fixtures'], cwd: 'repo', expectFail: true },
+  selfTest: { cmd: 'node', args: [script, id, '--fixtures'], cwd: 'repo', expectFail: true, ...(expectMatch ? { expectMatch } : {}) },
 })
 
 export default [
@@ -31,5 +32,10 @@ export default [
   mk('broken-imports', 'functionality', 'Every relative import points at a file that exists', 'fast', ST),
   mk('env-example', 'functionality', 'Every environment variable the code reads is documented', 'fast', ST),
   mk('whitespace', 'functionality', 'No byte-order marks or mixed line endings', 'fast', ST),
+  mk('key-in-config', 'security', 'No key-shaped string (sk_, ghp_, AKIA, xox) is assigned to a key-like name in code or config', 'fast', GR, 'looks like a (?:real key|key and also looks like a fake placeholder)'),
+  mk('test-no-assert', 'functionality', 'Every JavaScript or TypeScript test asserts something', 'fast', GR, 'runs code but never asserts'),
+  mk('img-alt-missing', 'ui', 'Every image in a template has an alt attribute (alt="" for decoration)', 'fast', GR, '<img> has no alt attribute'),
+  mk('scripts-binaries', 'functionality', 'Every program an npm script starts with is installed or on the path', 'fast', GR, 'starts with .securitycheck-nope.'),
+  mk('payment-status-unchecked', 'functionality', 'Candidate: an awaited payment, transfer or refund call has its result or error checked', 'fast', GR, 'candidate: .result. holds the result'),
   mk('ui-static', 'ui', 'Pages have alt text, a language, a title and a viewport; no empty buttons'),
 ]

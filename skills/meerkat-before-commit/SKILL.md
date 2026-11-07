@@ -1,7 +1,7 @@
 ---
 name: meerkat-before-commit
 description: |-
-  Use when you are about to commit, stage changes, or tell the user a change is ready to commit.
+  Use when you are about to commit, about to run git commit or git add, or about to tell the user that a change is ready to commit.
   Runs the Meerkat gate on only the changed files, then you read each finding and fix it or dismiss it with a reason.
   Not for pull requests (use meerkat-before-pr) or for posting anything outside the machine (use meerkat-secrets-before-post).
 ---

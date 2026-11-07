@@ -37,7 +37,10 @@ const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x)
 const deepMerge = (a, b) => {
   if (!isObj(a) || !isObj(b)) return b
   const out = { ...a }
-  for (const [k, v] of Object.entries(b)) out[k] = k in a ? deepMerge(a[k], v) : v
+  for (const [k, v] of Object.entries(b)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue // a parsed JSON key must not change an object's prototype
+    out[k] = Object.hasOwn(a, k) ? deepMerge(a[k], v) : v
+  }
   return out
 }
 const parseLoose = (text) => {
@@ -45,7 +48,9 @@ const parseLoose = (text) => {
     try {
       const v = JSON.parse(t)
       if (isObj(v)) return v
-    } catch {}
+    } catch {
+      // not JSON in this shape: try the next shape
+    }
   }
   return null
 }

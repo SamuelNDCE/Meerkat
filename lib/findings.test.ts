@@ -462,7 +462,7 @@ describe('meerkat findings and meerkat finding', () => {
     expect(r.result.structuredContent.findings.top[0].severity).toBe('critical')
     expect(r.result.structuredContent.findings.top.length).toBeLessThanOrEqual(20)
     const plain = await handleMessage({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'meerkat_last', arguments: {} } }, { showLast: () => ({ ok: true, text: 'the report' }) })
-    expect(plain.result.structuredContent).toBeUndefined()
+    expect(plain.result.structuredContent).toEqual({ schemaVersion: 1, context: { project: null, projectPath: null, run: null, preset: null } })
   })
 })
 function savedRunWith(fl: any[]) {

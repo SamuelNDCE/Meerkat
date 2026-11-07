@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
-import { EXIT, classify, gateFiles, gateMain, parseGateArgs, runGate, runSmoke } from './gate.mjs'
+import { EXIT, classify, gateFiles, gateMain, gateText, parseGateArgs, runGate, runSmoke } from './gate.mjs'
 
 const root = mkdtempSync(join(tmpdir(), 'meerkat-gatefix-'))
 afterAll(() => rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
@@ -152,6 +152,15 @@ describe('the command', () => {
     expect(parseGateArgs(['--timeout', '2'], { smoke: true }).seconds).toBe(2)
     expect(parseGateArgs(['--timeout', '2']).errors.join()).toMatch(/unknown option/)
   })
+  test('a folder can be given positionally to gate and smoke, and an unknown option names the valid ones', () => {
+    expect(parseGateArgs(['.'], { smoke: true })).toMatchObject({ app: '.', errors: [] })
+    expect(parseGateArgs(['../x', '--staged'])).toMatchObject({ app: '../x', staged: true, errors: [] })
+    expect(parseGateArgs(['a', 'b']).errors.join()).toMatch(/only one folder/)
+    const e = parseGateArgs(['--nope'], { smoke: true }).errors.join()
+    expect(e).toMatch(/unknown option --nope/)
+    expect(e).toContain('--staged')
+    expect(e).toContain('--timeout')
+  })
   test('gateMain returns 2 for bad usage and 75 outside a git repo', async () => {
     const out: string[] = []
     const io = { log: (l: string) => out.push(l), err: (l: string) => out.push(l) }
@@ -164,5 +173,18 @@ describe('the command', () => {
     expect(classify({ status: 'FAIL', exitCode: 1 }, 'Error: x\n    at f (file.js:3:9)')).toBe('crash')
     expect(classify({ status: 'FAIL', exitCode: null }, '')).toBe('crash')
     expect(classify({ status: 'FAIL', broken: true }, '')).toBe('crash')
+  })
+})
+
+describe('gate output says what to do', () => {
+  test('a failed gate ends with a next-step line, and an empty staging area says how to stage', async () => {
+    const failing = { id: 'x', kind: 'fail', detail: 'src/a.js:1 bad', findings: [] }
+    const text = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [failing], skipped: [], note: '' }, 'staged files')
+    expect(text).toMatch(/\nnext: fix the checks listed under "in the files you changed"/)
+    const old = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [{ id: 'y', kind: 'fail', detail: 'no SECURITY.md', findings: [] }], skipped: [], note: '' }, 'staged files')
+    expect(old).toMatch(/\nnext: no failure points into the files you changed/)
+    expect(gateText('gate', { exitCode: EXIT.pass, files: [], rows: [], skipped: [], note: '' }, 'd')).not.toMatch(/next:/)
+    const none = await runGate({ checks: [jsOk], files: [], repoRoot: dir, ...quiet })
+    expect(none.note).toMatch(/git add/)
   })
 })

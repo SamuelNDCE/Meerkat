@@ -118,3 +118,43 @@ describe('the git pack', () => {
     expect(checks.map((c) => c.id).sort()).toEqual([...ALL].sort())
   })
 })
+
+describe('commit-message-format judges only commits not yet on the default branch', () => {
+  const LONG = 'Release 0.2.0 with a subject line that is far longer than the seventy two character limit'
+  const oldLongOnMain = () => {
+    const dir = newRepo()
+    commit(dir, LONG, { 'a.js': '1\n' })
+    return dir
+  }
+  test('an old long commit on main is not judged when the new commit is short and not on main', () => {
+    const dir = oldLongOnMain()
+    git(dir, ['checkout', '-q', '-b', 'feature'])
+    commit(dir, 'Add b', { 'b.js': '2\n' })
+    const { code, out } = runCheck(['commit-message-format', '--root', dir])
+    expect(code, out).toBe(0)
+    expect(out).toContain('1 commit(s) not yet on main checked')
+  }, LIMIT)
+  test('a long commit that is not yet on main is still found, and the old one is not', () => {
+    const dir = oldLongOnMain()
+    git(dir, ['checkout', '-q', '-b', 'feature'])
+    commit(dir, 'A new subject that is again far longer than the seventy two character limit of git', { 'b.js': '2\n' })
+    const { code, out } = runCheck(['commit-message-format', '--root', dir])
+    expect(code).toBe(1)
+    expect(out).toContain('A new subject')
+    expect(out).not.toContain('Release 0.2.0')
+  }, LIMIT)
+  test('the base is origin/HEAD: nothing ahead of it means nothing to judge', () => {
+    const origin = oldLongOnMain()
+    const clone = mkdtempSync(join(tmpdir(), 'meerkat-git-clone-'))
+    made.push(clone)
+    execFileSync('git', ['clone', '-q', origin, clone], { stdio: 'pipe' })
+    const { code, out } = runCheck(['commit-message-format', '--root', clone])
+    expect(code, out).toBe(0)
+    expect(out).toContain('nothing to judge')
+  }, LIMIT)
+  test('with HEAD on a local main and no remote, the last 20 commits are checked and the result says so', () => {
+    const { code, out } = runCheck(['commit-message-format', '--root', oldLongOnMain()])
+    expect(code).toBe(1)
+    expect(out).toContain('the last 20 commits were checked')
+  }, LIMIT)
+})

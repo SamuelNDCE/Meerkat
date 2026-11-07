@@ -383,7 +383,7 @@ describe('finding bash for a machine lock script', () => {
 })
 
 describe('measured times replace the written guesses', () => {
-  test('the middle of the last passes wins; failures and stopped checks are not recorded', () => {
+  test('the last passes decide, the newest counting most; failures and stopped checks are not recorded', () => {
     expect(median([300, 100, 200])).toBe(200)
     expect(median([100, 300])).toBe(200)
     expect(median([])).toBeNull()
@@ -391,7 +391,7 @@ describe('measured times replace the written guesses', () => {
     expect(Object.keys(t.checks)).toEqual(['a'])
     for (const ms of [100_000, 120_000, 110_000, 130_000, 140_000]) t = recordRun(t, [{ id: 'a', status: 'PASS', ms }], 'fast')
     expect((t.checks as any).a.fast).toEqual([100_000, 120_000, 110_000, 130_000, 140_000])
-    expect(learnedSeconds(t, 'a', 'fast')).toBe(120)
+    expect(learnedSeconds(t, 'a', 'fast')).toBe(130) // the plain middle is 120; the newest runs (130, 140) pull it up (timings.mjs recentMedian)
     expect(learnedSeconds(t, 'a', 'thorough')).toBeNull()
   })
   test('applyLearned changes only checks that have been measured, and keeps the written value', () => {
@@ -836,7 +836,7 @@ describe('logs: every run saves what is needed to understand a failure', () => {
     expect(report).toContain('## Timeline')
     for (const f of ['summary.json', 'timeline.jsonl', 'report.md', 'lint.log']) expect(readFileSync(join(runDir, f), 'utf8').length).toBeGreaterThan(10)
     const summary = JSON.parse(readFileSync(join(runDir, 'summary.json'), 'utf8'))
-    expect(summary.counts).toEqual({ pass: 0, fail: 1, notRun: 0 })
+    expect(summary.counts).toEqual({ pass: 0, fail: 1, notRun: 0, skipped: 0 })
     expect(summary.results[0].logFile).toBe(file)
     expect(showLast(env).text).toContain('Failed (1)')
     expect(showWhy('lint', env).text).toContain('exit code: 1')

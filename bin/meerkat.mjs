@@ -43,7 +43,7 @@ const version = () => VERSION // lib/version.mjs: package.json, read once
 async function main() {
   // The accepted-findings, history, suggestion and CI commands (lib/extras-cli.mjs) are handled before the older parser sees them.
   // `meerkat <word> --help` is answered from the command registry (planCommand), not by the command.
-  if (EXTRA_WORDS.includes(argv[0]) && !argv.includes('--help') && !argv.includes('-h')) {
+  if ((EXTRA_WORDS.includes(argv[0]) || (argv[0] === 'init' && argv.includes('--profile'))) && !argv.includes('--help') && !argv.includes('-h')) {
     const code = await (await extrasMod()).runExtra(argv, { env, cwd, out, err })
     if (code !== null) return code
   }
@@ -114,6 +114,7 @@ async function main() {
       return r.ok ? 0 : 1
     }
     case 'ai': {
+      if (plan.action === 'hooks') { const h = await import('../lib/aihooks.mjs'); out(h.hooksText()); process.stderr.write(h.hooksNotes() + '\n'); return 0 }
       const { aiStatus, aiTest, aiUse } = await aiMod()
       const r = plan.action === 'status' ? { ok: true, text: aiStatus(env) } : plan.action === 'use' ? aiUse(plan.args, env) : plan.action === 'test' ? await aiTest(env) : { ok: false, text: 'usage: meerkat ai status | use <claude|openai|openrouter> [model] | test' }
       out(plan.json ? JSON.stringify({ ok: r.ok, text: r.text }, null, 2) : r.text)

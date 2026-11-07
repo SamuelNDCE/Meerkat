@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { envFileHoldsSecret, finding, finish, isFixture, keyFileHasContent, main, notRun, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
+import { envFileHoldsSecret, finding, finish, isFixture, isPlaceholderValue, keyFileHasContent, main, notRun, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 import { redact } from './redact.mjs'
 
 const cfg = (root) => readBudgets(root)?.security ?? {}
@@ -74,7 +74,10 @@ const valueStarts = (text, redacted) => {
 }
 const isLiteralValue = (text, k) => {
   if (PLACEHOLDER.test(text.slice(k, k + 40))) return false
-  if (/["'`]/.test(text[k - 1] ?? '')) return true
+  const quote = /["'`]/.exec(text[k - 1] ?? '')?.[0]
+  // A stand-in value (server-key-for-test, changeme, xxxxxxxx) is not a secret.
+  if (isPlaceholderValue(quote ? text.slice(k).split(quote)[0] : /^[^\s"'`,;()[\]{}]*/.exec(text.slice(k))[0])) return false
+  if (quote) return true
   const token = /^[^\s"'`,;()[\]{}]*/.exec(text.slice(k))[0]
   return token.length >= 12 && /[A-Za-z]/.test(token) && /[0-9]/.test(token) && /^[A-Za-z0-9_\-/=]+$/.test(token)
 }

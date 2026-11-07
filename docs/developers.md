@@ -12,6 +12,7 @@ This page is for people who want to change Meerkat itself, or add their own chec
 | `examples/` | Example projects and their own checks. Not part of the core tool | You want a worked example |
 | `fixtures/` | Bad and good sample files that prove each rule | Every new rule needs one |
 | `tools/` | Maintenance scripts (generate the docs, make the badges, measure accuracy) | You change the counts or the docs |
+| `tools/release/` | The release gate and the tarball and upgrade tests, see [release.md](release.md) | You change how a version is checked or published |
 | `tests/` | Meerkat's own tests (`npm test`) | Every behaviour change needs one |
 | `docs/` | The guides. Some files are generated, see below | You change anything a user can see |
 

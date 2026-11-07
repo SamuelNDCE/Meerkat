@@ -1,7 +1,7 @@
 ---
 name: meerkat-map-unfamiliar-code
 description: |-
-  Use when you start work in a codebase you do not know, or when you are planning a refactor.
+  Use when you start work in a codebase you do not know, when you are asked to read or explain unfamiliar code, or when you are planning a refactor or a new feature and do not yet know where it belongs.
   Runs Meerkat's code map, then you read the entry points and the most imported files first, before opening anything else.
   Follow it with blast radius on the files you plan to change.
 ---
@@ -18,7 +18,7 @@ meerkat map --app <folder>
 
 Leave `--app <folder>` off to use the current folder. Add `--json` for a machine-readable result.
 
-2. The command writes `codemap.json` and `codemap.md` into a run folder. Read the path it prints, or print the folder with `meerkat logs`. Open `codemap.md`.
+2. The command writes `codemap.json` and `codemap.md` into a run folder (only files changed since the last map are re-read; run `meerkat map --check` to see whether the saved map is current). `codemap.md` starts with the schema version, counts, the commit and the routes, then lists each file with its purpose and functions with line numbers, and which tests cover it. Read the path it prints, or print the folder with `meerkat logs`. Open `codemap.md`.
 
 3. Read in this order:
    1. The entry points: where the program starts. Open these files first.

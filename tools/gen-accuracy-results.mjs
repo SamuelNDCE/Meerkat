@@ -125,7 +125,7 @@ export function renderReadme(data) {
     '',
     'Recall on planted bugs measures what was planted, not real-world accuracy.',
     '',
-    'Every planted defect, its tier, suite and result is listed in [docs/accuracy-results.md](docs/accuracy-results.md).',
+    'Every planted defect, its tier, suite and result is listed in [docs/accuracy-results.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy-results.md).',
     '',
   ].join('\n')
 }

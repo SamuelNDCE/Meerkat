@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**395 checks** in 50 suites with 1433 sub-checks (a check that declares no rules counts as one), across 51 packs: 350 quick, 45 thorough, 38 opt-in. [Security 123](#security-checks) · [Functionality 217](#functionality-checks) · [UI 25](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
+**400 checks** in 50 suites with 1443 sub-checks (a check that declares no rules counts as one), across 51 packs: 355 quick, 45 thorough, 38 opt-in. [Security 124](#security-checks) · [Functionality 220](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -12,7 +12,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | Suite | Name | Checks | Sub-checks | What it covers |
 |---|---|---|---|---|
 | `secrets` | Secrets | 4 | 285 | Keys, tokens, passwords and private files that must never be committed. |
-| `risky-calls` | Risky code | 7 | 95 | Dangerous calls: eval, shell strings, disabled TLS checks, weak hashes, plain http. |
+| `risky-calls` | Risky code | 7 | 98 | Dangerous calls: eval, shell strings, disabled TLS checks, weak hashes, plain http. |
 | `injection-patterns` | Injection patterns | 7 | 71 | Code shapes that lead to SQL injection, path traversal, open redirects, regex DoS and XXE. |
 | `crypto-and-auth` | Crypto and auth | 2 | 2 | Weak JWT settings and weak encryption modes. |
 | `supply-chain` | Supply chain | 8 | 24 | Dependency pinning, lockfile integrity, known-vulnerable packages, install scripts and look-alike names. |
@@ -28,7 +28,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `javascript` | JavaScript and TypeScript | 7 | 7 | Common JS and TS mistakes: loose equality, var, unhandled promises, any, ts-ignore. |
 | `slow-code-patterns` | Slow code patterns | 4 | 4 | Sync file calls in handlers, parsing or regex building inside loops, DOM queries in loops. |
 | `repo-docs` | Repository docs | 5 | 5 | README sections, security policy, contributing guide, code owners and changelog format. |
-| `repo-files` | Repository files | 12 | 12 | Large files, odd file names, case conflicts, symlinks, exec bits, gitignore and editorconfig. |
+| `repo-files` | Repository files | 17 | 17 | Large files, odd file names, case conflicts, symlinks, exec bits, gitignore and editorconfig. |
 | `licensing` | Licensing | 5 | 5 | A licence file exists and matches what the package says. |
 | `config-files` | Config files | 22 | 22 | JSON, YAML and TOML parse, env examples, line endings and Makefile tabs. |
 | `ci-config` | CI config | 18 | 18 | A CI pipeline exists, has time limits and pins its Node version. |
@@ -45,7 +45,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `dependencies` | Dependencies | 15 | 15 | Lockfile in sync, unused, duplicate, wildcard or misplaced dependencies. |
 | `performance` | Performance | 11 | 11 | Size, start-up, memory, response time, load and build time against budgets. |
 | `node` | Node and TypeScript tools | 9 | 9 | ESLint, tsc, Prettier, circular imports, engines and tsconfig strictness. |
-| `rust` | Rust | 16 | 155 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
+| `rust` | Rust | 16 | 157 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
 | `python` | Python | 8 | 8 | ruff, mypy, pytest, bandit and dead code. |
 | `go` | Go | 4 | 4 | go vet and go test. |
 | `java` | Java | 3 | 3 | Maven validate, compile and test. |
@@ -64,7 +64,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 
 ## Security checks
 
-Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 123 checks.
+Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 124 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -91,7 +91,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `cp-dotnet-php-ruby` | fast | tiny | 1 s | C#, PHP and Ruby: no unsafe deserialization, no eval of input, no disabled checks, no unscoped params | code-patterns |
 | `cp-go` | fast | tiny | 1 s | Go: no hardcoded secrets, no unbounded servers, no command or path from requests, no weak crypto | code-patterns |
 | `cp-java` | fast | tiny | 1 s | Java: no runtime exec or object deserialization from untrusted input, no trust-all TLS, no expression injection | code-patterns |
-| `cp-js` | fast | tiny | 1 s | JavaScript and TypeScript: no command or require built from variables, no timing-unsafe secret checks, no hidden characters | code-patterns |
+| `cp-js` | fast | tiny | 1 s | JavaScript and TypeScript: no command or require built from variables, no timing-unsafe secret checks, no hidden characters, no duplicate imports, no raw error text from a Deno handler, no unguarded fetch after a debit | code-patterns |
 | `cp-python` | fast | tiny | 1 s | Python: no shell or process call from variables, no unsafe loads, no disabled TLS, no weak modes | code-patterns |
 | `cp-rust` | fast | tiny | 1 s | Rust: unsafe blocks carry a SAFETY note, no weak hashes, no secrets printed | code-patterns |
 | `credentials-in-urls` | fast | tiny | 1 s | No user name and password written into a web address | security-plus |
@@ -135,6 +135,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `ip-terraform-compose` | fast | tiny | 1 s | Terraform and Compose: open ports, encryption, public access, IAM wildcards, capabilities and dependencies | infra-plus |
 | `jenkinsfile-safety` | fast | tiny | 1 s | Jenkinsfile keeps parameters out of shell strings, credentials out of the log and the Docker socket off any agent | ci-systems |
 | `jwt-weak` | fast | tiny | 1 s | JWTs: no "none" algorithm, no decode used as a sign-in check, no secret typed into the code | security-plus |
+| `key-in-config` | fast | tiny | 1 s | No key-shaped string (sk_, ghp_, AKIA, xox) is assigned to a key-like name in code or config | hygiene |
 | `kube-linter` | fast | light | 10 s | Kubernetes manifests: security and best practice (kube-linter) *(needs: kube-linter)* | kubernetes |
 | `license` | fast | tiny | 1 s | A license is declared, and no copyleft dependency slipped in | hygiene |
 | `license-header-consistency` | fast | tiny | 1 s | The LICENSE text and the package manifests name the same licence | privacy |
@@ -194,7 +195,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 
 ## Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 217 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 220 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -214,7 +215,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `ci-present` | fast | tiny | 1 s | An automated check config (CI) exists | repo |
 | `ci-timeouts` | fast | tiny | 1 s | Every GitHub Actions job sets timeout-minutes | config |
 | `codeowners-valid` | fast | tiny | 1 s | CODEOWNERS: every pattern has a real owner, and no pattern is listed twice | repo |
-| `commit-message-format` | fast | tiny | 1 s | Recent commit subjects are short, not empty, not ending in a period, and free of WIP or fixup! | git |
+| `commit-message-format` | fast | tiny | 1 s | Subjects of the commits not yet on the default branch are short, not empty, not ending in a period, and free of WIP or fixup! | git |
 | `composer-validate` | fast | tiny | 5 s | Composer: composer.json is valid (strict) *(needs: composer)* | php |
 | `conflict-markers` | fast | tiny | 1 s | No leftover merge-conflict markers | hygiene |
 | `contributing-file` | fast | tiny | 1 s | CONTRIBUTING.md exists once a project has a README and several source files | repo |
@@ -315,6 +316,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `openapi-valid` | fast | tiny | 1 s | OpenAPI and Swagger files have a version, info title and version, paths, and responses on every operation | api |
 | `package-fields` | fast | tiny | 1 s | package.json has its name, version, license and entry points that exist | repo |
 | `pagination-bounds` | fast | tiny | 1 s | Request-supplied page sizes have an upper bound (listed unless required) | api |
+| `payment-status-unchecked` | fast | tiny | 1 s | Candidate: an awaited payment, transfer or refund call has its result or error checked | hygiene |
 | `phpstan` | fast | medium | 30 s | PHPStan: bugs and undefined code (also reports PHP syntax errors) *(needs: phpstan)* | php |
 | `pickle-load` | fast | tiny | 1 s | Pickle loads read a fixed path or use weights_only | data-science |
 | `pre-commit-config` | fast | tiny | 1 s | pre-commit hook repositories are pinned to a release and fetched over https | ci-systems |
@@ -345,6 +347,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `rust-test` | fast | heavy | 5.0 min | Rust tests (cargo test, the whole workspace) | rust |
 | `rust-todo-macros` | fast | tiny | 1 s | Rust has no todo! or unimplemented! outside tests | lang |
 | `rust-unwrap-overuse` | fast | tiny | 1 s | Rust unwrap() and expect() outside tests stay within the budget (lang.maxUnwrap) | lang |
+| `scripts-binaries` | fast | tiny | 1 s | Every program an npm script starts with is installed or on the path | hygiene |
 | `scripts-resolve` | fast | tiny | 1 s | Every file an npm script runs exists | hygiene |
 | `semver-valid` | fast | tiny | 1 s | Package, Rust and Python versions are valid version numbers | quality |
 | `shell-hygiene` | fast | tiny | 1 s | Shell scripts have a shebang, stop on errors and use LF line endings | quality |
@@ -360,6 +363,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `swiftlint` | fast | tiny | 10 s | SwiftLint: Swift style and safety *(needs: swiftlint)* | swift |
 | `tags-semver` | fast | tiny | 1 s | Version-like tags are vX.Y.Z | git |
 | `terraform-fmt` | fast | tiny | 5 s | Terraform: formatting (terraform fmt) *(needs: terraform)* | terraform |
+| `test-no-assert` | fast | tiny | 1 s | Every JavaScript or TypeScript test asserts something | hygiene |
 | `test-presence` | fast | tiny | 1 s | The source has tests, and large folders of source have a test file | quality |
 | `test-quality-static` | fast | tiny | 3 s | Test quality, read from the files: no assertions, always-true assertions, swallowed errors, sleeps, skipped tests | mutation |
 | `test-to-code-ratio` | fast | tiny | 2 s | Test lines per source line, by folder (informational): folders with source and no tests are listed | mutation |
@@ -418,7 +422,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 
 ## UI checks
 
-Pages and styles: accessibility basics and valid markup. 25 checks.
+Pages and styles: accessibility basics and valid markup. 26 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -433,6 +437,7 @@ Pages and styles: accessibility basics and valid markup. 25 checks.
 | `iframe-title` | fast | tiny | 1 s | Every iframe has a title | a11y |
 | `image-alt-quality` | fast | tiny | 1 s | Image descriptions say what the picture shows (not a file name or a bare word like "image") | a11y |
 | `image-dimensions` | fast | tiny | 1 s | Every image has a width and height, and large local images load lazily | web-plus |
+| `img-alt-missing` | fast | tiny | 1 s | Every image in a template has an alt attribute (alt="" for decoration) | hygiene |
 | `link-text` | fast | tiny | 1 s | Every link has text that says where it goes (no empty or "click here" links) | a11y |
 | `manifest-valid` | fast | tiny | 1 s | Web app manifests are valid JSON with a name, icons and a start_url | web-plus |
 | `media-captions` | fast | tiny | 1 s | Videos have captions, and autoplaying media is muted or has controls | a11y |
@@ -491,4 +496,80 @@ Is the code itself in good shape: duplicated code, dead code, files too long, ci
 | `dead-python` | thorough | light | 10 s | Dead Python code (vulture) *(needs: vulture)* | python |
 | `radon-complexity` | thorough | light | 10 s | Very complex Python functions from radon: cyclomatic complexity rank D (21) or worse (opt-in) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `vulture-dead-code` | thorough | light | 10 s | Dead Python code from vulture: unused imports and unreachable code at 80 percent confidence or more (opt-in: lower confidence is mostly noise) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
+
+## The bugs preset: what it leaves out
+
+The `bugs` preset runs the quick checks without the checks and rules below, which are style, documentation, formatting or housekeeping. The list lives in `lib/bugs-preset.mjs`; a test fails if an entry stops existing.
+
+| Left out | Kind | Reason |
+|---|---|---|
+| `markdownlint` | check | Markdown formatting of documents, not code behaviour |
+| `markdown-headings` | check | heading levels in Markdown, style of documents |
+| `markdown-code-fences` | check | language names on Markdown fences, style of documents |
+| `typos` | check | spelling in code and documents |
+| `spell-common-typos` | check | spelling in docs and comments |
+| `prettier` | check | code formatting only |
+| `rust-fmt` | check | code formatting only (cargo fmt --check) |
+| `dart-format` | check | code formatting only |
+| `dotnet-format` | check | code formatting only |
+| `trailing-whitespace` | check | stray spaces at line ends, formatting |
+| `final-newline` | check | newline at end of file, formatting |
+| `indent-consistency` | check | tabs versus spaces, formatting |
+| `line-length` | check | source line length, readability |
+| `whitespace` | check | byte-order marks and mixed line endings, formatting |
+| `gitattributes-eol` | check | line-ending policy file, housekeeping |
+| `editorconfig-present` | check | an .editorconfig file exists, housekeeping |
+| `readme-sections` | check | README headings, documentation |
+| `readme-install-usage` | check | README length and sections, documentation |
+| `contributing-file` | check | CONTRIBUTING.md exists, documentation |
+| `changelog-format` | check | CHANGELOG heading style, documentation |
+| `changelog-version-headings` | check | CHANGELOG heading order, documentation |
+| `commit-message-format` | check | commit subject style, process |
+| `branch-names` | check | branch naming style, process |
+| `merge-commit-noise` | check | history tidiness, process |
+| `todo-hygiene` | check | TODO comments naming an owner, process |
+| `markers` | check | FIXME and XXX notes left in code, a to-do list and not a defect |
+| `non-ascii-filenames` | check | file name characters, housekeeping |
+| `css-important-overuse` | check | count of !important in CSS, style |
+| `ts-ignore-comments` | check | whether @ts-ignore says why, comment style |
+| `js-var-usage` | check | var versus let and const, style |
+| `rp-api-ffi-wasm/rapi-pub-fn-undocumented` | rule | a public function has no /// comment: documentation |
+| `rp-api-ffi-wasm/rapi-pub-type-undocumented` | rule | a public type has no /// comment: documentation |
+| `rp-api-ffi-wasm/rapi-missing-docs-lint` | rule | no #![warn(missing_docs)] attribute: documentation policy |
+| `rp-api-ffi-wasm/rapi-missing-debug-derive` | rule | a public type does not derive Debug: API convenience, not wrong behaviour |
+| `rp-errors/rerr-string-error-result` | rule | a String error type in Result: design preference, the code still works |
+| `rp-perf-style/rperf-push-str-format` | rule | push_str(&format!) allocates a temporary: micro-performance style |
+| `rp-errors/rerr-map-err-to-string` | rule | map_err(to_string) loses the error type: design preference |
+| `rp-errors/rerr-box-dyn-error-public` | rule | Box<dyn Error> in a public signature: API design preference |
+| `rp-errors/rerr-unit-error-type` | rule | () as an error type: API design preference |
+| `rp-errors/rerr-unwrap-or-builds-value` | rule | eager unwrap_or argument: micro-performance style |
+| `rp-errors/rerr-error-no-display` | rule | error enum without Display: API convenience |
+| `rp-perf-style/rperf-len-compare-zero` | rule | len() == 0 versus is_empty: style |
+| `rp-perf-style/rperf-format-to-string-arg` | rule | format!("{}", x.to_string()): double allocation style |
+| `rp-perf-style/rperf-format-no-args` | rule | format! with no arguments: style |
+| `rp-perf-style/rperf-collect-then-iterate` | rule | needless collect: micro-performance style |
+| `rp-perf-style/rperf-iter-count` | rule | iter().count() versus len(): micro-performance style |
+| `rp-perf-style/rperf-nth-zero` | rule | nth(0) versus next(): style |
+| `rp-perf-style/rperf-map-identity` | rule | map(\|x\| x): style |
+| `rp-perf-style/rperf-bool-eq-literal` | rule | comparing a bool with true or false: style |
+| `rp-perf-style/rperf-index-range-loop` | rule | indexing a vector over 0..len: style |
+| `rp-perf-style/rperf-ref-vec-or-string-param` | rule | &Vec or &String parameter: style |
+| `rp-perf-style/rperf-box-vec` | rule | Box<Vec<T>>: style |
+| `rp-perf-style/rperf-option-option` | rule | Option<Option<T>>: style |
+| `rp-perf-style/rperf-unwrap-or-new-container` | rule | unwrap_or(Vec::new()): micro-performance style |
+| `rp-perf-style/rperf-clone-twice` | rule | clone() twice in a row: micro-performance style |
+| `rp-perf-style/rperf-to-vec-only-for-len` | rule | copy only to take a length: micro-performance style |
+| `rp-perf-style/rperf-match-bool-literals` | rule | match on a bool: style |
+| `rp-perf-style/rperf-println-in-library` | rule | a library prints to stdout: style |
+| `rp-perf-style/rperf-allow-clippy-group` | rule | a whole clippy group allowed: lint policy |
+| `rp-perf-style/rperf-allow-dead-code-crate` | rule | dead_code allowed crate-wide: lint policy |
+| `rp-cargo/rcargo-missing-description` | rule | Cargo package metadata: publishing housekeeping |
+| `rp-cargo/rcargo-missing-license` | rule | Cargo package metadata: publishing housekeeping |
+| `rp-cargo/rcargo-missing-edition` | rule | Cargo package metadata: housekeeping |
+| `rp-cargo/rcargo-edition-old` | rule | old Rust edition: modernisation advice |
+| `rp-cargo/rcargo-openssl-dependency` | rule | openssl versus rustls: informational preference |
+| `rp-cargo/rcargo-workspace-no-resolver` | rule | workspace resolver setting: modernisation advice |
+| `rp-api-ffi-wasm/rapi-glob-reexport` | rule | pub use x::*: API design preference |
+| `rp-api-ffi-wasm/rapi-extern-block-no-link` | rule | extern block without #[link]: informational |
+| `rp-async/rasync-runtime-built-per-call` | rule | tokio runtime built per call: informational performance note |
 <!-- checks:end -->

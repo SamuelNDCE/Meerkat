@@ -1,11 +1,11 @@
-// meerkat blast (lib/blast.mjs): counts on a three-module fixture, the per-commit map cache, and unresolved imports.
+// meerkat blast (lib/blast.mjs): counts on a three-module fixture, the map refresh, and unresolved imports.
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { cachedCodemap, runBlast } from './blast.mjs'
-import { buildCodemap, writeCodemap } from './codemap.mjs'
+import { writeCodemap } from './codemap.mjs'
 
 let tmp: string
 let app: string
@@ -84,46 +84,44 @@ describe('unresolved imports', () => {
   })
 })
 
-describe('map cache per commit', () => {
-  test('the second run reads the cache and does not rebuild', () => {
-    let builds = 0
-    const build = (d: string) => {
-      builds++
-      return buildCodemap(d)
-    }
-    const first = cachedCodemap(app, { env, build })
+describe('map refresh before blast answers', () => {
+  test('the first run builds, the second reads the cache and re-reads nothing', () => {
+    const first = cachedCodemap(app, { env })
     expect(first.source).toBe('built')
+    expect(first.cacheFile.startsWith(join(tmp, 'logs').split(String.fromCharCode(92)).join('/'))).toBe(true)
     expect(existsSync(first.cacheFile as string)).toBe(true)
-    const stamp = statSync(first.cacheFile as string).mtimeMs
-    const second = cachedCodemap(app, { env, build })
+    const second = cachedCodemap(app, { env })
     expect(second.source).toBe('cache')
-    expect(builds).toBe(1)
-    expect(statSync(second.cacheFile as string).mtimeMs).toBe(stamp)
+    expect(second.refreshed).toBe(0)
     expect(second.map.summary.files).toBe(first.map.summary.files)
+    expect(second.map.build.contentHash).toBe(first.map.build.contentHash)
   })
-  test('a changed source file or a new commit rebuilds; a changed doc file does not', () => {
-    let builds = 0
-    const build = (d: string) => {
-      builds++
-      return buildCodemap(d)
-    }
-    cachedCodemap(app, { env, build })
+  test('an edited source file is re-read (even uncommitted) and nothing else is; a doc file is ignored', () => {
+    cachedCodemap(app, { env })
     put('README.md', 'notes\n')
-    expect(cachedCodemap(app, { env, build }).source).toBe('cache')
-    put('src/ui/b.js', "import { sub } from '../core/calc.js'\nexport const show = () => sub(2, 3)\n")
-    expect(cachedCodemap(app, { env, build }).source).toBe('built-uncached')
-    commit('edit')
-    expect(cachedCodemap(app, { env, build }).source).toBe('built')
-    expect(cachedCodemap(app, { env, build }).source).toBe('cache')
-    expect(builds).toBe(3)
+    expect(cachedCodemap(app, { env }).source).toBe('cache')
+    put('src/ui/b.js', "import { sub } from '../core/calc.js'\nexport const show = () => sub(2, 3)\nexport const more = 1\n")
+    const r = cachedCodemap(app, { env })
+    expect(r.source).toBe('refreshed')
+    expect(r.refreshed).toBe(1)
+    expect(r.map.files.find((f: { path: string }) => f.path === 'src/ui/b.js').exports).toContain('more')
+    expect(cachedCodemap(app, { env }).source).toBe('cache')
   })
-  test('a folder that is not a git work tree is always built and nothing is cached', () => {
+  test('the answer says how many files it refreshed, in one line', () => {
+    const j = (a: string[]) => run(a).lines.join('\n')
+    expect(j(['src/core/calc.js', '--app', 'app'])).toContain('map: built')
+    expect(j(['src/core/calc.js', '--app', 'app'])).toContain('map: current')
+    put('src/ui/b.js', "import { sub } from '../core/calc.js'\nexport const show = () => sub(2, 3)\nexport const more = 1\n")
+    expect(j(['src/core/calc.js', '--app', 'app'])).toContain('map: refreshed 1 file first')
+    expect(run(['src/core/calc.js', '--app', 'app', '--json']).json().map.refreshed).toBe(0)
+  })
+  test('a folder that is not a git work tree is mapped and cached too', () => {
     const plain = join(tmp, 'plain')
     mkdirSync(plain)
     writeFileSync(join(plain, 'x.js'), 'export const x = 1\n')
-    const r = cachedCodemap(plain, { env })
-    expect(r.source).toBe('built-uncached')
-    expect(r.cacheFile).toBe(null)
+    expect(cachedCodemap(plain, { env }).source).toBe('built')
+    expect(cachedCodemap(plain, { env }).source).toBe('cache')
+    expect(cachedCodemap(plain, { env }).map.build.commit).toBe(null)
   })
 })
 

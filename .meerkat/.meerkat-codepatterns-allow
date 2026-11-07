@@ -1,2 +1,6 @@
 # Spawn with shell:true is deliberate: Windows .cmd shims (npm, npx) need a shell, and lib/exec.mjs quotes every argument.
 js-spawn-shell lib/exec.mjs
+# thorough/guards-code-patterns.mjs:205 is the regular expression that RECOGNISES exec(variable) (it is the rule, not a call to exec) (FIXTURE).
+js-exec-variable thorough/guards-code-patterns.mjs
+# tools/accuracy-tiers.mjs is a table of rule ids and tiers; node-serialize appears only inside ids such as v-js-node-serialize (FIXTURE).
+js-node-serialize tools/accuracy-tiers.mjs

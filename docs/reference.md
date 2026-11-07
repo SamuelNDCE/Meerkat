@@ -8,7 +8,7 @@ The full manual: every command, preset, setting and variable. Start with the [RE
 
 "Is this safe to push?" usually means running ten commands in the right order and remembering which needs which. Meerkat is one command, built on four rules:
 
-1. **It never passes quietly.** A tool that is not installed, a budget that is not set, a check that cannot start: each is reported as **NOT RUN**, and a run with a failure or a NOT RUN exits with an error.
+1. **It never passes quietly.** A tool that is not installed, a budget that is not set, a check that cannot start: each is reported as **NOT RUN**, and a run with a failure or a NOT RUN exits with an error. A check with nothing to look at in your project is different: a style tool the project never configured (eslint, prettier, stylelint with no configuration of their own) is **SKIPPED** with the reason on the same line ("no eslint configuration in this project"). SKIPPED is not a failure and not a pass, it does not change the exit code, and it is counted apart from NOT RUN in the summary line, `summary.json` (`counts.skipped`) and `findings.json` (`skipped[]`). A tool that is configured but cannot run (not installed, timed out) stays NOT RUN.
 2. **It proves its own checks.** `--self-test` gives every check a deliberately broken case and expects a failure, for the right reason. A check that quietly stopped working is caught.
 3. **It is gentle on your PC.** Light checks run together, heavy ones run alone, and only one Rust build runs at a time.
 4. **It keeps the evidence.** Every check's command, exit code, timing and full output is saved, so a failure can be understood later, by you or by an AI.
@@ -192,6 +192,7 @@ Measured on 2026-11-01 on Meerkat's own repository, a small project, on one PC (
 |---|---|---|---|
 | `meerkat quick` | the everyday check, 5 to 10 minutes at most: every short static check, no builds or test runs | not re-measured | not re-measured |
 | `meerkat fast` | same as quick | not re-measured | not re-measured |
+| `meerkat bugs` | the quick run without style, documentation and housekeeping rules: a finding is likely a real bug | not re-measured | not re-measured |
 | `meerkat full` | every check, the slow ones too: before a release | 294 | 10.5 s |
 | `meerkat thorough` | every check, the slow ones too (same as full) | 294 | 11.0 s |
 | `meerkat run --preset detectors` | full plus opt-in tools: osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck, actionlint | n/a | n/a |
@@ -255,6 +256,10 @@ meerkat project-smoke --changed
 - `meerkat project-smoke --changed` runs only the checks that read files changed against the base branch (`MEERKAT_BASE` or the default branch).
 
 What `--scope` limits: which checks run (those with no file in the folder are skipped) and which findings count. A check that scans the whole project still runs, and if it fails only on findings outside the folder it passes for that run. What it does not limit: repo-wide checks (git history, commit messages, dependency counts) look at the whole repository regardless. `--scope` and `--changed` cannot be used together.
+
+#### The bugs preset
+
+`meerkat bugs` (or `--preset bugs`) is for finding defects. It runs what `quick` runs, minus rules that are only about style, documentation, formatting or housekeeping, so a finding is likely a real bug. It was added after a measurement on 20 real bug-fix commits: `quick` reported about 540 findings per tree, over half from six style and doc rules (undocumented public items, markdownlint, missing Debug derive, String error types, `push_str(&format!)`), and caught 1 of the 20 bugs. Security checks are never excluded. The excluded checks and rules, with one reason each, are listed in [docs/checks.md](checks.md#the-bugs-preset-what-it-leaves-out) and live in one file, `lib/bugs-preset.mjs`. Excluded rules are left out of the findings as well as the verdict. A custom preset can do the same with `excludeChecks` (check ids) and `excludeSubs` (`check/rule` ids) in `meerkat.config.json`.
 
 #### What a preset is for: press `d`
 
@@ -490,7 +495,7 @@ Everything is a plain file. Mistakes in a file are printed as notes and never st
 | `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `override`, `budget`, `presets` |
 | `.meerkat-budgets.json` | numbers some checks need: performance budgets, hygiene, static and refactor limits |
 | `.meerkat-secrets-allow` | secret-scan findings you have accepted (a path, or `rule: text`) |
-| `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`) |
+| `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`, optionally followed by a `#` and a reason). Read from the project's own folder; every risky-code finding prints the exact line to paste, for example `src/view.js:118 # reason: say why it is safe` |
 | `.meerkat-env-allow` | environment variables you do not want documented |
 | `.meerkat-imports-allow` | imports the broken-imports check should ignore (a path, or `path:line`) |
 | `.meerkat-dead-allow` | exported names the dead-code check should ignore |
@@ -541,7 +546,7 @@ Meerkat is a clone of this repository, so updating is a fast-forward from GitHub
 | `meerkat update off` | no daily lookup and no bar (except after a manual `meerkat update --check`) |
 | `meerkat update status` | shows the mode, the newest version it knows about and when it was checked |
 
-An update is refused if you have local changes or it would not be a fast-forward. This is the only code in Meerkat that contacts the network by itself. It sends nothing about you or your project.
+An update first saves your uncommitted changes to tracked files as a patch file in the log folder, tries the new version in a temporary copy that carries your changes, and moves your folder only if that works. It is refused, with the files named and nothing touched, when a file you changed is also changed by the update and the two cannot be combined. PLACEHOLDER: this path is covered by unit tests (lib/smartupdate.test.ts, lib/updatedirty.test.ts) but has not been run against a real newer published release. This is the only code in Meerkat that contacts the network by itself. It sends nothing about you or your project.
 
 ## Privacy
 
@@ -577,6 +582,10 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 | `MEERKAT_PROFILE` | a named set of limits for a slower PC |
 | `MEERKAT_TIMINGS`, `MEERKAT_HISTORY`, `MEERKAT_STATUS`, `MEERKAT_THEME_FILE` | where the learned times, run history, live status and board theme are kept |
 | `MEERKAT_CARGO_LOCK`, `MEERKAT_CARGO_LOCK_DIR`, `MEERKAT_LOCK_MAX_WAIT` (older name `CARGO_LOCK_MAX_WAIT`) | use your own cargo lock script; move the built-in lock; how long a job waits for it (seconds, default 900) |
+| `MEERKAT_SECRET_SCAN_MAX` | the largest file in bytes the secret scan reads (default 50000000); a bigger file is not read at all |
+| `MEERKAT_SECRET_SCAN_CHUNK` | how many bytes of a file the secret scan reads at a time (default 1000000, minimum 64); lower it only to test the chunk boundary |
+| `MEERKAT_NO_INPROC`, `MEERKAT_INPROC_WORKERS` | `MEERKAT_NO_INPROC=1` runs every thorough check as its own process instead of in a reused worker thread (slower, same results); `MEERKAT_INPROC_WORKERS` sets how many worker threads (default: the number of CPUs) |
+| `MEERKAT_SPAWN_LOG` | a file path: one line is appended for each child process Meerkat starts, so a run's process count can be measured (a counter only, it changes nothing) |
 | `MEERKAT_FONT` | a `.ttf` file for `tools/screenshot.py`, which draws the board's pictures |
 | `MEERKAT_AI_CMD`, `MEERKAT_AI_BASE` | the model command for the AI checks (a JSON array); the branch the diff review compares with |
 | `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `MEERKAT_AI_KEY` | a key for the AI checks (see [AI checks](#ai-checks)); `MEERKAT_AI_MODEL` and `MEERKAT_AI_BASE_URL` change the model and the service |
@@ -671,13 +680,13 @@ Each fallback proves itself in `meerkat self-test` against a bad sample in `fixt
 
 ## When a check is still NOT RUN
 
-The reason is one line, for example `needs prettier: meerkat tools install`. Checks with no honest plain-Node substitute (eslint, prettier, tsc, madge, hadolint, actionlint) stay NOT RUN until the tool is installed.
+The reason is one line, for example `needs prettier: meerkat tools install`. (A project with no eslint, prettier or stylelint configuration is not NOT RUN but SKIPPED, whether or not the tool is installed.) Checks with no honest plain-Node substitute (eslint, prettier, tsc, madge, hadolint, actionlint) stay NOT RUN until the tool is installed.
 
 ## Publishing the npm package (maintainers)
 
 The package is `@samuelndce/meerkat` (the plain name `meerkat` belongs to another project on npm). `package.json` has a `files` list so only the program is published (bin, lib, packs, thorough, fixtures for `meerkat self-test`, examples, `run.mjs`), `publishConfig.access` is public, and the licence field points at `LICENSE`. Installed from npm, the commands are the same (`meerkat`, `meerkat-mcp`); `meerkat update` tells an npm install to update with `npm install -g @samuelndce/meerkat@latest`.
 
-To publish a version: run the tests and the self-run, cut the version with `node tools/release.mjs patch "what changed"`, check the contents with `npm pack --dry-run`, then log in with `npm login` and run `npm publish`. Publishing needs the owner's npm account, so it is never done by a script or an agent.
+To publish a version: run the tests and the self-run, cut the version with `node tools/release.mjs patch "what changed"`, run the release gate `node tools/release/gate.mjs --smoke` (changelog, the tarball file list, `npm audit --audit-level=high --omit=dev`, the secret scan, fix commits without a test, and a tarball install test), then publish a GitHub release, which runs the trusted-publishing workflow `.github/workflows/publish.yml`. Publishing needs the owner's npm account and a one-time trusted-publisher setup on npm, so it is never done by a script or an agent. The whole procedure, the upgrade test, the rollback path (`npm deprecate`, then a fixed patch) and the optional OpenSSF Scorecard workflow are in [release.md](release.md).
 
 The `detectors` preset (pack `detectors`) runs osv-scanner, gitleaks, Semgrep (`p/security-audit`, needs the network), `cargo clippy` correctness and suspicious lints, `tsc --strict` when typescript is already in the project's node_modules, staticcheck, govulncheck and actionlint. Which of them use the network, and their licences, are in [credits.md](credits.md).
 A missing tool is NOT RUN with an install hint; Meerkat never installs anything. Findings keep the tool's own rule ids.

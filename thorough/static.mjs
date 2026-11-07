@@ -9,7 +9,8 @@ import { finding, finish, isFixture, isTestFile, isText, main, readBudgets, read
 const cfg = (root) => readBudgets(root)?.static ?? {}
 const SOURCE = /\.(m?[jt]sx?|cjs|py|rs|go|rb|php|java|cs|svelte|vue)$/i
 const TESTISH = /(^|\/)(tests?|__tests__|fixtures?|spec|examples?|docs?)\/|\.(test|spec)\.[a-z]+$/i
-const allowList = (root, name) => new Set(readText(root, name).split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')))
+// One entry per line: a file, or file:line. A reason may follow after " # " ("src/view.js:118 # escaped by esc() above"); it is for the reader and is not part of the entry.
+const allowList = (root, name) => new Set(readText(root, name).split('\n').map((l) => l.trim().replace(/\s+#.*$/, '')).filter((l) => l && !l.startsWith('#')))
 const lineOf = (text, index) => text.slice(0, index).split('\n').length
 
 // ---- whitespace: a byte-order mark, or lines ended two different ways in one file
@@ -253,6 +254,7 @@ const xssSafeNames = (root) => new Set(readText(root, '.meerkat-xss-safe').split
 // starts with a continuation token, exactly as for a plain line end, so a comment cannot hide a raw value on the next line.
 let blankedFor = ''
 let blankedText = ''
+let blankedJsx = false
 let blankedFailed = false
 // Set by the last blankComments call: true when some region of the file could not be read with certainty (see blankComments), so the blanked text cannot be
 // trusted and every hit in the file is reported.
@@ -307,8 +309,10 @@ const regexEnd = (t, at) => {
 // Template literals are read with a stack, so a ${} holding a string, a comment or another template is read as JavaScript reads it.
 // It sets blankFailed (and every hit of the file is then reported) whenever a region cannot be read with certainty: a ' or " string that reaches a line end, a
 // string, template or block comment still open at the end of the file, a regex literal that does not close on its line, and a / that may be a division or a regex.
-const blankComments = (t) => {
-  if (t === blankedFor) {
+// jsx is true for .jsx and .tsx files: a ' or " that reaches a line end there is an apostrophe or quote in JSX text (<p>Don't</p>), not an open string, so the
+// scan carries on from the next line instead of giving up on the whole file (a real unterminated string is a syntax error in those files).
+const blankComments = (t, jsx = false) => {
+  if (t === blankedFor && jsx === blankedJsx) {
     blankFailed = blankedFailed
     return blankedText
   }
@@ -325,7 +329,7 @@ const blankComments = (t) => {
       if (c === '\\') out += t[++i] ?? ''
       else if (c === q) q = ''
       else if (c === '\n') {
-        failed = true
+        if (!jsx) failed = true
         q = ''
       }
     } else if (top >= 0 && stack[top] < 0) {
@@ -377,6 +381,7 @@ const blankComments = (t) => {
   }
   if (q || stack.length) failed = true
   blankedFor = t
+  blankedJsx = jsx
   blankedText = out
   blankedFailed = failed
   blankFailed = failed
@@ -696,7 +701,7 @@ const riskyCode = (root) => {
         // Inside a comment: the scanner's own blanked copy has a space where the code has a character (a regex literal becomes 0, so a // inside one is not a comment).
         // Only when the file was read with certainty (blankFailed is false): a comment decision made from an unconfirmed string, template or regex state is not trusted.
         if (jsLike) {
-          const b = blankComments(t)
+          const b = blankComments(t, /\.[jt]sx$/.test(x))
           if (!blankFailed && b[m.index] === ' ' && t[m.index] !== ' ') continue
         }
         const lineText = t.slice(ls, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index))
@@ -718,7 +723,8 @@ const riskyCode = (root) => {
           }
         }
         if (!allow.has(`${x}:${lineOf(t, m.index)}`)) {
-          f.push(`${x}:${lineOf(t, m.index)} ${why}`)
+          // The finding carries the exact line that records the decision, so accepting it is a paste (the file is read from the project's own folder).
+          f.push(`${x}:${lineOf(t, m.index)} ${why}  [if it is safe, accept it by adding this line to .meerkat-risky-allow: ${x}:${lineOf(t, m.index)} # reason: say why it is safe]`)
           // Every hit is reported with its own severity: innerHTML with a value the code does not show to be safe is a medium risk (it depends on where the
           // value comes from), the other calls keep the check's own severity (high).
           // A plain variable on the right (el.innerHTML = icon) only says "check where it comes from": low. Built text (concatenation, a template with a

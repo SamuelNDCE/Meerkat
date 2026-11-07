@@ -5,7 +5,7 @@
 // Known limits: a rule that matches one line cannot see a call that is split over several lines (noted per rule where it matters).
 
 import { requireHelperOnlyFixed } from './guards.mjs'
-import { constString, firstArgIsConst, pyLiteralCommand, pySubprocessStringShell, pyMarkSafeLiteral, pyDefusedMinidom, pyCsrfExemptSigned, pyZipOnlyExtract, goConstFirstArg, goGetFromConfig, goLoopbackListen, goPprofLoopbackOnly, goShellLiteralScript, goSprintfConstArgs, goCookieSecureMultiline, goHtmlLiteral, goBaseWrapped, goZipChecked, javaConstProcess, javaConstSpel, javaConstLookup, javaConstExec, javaStreamModeNoPadding, javaSqlConstTail, javaLdapEscaped, javaFileNameOnly, csProcessLiteralInfo, csSqlConstTail, phpAssertComparison, phpUnserializeNoClasses, phpIncludeFixedVar, rbMarshalOwnFile, rbShellEscaped, rbHtmlSafeFixed, rbNotFoundRoute, jsConstExec, jsSpawnFixedArgs, jsRequireAllowListed } from './guards-code-patterns.mjs'
+import { constString, firstArgIsConst, pyLiteralCommand, pySubprocessStringShell, pyMarkSafeLiteral, pyDefusedMinidom, pyCsrfExemptSigned, pyZipOnlyExtract, goConstFirstArg, goGetFromConfig, goLoopbackListen, goPprofLoopbackOnly, goShellLiteralScript, goSprintfConstArgs, goCookieSecureMultiline, goHtmlLiteral, goBaseWrapped, goZipChecked, javaConstProcess, javaConstSpel, javaConstLookup, javaConstExec, javaStreamModeNoPadding, javaSqlConstTail, javaLdapEscaped, javaFileNameOnly, csProcessLiteralInfo, csSqlConstTail, phpAssertComparison, phpUnserializeNoClasses, phpIncludeFixedVar, rbMarshalOwnFile, rbShellEscaped, rbHtmlSafeFixed, rbNotFoundRoute, jsConstExec, jsSpawnFixedArgs, jsSpawnFixedVar, jsRequireAllowListed } from './guards-code-patterns.mjs'
 import { rustInTest as rustTestAt } from './kit.mjs'
 const PY_SKIP = /^\s*#/
 const SLASH_SKIP = /^\s*(\/\/|\/\*|\*)/
@@ -224,14 +224,105 @@ export const PY = [
 ]
 
 // ---------------------------------------------------------------- JavaScript and TypeScript (cp-js)
+// js-deno-handler-raw-error: a Deno.serve handler that puts the text of a caught error in the response body with no caller check above it.
+const DENO_AUTH = /authoriz|getUser\(|getClaims\(|checkCaller|requireAuth|verifyJwt|jwtVerify|\bbearer\b|x-api-key|timingSafeEqual|constructEvent|(?<![\w$])\w*[Aa]uth\w*\s*\(/
+const ERR_VAR = String.raw`(?:e|err|error|ex)`
+const RAW_ERR_BODY = new RegExp(String.raw`\b(?:error|message|detail|details|msg|reason)\s*:\s*(?:String\(\s*${ERR_VAR}\s*\)|${ERR_VAR}\.message\b|\x60[^\x60\n]{0,120}\$\{\s*${ERR_VAR}(?:\.message)?\s*\}[^\x60\n]{0,120}\x60|${ERR_VAR}\s+instanceof\s+Error\s*\?\s*${ERR_VAR}\.message)`)
+const RESPONSE_CTX = /\bnew\s+Response\s*\(|\bResponse\.json\s*\(|JSON\.stringify\s*\(|(?<![\w$.])json\s*\(/
+function denoRawError(line, ctx) {
+  if (!RAW_ERR_BODY.test(line)) return false
+  if (!RESPONSE_CTX.test(ctx.lines.slice(Math.max(0, ctx.index - 3), ctx.index + 1).join('\n'))) return false
+  let start = -1
+  for (let i = ctx.index; i >= 0; i--) {
+    if (/\bDeno\.serve\s*\(/.test(ctx.lines[i])) {
+      start = i
+      break
+    }
+  }
+  return start >= 0 && !DENO_AUTH.test(ctx.lines.slice(start, ctx.index + 1).join('\n'))
+}
+
+// js-await-after-debit (heuristic): an awaited fetch, or a body read of a fetched response, after a balance-changing call in the same function with no try block around it.
+const DEBIT_CALL = /\bawait\s+(?:[\w$]+\.)*(?:reserve|debit|deduct|withdraw|spend|decrement)[A-Za-z]*\s*\(|\.rpc\(\s*['"`][a-z_]*(?:reserve|debit|deduct|withdraw|spend)[a-z_]*['"`]/
+function unguardedAfterDebit(line, ctx) {
+  const isFetch = /\bawait\s+fetch\s*\(/.test(line)
+  const body = /\bawait\s+([\w$]+)\.(?:text|json|arrayBuffer|blob)\s*\(/.exec(line)
+  if (!isFetch && !body) return false
+  if (/\.catch\s*\(/.test(line) || /\btry\s*\{/.test(line.slice(0, line.search(/\bawait\b/)))) return false
+  const fetchedBy = body ? new RegExp(String.raw`(?<![\w$])${body[1].replace(/\$/g, '\\$')}\s*=\s*await\s+fetch\s*\(`) : null
+  let fetched = !body
+  let debit = false
+  let guarded = false
+  let depth = 0
+  for (let i = ctx.index - 1; i >= 0 && i >= ctx.index - 150; i--) {
+    const l = ctx.lines[i]
+    if (/^[}\])]/.test(l)) break
+    if (DEBIT_CALL.test(l)) debit = true
+    if (fetchedBy?.test(l)) fetched = true
+    for (let k = l.length - 1; k >= 0; k--) {
+      if (l[k] === '}') depth++
+      else if (l[k] === '{' && --depth < 0) {
+        depth = 0
+        if (/\btry\s*\{/.test(l)) guarded = true
+        // The block that opens a function is the end of "the same function".
+        if (/\bfunction\b|=>/.test(l)) return debit && fetched && !guarded
+        break
+      }
+    }
+  }
+  return debit && fetched && !guarded
+}
+
+// js-duplicate-import-binding: the same name imported by two import declarations (or twice in one). That is a SyntaxError in a module and TS2300 in TypeScript, so no type checker is needed to be sure.
+const IMPORT_STMT = /^import[ \t]+(?:type[ \t]+)?([\w$ \t\r\n{},*]{1,1500}?)[ \t\r\n]+from[ \t]*['"][^'"\n]{1,200}['"]/gm
+function importedNames(clause) {
+  const names = []
+  const braces = /\{([^}]*)\}/.exec(clause)
+  for (const item of (braces ? braces[1] : '').split(',')) {
+    const it = item.trim().replace(/^type\s+(?=[\w$])/, '')
+    const name = /(?:\bas\s+)?([\w$]+)$/.exec(it)?.[1]
+    if (name) names.push(name)
+  }
+  for (const item of clause.replace(/\{[^}]*\}/, '').split(',')) {
+    const name = /^\s*(?:\*\s*as\s+)?([\w$]+)\s*$/.exec(item)?.[1]
+    if (name) names.push(name)
+  }
+  return names
+}
+const dupImportCache = new Map()
+function duplicateImportLines(text) {
+  if (dupImportCache.has(text)) return dupImportCache.get(text)
+  const seen = new Set()
+  const dup = new Set()
+  for (const m of text.matchAll(IMPORT_STMT)) {
+    const line = text.slice(0, m.index).split('\n').length - 1
+    for (const n of importedNames(m[1])) {
+      if (seen.has(n)) dup.add(line)
+      seen.add(n)
+    }
+  }
+  if (dupImportCache.size > 50) dupImportCache.clear()
+  dupImportCache.set(text, dup)
+  return dup
+}
+
 export const JS = [
+  JSF('js-duplicate-import-binding', 'the same name is imported twice in one file (a SyntaxError in a module and TS2300 in TypeScript; usually a merge left both)', undefined, "import { can, pageAllowed } from './entitlements'\nimport { useEntitlements } from './stores'\nimport { can } from './perms'\n\nexport const ok = can('x') && pageAllowed('y')\n", "import { can, pageAllowed } from './entitlements'\nimport { useEntitlements } from './stores'\nimport { can as canEdit } from './perms'\n\nexport const ok = can('x') && canEdit('y') && pageAllowed('z')\n", {
+    test: (line, ctx) => /^import\b/.test(line) && !/\.d\.ts$/.test(ctx.file) && duplicateImportLines(ctx.text).has(ctx.index),
+  }),
+  JSF('js-deno-handler-raw-error', 'a Deno.serve handler returns the text of a caught error (String(e) or e.message) in the response and checks no caller before it (error text can name secrets and hosts)', undefined, "Deno.serve(async (req) => {\n  try {\n    return new Response(JSON.stringify({ ok: true, rows: await load() }))\n  } catch (e) {\n    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 })\n  }\n})\n", "Deno.serve(async (req) => {\n  const caller = await checkCaller(req)\n  if (!caller.ok) return new Response('no', { status: 401 })\n  try {\n    return new Response(JSON.stringify({ ok: true, rows: await load() }))\n  } catch (e) {\n    console.error('run failed', e)\n    return new Response(JSON.stringify({ ok: false, error: 'internal' }), { status: 500 })\n  }\n})\n", {
+    test: denoRawError,
+  }),
+  JSF('js-await-after-debit', 'an awaited fetch or body read follows a debit or reserve call in the same function with no try block, so a network failure leaves the money taken (heuristic: it cannot see a try in a caller or a refund elsewhere)', undefined, "async function chat(db, req) {\n  const hold = await reserveBudget(db, req.account, 50)\n  const res = await fetch(URL, { method: 'POST' })\n  const raw = await res.text()\n  return raw\n}\n", "async function chat(db, req) {\n  const hold = await reserveBudget(db, req.account, 50)\n  try {\n    const res = await fetch(URL, { method: 'POST' })\n    return await res.text()\n  } catch (err) {\n    await refund(db, hold)\n    throw err\n  }\n}\n", {
+    test: unguardedAfterDebit,
+  }),
   JSF('js-exec-variable', 'child_process exec runs a command string that is not a fixed literal', /(?<![\w$.])(?:(?:child_process|childProcess|cp)\.)?exec(?:Sync)?\(\s*(?!['"][^'"\n]{0,300}['"]\s*[,)])(?!\w+\??\s*:\s*[A-Za-z{\[])/, 'exec(cmd, done)', 'exec("ls -l", done)', { unless: jsConstExec }),
   JSF('js-exec-alias', 'a child_process exec under another name (renamed import, namespace import or promisify) runs a command string that is not a fixed literal', undefined, "import { exec as run } from 'child_process'\nrun(cmd)", "import { exec as run } from 'child_process'\nrun('ls -l')", { test: (line, ctx) => {
     if (!/exec/.test(ctx.text)) return false
     const re = execAliasRe(ctx.text)
     return Boolean(re) && joined(re, (l) => re.test(l))(line, ctx)
   } }),
-  JSF('js-spawn-shell', 'spawn or execFile is given shell: true, so arguments are parsed by a shell', /\bspawn(?:Sync)?\([^\n]{0,300}\bshell\s*:\s*true\b/, 'spawn("ls", [], { shell: true })', 'spawn("ls", [])', { unless: jsSpawnFixedArgs }),
+  JSF('js-spawn-shell', 'spawn or execFile is given shell: true, so arguments are parsed by a shell', /\bspawn(?:Sync)?\([^\n]{0,300}\bshell\s*:\s*true\b/, 'spawn("ls", [], { shell: true })', 'spawn("ls", [])', { unless: (l, c) => jsSpawnFixedArgs(l) || jsSpawnFixedVar(l, c) }),
   JSF('js-require-variable', 'require is called with a name that is not a fixed string', /(?<![\w$.])require\(\s*(?:(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|path\.|__dirname|process\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,200}\)|`[^`\n]{0,150}\$\{[^`\n]{1,150}\}[^`\n]{0,150}`\s*\)|(['"])[^'"\n]{0,150}\1\s*\+\s*(?!['"`]|[A-Z][A-Z0-9_]*\s*\)|process\.|__dirname|path\.|join\(|resolve\()[A-Za-z_$][^)\n]{0,100}\))/, 'const m = require(name)', 'const m = require("fs")', { unless: (l, c) => requireHelperOnlyFixed(l, c) || jsRequireAllowListed(l, c) }),
   JSF('js-require-url', 'a module is loaded from a web address', /(?<![\w$.])require\(\s*['"]https?:\/\//, 'require("https://x.example/a.js")', 'require("./a.js")'),
   JSF('js-fs-request-path', 'a file system call takes its path straight from the request', /\bfs\.(?:readFile|readFileSync|writeFile|writeFileSync|createReadStream|createWriteStream|unlink|unlinkSync|readdir|readdirSync|stat|statSync|access|appendFile|rm|rmSync)\(\s*(?:req|request|ctx|params|query|body)\b/, 'fs.readFile(req.query.file, cb)', 'fs.readFile(safePath(req.query.file), cb)'),

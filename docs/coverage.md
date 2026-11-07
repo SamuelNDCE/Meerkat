@@ -9,18 +9,18 @@ In short: Meerkat reads files as text and applies rules. It is a fast first line
 ## 1. What Meerkat scans
 
 <!-- coverage:start -->
-Counted from all 51 packs under `packs/`: **395 checks** in **50 suites** with **1433 rules** (sub-checks).
+Counted from all 51 packs under `packs/`: **400 checks** in **50 suites** with **1443 rules** (sub-checks).
 
-Run by default: 349 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
+Run by default: 354 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
 
-Checks that need an outside tool (NOT RUN without it): 39 of 395. The other 356 need only Node.
+Checks that need an outside tool (NOT RUN without it): 39 of 400. The other 361 need only Node.
 
 Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results inside them. **Runs by default**: quick = in `meerkat verify`; full = only in `meerkat full`; both = a mix; opt-in = only when you ask. **Tool**: yes means at least one check in the suite is NOT RUN without that outside tool; the others still work.
 
 | Suite | What it looks at | Checks | Rules | Runs by default | Needs an outside tool? |
 |---|---|---|---|---|---|
 | `secrets` | Any text file git tracks; private key and credential files | 4 | 285 | quick | no |
-| `risky-calls` | JS/TS, Python, Go, Rust, Java and more (code), plus tracked text files | 7 | 95 | quick | no |
+| `risky-calls` | JS/TS, Python, Go, Rust, Java and more (code), plus tracked text files | 7 | 98 | quick | no |
 | `injection-patterns` | JS/TS, Python, Java, C#, PHP, Ruby source | 7 | 71 | quick | no |
 | `crypto-and-auth` | Source files (JWT and cipher settings) | 2 | 2 | quick | no |
 | `supply-chain` | package.json, lockfiles, requirements, .npmrc | 8 | 24 | both | yes: npm |
@@ -36,7 +36,7 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `javascript` | JS and TS source | 7 | 7 | quick | no |
 | `slow-code-patterns` | JS and TS source | 4 | 4 | quick | no |
 | `repo-docs` | README, SECURITY, CONTRIBUTING, CODEOWNERS, CHANGELOG | 5 | 5 | quick | no |
-| `repo-files` | File names, sizes, modes, .gitignore, .editorconfig | 12 | 12 | quick | no |
+| `repo-files` | File names, sizes, modes, .gitignore, .editorconfig | 17 | 17 | quick | no |
 | `licensing` | LICENSE, NOTICE, package licences | 5 | 5 | quick | no |
 | `config-files` | JSON, YAML, TOML, .env.example, Makefile, game-engine and CMS projects | 22 | 22 | quick | no |
 | `ci-config` | CI files (GitLab, CircleCI, Azure, Jenkins, GitHub), Helm, Ansible, pre-commit | 18 | 18 | quick | yes: actionlint |
@@ -53,7 +53,7 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `dependencies` | Manifests and lockfiles; opt-in: clean install | 15 | 15 | quick + opt-in | no |
 | `performance` | Images, assets, and budgets you set (.meerkat-budgets.json) | 11 | 11 | both | no |
 | `node` | JS/TS projects (package.json, tsconfig) | 9 | 9 | both | yes: eslint, madge, prettier, tsc |
-| `rust` | Rust crates (Cargo.toml) | 16 | 155 | both + opt-in | yes: cargo, cargo-audit, cargo-deny |
+| `rust` | Rust crates (Cargo.toml) | 16 | 157 | both + opt-in | yes: cargo, cargo-audit, cargo-deny |
 | `python` | Python projects | 8 | 8 | both | yes: bandit, mypy, pytest, ruff, vulture |
 | `go` | Go modules | 4 | 4 | quick | yes: go |
 | `java` | Maven projects (pom.xml) | 3 | 3 | quick | yes: mvn |
@@ -80,7 +80,7 @@ Legend. **DEEP**: 20 or more rules of Meerkat's own, and the rules were run agai
 
 | Area | Level | Own rules | Tools it can run | Note |
 |---|---|---|---|---|
-| JavaScript, TypeScript | DEEP | 32 | - |  |
+| JavaScript, TypeScript | DEEP | 35 | - |  |
 | Python | BASIC | 35 | - | rules not yet tried on real Python code |
 | Go | BASIC | 27 | go | use on real Go code not confirmed |
 | Rust | BASIC | 13 | cargo, cargo-audit, cargo-deny | rules tried on real Rust code (one corpus repo) |
@@ -234,6 +234,7 @@ To read back: `node run.mjs --last`, or `node run.mjs --why <check>`. More in `d
 | `.meerkat-infraplus-allow` | Docker, Kubernetes, Terraform, Compose, Actions rules |
 | `.meerkat-webhardening-allow` | header, HTML, publish-folder and supply rules |
 | `.meerkat-test-quality-allow` | `test-quality-static` |
+| `.meerkat-gap-allow` | `key-in-config`, `test-no-assert`, `img-alt-missing`, `scripts-binaries`, `payment-status-unchecked` (`<check-id> <file>` or `<check-id> *`) |
 
 To turn off a rule everywhere, use `disableSubs` in `meerkat.config.json`, for example `"secret-scan/aws-access-key"`. A turned-off rule is left out of the counts and listed on every run.
 

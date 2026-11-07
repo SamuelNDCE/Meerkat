@@ -6,4 +6,4 @@ That run also scanned clean and trap twins (the same code written safely) and re
 
 Recall on planted bugs measures what was planted, not real-world accuracy.
 
-Every planted defect and its result is listed in [docs/accuracy-results.md](docs/accuracy-results.md).
+Every planted defect and its result is listed in [docs/accuracy-results.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy-results.md).

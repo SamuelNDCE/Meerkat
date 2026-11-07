@@ -14,7 +14,7 @@ import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, re
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { argVal, fail, hasFlag, notRun, pass, repoRoot, say } from './lib.mjs'
-import { FAKE_VALUE, configPath, isTestFile, rustTestLines } from './kit.mjs'
+import { FAKE_VALUE, configPath, isPlaceholderValue, isTestFile, rustTestLines } from './kit.mjs'
 
 const RULES = [
   { name: 'aws-access-key-id', re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
@@ -47,7 +47,7 @@ function entropy(text) {
 
 function listFiles(root) {
   try {
-    const out = execFileSync('git', ['-C', root, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    const out = execFileSync('git', ['-C', root, 'ls-files', '-z'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })
     const files = out.split('\0').filter(Boolean)
     if (files.length) return files
   } catch {
@@ -205,7 +205,7 @@ function scanLine(lines, i, lineNo, norm, inTest, allow, findings) {
     const value = m[1] ?? m[0]
     if (rule.entropy && entropy(value) < rule.entropy) continue
     // A value that says it is fake (FAKE_TOKEN, SUPERSECRET) is not a secret. A key block mentioned in a comment has no key body under it.
-    if (!hasFlag('--include-tests') && (FAKE_VALUE.test(value) || FAKE_VALUE.test(m[0]))) continue
+    if (!hasFlag('--include-tests') && (FAKE_VALUE.test(value) || FAKE_VALUE.test(m[0]) || (rule.entropy && isPlaceholderValue(value)))) continue
     // Only a header in a comment, with no key text after it on the same line (also after a literal \n) or on the next, is a mention and not a key.
     // The same for a constant that is the header alone (a constant named PEM_BEGIN that holds only the header text): the line ends right after it.
     if (rule.name === 'private-key-block') {
@@ -229,9 +229,13 @@ function main() {
       writeFileSync(path.join(dir, 'src', 'config.js'), `const aws = '${'AKIA' + 'QWERTYUIOPASDFGH'}'\nconst gh = '${'ghp_' + '0123456789abcdefghijklmnopqrstuvwxyz'}'\n`)
       writeFileSync(path.join(dir, 'key.pem'), `${'-----BEGIN ' + 'RSA PRIVATE KEY-----'}\nMIIBOgIBAAJBAK\n`)
       const { findings } = scan(dir)
-      say(`planted 3 fake secrets, found ${findings.length}`)
-      if (findings.length) fail(`${findings.length} secret(s) found (expected: this is the self-test fixture)`)
-      pass('the scanner found nothing in a folder with planted secrets, so it cannot be trusted')
+      // The planted secrets must be found BY RULE. Any other failure (git printing "fatal: not a git repository", a crash) is not a detection.
+      const rules = new Set(findings.map((f) => f.rule))
+      const want = ['aws-access-key-id', 'github-token', 'private-key-block']
+      const missing = want.filter((r) => !rules.has(r))
+      say(`planted ${want.length} fake secrets, found ${findings.length}: ${[...rules].join(', ') || 'none'}`)
+      if (!missing.length) fail(`self-test: planted secrets found by rule (${want.join(', ')}); expected, this is the self-test fixture`)
+      pass(`self-test FAILED: the scanner did not find the planted secret(s) for ${missing.join(', ')}, so it cannot be trusted`)
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
