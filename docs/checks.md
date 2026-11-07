@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**395 checks** in 50 suites with 1438 sub-checks (a check that declares no rules counts as one), across 51 packs: 350 quick, 45 thorough, 38 opt-in. [Security 123](#security-checks) · [Functionality 217](#functionality-checks) · [UI 25](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
+**400 checks** in 50 suites with 1443 sub-checks (a check that declares no rules counts as one), across 51 packs: 355 quick, 45 thorough, 38 opt-in. [Security 124](#security-checks) · [Functionality 220](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -28,7 +28,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `javascript` | JavaScript and TypeScript | 7 | 7 | Common JS and TS mistakes: loose equality, var, unhandled promises, any, ts-ignore. |
 | `slow-code-patterns` | Slow code patterns | 4 | 4 | Sync file calls in handlers, parsing or regex building inside loops, DOM queries in loops. |
 | `repo-docs` | Repository docs | 5 | 5 | README sections, security policy, contributing guide, code owners and changelog format. |
-| `repo-files` | Repository files | 12 | 12 | Large files, odd file names, case conflicts, symlinks, exec bits, gitignore and editorconfig. |
+| `repo-files` | Repository files | 17 | 17 | Large files, odd file names, case conflicts, symlinks, exec bits, gitignore and editorconfig. |
 | `licensing` | Licensing | 5 | 5 | A licence file exists and matches what the package says. |
 | `config-files` | Config files | 22 | 22 | JSON, YAML and TOML parse, env examples, line endings and Makefile tabs. |
 | `ci-config` | CI config | 18 | 18 | A CI pipeline exists, has time limits and pins its Node version. |
@@ -64,7 +64,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 
 ## Security checks
 
-Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 123 checks.
+Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 124 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -135,6 +135,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `ip-terraform-compose` | fast | tiny | 1 s | Terraform and Compose: open ports, encryption, public access, IAM wildcards, capabilities and dependencies | infra-plus |
 | `jenkinsfile-safety` | fast | tiny | 1 s | Jenkinsfile keeps parameters out of shell strings, credentials out of the log and the Docker socket off any agent | ci-systems |
 | `jwt-weak` | fast | tiny | 1 s | JWTs: no "none" algorithm, no decode used as a sign-in check, no secret typed into the code | security-plus |
+| `key-in-config` | fast | tiny | 1 s | No key-shaped string (sk_, ghp_, AKIA, xox) is assigned to a key-like name in code or config | hygiene |
 | `kube-linter` | fast | light | 10 s | Kubernetes manifests: security and best practice (kube-linter) *(needs: kube-linter)* | kubernetes |
 | `license` | fast | tiny | 1 s | A license is declared, and no copyleft dependency slipped in | hygiene |
 | `license-header-consistency` | fast | tiny | 1 s | The LICENSE text and the package manifests name the same licence | privacy |
@@ -194,7 +195,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 
 ## Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 217 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 220 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -315,6 +316,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `openapi-valid` | fast | tiny | 1 s | OpenAPI and Swagger files have a version, info title and version, paths, and responses on every operation | api |
 | `package-fields` | fast | tiny | 1 s | package.json has its name, version, license and entry points that exist | repo |
 | `pagination-bounds` | fast | tiny | 1 s | Request-supplied page sizes have an upper bound (listed unless required) | api |
+| `payment-status-unchecked` | fast | tiny | 1 s | Candidate: an awaited payment, transfer or refund call has its result or error checked | hygiene |
 | `phpstan` | fast | medium | 30 s | PHPStan: bugs and undefined code (also reports PHP syntax errors) *(needs: phpstan)* | php |
 | `pickle-load` | fast | tiny | 1 s | Pickle loads read a fixed path or use weights_only | data-science |
 | `pre-commit-config` | fast | tiny | 1 s | pre-commit hook repositories are pinned to a release and fetched over https | ci-systems |
@@ -345,6 +347,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `rust-test` | fast | heavy | 5.0 min | Rust tests (cargo test, the whole workspace) | rust |
 | `rust-todo-macros` | fast | tiny | 1 s | Rust has no todo! or unimplemented! outside tests | lang |
 | `rust-unwrap-overuse` | fast | tiny | 1 s | Rust unwrap() and expect() outside tests stay within the budget (lang.maxUnwrap) | lang |
+| `scripts-binaries` | fast | tiny | 1 s | Every program an npm script starts with is installed or on the path | hygiene |
 | `scripts-resolve` | fast | tiny | 1 s | Every file an npm script runs exists | hygiene |
 | `semver-valid` | fast | tiny | 1 s | Package, Rust and Python versions are valid version numbers | quality |
 | `shell-hygiene` | fast | tiny | 1 s | Shell scripts have a shebang, stop on errors and use LF line endings | quality |
@@ -360,6 +363,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `swiftlint` | fast | tiny | 10 s | SwiftLint: Swift style and safety *(needs: swiftlint)* | swift |
 | `tags-semver` | fast | tiny | 1 s | Version-like tags are vX.Y.Z | git |
 | `terraform-fmt` | fast | tiny | 5 s | Terraform: formatting (terraform fmt) *(needs: terraform)* | terraform |
+| `test-no-assert` | fast | tiny | 1 s | Every JavaScript or TypeScript test asserts something | hygiene |
 | `test-presence` | fast | tiny | 1 s | The source has tests, and large folders of source have a test file | quality |
 | `test-quality-static` | fast | tiny | 3 s | Test quality, read from the files: no assertions, always-true assertions, swallowed errors, sleeps, skipped tests | mutation |
 | `test-to-code-ratio` | fast | tiny | 2 s | Test lines per source line, by folder (informational): folders with source and no tests are listed | mutation |
@@ -418,7 +422,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 
 ## UI checks
 
-Pages and styles: accessibility basics and valid markup. 25 checks.
+Pages and styles: accessibility basics and valid markup. 26 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -433,6 +437,7 @@ Pages and styles: accessibility basics and valid markup. 25 checks.
 | `iframe-title` | fast | tiny | 1 s | Every iframe has a title | a11y |
 | `image-alt-quality` | fast | tiny | 1 s | Image descriptions say what the picture shows (not a file name or a bare word like "image") | a11y |
 | `image-dimensions` | fast | tiny | 1 s | Every image has a width and height, and large local images load lazily | web-plus |
+| `img-alt-missing` | fast | tiny | 1 s | Every image in a template has an alt attribute (alt="" for decoration) | hygiene |
 | `link-text` | fast | tiny | 1 s | Every link has text that says where it goes (no empty or "click here" links) | a11y |
 | `manifest-valid` | fast | tiny | 1 s | Web app manifests are valid JSON with a name, icons and a start_url | web-plus |
 | `media-captions` | fast | tiny | 1 s | Videos have captions, and autoplaying media is muted or has controls | a11y |

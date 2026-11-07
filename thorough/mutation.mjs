@@ -1527,7 +1527,7 @@ const nearestPyClass = (lines, i, ind) => {
   return ''
 }
 
-const ASSERT = {
+export const ASSERT = {
   js: /\b(expect|assert|should)\b|\.(toBe|toEqual|toThrow|toMatch|rejects|resolves)\b|\bt\.(is|true|false|deepEqual|equal|throws|ok|plan|pass|fail|notThrows)\b|\bthrow\b|\bfail\s*\(|\b(check|verify|ensure|assert|expect)\w*\s*\(|\bdone\s*\(/,
   py: /\bassert\b|self\.assert|\bpytest\.(raises|fail|warns)|\.assert_\w+|\braise\b|\bassert_\w+\(|\bcheck\w*\(|\bverify\w*\(/,
   go: /\bt\.(Fatal|Fatalf|Error|Errorf|Fail|FailNow)\b|\b(assert|require)\.|\bpanic\(|\b(check|verify|assert)\w*\(/i,
@@ -1535,7 +1535,7 @@ const ASSERT = {
   cs: /\bAssert\.|\.Should\(|\bThrows\b|\bThrow\b|\bVerify\(/,
   rs: /\bassert\w*!|\bpanic!|\bunreachable!|\.unwrap\(\)|\.expect\(|\?\s*;/,
 }
-const asserts = (t, lang) => Boolean(t.shouldFail) || ASSERT[lang].test(t.mbody)
+export const asserts = (t, lang) => Boolean(t.shouldFail) || ASSERT[lang].test(t.mbody)
 export const testable = (t) => !t.skipped && !t.empty && !t.opaque
 
 // Logic rules: { id, title, langs, bad, good, sample, find(text, file, lang, ctx) -> [{line, msg}] }
