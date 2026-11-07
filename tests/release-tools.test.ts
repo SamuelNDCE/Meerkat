@@ -84,6 +84,9 @@ describe('pack file-list gate', () => {
     expect(checkPackList(['package.json', 'docs/guide.md']).join()).toMatch(/outside the expected folders/)
     expect(checkPackList(['package.json', 'notes.txt']).join()).toMatch(/outside the expected folders/)
   })
+  test('the workflow profiles folder is allowed', () => {
+    expect(checkPackList(['package.json', 'profiles/solo.json', 'profiles/team.json'])).toEqual([])
+  })
   test('an empty tarball fails', () => {
     expect(checkPackList([]).join()).toMatch(/empty/)
   })
