@@ -43,7 +43,7 @@ A NOT RUN is never a pass. Report what is missing.
 | `meerkat smoke` | Runs each selected check on the changed files with a tiny time limit. It fails when the tool misbehaves, not when your project has problems. |
 | `meerkat blast <file>[#symbol]` | Importers, modules, tests that reach the target, and unresolved imports (never counted as safe). `--json` for the full result. |
 | `meerkat brief <file>[#symbol]` | Declaration, callers, tests, findings from the last saved run, git churn, a risk tier with reasons and a checklist. Starts no scan. `--json` for the facts. |
-| `meerkat map --app <folder>` | Writes `codemap.json` and `codemap.md` into a run folder: entry points, modules, most imported files. |
+| `meerkat map --app <folder>` | Writes `codemap.json` and `codemap.md` into a run folder: files with functions and line numbers, routes, tests, entry points, modules, most imported files. Only changed files are re-read; `--check` says whether it is current. |
 | `meerkat verify` / `meerkat full` / `meerkat run <preset>` | Run the quick preset, every check, or any preset. `--json` prints the run summary. |
 | `meerkat check <id\|suite\|suite/check>` | Runs only those checks. |
 | `meerkat tests --json` | The catalog of every kind of check: what it proves, when it triggers, cost, needs. |

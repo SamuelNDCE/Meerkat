@@ -62,9 +62,9 @@ describe('the fixture', () => {
   const map = buildCodemap(FIXTURE)
 
   test('schema fields and version', () => {
-    expect(map.schemaVersion).toBe(1)
-    expect(Object.keys(map).sort()).toEqual(['app', 'entryPoints', 'files', 'generator', 'limits', 'moduleEdges', 'modules', 'mostImported', 'skipped', 'summary', 'unresolved', 'schemaVersion'].sort())
-    for (const f of map.files) expect(Object.keys(f).sort()).toEqual(['exports', 'id', 'imports', 'language', 'lines', 'path'])
+    expect(map.schemaVersion).toBe(2)
+    expect(Object.keys(map).sort()).toEqual(['app', 'build', 'entryPoints', 'files', 'generator', 'limits', 'moduleEdges', 'modules', 'mostImported', 'routes', 'routing', 'skipped', 'summary', 'tests', 'unresolved', 'schemaVersion'].sort())
+    for (const f of map.files) expect(Object.keys(f).sort()).toEqual(['exports', 'id', 'imports', 'language', 'lines', 'path', 'purpose', 'routes', 'symbols', 'testedBy'])
     expect(map.app.name).toBe('codemap')
     expect(JSON.stringify(map)).not.toMatch(/[A-Za-z]:[\\/]|Users/)
   })
@@ -164,7 +164,7 @@ describe('the fixture', () => {
   test('markdown summary is short and has the sections, with no em dashes', () => {
     const md = codemapMarkdown(map)
     for (const h of ['# Code map', '## Entry points', '## Modules', '## Most imported files', '## Unresolved', '## How to read this']) expect(md).toContain(h)
-    expect(md.split('\n').length).toBeLessThan(80)
+    expect(md.split('\n').length).toBeLessThan(140)
     expect(md).not.toContain(String.fromCharCode(0x2014))
   })
 })
@@ -228,7 +228,7 @@ describe('writing and the command', () => {
     const r = writeCodemap(FIXTURE, run)
     expect(existsSync(r.json)).toBe(true)
     expect(existsSync(r.md)).toBe(true)
-    expect(JSON.parse(readFileSync(r.json, 'utf8')).schemaVersion).toBe(1)
+    expect(JSON.parse(readFileSync(r.json, 'utf8')).schemaVersion).toBe(2)
   })
   test('runMap --app writes both files into a new run folder and prints it', () => {
     const lines: string[] = []

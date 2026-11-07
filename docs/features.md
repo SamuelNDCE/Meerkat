@@ -90,11 +90,12 @@ Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 
 ## Codebase map
 
-- **What it is:** a written map of a project: entry points, modules and their imports.
-- **Why it is good:** a person or an AI meeting unfamiliar code gets its shape in one file before reading any of it.
-- **What it does:** writes `codemap.json` (files, imports, exports, entry points, module edges) and `codemap.md` (entry points, modules, most imported files, unresolved imports, blast radius of the top five) into a new run folder.
-- **What it does NOT do:** import or run your code (it reads text with regular expressions), guess an import it cannot resolve (it is marked unresolved with a reason), or map more than a fixed number of files.
-- **Command or tool:** `meerkat map [--app <folder>] [--json]`; MCP `meerkat_map`, then the resource `meerkat://map/latest`.
+- **What it is:** a written map of a project: every file with its purpose, functions and classes (with line numbers), exports and imports, plus routes, entry points, modules and which tests cover which files.
+- **Why it is good:** a person or an AI meeting unfamiliar code gets its shape in one file before reading any of it, and the map keeps itself current as the code changes.
+- **What it does:** writes `codemap.json` (schema version 2: a build header with the commit and time, files, symbols, imports resolved to project files, routes, tests, entry points, module edges) and `codemap.md` (the same, short) into a run folder. The output is sorted and has no clock in its content, so an unchanged project gives byte-identical files and no new run folder. The per-file facts are cached by content hash in the Meerkat data folder (never in your repo), so a second run re-reads only the files that changed. `meerkat map --check` says in about 50 ms whether the saved map is current, and lists the stale files if not. `meerkat blast`, `meerkat brief` and the MCP tools refresh the changed files first and say so in one line ("map: refreshed 2 files first").
+- **Routes:** Express, Fastify, Hono, Koa router, Restify, hapi, Polka (a method call with a string path), Next.js app router and pages/api (from the file path), Flask, Quart, FastAPI and Sanic (decorators). A framework that is imported but not parsed (for example NestJS or Django) is named in the header instead of guessed.
+- **What it does NOT do:** import or run your code (it reads text with regular expressions), guess an import it cannot resolve (it is marked unresolved with a reason), follow mounted route prefixes, template-string paths, tsconfig aliases or computed requires, see a test that starts your program as a child process (only imports count), or map more than a fixed number of files. See [docs/codemap.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md).
+- **Command or tool:** `meerkat map [--app <folder>] [--json] [--quiet] [--check]`; MCP `meerkat_map`, then the resource `meerkat://map/latest`.
 
 ## Red testing
 
