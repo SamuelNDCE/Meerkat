@@ -16,7 +16,7 @@ Each feature below has the same short block: what it is, why it is good, what it
 | Red testing | `meerkat redtest --kind <kind>` (or `node lib/redtest/run.mjs --kind <kind>`); MCP `meerkat_redtest` |
 | Catalog and tests command | `meerkat tests --json`, `meerkat.order.json`; MCP `meerkat_tests` |
 | Doctor, tools, discover and recommend | `meerkat doctor`, `meerkat tools`, `meerkat discover`, `meerkat recommend`; MCP `meerkat_doctor`, `meerkat_tools`, `meerkat_discover`, `meerkat_recommend` |
-| MCP tools | `meerkat mcp serve`: 29 tools |
+| MCP tools | `meerkat mcp serve` (the count: `meerkat_list`, or `node bin/meerkat-mcp.mjs --list-tools`) |
 | MCP resources and prompts | `meerkat://run/latest/...`, `meerkat://map/latest`, `meerkat://tests/catalog`, nine prompts |
 | Hook safety | `meerkat hook install\|remove\|status`; MCP `meerkat_hook`, `meerkat_hook_status` |
 | AI verification of findings | `--ai-verify`, `meerkat ai` |
@@ -35,9 +35,9 @@ Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 
 - **What it is:** the saved result of a run, as data a person or an AI can read, filter and hand on.
 - **Why it is good:** an AI that never saw the project gets every problem with its place, evidence and fix hint, worst first, without scrolling a log.
-- **What it does:** every run saves `findings.json`, `findings.md`, `findings.sarif` and `detections.jsonl`. `meerkat findings` lists them (filters: severity, suite, check, new, fixed), `meerkat finding <id>` shows one in full, `meerkat prompt` writes a prompt for an AI. `--fail-on <severity>` sets the exit code for CI.
+- **What it does:** every run saves `findings.json`, `findings.md`, `findings.sarif` and `detections.jsonl`. `meerkat findings` lists them (filters: severity, suite, check, new, fixed), `meerkat finding <id>` shows one in full, `meerkat prompt` writes a prompt for an AI. `--fail-on <severity>` sets the exit code for CI (with `--new` only new findings count), `--export sarif|markdown|json` points at the saved file.
 - **What it does NOT do:** decide for you that a finding is a false alarm. An AI double-check happens only if you opt in.
-- **Command or tool:** `meerkat findings [folder|run-id] [--json]`, `meerkat finding <id>`, `meerkat prompt [--print]`; MCP `meerkat_findings`, `meerkat_finding`.
+- **Command or tool:** `meerkat findings [folder|run-id] [--json]`, `meerkat finding <id>`, `meerkat prompt [--print]`; MCP `meerkat_findings` (also `failOn`, `new`, `export`), `meerkat_finding`, `meerkat_prompt`.
 
 ## Accepted findings and ratchet
 
@@ -127,7 +127,7 @@ Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 
 - **What it is:** a stdio MCP server that offers Meerkat to an AI client as tools.
 - **Why it is good:** an AI can run the checks, read the findings and look up a blast radius itself, with inputs that are checked before anything starts.
-- **What it does:** offers 29 tools. Read-only: `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_blast`, `meerkat_brief`, `meerkat_tests`, `meerkat_findings`, `meerkat_finding`, `meerkat_doctor`, `meerkat_discover`, `meerkat_recommend`, `meerkat_tools`, `meerkat_trend`, `meerkat_suggest`, `meerkat_pr_comment`, `meerkat_dismissals`, `meerkat_hook_status`, `meerkat_describe`. They run the project's own commands: `meerkat_run`, `meerkat_self_test`, `meerkat_gate`, `meerkat_smoke`, `meerkat_redtest`, and `meerkat_map` writes a map into the log folder. Writes (description starts with WRITES, folder required): `meerkat_dismiss`, `meerkat_undismiss`, `meerkat_baseline`, `meerkat_hook`. Folders must be inside the folder the server started in or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
+- **What it does:** offers its tools (the count and the names: `meerkat_list`, `meerkat_version` or `node bin/meerkat-mcp.mjs --list-tools`). The tools that read a run take `folder`, `run` and `preset`, so a call stays on one project; `meerkat_run` takes `ratchet` and the run flags; `meerkat_findings` takes `failOn`, `new` and `export`; every result starts with a status line and has a `schemaVersion`. Read-only: `meerkat_list`, `meerkat_presets`, `meerkat_last`, `meerkat_why`, `meerkat_blast`, `meerkat_brief`, `meerkat_tests`, `meerkat_findings`, `meerkat_finding`, `meerkat_doctor`, `meerkat_discover`, `meerkat_recommend`, `meerkat_tools`, `meerkat_trend`, `meerkat_suggest`, `meerkat_pr_comment`, `meerkat_dismissals`, `meerkat_hook_status`, `meerkat_describe`, `meerkat_version`, `meerkat_check_list`, `meerkat_run_list`. They run the project's own commands: `meerkat_run`, `meerkat_self_test`, `meerkat_gate`, `meerkat_smoke`, `meerkat_redtest`, and `meerkat_map` writes a map into the log folder. Writes (description starts with WRITES, folder required): `meerkat_dismiss`, `meerkat_undismiss`, `meerkat_baseline`, `meerkat_hook`. Folders must be inside the folder the server started in or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
 - **What it does NOT do:** run any command except Meerkat's own, or offer `root add`, `update`, `init`, check or preset edits, `recommend --add`, `tools install`, `rules test`, `logs`, `repos` or `recent`.
 - **Command or tool:** `meerkat mcp serve`, `meerkat mcp install [claude] [--dry-run]`, `meerkat mcp status`, or `node bin/meerkat-mcp.mjs`. The tools are defined in `lib/mcp.mjs`, `lib/mcptools.mjs` and `lib/mcpmore.mjs`.
 
