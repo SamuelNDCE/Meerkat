@@ -110,7 +110,7 @@ describe('tools', () => {
     const res = r.result
     expect(res.isError).toBe(true)
     expect(res.structuredContent.exitCode).toBe(1)
-    expect(res.structuredContent.counts).toEqual({ passed: 2, failed: 1, notRun: 1 })
+    expect(res.structuredContent.counts).toEqual({ passed: 2, failed: 1, notRun: 1, skipped: 0 })
     expect(res.structuredContent.failed.map((f: { id: string }) => f.id)).toEqual(['build', 'e2e'])
     expect(res.structuredContent.failed[0]).toMatchObject({ reason: 'exit 1', logFile: '/logs/build.log', command: 'npm run build', seconds: 3.2 })
     expect(res.structuredContent.runFolder).toBe('/logs/run1')

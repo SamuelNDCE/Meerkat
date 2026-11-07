@@ -836,7 +836,7 @@ describe('logs: every run saves what is needed to understand a failure', () => {
     expect(report).toContain('## Timeline')
     for (const f of ['summary.json', 'timeline.jsonl', 'report.md', 'lint.log']) expect(readFileSync(join(runDir, f), 'utf8').length).toBeGreaterThan(10)
     const summary = JSON.parse(readFileSync(join(runDir, 'summary.json'), 'utf8'))
-    expect(summary.counts).toEqual({ pass: 0, fail: 1, notRun: 0 })
+    expect(summary.counts).toEqual({ pass: 0, fail: 1, notRun: 0, skipped: 0 })
     expect(summary.results[0].logFile).toBe(file)
     expect(showLast(env).text).toContain('Failed (1)')
     expect(showWhy('lint', env).text).toContain('exit code: 1')

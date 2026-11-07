@@ -87,8 +87,8 @@ describe('run result headline', () => {
     const ctx = { ...base, runMeerkat: async () => ({ code: 1, stdout: '', stderr: '', timedOut: false }), readFile: () => summary({ pass: 1, fail: 1, notRun: 0 }, [{ id: 'lint', status: 'PASS', ms: 1 }, { id: 'build', status: 'FAIL', ms: 5, detail: 'exit 1' }]), findingsSummary: () => ({ top: [{ file: 'x.js', line: 7 }] }) }
     const r = await call(ctx, 'meerkat_run')
     const text = r.result.content[0].text as string
-    expect(text.split('\n')[0]).toBe('Meerkat FAIL: 1 failed, 0 warned, 1 passed. Top: x.js:7')
-    expect(r.result.structuredContent.headline).toBe(text.split('\n')[0])
+    expect(text.split('\n')[0]).toContain('Meerkat FAIL: 1 failed, 0 warned, 1 passed. Top: x.js:7') // the status line comes first (mcp parity)
+    expect(r.result.structuredContent.headline).toBe('Meerkat FAIL: 1 failed, 0 warned, 1 passed. Top: x.js:7')
   })
 })
 

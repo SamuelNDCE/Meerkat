@@ -36,6 +36,12 @@ describe('recordRun', () => {
   })
 })
 
+test('a SKIPPED check (tool never configured) is learned too, so its written guess is not used again', () => {
+  const next = recordRun({ checks: {} }, [{ id: 'eslint', status: 'SKIPPED', ms: 0, detail: 'no eslint configuration in this project' }, { id: 'stopped', status: 'SKIPPED', ms: 5, detail: 'skipped by you after 0:01' }], 'fast')
+  expect(Object.keys(next.checks)).toEqual(['eslint'])
+  expect(next.checks.eslint.fast).toEqual([1])
+})
+
 describe('the estimate moves toward a faster real time', () => {
   test('after three slow runs and then two fast ones, the run estimate follows the fast time', () => {
     const ids = ['a', 'b', 'c', 'd']
