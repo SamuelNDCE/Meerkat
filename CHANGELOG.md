@@ -2,6 +2,10 @@
 
 Every released version of Meerkat, newest first. Versions follow semantic versioning: a patch fixes, a minor adds, a major changes how you use it.
 
+## Unreleased
+
+- New: `meerkat brief <file>[#symbol]` (and MCP `meerkat_brief`, 29 tools now). One fast pre-edit call: declaration and signature, callers (count and the first 10 with the calling function), tests that reference it, findings from the last saved run (no scan is started), recent git churn, a risk tier with every reason written out, and a before-you-edit checklist. `--json` adds a `version` field. Cached by content hash, so a repeat call is quick. Covered by lib/brief.test.ts and lib/mcptools.test.ts.
+
 ## 0.5.1 (2026-11-06)
 
 A hotfix release. Items marked unverified were not proven against a real newer release or a live client.

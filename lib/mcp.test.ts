@@ -57,10 +57,10 @@ describe('protocol', () => {
     expect(d.result.protocolVersion).toBe('2024-11-05')
   })
 
-  test('tools/list names twenty-eight tools, each with an input schema and a two line description', async () => {
+  test('tools/list names every registered tool, each with an input schema and a two line description', async () => {
     const { ctx } = makeCtx()
     const r = await handleMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, ctx)
-    expect(r.result.tools.map((t: { name: string }) => t.name)).toEqual(['meerkat_run', 'meerkat_list', 'meerkat_presets', 'meerkat_last', 'meerkat_why', 'meerkat_self_test', 'meerkat_gate', 'meerkat_smoke', 'meerkat_blast', 'meerkat_map', 'meerkat_tests', 'meerkat_findings', 'meerkat_finding', 'meerkat_redtest', 'meerkat_dismiss', 'meerkat_baseline', 'meerkat_doctor', 'meerkat_discover', 'meerkat_recommend', 'meerkat_tools', 'meerkat_trend', 'meerkat_suggest', 'meerkat_pr_comment', 'meerkat_dismissals', 'meerkat_hook_status', 'meerkat_describe', 'meerkat_undismiss', 'meerkat_hook'])
+    expect(r.result.tools.map((t: { name: string }) => t.name)).toEqual(['meerkat_run', 'meerkat_list', 'meerkat_presets', 'meerkat_last', 'meerkat_why', 'meerkat_self_test', 'meerkat_gate', 'meerkat_smoke', 'meerkat_blast', 'meerkat_map', 'meerkat_tests', 'meerkat_findings', 'meerkat_finding', 'meerkat_redtest', 'meerkat_dismiss', 'meerkat_baseline', 'meerkat_doctor', 'meerkat_discover', 'meerkat_recommend', 'meerkat_tools', 'meerkat_trend', 'meerkat_suggest', 'meerkat_pr_comment', 'meerkat_dismissals', 'meerkat_hook_status', 'meerkat_describe', 'meerkat_undismiss', 'meerkat_hook', 'meerkat_brief'])
     for (const t of TOOLS) {
       expect(t.inputSchema.type).toBe('object')
       expect(t.description.length).toBeGreaterThan(20)
@@ -343,7 +343,7 @@ describe('stdio smoke test', () => {
       const a = JSON.parse(lines[0])
       const b = JSON.parse(lines[1])
       expect(a.result.serverInfo.name).toBe('meerkat')
-      expect(b.result.tools).toHaveLength(28)
+      expect(b.result.tools).toHaveLength(TOOLS.length)
     } finally {
       child.kill()
     }

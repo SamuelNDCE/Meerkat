@@ -57,6 +57,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat suggest` | suggested commands for the newest run's findings (never run for you) | |
 | `meerkat pr-comment [--run-url <url>]` | markdown for a pull request comment | pipe it to `gh pr comment` |
 | `meerkat map` / `meerkat blast <file>[#symbol]` | a map of the codebase, and the blast radius of a file or symbol | blast: exit 75 when the file is not in the map |
+| `meerkat brief <file>[#symbol]` | a pre-edit brief: callers, tests, last-run findings, churn, risk tier and checklist | exit 2 on an unknown symbol, 75 when the file is not in the map |
 
 ## Checks, presets, packs
 
@@ -110,7 +111,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | 1 | a check failed or could not run |
 | 2 | a usage or configuration error (the message says what to change) |
 | 3 | meerkat run and the presets: nothing to run (the preset selected no checks here). Not a pass |
-| 75 | meerkat gate and meerkat smoke: the run could not start (no base found, not a git repo, no checks loaded); meerkat blast: the target file is not in the code map. Not a pass |
+| 75 | meerkat gate and meerkat smoke: the run could not start (no base found, not a git repo, no checks loaded); meerkat blast and meerkat brief: the target file is not in the code map. Not a pass |
 | 130 | interrupted |
 
 ## Output and machine use
