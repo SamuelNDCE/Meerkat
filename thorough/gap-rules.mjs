@@ -13,7 +13,7 @@ import { ASSERT, SRC_TEST, extractTests, maskLines, testable } from './mutation.
 const ALLOW = '.meerkat-gap-allow'
 const SKIP_DIR = /(^|\/)(node_modules|vendor|dist|build|target|coverage|\.next|out)\//
 // Every value taken from the scanned project (names, paths, text) is cleaned of control characters (CR, LF, ESC, other C0 and C1) before it reaches a message, so it cannot forge an output line.
-const clean = (v) => String(v).replace(/[\u0000-\u001f\u007f-\u009f  ]+/g, ' ')
+const clean = (v) => String(v).replace(/[\u0000-\u001f\u007f-\u009f\p{Zl}\p{Zp}]+/gu, ' ')
 const lineOf = (text, index) => text.slice(0, index).split('\n').length
 
 // Runs one scan over the tracked files, drops what the allow file accepts, prints a finding line per hit, and returns the exit code.
