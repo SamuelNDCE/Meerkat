@@ -37,13 +37,15 @@ A minor release: it adds an MCP surface, skills, click-through drivers, new comm
 - Accuracy, measured 2026-11-06 (docs/accuracy.md): planted-bug recall 99.77% (1735 of 1739) in the default run and 100% in the pedantic run; 0 false alarms on 1739 clean twins; 4.6% false alarms on real Rust code (6 of 130 labelled); real-code mutation run 37% (default rules) and 98% (all rules) on 200 mutants, from one run whose raw output is not stored here (unverified, re-run before quoting). The planted corpus is built from the rules' own samples, so those figures are near the ceiling by construction
 - Not verified in this release: a full `npm test` run, and the click-through drivers against a real app
 
-The entries under Unreleased below are part of this release.
+The entries under "Carried-over notes of the minor release above" below are part of this release. \*
+
+> \*Corrected 2026-11-07: that section was headed "Unreleased" by mistake after the release; it is renamed so the changelog has one Unreleased section, at the top.
 
 ## 0.4.1 (2026-11-04)
 
 - Updates: U works from the project picker, updates survive a folder on another branch, a spinner while checking. New smoke preset and --scope to check one folder. Accuracy corpus is opt-in.
 
-## Unreleased
+## Carried-over notes of the minor release above
 
 ### Added
 

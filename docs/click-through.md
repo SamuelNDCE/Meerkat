@@ -71,7 +71,7 @@ A generic driver that walks any web or Electron app with no code from you is not
 
 ---
 
-# Scenario click-throughs: the click path as a data file
+## Scenario click-throughs: the click path as a data file
 
 The sections above wire in a driver script you write yourself. This part is the generic route: the click path is a JSON file (a scenario), Meerkat runs it step by step through a small **driver** command your project names, enforces a timeout on every step, and reports pass or fail with evidence. An AI can write the scenario for an app without writing a test framework. Meerkat has no dependencies and does not bundle a browser library: the driver is the only part that knows your stack.
 
@@ -87,7 +87,7 @@ node lib/clickthrough.mjs <scenario.json> [--root <dir>] [--out <dir>]
 
 `--root` is the folder every relative path in the scenario is resolved from (default: the current folder). `--out` is where the run folder goes (default: `$MEERKAT_SCRATCH/click-through` inside a Meerkat run, otherwise `.meerkat/click-through` under the root). Each run gets its own time-stamped subfolder holding `result.json`, `app.log` (the app's output), `driver.log` (the driver's stderr), the screenshots, and a `session` folder the driver may use to keep state between steps.
 
-## The scenario format
+### The scenario format
 
 ```json
 {
@@ -141,7 +141,7 @@ A failing step is reported like this (also in `result.json` under `failed`):
 FAIL step 3 (assert "Saved") failed. expected: text "Saved" is present. actual: page shows: Welcome, Save
 ```
 
-## The driver contract
+### The driver contract
 
 The driver is any command. The runner starts it **once per scenario** and talks to it over **stdin and stdout**, one JSON object per line (newline-delimited, UTF-8). Because the process stays alive, a browser or window opened by the first step is still there for the next one: no state needs to be parked in the `session` folder. This is **protocol 2**. Protocol 1 (one process per step) still works for one release, see the end of this section.
 
@@ -214,7 +214,7 @@ rl.on('line', async (line) => {
 
 Which stack uses what is for the project to decide. Meerkat does not recommend or install one, and no driver in this repository uses a browser library.
 
-### Protocol 1 (deprecated)
+#### Protocol 1 (deprecated)
 
 > \*Deprecated 2026-11-06: protocol 1 is kept for one release and is then removed. Move drivers to protocol 2 above.
 
@@ -235,7 +235,7 @@ The runner starts the driver **once per step**, writes one JSON object to its st
 
 Response (stdout, exit code 0): `{ "ok": true, "state": "..." }` or `{ "ok": false, "expected": "...", "actual": "..." }`, with the same fields as above (no `id`). Rules: `ok: true` counts only with exit code 0; a step past `timeoutMs` plus 1.5 seconds is killed and fails with `no answer within N ms`; exit **75** with no JSON, or a command that cannot start, ends the run with 75; `ready.windowTitle` is sent as a step of type `ready` with index 0; the final cleanup `stop` carries `implicit: true`; the environment gets `MEERKAT_CT_SESSION` and `MEERKAT_CT_OUT`.
 
-## Running a scenario as a check
+### Running a scenario as a check
 
 `clickThroughCheck` in `lib/clickthrough.mjs` returns a ready check on the **windows lane** with `found: true`, so a scenario follows the same gate and the same lane as every other window check: left out of `full` and `thorough`, run by `release`, by `--include windows` and by `MEERKAT_WINDOWS=1`, and several at a time up to the window limit. Put a file in `.meerkat/checks/`:
 
@@ -261,7 +261,7 @@ meerkat check new --id click-notes --cmd "node <path to Meerkat>/lib/clickthroug
 
 The wrapper is not added to a built-in pack: a pack ships with Meerkat and cannot know your scenario file, and window checks only get the gate when they are marked `found`, which discovery does for the project's own checks.
 
-## Guide for an AI: "write a click-through for this app"
+### Guide for an AI: "write a click-through for this app"
 
 Follow these steps in order. Do not write a test framework; write one scenario file and, only if the project has none, one small driver.
 

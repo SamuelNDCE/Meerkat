@@ -18,3 +18,6 @@ catalog/*/*/bad/
 fixtures/geiger-unsafe/
 fixtures/miri-clean/
 fixtures/miri-ub/
+
+# Clean twins of the catalog bad cases: tests/catalog.test.ts runs each one on its own copy and requires it to pass, so the self-run does not need to scan them too (they are short samples with no docs or tsconfig).
+catalog/*/*/good/

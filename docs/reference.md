@@ -582,6 +582,8 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 | `MEERKAT_PROFILE` | a named set of limits for a slower PC |
 | `MEERKAT_TIMINGS`, `MEERKAT_HISTORY`, `MEERKAT_STATUS`, `MEERKAT_THEME_FILE` | where the learned times, run history, live status and board theme are kept |
 | `MEERKAT_CARGO_LOCK`, `MEERKAT_CARGO_LOCK_DIR`, `MEERKAT_LOCK_MAX_WAIT` (older name `CARGO_LOCK_MAX_WAIT`) | use your own cargo lock script; move the built-in lock; how long a job waits for it (seconds, default 900) |
+| `MEERKAT_SECRET_SCAN_MAX` | the largest file in bytes the secret scan reads (default 50000000); a bigger file is not read at all |
+| `MEERKAT_SECRET_SCAN_CHUNK` | how many bytes of a file the secret scan reads at a time (default 1000000, minimum 64); lower it only to test the chunk boundary |
 | `MEERKAT_FONT` | a `.ttf` file for `tools/screenshot.py`, which draws the board's pictures |
 | `MEERKAT_AI_CMD`, `MEERKAT_AI_BASE` | the model command for the AI checks (a JSON array); the branch the diff review compares with |
 | `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `MEERKAT_AI_KEY` | a key for the AI checks (see [AI checks](#ai-checks)); `MEERKAT_AI_MODEL` and `MEERKAT_AI_BASE_URL` change the model and the service |
