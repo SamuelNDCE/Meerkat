@@ -215,7 +215,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `ci-present` | fast | tiny | 1 s | An automated check config (CI) exists | repo |
 | `ci-timeouts` | fast | tiny | 1 s | Every GitHub Actions job sets timeout-minutes | config |
 | `codeowners-valid` | fast | tiny | 1 s | CODEOWNERS: every pattern has a real owner, and no pattern is listed twice | repo |
-| `commit-message-format` | fast | tiny | 1 s | Recent commit subjects are short, not empty, not ending in a period, and free of WIP or fixup! | git |
+| `commit-message-format` | fast | tiny | 1 s | Subjects of the commits not yet on the default branch are short, not empty, not ending in a period, and free of WIP or fixup! | git |
 | `composer-validate` | fast | tiny | 5 s | Composer: composer.json is valid (strict) *(needs: composer)* | php |
 | `conflict-markers` | fast | tiny | 1 s | No leftover merge-conflict markers | hygiene |
 | `contributing-file` | fast | tiny | 1 s | CONTRIBUTING.md exists once a project has a README and several source files | repo |

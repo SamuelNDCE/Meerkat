@@ -8,7 +8,7 @@
 //   notIn   optional RegExp on the path: files to skip
 //   re      RegExp tested on each line (a line match is a finding at that line)
 //   test    alternative to re: (line) => boolean
-//   whole   (text, path) => boolean, true = finding (for rules that read a whole file, e.g. JSON)
+//   whole   (text, path) => boolean, true = finding (for rules that read a whole file, e.g. JSON); a string is a finding and is shown after the title
 //   lacks   RegExp that the file must contain; the file is a finding when it does not
 //   path    RegExp on each path in the folder tree (a match is a finding). Used for publish-folder rules.
 //   sample  file name the bad and good samples are judged as (must match `files`)
@@ -281,6 +281,8 @@ export const PUBLISH = [
 
 // ---------- wh-supply: vendored libraries, lockfile and manifest hygiene, SBOM readiness ----------
 
+import { lockGraph, nameOfKey, parentNote } from '../lib/lockparents.mjs'
+
 const jparse = (t) => {
   try {
     return JSON.parse(t)
@@ -297,6 +299,12 @@ const lockEntries = (t) => {
   return []
 }
 const lockEntriesOrNone = (t) => lockEntries(t)
+// 'rimraf@2.6.3 (transitive, pulled in by foo (foo > glob > rimraf))' for up to three locked packages (lib/lockparents.mjs).
+const withParents = (t, keys) => {
+  const g = lockGraph(t)
+  const shown = keys.slice(0, 3).map((k) => `${g ? g.label(k) : nameOfKey(k)} (${parentNote(g, k)})`)
+  return `${shown.join('; ')}${keys.length > 3 ? `; and ${keys.length - 3} more` : ''}`
+}
 const pkgJson = (t) => {
   const j = jparse(t)
   return j && typeof j === 'object' && !Array.isArray(j) ? j : null
@@ -336,13 +344,18 @@ export const SUPPLY = [
         vs.add(k)
         seen.set(name, vs)
       }
-      let dup = 0
-      for (const set of seen.values()) if (set.size > 1) dup++
-      return dup > 25
+      const dups = [...seen.entries()].filter(([, set]) => set.size > 1)
+      if (dups.length <= 25) return false
+      // Name the first few, and who pulls in the extra copy (the copy that is not at the top level).
+      const extra = dups.slice(0, 3).map(([, set]) => [...set].sort((a, b) => a.length - b.length).pop())
+      return `${dups.length} packages; for example ${withParents(t, extra)}`
     },
     bad: JSON.stringify({ lockfileVersion: 3, packages: Object.fromEntries(Array.from({ length: 26 }, (_, i) => [[`node_modules/p${i}`, { version: '1.0.0' }], [`node_modules/q/node_modules/p${i}`, { version: '2.0.0' }]]).flat()) }), good: '{"lockfileVersion":3,"packages":{"":{}}}' },
   { id: 'lockfile-deprecated-entry', title: 'A lockfile entry carries a deprecated marker (the package is no longer maintained)', files: /(^|\/)package-lock\.json$/, sample: 'package-lock.json',
-    whole: (t) => lockEntriesOrNone(t).some(([, v]) => v && typeof v === 'object' && 'deprecated' in v),
+    whole: (t) => {
+      const keys = lockEntriesOrNone(t).filter(([, v]) => v && typeof v === 'object' && 'deprecated' in v).map(([k]) => k)
+      return keys.length ? withParents(t, keys) : false
+    },
     bad: '{"packages":{"node_modules/a":{"version":"1.0.0","deprecated":"use b"}}}', good: '{"packages":{"node_modules/a":{"version":"1.0.0"}}}' },
   { id: 'package-git-or-tarball-dependency', title: 'A published package depends on a git, tarball, file or http URL instead of a registry version', files: /(^|\/)package\.json$/, sample: 'package.json',
     whole: (t) => { const j = pkgJson(t); return !!j && !j.private && Object.values(allDeps(j)).some((v) => typeof v === 'string' && /^(git\+|git:|github:|https?:|file:|bitbucket:|gitlab:)/.test(v)) },

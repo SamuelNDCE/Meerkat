@@ -63,6 +63,8 @@ const blank = (t) => t.replace(COMMENTS, (m) => m.replace(/[^\r\n]/g, ' '))
 // Express's helmet() sets these headers by default, so a project that calls it is not missing them.
 const HELMET_SETS = new Set(['hsts-missing', 'xfo-missing', 'frame-ancestors-missing', 'xcto-missing', 'referrer-policy-missing', 'coop-missing', 'corp-missing'])
 
+// A `whole` rule may return a string instead of true: it is shown after the rule's title (for example which package, and who pulls it in).
+const DETAIL = new Map()
 export function hitsIn(rule, file, text) {
   if (rule.when && !rule.when.test(text)) return null
   if (rule.sample === 'index.html' && !rule.id.startsWith('comment-') && /<!--|\{%-?\s*(comment|doc)|\{#|\{\{!--/.test(text)) text = blank(text)
@@ -79,7 +81,11 @@ export function hitsIn(rule, file, text) {
     }
     return out
   }
-  if (rule.whole) return rule.whole(text, file) ? [file] : []
+  if (rule.whole) {
+    const w = rule.whole(text, file)
+    if (typeof w === 'string' && w) DETAIL.set(`${rule.id} ${file}`, w)
+    return w ? [file] : []
+  }
   if (rule.lacks) return rule.lacks.test(text) ? [] : [file]
   return []
 }
@@ -134,7 +140,10 @@ export function runTable(name, root, rules, { walk = false } = {}) {
       if (r.path) for (const h of found) byFolder.set(countedUnder(h), (byFolder.get(countedUnder(h)) ?? 0) + 1)
       const where = byFolder.size ? ` in ${[...byFolder].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([d, n]) => `${d}/ (${n})`).join(', ')}${byFolder.size > 4 ? `, +${byFolder.size - 4} more` : ''}` : ''
       console.log(`MEERKAT-SUB FAIL ${r.id} ${found.length} found${where}: ${reason}`)
-      for (const f of found) lines.push(`${f} ${r.title}`)
+      for (const f of found) {
+        const more = DETAIL.get(`${r.id} ${f.replace(/:\d+$/, '')}`)
+        lines.push(`${f} ${r.title}${more ? `: ${more}` : ''}`)
+      }
     } else console.log(`MEERKAT-SUB PASS ${r.id} ${reason}`)
   }
   if (!total) {

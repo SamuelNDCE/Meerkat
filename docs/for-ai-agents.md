@@ -30,7 +30,7 @@ The run itself returns one of three codes:
 | 1 | At least one check failed, or at least one could not run (NOT RUN). |
 | 2 | A usage or config problem: an unknown argument, a bad config, a missing app folder, or no checks selected. Also an unexpected crash. |
 
-Code 75 is not returned by the run. A single check uses 75 to say "I could not run" (a tool or setting is missing); Meerkat turns that into a NOT RUN result, and the run then exits 1. A NOT RUN is never a pass.
+Code 75 is not returned by the run. A single check uses 75 to say "I could not run" (a tool or setting is missing); Meerkat turns that into a NOT RUN result, and the run then exits 1. A NOT RUN is never a pass. A SKIPPED check (a style tool the project has no configuration for, exit 74 inside a check) does not change the exit code.
 
 ## Every command an AI can run
 
@@ -121,7 +121,7 @@ Fields to read first in `summary.json`:
 - `exitCode`: the run's exit code.
 - `summary`: the one-line result.
 - `counts`: `{ pass, fail, notRun }`.
-- `results[].id`, `results[].status` (`PASS`, `FAIL` or `NOT RUN`), `results[].detail` (the reason), `results[].logFile`, `results[].command`.
+- `results[].id`, `results[].status` (`PASS`, `FAIL`, `NOT RUN`, or `SKIPPED` for a style tool the project never configured: not a failure, not a pass), `results[].detail` (the reason), `results[].logFile`, `results[].command`.
 - `results[].files.total`: how many files the check examined. Present only when the check reported it (the built-in file scanners do; an external tool such as `tsc` or `cargo` does not), so a missing `files` means "not known", never zero.
 
 ## Recipe: act on a failure

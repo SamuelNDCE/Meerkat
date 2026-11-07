@@ -5,6 +5,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { lockGraph, nameOfKey, parentNote } from '../lib/lockparents.mjs'
 import { finish, isFixture, main, readBudgets, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const GENERATED = new Set(['node_modules', 'dist', 'build', 'target', '.next', 'out', '__pycache__', 'coverage', '.venv'])
@@ -234,26 +235,19 @@ const deprecatedDeps = (root) => {
       continue
     }
     const seen = new Set()
-    const note = (name, version, msg) => {
-      const line = `${x}: ${name}@${version} is deprecated: ${msg}`
+    const graph = lockGraph(readText(root, x), readText(root, join(dirname(x), 'package.json')) || null)
+    const note = (name, version, msg, via) => {
+      const line = `${x}: ${name}@${version} is deprecated: ${msg} (${via})`
       if (!seen.has(line)) {
         seen.add(line)
         f.push(line)
       }
     }
-    for (const [key, p] of Object.entries(j.packages ?? {})) {
-      if (key && p?.deprecated) {
-        const name = key.includes('node_modules/') ? key.slice(key.lastIndexOf('node_modules/') + 'node_modules/'.length) : key
-        note(name, p.version, p.deprecated)
-      }
+    // The lockfile graph (v2/v3 packages, or the v1 tree flattened) tells who pulls each package in; without it the parent is unknown.
+    const entries = graph ? Object.entries(graph.packages) : Object.entries(j.packages ?? {})
+    for (const [key, p] of entries) {
+      if (key && p?.deprecated) note(nameOfKey(key), p.version, p.deprecated, parentNote(graph, key))
     }
-    const v1 = (deps) => {
-      for (const [n, d] of Object.entries(deps ?? {})) {
-        if (d?.deprecated) note(n, d.version, d.deprecated)
-        v1(d?.dependencies)
-      }
-    }
-    v1(j.dependencies)
   }
   return finish('deprecated-deps', f, 'no locked package is marked deprecated')
 }

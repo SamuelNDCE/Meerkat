@@ -44,12 +44,12 @@ describe('config-guard', () => {
   test('an unknown tool is a usage error (2)', () => {
     expect(node([guard, '--bin', 'nope', '--', '.']).status).toBe(2)
   })
-  test.each(['eslint', 'prettier', 'stylelint'])('%s in a folder with no configuration is NOT RUN or not installed (75)', (bin) => {
+  test.each(['eslint', 'prettier', 'stylelint'])('%s in a folder with no configuration is SKIPPED (74), whether or not the tool is installed', (bin) => {
     const d = dir()
     writeFileSync(join(d, 'a.js'), 'var x = 1\n')
     const r = node([guard, '--bin', bin, '--root', d, '--', '.'], d)
-    expect(r.status).toBe(75)
-    expect(r.stdout).toContain('NOT RUN')
+    expect(r.status).toBe(74)
+    expect(r.stdout).toContain('SKIPPED')
   })
 })
 

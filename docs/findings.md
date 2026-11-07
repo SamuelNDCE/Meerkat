@@ -63,6 +63,7 @@ A message that would be cut is cut at the cap, never earlier. A line in a saved 
 | `findings[]` | see below, most severe first |
 | `fixed[]` | findings of the previous comparable run that are gone now: `id`, and `severity`, `title`, `file`, `line`, `check`, `rule` when known, `fixedIn`, `previousRun` |
 | `notRun[]` | `{ check, reason }`: checks that could not run. A check that did not run is not a finding, and nothing is known about it |
+| `skipped[]` | `{ check, reason }`: checks with nothing to look at in this project (a style tool with no configuration of its own). Not a failure, not a pass, and not in `notRun[]` |
 
 One entry of `findings[]`:
 
