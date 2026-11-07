@@ -1,0 +1,20 @@
+{
+  "name": "team",
+  "summary": "A team: a staged-files check before each commit, a changed-files gate on every pull request, and existing debt accepted so only new findings fail.",
+  "preset": "quick",
+  "scope": { "mode": "changed", "detail": "staged files locally, files changed since the base branch in a pull request" },
+  "hooks": ["pre-commit"],
+  "pullRequestGate": true,
+  "baseline": "existing-debt",
+  "blocking": { "failOn": "high", "suites": ["secrets", "risky-calls", "supply-chain", "ci-workflows"], "otherwise": "report only" },
+  "output": { "format": "github" },
+  "cache": "on",
+  "commands": {
+    "setup": "meerkat baseline",
+    "local": "meerkat gate --staged",
+    "pullRequest": "meerkat gate --base origin/main --format github",
+    "ratchet": "meerkat verify --ratchet",
+    "block": "meerkat findings --fail-on high --new"
+  },
+  "notes": ["Run `meerkat verify` once on the main branch, then `meerkat baseline` to accept what is already there. After that `--ratchet` runs fail only on new findings.", "Change origin/main to your base branch if it is named differently."]
+}

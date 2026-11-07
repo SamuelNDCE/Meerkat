@@ -1,0 +1,17 @@
+{
+  "name": "solo",
+  "summary": "One person, fast and local: a quick look at what you are about to commit, nothing else.",
+  "preset": "quick",
+  "scope": { "mode": "changed", "detail": "the files staged for commit" },
+  "hooks": ["pre-commit"],
+  "pullRequestGate": false,
+  "baseline": "none",
+  "blocking": { "failOn": "high", "suites": ["secrets", "risky-calls"], "otherwise": "report only" },
+  "output": { "format": "text" },
+  "cache": "on",
+  "commands": {
+    "local": "meerkat gate --staged",
+    "block": "meerkat findings --fail-on high"
+  },
+  "notes": ["Call the local command from .git/hooks/pre-commit. `meerkat hook install` writes a pre-push hook, not a pre-commit one.", "Run `meerkat verify` yourself before a release; this profile never runs the slow checks."]
+}

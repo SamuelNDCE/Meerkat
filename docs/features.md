@@ -8,6 +8,8 @@ Each feature below has the same short block: what it is, why it is good, what it
 | Findings and prompt | `meerkat findings`, `meerkat finding`, `meerkat prompt`; MCP `meerkat_findings`, `meerkat_finding` |
 | Accepted findings and ratchet | `meerkat dismiss`, `undismiss`, `dismissals`, `baseline`, `--ratchet`; MCP `meerkat_dismiss`, `meerkat_undismiss`, `meerkat_dismissals`, `meerkat_baseline` |
 | Trend, suggestions and PR comment | `meerkat trend`, `meerkat suggest`, `meerkat pr-comment`; MCP `meerkat_trend`, `meerkat_suggest`, `meerkat_pr_comment` |
+| Workflow profiles | `meerkat init --profile <name>` |
+| Memory hook | `meerkat memory` |
 | Gate (checks for changed files) | `meerkat gate`; MCP `meerkat_gate` |
 | Smoke | `meerkat run smoke` (preset), `meerkat smoke` (self-check); MCP `meerkat_smoke` |
 | Blast radius | `meerkat blast <file>[#symbol]`; MCP `meerkat_blast` |
@@ -89,6 +91,23 @@ Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 - **How callers and tests are found:** callers are the files the import graph says import the target (the same logic as `meerkat blast`), and with a symbol only those that name it; the line and function are the first non-import use in each file. Tests are the test files that import the file (directly or through other files) plus test files whose text names the symbol (or the file name).
 - **What it does NOT do:** start a scan (no saved run means "no findings" is said in one line), prove that a name match is a real call, or follow dynamic imports. A text match can be a different thing with the same name, and the symbol line range used to place findings is approximate. Unresolved imports are reported and never counted as safe.
 - **Command or tool:** `meerkat brief <file>[#symbol] [--app <folder>] [--json]`; MCP `meerkat_brief`. Exit codes: 0 done, 2 usage error or unknown symbol, 75 the file is not in the code map.
+
+## Workflow profiles
+
+- **What it is:** a starting configuration for a kind of workflow, kept as data in `profiles/<name>.json`: `solo`, `team`, `ai-agent`, `legacy`, `monorepo` and `ci-only`.
+- **Why it is good:** the same scanner is used very differently by one person before a commit, a team gating pull requests, an AI agent editing code, a project adopting Meerkat on old code, a monorepo and a CI-only setup. A profile names the choices (preset, scope, which findings block, output format, cache use) and the exact commands, so nobody has to work them out.
+- **What it does:** `meerkat init --profile <name>` prints the `meerkat.config.json` it would write (the packs found for the folder plus a `workflow` record), then the commands of that workflow and a few notes. Every command in a profile is checked by a test to be one Meerkat accepts.
+- **What it does NOT do:** change how a run behaves (the `workflow` record is read by people and tools; use the printed commands), install hooks, or write anything without `--write`. `--write` refuses to replace an existing `meerkat.config.json`; `--force` replaces it. These are workflow profiles, not the machine profiles of `--profile low|normal|high` on `run.mjs`.
+- **The six:** `solo` (staged files only, before a commit), `team` (staged files plus a changed-files gate on pull requests, existing findings accepted as a baseline), `ai-agent` (a `meerkat brief` before an edit, a `meerkat gate` after it, JSON output), `legacy` (accept everything now, fail only on new findings), `monorepo` (one package folder at a time with `--scope`), `ci-only` (the `full` preset in CI, no hooks, no cache).
+- **Command:** `meerkat init --profile <name> [folder] [--write] [--force]`. Exit codes: 0 printed or written, 1 refused or could not write, 2 usage error or unknown profile.
+
+## Memory hook
+
+- **What it is:** `meerkat memory`, a thin hook that hands the newest run of a project to a memory adapter, a module that keeps the results as a note outside the project.
+- **Why it is good:** what Meerkat found stays in the place where a person or an AI already keeps project knowledge, with what changed since the last time.
+- **What it does:** reads `"memory": { "adapter": "<name>" }` from `meerkat.config.json`, loads that adapter from `examples/`, and calls it with the project and the newest run. The adapter shipped in `examples/neuralvault/` writes one markdown note into a NeuralVault vault folder: frontmatter (`type`, `project`, `updated`, `source_run`), the latest run's pass and fail counts, the findings summary, the code map summary when the run has a `codemap.json`, and a "what changed since last export" section. The vault folder comes from `NV_VAULT_PATH` or the first line of `~/.neuralvault-vault-path`, never from the config or the code.
+- **What it does NOT do:** run anything when no adapter is set, write outside the vault folder (a path that leaves it, an absolute note path or a folder that is a link out are refused), write evidence or raw tool output, or write a note in which redaction still finds a secret-like value (nothing is written then). Findings are already redacted by Meerkat; the adapter keeps only short fields and redacts them again. Lines in the old note marked as corrections (a trailing `\*`) are kept.
+- **Command:** `meerkat memory [folder] [--app <folder>] [--run <run folder>] [--dry-run] [--json]`. Exit codes: 0 done, 1 the adapter refused or failed, 2 no adapter set or a usage error. `--dry-run` checks everything and writes nothing.
 
 ## Codebase map
 

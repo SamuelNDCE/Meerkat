@@ -1,0 +1,17 @@
+{
+  "name": "ci-only",
+  "summary": "No hooks on anyone's machine: the full preset runs in CI and nowhere else.",
+  "preset": "full",
+  "scope": { "mode": "all", "detail": "the whole project on every CI run" },
+  "hooks": [],
+  "pullRequestGate": true,
+  "baseline": "none",
+  "blocking": { "failOn": "high", "suites": ["secrets", "supply-chain", "ci-workflows"], "otherwise": "report only" },
+  "output": { "format": "github" },
+  "cache": "off",
+  "commands": {
+    "ci": "meerkat full --no-cache --format github --plain",
+    "block": "meerkat findings --fail-on high"
+  },
+  "notes": ["Put the ci command in the pipeline. Nothing is installed on developer machines.", "The cache is off so every CI run is a clean run."]
+}

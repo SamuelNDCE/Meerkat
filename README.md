@@ -51,6 +51,8 @@ meerkat last
 | 💥 [Blast radius](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius) | Lists what an edit to a file or symbol affects |
 | 📋 [Pre-edit brief](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#pre-edit-brief) | One fast call before an edit: callers, tests, findings, churn and a risk tier |
 | 🗺 [Codebase map](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#codebase-map) | Writes a map of files, functions with line numbers, routes, tests and imports; only changed files are re-read, `meerkat map --check` says if it is current ([details](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md)) |
+| 🧭 [Workflow profiles](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#workflow-profiles) | `meerkat init --profile` solo, team, ai-agent, legacy, monorepo or ci-only prints a starting config and the commands for that workflow |
+| 📝 [Memory hook](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#memory-hook) | `meerkat memory` hands the newest run to an adapter you name in the config, which keeps it as a note outside the project |
 | 🧪 [Red testing](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#red-testing) | Attacks Meerkat itself with planted bugs and clean twins (repository checkout only) |
 | 📏 [Real-code benchmark](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md#real-code-benchmark) | Measures false alarms on real Rust code (repository checkout only) |
 | 📚 [Test catalog](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#catalog-and-tests-command) | `meerkat tests --json` lists every kind of test and what it proves |

@@ -43,6 +43,7 @@
     "lib/",
     "packs/",
     "thorough/",
+    "profiles/",
     "fixtures/",
     "examples/",
     "run.mjs",

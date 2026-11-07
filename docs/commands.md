@@ -57,6 +57,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat suggest` | suggested commands for the newest run's findings (never run for you) | |
 | `meerkat pr-comment [--run-url <url>]` | markdown for a pull request comment | pipe it to `gh pr comment` |
 | `meerkat map [--check] [--quiet]` / `meerkat blast <file>[#symbol]` | a map of the codebase (`--check`: exit 1 if it is stale), and the blast radius of a file or symbol | map --check: exit 1 when stale; blast: exit 75 when the file is not in the map |
+| `meerkat memory [folder] [--dry-run] [--json]` | hand the newest run to the memory adapter named by `"memory": { "adapter": ... }` in `meerkat.config.json`; nothing happens without that key | exit 2 when no adapter is set |
 | `meerkat brief <file>[#symbol]` | a pre-edit brief: callers, tests, last-run findings, churn, risk tier and checklist | exit 2 on an unknown symbol, 75 when the file is not in the map |
 
 ## Checks, presets, packs
@@ -90,6 +91,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | Command | Does |
 |---|---|
 | `meerkat init [folder]` | write a starting `meerkat.config.json` |
+| `meerkat init --profile <name> [folder] [--write] [--force]` | print the config for a workflow profile (`solo`, `team`, `ai-agent`, `legacy`, `monorepo`, `ci-only`) and the commands of that workflow; writes `meerkat.config.json` only with `--write`, never over an existing one without `--force` |
 | `meerkat doctor [folder]` | for this project: which checks would run, which would be NOT RUN and what to install; `--json` |
 | `meerkat tools [folder]` | every optional outside tool, whether it is found, and one install command per ecosystem (npm, pip, cargo, system); `--json` |
 | `meerkat tools install [folder]` | put the missing npm-based tools in `~/.meerkat/tools` (never in the project, never global, `--ignore-scripts`); shows the list first and asks, or use `--yes`; `--dry-run` only shows the list |
