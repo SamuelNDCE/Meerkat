@@ -20,7 +20,7 @@ meerkat <command> --help                help for any command (also: meerkat help
 | `meerkat full [folder]` | every check | alias of `meerkat thorough` |
 | `meerkat <preset> [folder]` | any preset: `bugs`, `security`, `ui`, `functionality`, `performance`, `refactor`, `ci`, `release`, and your own | `meerkat preset list` shows them |
 | `meerkat check <id>... [folder]` | only these checks | same as `--only` |
-| `meerkat gate [--staged or --base <ref> or --against <ref>]` | only the checks that cover the files you changed (for a pre-commit hook or a pull request) | exit 75 when it could not start |
+| `meerkat gate [--staged or --base <ref> or --against <ref>] [--all] [--no-cache]` | only the checks that cover the files you changed, and only failures in those files block (for a pre-commit hook or a pull request). `--all` also blocks on project-wide failures; `--no-cache` runs every check again | exit 75 when it could not start |
 | `meerkat smoke [--timeout <seconds>]` | prove that the checks selected for your changes start, finish and are not broken (it tests Meerkat, not your project) | the preset that asks whether a change breaks your project is `project-smoke` |
 | `meerkat repos [--scan <folder>]` | the git repositories Meerkat can find: name, path, branch (`--json` for scripts) | `--scan` looks in that folder too, once |
 | `meerkat recent` / `recent clear` | the last 12 projects you used, newest first (`--json`); `clear` empties the list | stored as paths only in `~/.meerkat.json` |
