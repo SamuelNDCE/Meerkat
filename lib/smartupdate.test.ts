@@ -99,7 +99,8 @@ describe('smart update', () => {
     expect(head(s.clone)).toBe(before)
     expect(readFileSync(join(s.clone, 'b.txt'), 'utf8')).toBe('my b\n')
     expect(readFileSync(join(s.clone, 'a.txt'), 'utf8')).toBe('my a\n')
-    expect(existsSync(join(s.logDir, 'update-patches'))).toBe(false)
+    expect(existsSync(r.patch)).toBe(true) // the user's work is saved as a patch even when refused
+    expect(r.reason).toContain(r.patch)
     expect(leftovers(s.logDir)).toEqual([])
   })
 
