@@ -177,3 +177,11 @@ commit-message-format b3ceecd
 # Subjects of the integration-6 commits that carry a list in the body; history is not rewritten (HISTORY).
 commit-message-format f71d888
 commit-message-format 8769429
+# 3d9423d30c: an old merge commit already on main; history cannot be changed (HISTORY).
+merge-commit-noise 3d9423d30c
+# e42a33a3d2: our own smoke-suite commit with a 133 character subject; the subject is kept to record what it contains (HISTORY).
+commit-message-format e42a33a3d2
+# fafea1cc0d: red-suite commit on this branch with a 171 character subject; history is not rewritten (HISTORY).
+commit-message-format fafea1cc0d
+# c63c375910: smoke tests commit on this branch with a 101 character subject; history is not rewritten (HISTORY).
+commit-message-format c63c375910

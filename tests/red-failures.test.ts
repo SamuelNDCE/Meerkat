@@ -247,7 +247,7 @@ describe('red: the environment', () => {
     clean(r, [1], { says: /NOT RUN/ })
     expect(r.all).not.toMatch(/1 passed/)
   })
-  test.skip('SKIPPED: node missing (the CLI is started by node itself, so "no node" cannot be simulated from inside a test)', () => {})
+  // Not tested: node missing. The CLI is started by node itself, so "no node" cannot be simulated from inside a test.
   test('a run killed after 1 second leaves a store the next command can read', async () => {
     const sb = box()
     const { child, done } = spawnCli(sb, ['verify', '--plain'])
