@@ -1,0 +1,19 @@
+{
+  "name": "legacy",
+  "summary": "Adopting Meerkat on old code: accept everything that is there today, then report and fail only on what is new.",
+  "preset": "quick",
+  "scope": { "mode": "all", "detail": "the whole project, but only findings that are not in the baseline count" },
+  "hooks": ["pre-push"],
+  "pullRequestGate": false,
+  "baseline": "everything",
+  "blocking": { "failOn": "low", "suites": [], "otherwise": "only new findings block" },
+  "output": { "format": "text" },
+  "cache": "on",
+  "commands": {
+    "setup": "meerkat baseline",
+    "run": "meerkat verify --ratchet",
+    "hook": "meerkat hook install",
+    "block": "meerkat findings --fail-on low --new"
+  },
+  "notes": ["Run `meerkat verify` once, read it, then `meerkat baseline` to accept all of it. Fix old findings at your own pace and run `meerkat baseline` again to shrink the list.", "`meerkat hook install` runs the quick preset with --ratchet before every push."]
+}

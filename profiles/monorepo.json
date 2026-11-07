@@ -1,0 +1,20 @@
+{
+  "name": "monorepo",
+  "summary": "Several packages in one repository: each package is checked on its own, from the folder you name.",
+  "preset": "quick",
+  "scope": { "mode": "package", "detail": "one package folder at a time, chosen with --scope" },
+  "hooks": ["pre-commit"],
+  "pullRequestGate": true,
+  "baseline": "existing-debt",
+  "blocking": { "failOn": "high", "suites": ["secrets", "supply-chain"], "otherwise": "report only" },
+  "output": { "format": "github" },
+  "cache": "on",
+  "commands": {
+    "setup": "meerkat baseline",
+    "package": "meerkat verify --scope <package-folder> --ratchet",
+    "local": "meerkat gate --staged",
+    "pullRequest": "meerkat gate --base origin/main --format github",
+    "block": "meerkat findings --fail-on high --new"
+  },
+  "notes": ["Replace <package-folder> with a folder such as packages/web. Run the package command once per package, for example in a CI matrix.", "The gate commands select checks from the files that changed, in whichever package they are."]
+}

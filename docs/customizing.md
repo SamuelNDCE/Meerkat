@@ -41,6 +41,8 @@ It is JSON, no code.
 | `disable` | Turn checks off. Every run lists them as `[DISABLED]`, so nothing is ever turned off silently. `"suite:<name>"` turns off a whole suite. |
 | `disableSubs` | Turn single rules off, as `"check/sub"`, for example `"secret-scan/aws-access-key"`. They are left out of the counts. See docs/suites.md. |
 | `override` | Change one check: `tier`, `lane`, `weight`, `alone`, `estSeconds`, `cost`, `timeoutSeconds`, `paths`, `after`, `needs`, `optIn`, `title`, `run` (the command) and `selfTest`. |
+| `workflow` | A record written by `meerkat init --profile <name>`: the profile, its preset, scope, hooks, baseline, blocking severity, output format, cache use and the commands of that workflow. Meerkat keeps it for people and tools to read; the commands in it are the ones to run. |
+| `memory` | `{ "adapter": "<name>", "project": "<slug>", "note": "<path>" }`. Names the adapter `meerkat memory` calls. Without it that command does nothing. The adapter decides where the note goes; the config cannot choose the vault. |
 | `budget` | How much a run may use at once: slots (`cpu`, default 10 or the number of threads if fewer), the most checks together (`maxParallel`, default 10) and memory to leave free (`reserveGB`, default 3). |
 
 A mistake in the file (a typo, a wrong type, an id that does not exist) is printed as a `config:` note and the rest of the file still applies. It can
