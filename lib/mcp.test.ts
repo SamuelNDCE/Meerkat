@@ -46,6 +46,8 @@ function makeCtx(over: Record<string, unknown> = {}) {
   return { ctx, calls }
 }
 
+// Every result starts with one status line (finishResult in lib/mcp.mjs); these tests look at what follows it.
+const body = (r: { result: { content: { text: string }[] } }) => r.result.content[0].text.split('\n').slice(1).join('\n')
 const call = (ctx: unknown, name: string, args: unknown = {}, id = 1) => handleMessage({ jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: args } }, ctx)
 
 describe('protocol', () => {
@@ -60,7 +62,7 @@ describe('protocol', () => {
   test('tools/list names every registered tool, each with an input schema and a two line description', async () => {
     const { ctx } = makeCtx()
     const r = await handleMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, ctx)
-    expect(r.result.tools.map((t: { name: string }) => t.name)).toEqual(['meerkat_run', 'meerkat_list', 'meerkat_presets', 'meerkat_last', 'meerkat_why', 'meerkat_self_test', 'meerkat_gate', 'meerkat_smoke', 'meerkat_blast', 'meerkat_map', 'meerkat_tests', 'meerkat_findings', 'meerkat_finding', 'meerkat_redtest', 'meerkat_dismiss', 'meerkat_baseline', 'meerkat_doctor', 'meerkat_discover', 'meerkat_recommend', 'meerkat_tools', 'meerkat_trend', 'meerkat_suggest', 'meerkat_pr_comment', 'meerkat_dismissals', 'meerkat_hook_status', 'meerkat_describe', 'meerkat_undismiss', 'meerkat_hook', 'meerkat_brief'])
+    expect(r.result.tools.map((t: { name: string }) => t.name)).toEqual(['meerkat_run', 'meerkat_list', 'meerkat_presets', 'meerkat_last', 'meerkat_why', 'meerkat_self_test', 'meerkat_gate', 'meerkat_smoke', 'meerkat_blast', 'meerkat_map', 'meerkat_tests', 'meerkat_findings', 'meerkat_finding', 'meerkat_redtest', 'meerkat_dismiss', 'meerkat_baseline', 'meerkat_doctor', 'meerkat_discover', 'meerkat_recommend', 'meerkat_tools', 'meerkat_trend', 'meerkat_suggest', 'meerkat_pr_comment', 'meerkat_dismissals', 'meerkat_hook_status', 'meerkat_describe', 'meerkat_undismiss', 'meerkat_hook', 'meerkat_brief', 'meerkat_version', 'meerkat_check_list', 'meerkat_prompt', 'meerkat_run_list'])
     for (const t of TOOLS) {
       expect(t.inputSchema.type).toBe('object')
       expect(t.description.length).toBeGreaterThan(20)
@@ -170,9 +172,9 @@ describe('tools', () => {
 
   test('meerkat_last and meerkat_why use the readers', async () => {
     const { ctx } = makeCtx()
-    expect((await call(ctx, 'meerkat_last')).result.content[0].text).toBe('# Meerkat run: quick')
-    expect((await call(ctx, 'meerkat_why', { check: 'build', lines: 5 })).result.content[0].text).toBe('why build 5')
-    expect((await call(ctx, 'meerkat_why', { check: 'build' })).result.content[0].text).toBe('why build 80')
+    expect(body(await call(ctx, 'meerkat_last'))).toBe('# Meerkat run: quick')
+    expect(body(await call(ctx, 'meerkat_why', { check: 'build', lines: 5 }))).toBe('why build 5')
+    expect(body(await call(ctx, 'meerkat_why', { check: 'build' }))).toBe('why build 80')
     const none = makeCtx({ showLast: () => ({ ok: false, text: 'no run has been saved yet' }) }).ctx
     const r = await call(none, 'meerkat_last')
     expect(r.result.isError).toBe(true)
@@ -279,7 +281,7 @@ describe('secrets are left out of replies', () => {
   test('meerkat_why and meerkat_last leave out text holding a key', async () => {
     const { ctx } = makeCtx({ showWhy: () => ({ ok: true, text: `output ${key} end` }), showLast: () => ({ ok: true, text: `report ${key}` }) })
     for (const [tool, args] of [['meerkat_why', { check: 'build' }], ['meerkat_last', {}]] as const) {
-      const text = (await call(ctx, tool, args)).result.content[0].text
+      const text = body(await call(ctx, tool, args))
       expect(text).toBe('(left out: it looks like it contains a secret)')
     }
   })
@@ -294,7 +296,7 @@ describe('secrets are left out of replies', () => {
 
   test('a very long line is left out', async () => {
     const { ctx } = makeCtx({ showLast: () => ({ ok: true, text: 'x'.repeat(5000) }) })
-    expect((await call(ctx, 'meerkat_last')).result.content[0].text).toBe('(left out: a line is too long to check)')
+    expect(body(await call(ctx, 'meerkat_last'))).toBe('(left out: a line is too long to check)')
   })
 
   test('run reasons, commands and output tails are redacted', async () => {
@@ -357,6 +359,6 @@ describe('meerkat_list reports the server itself', () => {
     const r = await call(ctx, 'meerkat_list', {})
     expect(r.result.structuredContent.server).toEqual({ version: '9.9.9', tools: listed.result.tools.length })
     expect(r.result.structuredContent.server.tools).toBe(TOOLS.length)
-    expect(r.result.content[0].text.split('\n')[0]).toBe(`meerkat server 9.9.9, ${TOOLS.length} tools`)
+    expect(r.result.content[0].text.split('\n')[1]).toContain(`meerkat server 9.9.9, ${TOOLS.length} tools`)
   })
 })

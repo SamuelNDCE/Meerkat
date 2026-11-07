@@ -85,7 +85,7 @@ Measured 2026-11-06 with `tools/corpus/gen-planted.mjs` and `tools/corpus/measur
 
 ## 🤖 Using it with AI
 
-- **MCP server:** `meerkat mcp serve` offers 29 tools, read-only resources (`meerkat://run/latest/...`) and prompts. `meerkat mcp install` registers it with Claude Code.
+- **MCP server:** `meerkat mcp serve` offers its tools (`meerkat_list` or `node bin/meerkat-mcp.mjs --list-tools` gives the count and the names), read-only resources (`meerkat://run/latest/...`) and prompts. Tools that read a run take `folder`, `run` and `preset`, so an AI stays on its own project. `meerkat mcp install` registers it with Claude Code.
 - **Skills:** the [skills](https://github.com/SamuelNDCE/Meerkat/blob/main/skills/README.md) folder holds short guides (before a commit, before a PR, blast radius before an edit, mapping unfamiliar code, and more).
 - **Rule for agents:** a NOT RUN is never a pass, and never edit the config or turn a check off to make a run pass.
 
