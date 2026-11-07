@@ -8,6 +8,7 @@ Everything an AI needs to use Meerkat. This page agrees with [skills/meerkat/SKI
 |---|---|
 | Before committing or opening a pull request | the gate: `meerkat gate` (`--staged` in a pre-commit hook, `--base <ref>` for a pull request) |
 | After a code change, to see what it affects | `meerkat blast <file>` or `meerkat blast <file>#<symbol>` |
+| Before editing a function or file, to get callers, tests, findings, churn and a risk tier in one call | `meerkat brief <file>` or `meerkat brief <file>#<symbol>` (add `--json` to parse it) |
 | Before promoting or releasing | `meerkat full` for the merge gate, `meerkat run release` before shipping |
 | An unfamiliar codebase, or planning a refactor | `meerkat map --app <folder>`, then `meerkat blast` on the files you will change |
 | Checking that Meerkat itself works | the smoke self-check (it tests the tool, not your project); `meerkat self-test` proves each check fails on a broken sample |
@@ -15,7 +16,7 @@ Everything an AI needs to use Meerkat. This page agrees with [skills/meerkat/SKI
 | A quick check of the whole project | `meerkat verify` |
 | After a fix, did it work | `meerkat check <id>` on only the check that failed |
 
-## The 28 MCP tools
+## The 29 MCP tools
 
 `meerkat mcp serve` (or `node bin/meerkat-mcp.mjs`) serves these over stdio and nothing else. Register it with `claude mcp add meerkat -- node <path>/bin/meerkat-mcp.mjs` or `meerkat mcp install`.
 
@@ -30,6 +31,7 @@ Everything an AI needs to use Meerkat. This page agrees with [skills/meerkat/SKI
 | `meerkat_gate` | Run only the checks that cover the changed files (`staged`, `base` or `against`). Exit code 0 means safe to go on; 75 means it could not start. Runs the project's own commands. | `folder`, `staged`, `base`, `against` |
 | `meerkat_smoke` | Prove each selected check starts, runs and stops in time. Same file selection as the gate, plus a timeout. | gate inputs, `timeout` (1 to 600 s, default 5) |
 | `meerkat_blast` | Blast radius of a file or symbol: what imports it, what it imports, what could break. `found: false` means the file is not in the code map. | `target` (required, `src/a.js` or `src/a.js#name`), `folder` |
+| `meerkat_brief` | Pre-edit brief for a file or symbol: declaration (line, signature, exported), callers (count and the first 10 with the calling function), tests that reference it, findings from the last saved run, git churn, a risk tier with its reasons, and a before-you-edit checklist. Starts no scan. The text is markdown; the structured result has a `version` field. | `target` (required, `src/a.js` or `src/a.js#name`), `folder` |
 | `meerkat_map` | Build the code map (files, exports, imports, most imported files) and save `codemap.json` and `codemap.md` in a new run folder. | `folder` |
 | `meerkat_tests` | The catalog of everything Meerkat can check: kinds, families, each check, what it proves, cost and when it runs. | `detail` (`summary` or `full`) |
 | `meerkat_findings` | List the newest run's findings, most severe first. Reads files only. | `severity`, `check`, `suite`, `status` (`new` or `known`), `limit` (1 to 500, default 50) |
@@ -86,7 +88,7 @@ To choose tests, run `meerkat tests --json`. It lists every kind and family with
 | 1 | A check failed, or could not run (NOT RUN). |
 | 2 | A usage or configuration problem. The message says what to change. |
 | 3 | Nothing to run: the preset selected no checks here. |
-| 75 | `gate`, `smoke` and `blast` only: not run (no base ref, no checks loaded, or the file is not in the map). Not a pass. |
+| 75 | `gate`, `smoke`, `blast` and `brief` only: not run (no base ref, no checks loaded, or the file is not in the map). Not a pass. |
 | 130 | Interrupted. |
 
 A NOT RUN is never a pass. Report what is missing instead of treating it as success.

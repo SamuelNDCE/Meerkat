@@ -15,6 +15,7 @@ Meerkat is one command that checks a project and saves a report. Replace `<folde
 |---|---|
 | Before committing or opening a pull request | `meerkat gate` (add `--staged` in a pre-commit hook, or `--base <ref>` for a pull request) |
 | After a code change, to see what it affects | `meerkat blast <file>` or `meerkat blast <file>#<symbol>` |
+| Before editing a function or file | `meerkat brief <file>#<symbol>` (callers, tests, findings, churn, risk tier; `--json` to parse) |
 | Before promoting or releasing | `meerkat full` for the merge gate, `meerkat run release` before shipping |
 | Checking an unfamiliar codebase or planning a refactor | `meerkat map --app <folder>`, then `meerkat blast` on the files you will change |
 | Checking that Meerkat itself works | `meerkat smoke` (it tests the tool, not your project) |
@@ -41,6 +42,7 @@ A NOT RUN is never a pass. Report what is missing.
 | `meerkat gate` | Runs only the checks whose paths match files changed since the base ref (`--staged`, `--base <ref>`, `--against <ref>`, `--json`, `--thorough`). |
 | `meerkat smoke` | Runs each selected check on the changed files with a tiny time limit. It fails when the tool misbehaves, not when your project has problems. |
 | `meerkat blast <file>[#symbol]` | Importers, modules, tests that reach the target, and unresolved imports (never counted as safe). `--json` for the full result. |
+| `meerkat brief <file>[#symbol]` | Declaration, callers, tests, findings from the last saved run, git churn, a risk tier with reasons and a checklist. Starts no scan. `--json` for the facts. |
 | `meerkat map --app <folder>` | Writes `codemap.json` and `codemap.md` into a run folder: entry points, modules, most imported files. |
 | `meerkat verify` / `meerkat full` / `meerkat run <preset>` | Run the quick preset, every check, or any preset. `--json` prints the run summary. |
 | `meerkat check <id\|suite\|suite/check>` | Runs only those checks. |

@@ -49,6 +49,7 @@ meerkat last
 | 🚦 [Gate on changed files](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#gate) | Runs only the checks matching the files you changed |
 | 💨 [Smoke](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#smoke) | The `smoke` preset works; the tool self-check is not routed as a command yet |
 | 💥 [Blast radius](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius) | Lists what an edit to a file or symbol affects |
+| 📋 [Pre-edit brief](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#pre-edit-brief) | One fast call before an edit: callers, tests, findings, churn and a risk tier |
 | 🗺 [Codebase map](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#codebase-map) | Writes a map of entry points, modules and imports |
 | 🧪 [Red testing](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#red-testing) | Attacks Meerkat itself with planted bugs and clean twins (repository checkout only) |
 | 📏 [Real-code benchmark](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md#real-code-benchmark) | Measures false alarms on real Rust code (repository checkout only) |
@@ -84,7 +85,7 @@ Measured 2026-11-06 with `tools/corpus/gen-planted.mjs` and `tools/corpus/measur
 
 ## 🤖 Using it with AI
 
-- **MCP server:** `meerkat mcp serve` offers 28 tools, read-only resources (`meerkat://run/latest/...`) and prompts. `meerkat mcp install` registers it with Claude Code.
+- **MCP server:** `meerkat mcp serve` offers 29 tools, read-only resources (`meerkat://run/latest/...`) and prompts. `meerkat mcp install` registers it with Claude Code.
 - **Skills:** the [skills](https://github.com/SamuelNDCE/Meerkat/blob/main/skills/README.md) folder holds short guides (before a commit, before a PR, blast radius before an edit, mapping unfamiliar code, and more).
 - **Rule for agents:** a NOT RUN is never a pass, and never edit the config or turn a check off to make a run pass.
 
