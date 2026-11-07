@@ -152,6 +152,19 @@ describe('the generated block', () => {
   })
 })
 
+describe('hook install stays inside the repository', () => {
+  test('a local core.hooksPath that points outside the repository is refused and nothing is written there', () => {
+    const dir = repo('outside-hookspath')
+    const outside = join(tmp, 'outside-hooks-dir')
+    mkdirSync(outside, { recursive: true })
+    execFileSync('git', ['-C', dir, 'config', '--local', 'core.hooksPath', outside], { env: baseEnv })
+    const r = hook('install', dir)
+    expect(r.code).not.toBe(0)
+    expect(r.text).toContain('outside')
+    expect(existsSync(join(outside, 'pre-push'))).toBe(false)
+  })
+})
+
 test('cleanup', () => {
   rmSync(tmp, { recursive: true, force: true })
 })

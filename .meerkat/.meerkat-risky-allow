@@ -11,3 +11,8 @@ thorough/rules-infra-plus.mjs
 thorough/rules-rust-plus.mjs
 thorough/rules-web-hardening.mjs
 thorough/sandbox.mjs
+
+# Self-scan 2026-11 (reviewed, not real defects): sha1 is a non-security content id in a benchmark; the http:// is the Maven XML namespace URI in a fixture string.
+benchmarks/real-rust/measure.mjs:59
+benchmarks/real-rust/measure.mjs:114
+tools/corpus/base-project.mjs:30

@@ -12,3 +12,9 @@ tools/compat-fixtures.mjs
 tools/fake-apps/
 # Tool self-test files: each is broken on purpose so the tool must reject it (they are passed to the tools by name, not found by scanning).
 fixtures/tools/
+
+# Deliberately bad examples (the scanners must flag them): catalog bad cases and the Rust tool fixtures.
+catalog/*/*/bad/
+fixtures/geiger-unsafe/
+fixtures/miri-clean/
+fixtures/miri-ub/
