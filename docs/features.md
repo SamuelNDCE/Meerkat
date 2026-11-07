@@ -60,8 +60,10 @@ Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 - **What it is:** a run limited to the files you changed.
 - **Why it is good:** a commit or a pull request is checked in seconds, not minutes, and the answer covers exactly what you touched.
 - **What it does:** runs only the checks whose paths match the files changed (`--staged`, `--base <ref>` or `--against <ref>`; `--thorough` for the slower tier). Exit codes: 0 passed, 1 a check failed or crashed, 2 usage error, 75 could not run (no base found, no checks loaded, or a selected check could not run). 75 is not a pass.
+- **Scoped by default:** the first line says how many failures block, which files were scanned and how long it took. A failure blocks only when it points into a file that changed. A failure that points at nothing or at files nobody touched (no `SECURITY.md`, no licence, no README) is listed under "project-wide, not blocking" with a count, so it is visible but not in the way. `--all` restores the full behaviour: every failure blocks and every passing check is listed. Passing checks are a count, not 270 lines.
+- **Fast repeat runs:** a check whose inputs are exactly as at its last run is not run again (`lib/gatecache.mjs`; stored in `~/.meerkat/cache/`, `--no-cache` turns it off). The inputs are every tracked file's content, the commit, the Meerkat version, the tier, the `.meerkat*` settings files and the `MEERKAT_*` environment. Checks that never read source text (repo documents, CI config, git history; listed in `lib/gatepaths.mjs`) are keyed without source files, so a one-file source edit does not run them again. A check that is plainly about one language (a Rust check, a notebook check) waits for a changed file of that kind.
 - **What it does NOT do:** check files that did not change, or read the staged copy of a partly staged file (it checks the file as saved).
-- **Command or tool:** `meerkat gate [--staged | --base <ref> | --against <ref>] [--app <folder>] [--json]`; MCP `meerkat_gate`.
+- **Command or tool:** `meerkat gate [--staged | --base <ref> | --against <ref>] [--all] [--no-cache] [--app <folder>] [--json]`; MCP `meerkat_gate`.
 
 ## Smoke
 
