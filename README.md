@@ -116,6 +116,7 @@ The driver protocol is built and Meerkat schedules, times and reports a driver l
 | [docs/adding-tests.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/adding-tests.md) | Adding checks, packs and presets |
 | [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) | How accuracy is measured |
 | [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) | Every command and flag |
+| [docs/release.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/release.md) | The release gate, tarball and upgrade tests, publishing and rollback |
 | [CONTRIBUTING.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CONTRIBUTING.md) | How to contribute |
 | [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md) | What changed |
 
