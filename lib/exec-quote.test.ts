@@ -18,10 +18,10 @@ describe('quote for cmd.exe', () => {
     expect(quote('a&b')).toBe('"a&b"')
     expect(quote('a^b')).toBe('"a^b"')
   })
-  test('% and ! are refused', () => {
+  test('! is passed through (ignore globs), % is refused', () => {
+    expect(quote('!node_modules/**')).toBe('!node_modules/**')
     expect(() => quote('%PATH%')).toThrow(/refusing/)
     expect(() => quote('50%')).toThrow(/refusing/)
-    expect(() => quote('hi!')).toThrow(/refusing/)
   })
   test('a newline, carriage return or NUL is refused', () => {
     expect(() => quote('a\nb')).toThrow(/refusing/)
