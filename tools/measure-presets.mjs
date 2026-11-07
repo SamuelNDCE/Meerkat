@@ -33,7 +33,7 @@ function measure(name) {
 const time = (s) => (s < 1 ? '<1 s' : s < 60 ? `${s.toFixed(1)} s` : `${(s / 60).toFixed(1)} min`)
 
 const SECTIONS = [
-  ['Everything', ['quick', 'fast', 'full', 'thorough']],
+  ['Everything', ['quick', 'fast', 'bugs', 'full', 'thorough']],
   ['By kind', ['security-fast', 'security', 'functionality-fast', 'functionality', 'ui-fast', 'ui', 'performance-fast', 'performance', 'refactor']],
   ['Combinations', ['app-fast', 'app', 'ci', 'release', 'security-ai']],
 ]

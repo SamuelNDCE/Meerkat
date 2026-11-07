@@ -26,7 +26,7 @@ Planned (not built as a command or tool): [Advisory scan](#advisory-scan).
 
 - **What it is:** the main job of Meerkat: a set of checks (secrets, web security, accessibility, build, tests, performance, code shape and more) that fit your project, grouped into presets.
 - **Why it is good:** one command tells a person or an AI whether a project is safe to push, and a check that could not run says so instead of passing.
-- **What it does:** runs the checks that apply, then saves a report, a findings file and one log per check. `quick` (also `verify`) before a push; `full` before a release; `ci`, `release`, `security`, `ui`, `performance`, `refactor` for one purpose. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage or configuration error, 3 nothing to run, 130 interrupted.
+- **What it does:** runs the checks that apply, then saves a report, a findings file and one log per check. `quick` (also `verify`) before a push; `bugs` for findings that are likely real defects (quick minus style and documentation rules); `full` before a release; `ci`, `release`, `security`, `ui`, `performance`, `refactor` for one purpose. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage or configuration error, 3 nothing to run, 130 interrupted.
 - **What it does NOT do:** edit your project, install anything without a yes, or call an AI unless you opt in. `quick` skips builds and compiled test suites on purpose; `full` leaves out the AI review.
 - **Command or tool:** `meerkat verify [folder]`, `meerkat full [folder]`, `meerkat run <preset> [folder]`, `meerkat check <id|suite|suite/check> [folder]`, `meerkat self-test`; MCP `meerkat_run`, `meerkat_list`, `meerkat_presets`, `meerkat_self_test`, `meerkat_last`, `meerkat_why`.
 
