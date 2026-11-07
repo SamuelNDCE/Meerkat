@@ -24,7 +24,7 @@ import { discoverChecks } from './lib/discover.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
 import { estimateRunMs, estimateVsActualText } from './lib/runestimate.mjs'
 import { clampScale } from './lib/timeouts.mjs'
-import { detect, initConfig, presetPacks } from './lib/init.mjs'
+import { applicablePacks, detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
 import { compactSummary } from './lib/tui/results.mjs'
 import { buildFindings, saveFindings } from './lib/findingsdoc.mjs'
@@ -330,7 +330,9 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     tier = chosen.preset.tier
     groups = [...chosen.preset.groups, ...groups]
     opts.include.push(...chosen.preset.include)
-    read.config.packs = [...new Set([...(read.config.packs ?? []), ...presetPacks(chosen.preset, appDir)])]
+    // With no config file, a preset that picks checks by kind (security, refactor, ui, ...) has nothing to pick from in the two starting packs,
+    // so every pack that applies to the folder loads, as it does for quick and full. A project's config still decides for itself.
+    read.config.packs = [...new Set([...(read.config.packs ?? []), ...presetPacks(chosen.preset, appDir), ...(configFile ? [] : applicablePacks(appDir))])]
     if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
   }
   const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) })

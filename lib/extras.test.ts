@@ -101,3 +101,28 @@ describe('applyAccepted uses the ids findings.json lists', () => {
     expect(results[0].status).toBe('FAIL')
   })
 })
+
+describe('applyAccepted with some findings of a check still open', () => {
+  const meta = { version: '1', runId: 'r', tier: 'fast', startedAt: '2026-11-01T00:00:00.000Z', endedAt: '2026-11-01T00:00:01.000Z', ms: 1 }
+  const checks = [{ id: 'pii-in-logs', group: 'security', tier: 'fast', run: { script: 'x.mjs' } }]
+  test('the dismissed finding leaves the list, the open one stays, the check stays FAIL', () => {
+    const results = [{ id: 'pii-in-logs', status: 'FAIL', ms: 1, detail: 'd', suite: 'privacy', subs: [] }]
+    const sink = new Map([['pii-in-logs', { findings: [], output: 'a.js:1 logs "token", with no redaction nearby\nb.js:2 logs "token", with no redaction nearby\n' }]])
+    const dir = mkdtempSync(join(tmpdir(), 'mk-acc2-'))
+    try {
+      writeFileSync(join(dir, 'a.js'), 'x\n')
+      writeFileSync(join(dir, 'b.js'), 'x\ny\n')
+      const doc = buildFindings({ results, checks, sink, appDir: dir, meta })
+      expect(doc.findings).toHaveLength(2)
+      const dismissed = doc.findings.find((f: { file: string }) => f.file === 'a.js')
+      const sets = { dismissed: new Map([[dismissed.id, 'fixture']]), baseline: new Set() }
+      const out = applyAccepted(results, sink, sets, doc.findings)
+      expect(out).toHaveLength(1)
+      expect(results[0].status).toBe('FAIL')
+      const after = buildFindings({ results, checks, sink, appDir: dir, meta }).findings
+      expect(after.map((f: { file: string }) => f.file)).toEqual(['b.js'])
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+})
