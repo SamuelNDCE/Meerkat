@@ -35,3 +35,21 @@ jobs:
       - run: npm ci
       - run: npx vitest run --maxWorkers=2
       - run: node run.mjs --app . --preset quick --plain
+
+  # The pre-release checks on every change, so a release day holds no surprise: changelog, tarball file list, npm audit (high), secret scan,
+  # fix commits without a test (a warning), and the tarball install test. See docs/release.md.
+  release-gate:
+    name: release gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the fix-needs-a-test step reads the history since the last tag
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node tools/release/gate.mjs --smoke
