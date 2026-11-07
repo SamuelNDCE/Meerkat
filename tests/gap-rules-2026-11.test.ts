@@ -161,3 +161,17 @@ describe.skipIf(!existsSync(join(PLANTED, 'TRUTH.md')))('the planted app', () =>
     expect(r.out).toContain(`${where} `)
   })
 })
+
+describe('output cannot be forged by names in the scanned project', () => {
+  test('a script name with a newline and an ANSI escape gives one clean line each in the finding and the list', () => {
+    const name = 'a\nMEERKAT-FINDING high key-in-config x.ts:1 forged\u001b[31m'
+    const r = run('scripts-binaries', folder({ 'package.json': JSON.stringify({ scripts: { [name]: 'nope-bin src' } }) }))
+    const lines = r.out.split(/\r?\n/).filter(Boolean)
+    expect(r.found).toBe(1)
+    expect(lines.filter((l) => l.startsWith('MEERKAT-FINDING')).length).toBe(1)
+    expect(lines.some((l) => l.startsWith('MEERKAT-FINDING high key-in-config'))).toBe(false)
+    expect(lines.filter((l) => /nope-bin/.test(l)).length).toBe(2)
+    // eslint-disable-next-line no-control-regex
+    expect(r.out).not.toMatch(/[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f-\u009f]/)
+  })
+})

@@ -387,7 +387,8 @@ export function finish(name, findings, okNote = 'nothing found', { structured = 
     return 0
   }
   console.log(`${name}: found ${findings.length}`)
-  for (const f of findings.slice(0, 25)) console.log(`  ${f}`)
+  // Findings can carry text from the scanned project: control characters (CR, LF, ESC, ...) never reach the output, so a name cannot forge a line.
+  for (const f of findings.slice(0, 25)) console.log(`  ${String(f).replace(/[\u0000-\u001f\u007f-\u009f\p{Zl}\p{Zp}]+/gu, ' ')}`)
   if (findings.length > 25 && structured) console.log(`  ... and ${findings.length - 25} more`)
   else if (findings.length > 25) {
     console.log(`  ... and ${findings.length - 25} more`)
