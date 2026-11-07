@@ -17,3 +17,16 @@ regex-in-loop tools/gen-coverage.mjs
 regex-in-loop thorough/privacy.mjs
 # Accepted: npm trusted publishing needs Node 22.14 or newer, so publish.yml uses 24 while the package itself supports Node 20.
 node-version-mismatch .github/workflows/publish.yml
+# ci.yml: the test matrix runs Node 20 and 22 on purpose (the supported range) and the release gate job pins 22; package.json says >=20 (DELIBERATE).
+node-version-mismatch .github/workflows/ci.yml
+# tools/corpus/gen-planted.mjs builds a RegExp per sample name because each name changes the pattern; it cannot be hoisted out of the loop (DELIBERATE).
+regex-in-loop tools/corpus/gen-planted.mjs
+# A RegExp built from a name or key that changes on every pass (a helper name, a rule table entry, a plist key), or built once per call and misread as in a loop (lib/refactorctx.mjs:74) (DELIBERATE).
+regex-in-loop lib/refactorctx.mjs
+regex-in-loop thorough/doc-drift.mjs
+regex-in-loop thorough/gap-rules.mjs
+regex-in-loop thorough/guards-code-patterns.mjs
+regex-in-loop thorough/health.mjs
+regex-in-loop thorough/rust-tools.mjs
+regex-in-loop thorough/sec-code.mjs
+regex-in-loop tools/corpus/complete-config.mjs

@@ -49,3 +49,11 @@ tests/nv-round-5a.test.ts
 tests/nv-round-5b.test.ts
 # fp-security tests quote #[ignore] inside Rust sample strings to prove the rules skip ignored tests.
 tests/fp-security.test.ts
+# thorough/static.mjs prints its self-test result to the command line (node thorough/static.mjs), like the other check scripts above (DELIBERATE).
+thorough/static.mjs:866
+# Sample text in tests: empty catch blocks and a debugger statement written inside strings so the rules can be proven (FIXTURE).
+lib/redtest/regression.test.ts
+tests/plume-fp.test.ts
+tests/fa-repo-config.test.ts:111
+# tests/uiadriver.test.ts:60: stopping a test process that may already have exited; there is nothing to do if kill fails (DELIBERATE).
+tests/uiadriver.test.ts:60

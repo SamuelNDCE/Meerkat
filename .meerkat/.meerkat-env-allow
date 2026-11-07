@@ -9,3 +9,6 @@ TITLE
 MEERKAT_FONT
 # Set by vitest.setup.mjs for its own workers so the private test temp folder is made once (an internal marker, not a setting).
 MEERKAT_TEST_TMP_SET
+# Names that appear only inside planted sample files of the checks (a fixture reads DEMO_REAL, the key-in-config clean twin reads PAYMENTS_KEY); the tool itself never reads them (FIXTURE).
+DEMO_REAL
+PAYMENTS_KEY

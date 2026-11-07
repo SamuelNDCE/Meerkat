@@ -30,3 +30,11 @@ js-await-in-loop tests/e2e-estimates.test.ts
 js-await-in-loop tests/e2e-fakeapps.test.ts
 js-await-in-loop lib/aiverify.mjs
 js-await-in-loop lib/aiprompt.test.ts
+# tools/trap-lang-verify.mjs imports the trap modules one at a time, in sorted order, so the output is the same every run (DELIBERATE).
+js-await-in-loop tools/trap-lang-verify.mjs
+# Sequential on purpose: advisory batches go to OSV one after another (rate limit, cache between calls), gate checks run one at a time, corpus tools import and measure in order (DELIBERATE).
+js-await-in-loop lib/advisory.mjs
+js-await-in-loop lib/gate.mjs
+js-await-in-loop tools/corpus/gen-planted.mjs
+js-await-in-loop tools/corpus/measure.mjs
+js-await-in-loop tools/gen-accuracy-results.mjs

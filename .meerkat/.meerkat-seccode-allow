@@ -8,3 +8,11 @@ lib/tui/resultssample.mjs:83
 # thorough/api.mjs:297 and health.mjs:291 name the dangerous calls in rule text and messages, not call them.
 thorough/api.mjs:297
 thorough/health.mjs:291
+# Self-scan 2026-11 (FIXTURE): README sample finding text that describes a SQL injection on purpose (lib/tui/resultssample.mjs:73) and the sample MD5 row (:84).
+lib/tui/resultssample.mjs:73
+lib/tui/resultssample.mjs:84
+# thorough/api.mjs:298 is the DELETE FROM without WHERE rule text, and thorough/health.mjs:332 is the createCipher deprecation rule text: they name the dangerous call, they do not make it (FIXTURE).
+thorough/api.mjs:298
+thorough/health.mjs:332
+# tools/accuracy-tiers.mjs is a table of rule ids and tiers (js-md5-password and others); the word md5 is a rule name there, not code that hashes a password (FIXTURE).
+tools/accuracy-tiers.mjs

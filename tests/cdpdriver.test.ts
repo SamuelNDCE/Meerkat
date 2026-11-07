@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'vitest'
 // @ts-ignore plain mjs modules
 import { createHandler, CAPABILITIES } from '../examples/drivers/cdp-driver.mjs'
-// @ts-ignore
+// @ts-ignore plain mjs module with no type declarations
 import { fakeCdp } from '../fixtures/clickthrough/fake-cdp-server.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))

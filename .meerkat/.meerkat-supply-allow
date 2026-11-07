@@ -31,3 +31,23 @@ eb805f1 tests/fp-security.test.ts
 # Squash merges give a new commit hash that cannot be listed in advance, so these two files are accepted by path: the fp-security test holds a sample AWS-style key, and the recorded gitleaks fixture holds the tool's own REDACTED placeholder.
 tests/fp-security.test.ts
 tests/fixtures/detectors/gitleaks.json
+# 90176bc: tools/accuracy-extra-trap-lang-2.mjs adds trap samples; the "Password" it flags is a UI label string ("Password"), not a secret value. History is not rewritten (HISTORY).
+90176bc tools/accuracy-extra-trap-lang-2.mjs
+# Self-scan 2026-11 (HISTORY, reviewed by reading each added line): these commits added test or corpus samples with made-up values (AWS documented example key AKIAIOSFODNN7EXAMPLE, ghp_abcdef... fakes, placeholder passwords, short fake PEM bodies, UI labels such as "Password"). None is a live credential and history is not rewritten.
+8c0a261 tests/adversarial-2026-11.test.ts
+90176bc tests/fa-repo-config.test.ts
+90176bc tests/false-alarm-fix.test.ts
+90176bc tests/rules-split-files.test.ts
+90176bc tools/accuracy-extra-grow-hard-4.mjs
+90176bc tools/accuracy-extra-grow-lang-1.mjs
+90176bc tools/accuracy-extra-grow-lang-2.mjs
+90176bc tools/accuracy-extra-grow-lang-3.mjs
+90176bc tools/accuracy-extra-grow-web-2.mjs
+90176bc tools/accuracy-extra-grow-web-3.mjs
+90176bc tools/accuracy-extra-trap-lang-1.mjs
+90176bc tools/accuracy-extra-trap-lang-3.mjs
+90176bc tools/accuracy-extra-trap-web-2.mjs
+ae67ff8 tests/fp-detectors-2026-11.test.ts
+da6a88f tests/gap-rules-2026-11.test.ts
+da6a88f thorough/gap-rules.mjs
+e475a7c .meerkat/.meerkat-secrets-allow

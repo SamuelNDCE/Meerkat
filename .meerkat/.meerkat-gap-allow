@@ -1,0 +1,2 @@
+# thorough/gap-rules.mjs holds the planted broken and clean samples of the key-in-config rule (a made-up ghp_ token and sk_test_FAKE values) as strings; the rule must see them to prove itself (FIXTURE).
+key-in-config thorough/gap-rules.mjs
