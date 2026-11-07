@@ -22,7 +22,7 @@ import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from '
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
 import { discoverChecks } from './lib/discover.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
-import { estimateRunMs, estimateVsActualText } from './lib/runestimate.mjs'
+import { estimateRunMs, estimateRunMsWithCache, estimateVsActualText } from './lib/runestimate.mjs'
 import { clampScale } from './lib/timeouts.mjs'
 import { applicablePacks, detect, initConfig, presetPacks } from './lib/init.mjs'
 import { finalReport } from './lib/report.mjs'
@@ -491,6 +491,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       if (hit) cached.push({ ...hit.result, status: 'PASS', ms: 0, cached: true, detail: `unchanged since ${hit.at.slice(0, 16).replace('T', ' ')} UTC: passed on this exact project (--no-cache runs it again)` })
       else toRun.push(c)
     }
+    // The estimate counts only what will really run: checks the cache serves take no time (lib/runestimate.mjs).
+    if (cached.length) estimatedMs = estimateRunMsWithCache(toRun, cached.length, timings, tier, { slots: defaultParallel(cpus().length, env) })
     const ranNow = toRun.length ? await stoppable(ctx, log, () => runAll(toRun, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: defaultParallel(cpus().length, env), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder), deadlineMs: runDeadlineMs(ctx, opts) })) : []
     results = [...ranNow, ...cached]
     if (cached.length && !quiet) log(`cache: ${cached.length} passing check(s) reused from an earlier run on this exact project (--no-cache runs everything again)`)

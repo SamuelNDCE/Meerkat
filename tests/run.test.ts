@@ -383,7 +383,7 @@ describe('finding bash for a machine lock script', () => {
 })
 
 describe('measured times replace the written guesses', () => {
-  test('the middle of the last passes wins; failures and stopped checks are not recorded', () => {
+  test('the last passes decide, the newest counting most; failures and stopped checks are not recorded', () => {
     expect(median([300, 100, 200])).toBe(200)
     expect(median([100, 300])).toBe(200)
     expect(median([])).toBeNull()
@@ -391,7 +391,7 @@ describe('measured times replace the written guesses', () => {
     expect(Object.keys(t.checks)).toEqual(['a'])
     for (const ms of [100_000, 120_000, 110_000, 130_000, 140_000]) t = recordRun(t, [{ id: 'a', status: 'PASS', ms }], 'fast')
     expect((t.checks as any).a.fast).toEqual([100_000, 120_000, 110_000, 130_000, 140_000])
-    expect(learnedSeconds(t, 'a', 'fast')).toBe(120)
+    expect(learnedSeconds(t, 'a', 'fast')).toBe(130) // the plain middle is 120; the newest runs (130, 140) pull it up (timings.mjs recentMedian)
     expect(learnedSeconds(t, 'a', 'thorough')).toBeNull()
   })
   test('applyLearned changes only checks that have been measured, and keeps the written value', () => {
