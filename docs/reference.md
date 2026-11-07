@@ -192,6 +192,7 @@ Measured on 2026-11-01 on Meerkat's own repository, a small project, on one PC (
 |---|---|---|---|
 | `meerkat quick` | the everyday check, 5 to 10 minutes at most: every short static check, no builds or test runs | not re-measured | not re-measured |
 | `meerkat fast` | same as quick | not re-measured | not re-measured |
+| `meerkat bugs` | the quick run without style, documentation and housekeeping rules: a finding is likely a real bug | not re-measured | not re-measured |
 | `meerkat full` | every check, the slow ones too: before a release | 294 | 10.5 s |
 | `meerkat thorough` | every check, the slow ones too (same as full) | 294 | 11.0 s |
 | `meerkat run --preset detectors` | full plus opt-in tools: osv-scanner, gitleaks, Semgrep, clippy, tsc, staticcheck, govulncheck, actionlint | n/a | n/a |
@@ -255,6 +256,10 @@ meerkat project-smoke --changed
 - `meerkat project-smoke --changed` runs only the checks that read files changed against the base branch (`MEERKAT_BASE` or the default branch).
 
 What `--scope` limits: which checks run (those with no file in the folder are skipped) and which findings count. A check that scans the whole project still runs, and if it fails only on findings outside the folder it passes for that run. What it does not limit: repo-wide checks (git history, commit messages, dependency counts) look at the whole repository regardless. `--scope` and `--changed` cannot be used together.
+
+#### The bugs preset
+
+`meerkat bugs` (or `--preset bugs`) is for finding defects. It runs what `quick` runs, minus rules that are only about style, documentation, formatting or housekeeping, so a finding is likely a real bug. It was added after a measurement on 20 real bug-fix commits: `quick` reported about 540 findings per tree, over half from six style and doc rules (undocumented public items, markdownlint, missing Debug derive, String error types, `push_str(&format!)`), and caught 1 of the 20 bugs. Security checks are never excluded. The excluded checks and rules, with one reason each, are listed in [docs/checks.md](checks.md#the-bugs-preset-what-it-leaves-out) and live in one file, `lib/bugs-preset.mjs`. Excluded rules are left out of the findings as well as the verdict. A custom preset can do the same with `excludeChecks` (check ids) and `excludeSubs` (`check/rule` ids) in `meerkat.config.json`.
 
 #### What a preset is for: press `d`
 

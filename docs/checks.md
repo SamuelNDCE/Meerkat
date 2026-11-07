@@ -491,4 +491,80 @@ Is the code itself in good shape: duplicated code, dead code, files too long, ci
 | `dead-python` | thorough | light | 10 s | Dead Python code (vulture) *(needs: vulture)* | python |
 | `radon-complexity` | thorough | light | 10 s | Very complex Python functions from radon: cyclomatic complexity rank D (21) or worse (opt-in) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `vulture-dead-code` | thorough | light | 10 s | Dead Python code from vulture: unused imports and unreachable code at 80 percent confidence or more (opt-in: lower confidence is mostly noise) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
+
+## The bugs preset: what it leaves out
+
+The `bugs` preset runs the quick checks without the checks and rules below, which are style, documentation, formatting or housekeeping. The list lives in `lib/bugs-preset.mjs`; a test fails if an entry stops existing.
+
+| Left out | Kind | Reason |
+|---|---|---|
+| `markdownlint` | check | Markdown formatting of documents, not code behaviour |
+| `markdown-headings` | check | heading levels in Markdown, style of documents |
+| `markdown-code-fences` | check | language names on Markdown fences, style of documents |
+| `typos` | check | spelling in code and documents |
+| `spell-common-typos` | check | spelling in docs and comments |
+| `prettier` | check | code formatting only |
+| `rust-fmt` | check | code formatting only (cargo fmt --check) |
+| `dart-format` | check | code formatting only |
+| `dotnet-format` | check | code formatting only |
+| `trailing-whitespace` | check | stray spaces at line ends, formatting |
+| `final-newline` | check | newline at end of file, formatting |
+| `indent-consistency` | check | tabs versus spaces, formatting |
+| `line-length` | check | source line length, readability |
+| `whitespace` | check | byte-order marks and mixed line endings, formatting |
+| `gitattributes-eol` | check | line-ending policy file, housekeeping |
+| `editorconfig-present` | check | an .editorconfig file exists, housekeeping |
+| `readme-sections` | check | README headings, documentation |
+| `readme-install-usage` | check | README length and sections, documentation |
+| `contributing-file` | check | CONTRIBUTING.md exists, documentation |
+| `changelog-format` | check | CHANGELOG heading style, documentation |
+| `changelog-version-headings` | check | CHANGELOG heading order, documentation |
+| `commit-message-format` | check | commit subject style, process |
+| `branch-names` | check | branch naming style, process |
+| `merge-commit-noise` | check | history tidiness, process |
+| `todo-hygiene` | check | TODO comments naming an owner, process |
+| `markers` | check | FIXME and XXX notes left in code, a to-do list and not a defect |
+| `non-ascii-filenames` | check | file name characters, housekeeping |
+| `css-important-overuse` | check | count of !important in CSS, style |
+| `ts-ignore-comments` | check | whether @ts-ignore says why, comment style |
+| `js-var-usage` | check | var versus let and const, style |
+| `rp-api-ffi-wasm/rapi-pub-fn-undocumented` | rule | a public function has no /// comment: documentation |
+| `rp-api-ffi-wasm/rapi-pub-type-undocumented` | rule | a public type has no /// comment: documentation |
+| `rp-api-ffi-wasm/rapi-missing-docs-lint` | rule | no #![warn(missing_docs)] attribute: documentation policy |
+| `rp-api-ffi-wasm/rapi-missing-debug-derive` | rule | a public type does not derive Debug: API convenience, not wrong behaviour |
+| `rp-errors/rerr-string-error-result` | rule | a String error type in Result: design preference, the code still works |
+| `rp-perf-style/rperf-push-str-format` | rule | push_str(&format!) allocates a temporary: micro-performance style |
+| `rp-errors/rerr-map-err-to-string` | rule | map_err(to_string) loses the error type: design preference |
+| `rp-errors/rerr-box-dyn-error-public` | rule | Box<dyn Error> in a public signature: API design preference |
+| `rp-errors/rerr-unit-error-type` | rule | () as an error type: API design preference |
+| `rp-errors/rerr-unwrap-or-builds-value` | rule | eager unwrap_or argument: micro-performance style |
+| `rp-errors/rerr-error-no-display` | rule | error enum without Display: API convenience |
+| `rp-perf-style/rperf-len-compare-zero` | rule | len() == 0 versus is_empty: style |
+| `rp-perf-style/rperf-format-to-string-arg` | rule | format!("{}", x.to_string()): double allocation style |
+| `rp-perf-style/rperf-format-no-args` | rule | format! with no arguments: style |
+| `rp-perf-style/rperf-collect-then-iterate` | rule | needless collect: micro-performance style |
+| `rp-perf-style/rperf-iter-count` | rule | iter().count() versus len(): micro-performance style |
+| `rp-perf-style/rperf-nth-zero` | rule | nth(0) versus next(): style |
+| `rp-perf-style/rperf-map-identity` | rule | map(\|x\| x): style |
+| `rp-perf-style/rperf-bool-eq-literal` | rule | comparing a bool with true or false: style |
+| `rp-perf-style/rperf-index-range-loop` | rule | indexing a vector over 0..len: style |
+| `rp-perf-style/rperf-ref-vec-or-string-param` | rule | &Vec or &String parameter: style |
+| `rp-perf-style/rperf-box-vec` | rule | Box<Vec<T>>: style |
+| `rp-perf-style/rperf-option-option` | rule | Option<Option<T>>: style |
+| `rp-perf-style/rperf-unwrap-or-new-container` | rule | unwrap_or(Vec::new()): micro-performance style |
+| `rp-perf-style/rperf-clone-twice` | rule | clone() twice in a row: micro-performance style |
+| `rp-perf-style/rperf-to-vec-only-for-len` | rule | copy only to take a length: micro-performance style |
+| `rp-perf-style/rperf-match-bool-literals` | rule | match on a bool: style |
+| `rp-perf-style/rperf-println-in-library` | rule | a library prints to stdout: style |
+| `rp-perf-style/rperf-allow-clippy-group` | rule | a whole clippy group allowed: lint policy |
+| `rp-perf-style/rperf-allow-dead-code-crate` | rule | dead_code allowed crate-wide: lint policy |
+| `rp-cargo/rcargo-missing-description` | rule | Cargo package metadata: publishing housekeeping |
+| `rp-cargo/rcargo-missing-license` | rule | Cargo package metadata: publishing housekeeping |
+| `rp-cargo/rcargo-missing-edition` | rule | Cargo package metadata: housekeeping |
+| `rp-cargo/rcargo-edition-old` | rule | old Rust edition: modernisation advice |
+| `rp-cargo/rcargo-openssl-dependency` | rule | openssl versus rustls: informational preference |
+| `rp-cargo/rcargo-workspace-no-resolver` | rule | workspace resolver setting: modernisation advice |
+| `rp-api-ffi-wasm/rapi-glob-reexport` | rule | pub use x::*: API design preference |
+| `rp-api-ffi-wasm/rapi-extern-block-no-link` | rule | extern block without #[link]: informational |
+| `rp-async/rasync-runtime-built-per-call` | rule | tokio runtime built per call: informational performance note |
 <!-- checks:end -->

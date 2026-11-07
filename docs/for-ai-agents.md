@@ -139,6 +139,7 @@ Pick the smallest one that answers your question. `--list-presets` shows these p
 | Preset | Use it for |
 |---|---|
 | `quick` (also `fast`) | Before every push. Every short static check: no builds, no compiled tests (cargo, go test, mvn, dotnet, swift, pytest, rspec, build scripts); direct vitest or jest runs stay in. |
+| `bugs` | Hunting defects. The quick checks minus rules that are only style, documentation or housekeeping (undocumented public items, markdownlint, missing Debug derive, String error types, push_str(&format!) and more), so a finding is likely a real bug. Security checks all stay on. The list and a reason for each is in docs/checks.md. |
 | `full` (also `thorough`) | Before a release. Every check, the slow ones too, including the builds and compiled tests. |
 | `ci` | A build server: quick security and functionality checks, no windows. |
 | `release` | Before shipping: everything plus the AI review (opt-in `ai`, may call a paid model). |

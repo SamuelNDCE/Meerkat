@@ -45,7 +45,7 @@ meerkat last
 
 | Feature | What it does |
 |---|---|
-| 🔍 [Checks and presets](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#checks-and-presets) | Runs the checks that fit your project; presets pick a set (`quick`, `full`, `ci`, `release`) |
+| 🔍 [Checks and presets](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#checks-and-presets) | Runs the checks that fit your project; presets pick a set (`quick`, `bugs`, `full`, `ci`, `release`) |
 | 🚦 [Gate on changed files](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#gate) | Runs only the checks matching the files you changed |
 | 💨 [Smoke](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#smoke) | The `smoke` preset works; the tool self-check is not routed as a command yet |
 | 💥 [Blast radius](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius) | Lists what an edit to a file or symbol affects |

@@ -43,7 +43,7 @@ import { packOfCheck, resolveOnly, suiteIdOf, suiteInfo } from './lib/suites.mjs
 import { tipLine } from './lib/recommend.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
-import { mergePresets, parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
+import { applyPresetExclusions, mergePresets, parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
 import { readUserConfig } from './lib/userconfig.mjs'
 import { createSplash } from './lib/tui/splash.mjs'
 import { loadTheme } from './lib/tui/theme.mjs'
@@ -176,7 +176,7 @@ const subsOffMap = (list = []) => {
 }
 const listJsonText = (checks) => JSON.stringify(checks.map((c) => ({ id: c.id, kind: c.group, tier: c.tier, lane: c.lane, seconds: c.estSeconds ?? null, title: c.title, optIn: c.optIn ?? null, pack: packOfCheck(c), suite: suiteIdOf(c), subs: c.subs ?? 1, origin: c.origin ?? 'bundled', ...(suiteInfo(suiteIdOf(c))?.project ? { suiteLabel: suiteInfo(suiteIdOf(c)).label, suitePurpose: suiteInfo(suiteIdOf(c)).purpose } : {}) })))
 function logDisabled(log, applied, configFile) {
-  for (const d of applied.disabled) log(`[DISABLED] ${d.id}: turned off in ${configFile}${d.by ? ` (${d.by})` : ''}`)
+  for (const d of applied.disabled) log(`[DISABLED] ${d.id}: ${d.preset ? `left out by preset ${d.preset}` : `turned off in ${configFile}${d.by ? ` (${d.by})` : ''}`}`)
   for (const ref of applied.disabledSubs ?? []) log(`[DISABLED] sub-check ${ref}: turned off in ${configFile}`)
 }
 const warnUnmatched = (log, words) => words.forEach((w) => log(`warning: ${w.startsWith('suite ') ? `--suite ${w.slice(6)}` : `--only ${w}`} matches no check`))
@@ -334,6 +334,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
   }
   const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) })
+  applyPresetExclusions(applied, chosen.preset)
   // The project's own tests, found without being told (lib/discover.mjs): only for full, thorough and release (thorough tier with every pack; quick also has allPacks, so the tier decides), or
   // when asked for by name (`meerkat check discovered`). Never for quick or ci. "discover": false turns it off.
   const asked = opts.only.includes('discovered')
