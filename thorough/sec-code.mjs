@@ -235,6 +235,14 @@ const neutralSql = (t) => {
     u = u.replace(new RegExp(String.raw`(['"\x60])\s*\+\s*${n}\s*\([^()]*\)\s*\+\s*(['"\x60])`, 'g'), '')
     u = u.replace(new RegExp(String.raw`(['"\x60])\s*\+\s*${n}\s*\([^()]*\)(?=\s*[,);\n])`, 'g'), '$1')
   }
+  // A constant table name joined into the statement ('SELECT * FROM ' + TABLE + ' WHERE ...') is author-written text, the same as ${TABLE}.
+  for (const n of new Set([...u.matchAll(/(['"\x60])\s*\+\s*([A-Z][A-Z0-9_]*)\s*(?:\+\s*(['"\x60])|(?=[,);\n]))/g)].map((m) => m[2]).filter(isText))) {
+    u = u.replace(new RegExp(String.raw`(['"\x60])\s*\+\s*${n}\s*\+\s*(['"\x60])`, 'g'), '')
+    u = u.replace(new RegExp(String.raw`(['"\x60])\s*\+\s*${n}(?=\s*[,);\n])`, 'g'), '$1')
+  }
+  // A parameterised call: the first argument is ONE plain SQL literal (no join in the statement itself) and the second is an array of bound values. A + or a template inside
+  // that array (['%' + name + '%'] for a LIKE) is a value the driver binds, not text added to the SQL, so the array is emptied before the line is judged.
+  u = u.replace(/(\(\s*)(['"\x60])((?:(?!\2)[^\n])*)\2(\s*,\s*)\[(?:[^\[\]\n]|\[[^\]\n]*\])*\]/g, (m, open, q, body, comma) => (SQL_KW.test(body) && !(q === '\x60' && body.includes('${')) ? `${open}${q}${body}${q}${comma}[]` : m))
   return u
 }
 const sqlBuilt = {
