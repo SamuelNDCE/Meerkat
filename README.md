@@ -146,6 +146,9 @@ The driver protocol is built and Meerkat schedules, times and reports a driver l
 | [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) | How accuracy is measured |
 | [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) | Every command and flag |
 | [docs/how-to.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/how-to.md) | How to run Meerkat efficiently: presets, the daily loop, pull requests, speed |
+| [docs/capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md) | What Meerkat does, by job, with every command and MCP tool |
+| [docs/neuralvault.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault.md) | Using Meerkat from NeuralVault: the MCP server, the verdict, trust and NO-RESULT |
+| [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md) | Questions teams have asked: slow gates, branch failures, trust, progress, the cargo lock |
 | [docs/release.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/release.md) | The release gate, tarball and upgrade tests, publishing and rollback |
 | [CONTRIBUTING.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CONTRIBUTING.md) | How to contribute |
 | [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md) | What changed |

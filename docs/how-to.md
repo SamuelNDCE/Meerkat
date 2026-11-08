@@ -181,3 +181,9 @@ To add a check, see [writing-checks.md](writing-checks.md). The shortest way is 
 - Run `meerkat preset show quick` before a big run to see what runs and how long it takes.
 - Set `MEERKAT_LOG_DIR` to a folder you keep, so run history survives a temp cleanup.
 - Stage whole files. The gate reads files as saved, so a file staged in part is checked in full as it is on disk.
+
+## More pages
+
+- [capabilities.md](capabilities.md): what Meerkat does, by job.
+- [neuralvault.md](neuralvault.md): using Meerkat from NeuralVault.
+- [faq.md](faq.md): questions teams have asked.
