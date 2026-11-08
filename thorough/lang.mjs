@@ -182,7 +182,20 @@ const FN_BODY = /(?:\bfunction\b[^{;]*|=>[ \t\n]*)\{/g
 // Only a call that really sleeps or polls (not the word in an option object), or a header that counts attempts or tests a clock or flag.
 const SLEEP_CALL = /(?<![\w$])(?:sleep|delay|setTimeout|backoff|wait\w*|poll\w*|retry\w*)[ \t]*\(/i
 const POLL_HEADER = /attempt|retr(?:y|ies)|deadline|Date\.now|poll|\bwhile[ \t]*\([ \t]*!?[ \t]*[\w$.]+[ \t]*\)/i
+// A break or return that sits directly in the loop body (not inside an if, a nested block or an if-without-braces) means the loop runs at most one pass,
+// so there is nothing to run in parallel. Nested braces and strings are blanked first; a statement starting with if/else/for/while does not count.
+function exitsEveryPass(body) {
+  let depth = 0
+  let top = ''
+  for (const c of body) {
+    if (c === '{') depth++
+    else if (c === '}') depth--
+    else if (depth === 0) top += c
+  }
+  return top.split(/[;\n]/).some((s) => /^\s*(?:break|return)\b/.test(s))
+}
 function dependentLoop(header, body, kind) {
+  if (exitsEveryPass(body)) return true
   if (POLL_HEADER.test(header) || SLEEP_CALL.test(body)) return true
   // Leaving early counts only when the choice depends on the awaited result (a guard clause on the item does not).
   for (const m of body.matchAll(/(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*await\b/g)) {

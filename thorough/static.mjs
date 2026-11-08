@@ -561,7 +561,7 @@ const safeLiteralAssign = (t0, m, why, vouched = new Set()) => {
   if (full === null) return false
   const oneLine = !full.includes('\n')
   // A plain name or dotted path that is a top-level constant holding only text (const ICONS = { save: '<svg ...>' }) is author-written markup too.
-  const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*(?:\/\/.*)?$/.exec(rest)
+  const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*\}*\s*(?:\/\/.*)?$/.exec(rest)
   if (oneLine && root && isConstantMarkup(t, root[1])) return true
   if (oneLine && root && !root[0].includes('.') && paramOnlyConstants(t, m.index, root[1])) return true
   // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
