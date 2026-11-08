@@ -12,7 +12,7 @@ import { initConfig } from '../lib/init.mjs'
 // @ts-expect-error plain .mjs module
 import { applyConfig } from '../lib/config.mjs'
 // @ts-expect-error plain .mjs module
-import { hashFiles, makeTrust, projectCodeFiles, promptText, trustFile } from '../lib/trust.mjs'
+import { hashFiles, makeTrust, projectCodeFiles, promptText, trustedFiles, trustFile } from '../lib/trust.mjs'
 // @ts-expect-error plain .mjs module
 import { latestRunDir, makeRunDir, usedRunLine, writeRunReport } from '../lib/runlog.mjs'
 // @ts-expect-error plain .mjs module
@@ -107,6 +107,19 @@ describe('P1.2 follow-ups: same file list as the loader, import closure, safe pr
     const before = hashFiles(files, d)
     put(d, 'helpers/deep.js', 'export const d = 2 // changed\n')
     expect(hashFiles(files, d)).not.toBe(before)
+  })
+  test('a sibling reached only by a non-literal dynamic import still changes the hash when it changes', () => {
+    const d = mkdtempSync(join(root, 'dyn-'))
+    put(d, 'package.json', '{}')
+    put(d, 'mychecks/a.mjs', 'const n = "side"; export default (await import("./" + n + ".txt.mjs"), [])' + String.fromCharCode(10))
+    put(d, 'mychecks/side.txt.mjs', 'export const x = 1' + String.fromCharCode(10))
+    const args = { projectDir: d, where: d, extraChecks: ['mychecks'] }
+    const before = hashFiles(trustedFiles(args), d)
+    put(d, 'mychecks/side.txt.mjs', 'export const x = 2' + String.fromCharCode(10))
+    expect(hashFiles(trustedFiles(args), d)).not.toBe(before)
+    const mid = hashFiles(trustedFiles(args), d)
+    put(d, 'package.json', '{"a":1}')
+    expect(hashFiles(trustedFiles(args), d)).not.toBe(mid)
   })
   test('the prompt strips escape sequences from file names and the project path', () => {
     const t = promptText(['/p/evil\u001b[2Jname.mjs'], '/p\u001b]0;x\u0007')
