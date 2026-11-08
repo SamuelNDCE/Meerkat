@@ -233,7 +233,7 @@ describe('the last group of tools: each rejects a bad argument and builds the ri
   test.each([['meerkat_doctor', 'doctor'], ['meerkat_discover', 'discover'], ['meerkat_recommend', 'recommend'], ['meerkat_tools', 'tools']])('%s runs the command on the folder and rejects an unknown argument and a folder outside', async (tool, word) => {
     const { ctx, cli } = makeCtx()
     expect(isErr(await call(ctx, tool, {}))).toBe(false)
-    expect(cli[0]).toEqual([word, HERE, '--json'])
+    expect(cli[0]).toEqual(word === 'discover' ? [word, HERE, '--json'] : [word, HERE]) // doctor, recommend and tools return the CLI's own text
     expect(isErr(await call(ctx, tool, { extra: 1 }))).toBe(true)
     expect(isErr(await call(ctx, tool, { folder: 42 }))).toBe(true)
     expect(isErr(await call(ctx, tool, { folder: resolve('/elsewhere') }))).toBe(true)
