@@ -4,6 +4,24 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+## 0.5.3 (2026-11-08)
+
+Safer by default, quieter output, fewer false alarms.
+
+- Gate: `meerkat gate` applies every pack that fits the folder and uses the `bugs` preset by default (no style or documentation rules). `--all` runs everything. The output is the failures plus one summary line; `--verbose` lists every check.
+- Project code is never run unasked. Check files in `extraChecks` and `.meerkat/checks` need a one-time yes in a terminal; operators can set `MEERKAT_TRUST_PROJECT=1`. CI and runs with no terminal refuse project code and say so.
+- Trust covers the check files, the files they import by a relative path, and `package.json`. It refuses a `node_modules` folder or a symlinked folder inside a check folder, and fails closed when the file or size cap is hit.
+- The pre-push hook fails closed: if Meerkat cannot run, the push is blocked and the message says so. `MEERKAT_ALLOW_HOOK_FAIL=1` pushes anyway, and the bypass is written to `hook.log`.
+- `meerkat update` fetches the release tarball and checks its SHA-256 against the GitHub release, then checks that the commit matches the release tag, and installs that exact commit. It fails closed and has no bypass.
+- The last run is kept per project and per preset. Self-tests never replace it, and read commands (`last`, `findings`, `why` and the like) say which run they used.
+- First-run note, and log paths are printed.
+- `--no-input` is accepted by every command. `meerkat dismiss` and `meerkat rules test` exit 2 on usage errors. Unknown config keys are warned about. A cut-off findings list is named as truncated.
+- False-alarm fixes: an `innerHTML` set from a constant on one line, `break` inside loops, markers inside quotes, history rules judging new commits only, and `merge-commit-noise` and `large-commits` using the same commit range.
+- The `quick` preset no longer runs style-only and documentation-only checks.
+- Added a Linux CI job. It has not been verified on GitHub yet.
+
+Not in 0.5.3: a re-measure of recall, batching and speed work, designs aimed at AI use, a run of the GitHub Action, team features, and the gap features.
+
 ## 0.5.2 (2026-11-07)
 
 - Integration 6 sweep: the README has an Everyday commands table (scoped gate, pre-commit use, brief, blast, map, ratchet, run flags, findings for CI, MCP scope, SKIPPED, commit-message scope, workflow profiles, memory adapter, release tools, update, Windows guard, estimate) and its stale 'gate and smoke are not routed' notes are gone; `meerkat redtest` is listed in docs/commands.md; docs/reference.md describes the careful update path. Fixes found by merging: the release pack list now allows the `profiles/` folder that package.json ships (tools/release/pack-list.mjs, tests/release-tools.test.ts), a SKIPPED check's time is learned so the run estimate no longer keeps its written guess (lib/timings.mjs, lib/timings.test.ts), and four tests were updated to the new result shapes (`counts.skipped`, the MCP status line). PLACEHOLDER: the smoke and red suites (smoke-red-2026-11) are not merged.
