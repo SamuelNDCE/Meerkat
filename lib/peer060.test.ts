@@ -15,8 +15,8 @@ const put = (rel: string, text: string, root = app) => {
   mkdirSync(dirname(join(root, rel)), { recursive: true })
   writeFileSync(join(root, rel), text)
 }
-const cli = (args: string[], cwd = app) =>
-  spawnSync(process.execPath, [bin, ...args], { encoding: 'utf8', cwd, env: { ...process.env, NO_COLOR: '1', CI: '1', MEERKAT_LOG_DIR: join(tmp, 'logs') } })
+const cli = (args: string[], cwd = app, extraEnv: Record<string, string> = {}) =>
+  spawnSync(process.execPath, [bin, ...args], { encoding: 'utf8', cwd, env: { ...process.env, NO_COLOR: '1', CI: '1', MEERKAT_LOG_DIR: join(tmp, 'logs'), ...extraEnv } })
 const LOOSE = 'export const v = 1\nif (v == 2) {}\n'
 
 beforeEach(() => {
@@ -145,13 +145,30 @@ describe('repo test and build commands', () => {
     expect(JSON.parse(cli(['commands', '--json']).stdout).commands.build).toBe('node mark.mjs build 3')
   })
   test('meerkat test and meerkat build print the exact command, run only that command and pass its exit code on', () => {
-    const t = cli(['test'])
+    const t = cli(['test'], app, { MEERKAT_TRUST_PROJECT: '1' })
     expect(t.stdout).toContain('$ node mark.mjs test')
     expect(t.status).toBe(0)
-    const b = cli(['build'])
+    const b = cli(['build'], app, { MEERKAT_TRUST_PROJECT: '1' })
     expect(b.stdout).toContain('$ node mark.mjs build 3')
     expect(b.status).toBe(3)
     expect(marks()).toEqual(['test', 'build'])
+  })
+  test('an untrusted config runs nothing: build refuses and meerkat test says it took the quick-check path; no marker is written', () => {
+    const b = cli(['build'])
+    expect(b.status).toBe(1)
+    expect(b.stderr).toContain('meerkat trust')
+    expect(marks()).toEqual([])
+    const u = cli(['test'])
+    expect(u.stderr).toContain('commands.test was NOT run')
+    expect(u.stderr).toContain('quick check')
+    expect(marks()).toEqual([])
+  }, SLOW)
+  test('meerkat trust without a terminal trusts nothing; a trusted config runs', () => {
+    expect(cli(['trust']).status).toBe(1)
+    expect(cli(['build']).status).toBe(1)
+    expect(marks()).toEqual([])
+    expect(cli(['build'], app, { MEERKAT_TRUST_PROJECT: '1' }).status).toBe(3)
+    expect(marks()).toEqual(['build'])
   })
   test('with no commands block, meerkat build is a usage error and runs nothing', () => {
     rmSync(join(app, 'meerkat.config.json'))
