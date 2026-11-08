@@ -336,7 +336,7 @@ describe('red: regressions in the checks', () => {
     runCli(sb, ['init'])
     writeFileSync(join(sb.app, 'src', 'q.js'), 'export function bad(db, req) {\n  return db.query("SELECT * FROM users WHERE name = \'" + req.query.name + "\'")\n}\n')
     git(sb.app, ['add', '-A'], sb.env)
-    const r = runCli(sb, ['gate', '--staged', '--no-cache'], { timeout: 120000 })
+    const r = runCli(sb, ['gate', '--staged', '--no-cache', '--verbose'], { timeout: 120000 })
     clean(r, [0, 1, 75], { action: false })
     expect(r.all).toMatch(/gate: \d+ passed/)
   }, 130000)

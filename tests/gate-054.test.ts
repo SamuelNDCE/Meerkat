@@ -39,7 +39,7 @@ const logs = join(root, 'logs')
 const env = () => ({ ...process.env, MEERKAT_NO_PROJECT_CODE: '1', MEERKAT_LOG_DIR: logs })
 async function gate(dir: string, args: string[]) {
   const lines: string[] = []
-  const code = await gateMain([...args, '--app', dir], { env: env(), cwd: dir, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
+  const code = await gateMain(['--verbose', ...args, '--app', dir], { env: env(), cwd: dir, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
   return { code, text: lines.join(NL), lines }
 }
 
@@ -143,8 +143,8 @@ describe('file:line, editor format, PASS line, project-wide count (items 1, 5, 6
   })
   test('gateText with showWide false folds the list into a count', () => {
     const out = { exitCode: 0, files: ['a.js'], skipped: [], rows: [{ kind: 'wide', id: 'lockfiles', detail: 'x' }, { kind: 'wide', id: 'node-engines', detail: 'y' }], note: '' }
-    expect(gateText('gate', out, 'staged files', { showWide: false })).toMatch(/2 project-wide items, not blocking/)
-    expect(gateText('gate', out, 'staged files', { showWide: true })).toMatch(/lockfiles: x/)
+    expect(gateText('gate', out, 'staged files', { verbose: true, showWide: false })).toMatch(/2 project-wide items, not blocking/)
+    expect(gateText('gate', out, 'staged files', { verbose: true, showWide: true })).toMatch(/lockfiles: x/)
   })
 })
 

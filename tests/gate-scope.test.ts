@@ -44,7 +44,7 @@ beforeAll(() => {
 const env = () => ({ ...process.env, MEERKAT_NO_PROJECT_CODE: '1', MEERKAT_LOG_DIR: logs })
 async function gate(args: string[]) {
   const lines: string[] = []
-  const code = await gateMain([...args, '--app', dir], { env: env(), cwd: dir, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
+  const code = await gateMain(['--verbose', ...args, '--app', dir], { env: env(), cwd: dir, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
   return { code, text: lines.join('\n'), lines }
 }
 const kindOf = (json: any, id: string) => json.rows.find((r: any) => r.id === id)?.kind
@@ -86,12 +86,12 @@ describe('scoped gate', () => {
     put(d, 'src/a.js', 'export const a = 2\n')
     git(d, 'add', 'src/a.js')
     const lines: string[] = []
-    const code = await gateMain(['--staged', '--no-cache', '--app', d], { env: env(), cwd: d, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
+    const code = await gateMain(['--verbose', '--staged', '--no-cache', '--app', d], { env: env(), cwd: d, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
     expect(code).toBe(0)
     expect(lines.join(String.fromCharCode(10)).split(String.fromCharCode(10))[0]).toMatch(/^MEERKAT gate: 0 blocking, scanned src\/a\.js/)
     expect(lines.join('\n')).toMatch(/project-wide, not blocking/)
     const all = []
-    expect(await gateMain(['--staged', '--no-cache', '--all', '--app', d], { env: env(), cwd: d, log: (l: string) => all.push(l), err: () => {} })).toBe(1)
+    expect(await gateMain(['--verbose', '--staged', '--no-cache', '--all', '--app', d], { env: env(), cwd: d, log: (l: string) => all.push(l), err: () => {} })).toBe(1)
   })
 })
 
