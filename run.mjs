@@ -20,6 +20,7 @@ import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
 import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from './lib/timings.mjs'
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
+import { makeTrust } from './lib/trust.mjs'
 import { discoverChecks } from './lib/discover.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
 import { estimateRunMs, estimateRunMsWithCache, estimateVsActualText } from './lib/runestimate.mjs'
@@ -362,7 +363,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     read.config.packs = [...new Set([...(read.config.packs ?? []), ...presetPacks(chosen.preset, appDir), ...(configFile ? [] : applicablePacks(appDir))])]
     if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
   }
-  const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) })
+  const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE), trust: makeTrust(env, { interactive: opts.noInput ? false : undefined }) })
   applyPresetExclusions(applied, chosen.preset)
   // The project's own tests, found without being told (lib/discover.mjs): only for full, thorough and release (thorough tier with every pack; quick also has allPacks, so the tier decides), or
   // when asked for by name (`meerkat check discovered`). Never for quick or ci. "discover": false turns it off.

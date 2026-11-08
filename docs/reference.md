@@ -556,6 +556,18 @@ Its one network call of its own is the update look-up. Once a day it asks GitHub
 
 The tools Meerkat runs may use the network. `npm audit` and `cargo audit` ask their registries, and the performance checks call only the URLs you put in your budgets. The AI checks are opt-in: they send code to a model only when you turn them on, and they say what they will send before they do.
 
+## Trusting a project's own code
+
+A project's own check code (the `extraChecks` folders in `meerkat.config.json` and `.meerkat/checks/*.mjs`) runs inside Meerkat's process, so it is never run unasked. The first time Meerkat meets it in a terminal it lists the files and asks once; a yes is remembered in `trust.json` in the Meerkat data folder (`MEERKAT_LOG_DIR`, else `~/.meerkat`), keyed by the project path and a hash of those files, so changing a file asks again. With no terminal (no TTY, `--no-input`, or `CI` set) nothing is asked and nothing is trusted: the project's code is left out of the run and Meerkat prints that it was not run. `MEERKAT_NO_PROJECT_CODE=1` still leaves it out always. A CI job that owns its repository and wants that code run without a terminal sets `MEERKAT_TRUST_PROJECT=1` in its own environment (a repository cannot set it).
+
+## Which run the read commands use
+
+`meerkat findings`, `finding`, `dismiss`, `undismiss` and `suggest` read the last real run. A self-test (smoke, red tests, `--self-test`) never becomes that run, so it cannot hide your findings. Meerkat also keeps the last run per project (`latest-by-project.json`) and per preset (`latest-by-preset.json`) in the log folder. Each of these commands prints one line first saying which run it used, for example `using run 20261101-100000-myapp--security (preset security)`.
+
+## The pre-push hook
+
+`meerkat hook install` adds a git pre-push hook that runs the quick preset with `--ratchet`. The hook **fails closed**: if Meerkat itself cannot run (node or `run.mjs` is missing, or the run times out), the push is **blocked**, a `TOOL FAULT` line is printed, and so is how to push anyway on purpose: `MEERKAT_ALLOW_HOOK_FAIL=1 git push`. With that variable set the push goes ahead unchecked and a line is appended to `hook.log` in the log folder (`MEERKAT_LOG_DIR`, else `~/.meerkat/logs`), so a bypass leaves a record. A real Meerkat failure blocks with its own exit code, as before.
+
 ## Using it in CI
 
 Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for every run. A minimal GitHub Actions job:

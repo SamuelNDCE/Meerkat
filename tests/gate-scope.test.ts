@@ -21,6 +21,9 @@ const put = (dir: string, file: string, body: string) => {
   writeFileSync(join(dir, file), body)
 }
 
+// 0.5.3 (P1.1): the gate now adds every pack that applies, not only the configured ones, so the toy files here are also seen by the refactor
+// pack. These two fixtures changed for that reason: 'unused-files' is disabled in their config (a one-file fixture is always unused), so the
+// tests keep pinning the scoped-gate rules they are about. The old behaviour (only the configured packs run) is no longer pinned.
 // One clean commit with no SECURITY.md, then one staged file with a planted SQL-injection bug.
 let dir: string
 let logs: string
@@ -29,7 +32,7 @@ beforeAll(() => {
   logs = join(root, 'logs')
   mkdirSync(dir, { recursive: true })
   git(dir, 'init', '-q', '-b', 'main')
-  put(dir, 'meerkat.config.json', JSON.stringify({ packs: ['security-plus', 'repo'], discover: false }))
+  put(dir, 'meerkat.config.json', JSON.stringify({ packs: ['security-plus', 'repo'], disable: ['unused-files'], discover: false }))
   put(dir, 'package.json', JSON.stringify({ name: 'fx', version: '1.0.0', private: true }))
   put(dir, 'src/ok.js', 'export const ok = (a) => a + 1\n')
   git(dir, 'add', '-A')
@@ -75,7 +78,7 @@ describe('scoped gate', () => {
     const d = join(root, 'clean')
     mkdirSync(d, { recursive: true })
     git(d, 'init', '-q', '-b', 'main')
-    put(d, 'meerkat.config.json', JSON.stringify({ packs: ['security-plus', 'repo'], discover: false }))
+    put(d, 'meerkat.config.json', JSON.stringify({ packs: ['security-plus', 'repo'], disable: ['unused-files'], discover: false }))
     put(d, 'package.json', JSON.stringify({ name: 'fx', version: '1.0.0', private: true }))
     put(d, 'src/a.js', 'export const a = 1\n')
     git(d, 'add', '-A')

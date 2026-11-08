@@ -46,7 +46,7 @@ describe('hook install safety', () => {
     expect(r.code).toBe(0)
     const text = readFileSync(hookFile(dir), 'utf8')
     expect(text).toContain('# >>> meerkat pre-push >>>')
-    expect(text).toContain('TOOL FAULT: meerkat not found, push not checked')
+    expect(text).toContain('meerkat_fault "meerkat not found"')
     const s = hook('status', dir)
     expect(s.code).toBe(0)
     expect(s.text).toContain('installed: yes')
@@ -120,19 +120,30 @@ describe('the generated block', () => {
     return spawnSync(shPath as string, [script], { encoding: 'utf8', env })
   }
 
-  sh('with node missing from PATH it prints TOOL FAULT and exits 0', () => {
+  // 0.5.3: the hook fails CLOSED. A hook error blocks the push and says how to bypass it on purpose.
+  sh('with node missing from PATH it prints TOOL FAULT, blocks the push (non-zero) and names the bypass', () => {
     const runFile = join(tmp, 'fake-run.mjs')
     writeFileSync(runFile, 'process.exit(1)\n')
     const r = runBlock(prePushBlock(runFile, '--x'), runFile, { PATH: '' })
-    expect(r.stderr).toContain('TOOL FAULT: meerkat not found, push not checked')
-    expect(r.status).toBe(0)
+    expect(r.stderr).toContain('TOOL FAULT: meerkat not found')
+    expect(r.stderr).toContain('MEERKAT_ALLOW_HOOK_FAIL=1 git push')
+    expect(r.status).toBe(1)
     expect(r.stdout).not.toContain('reached-end')
   })
 
-  sh('with run.mjs missing it prints TOOL FAULT and exits 0', () => {
-    const r = runBlock(prePushBlock(join(tmp, 'does-not-exist.mjs'), '--x'), '', { ...process.env })
+  sh('with run.mjs missing it prints TOOL FAULT and blocks (exit 1)', () => {
+    const r = runBlock(prePushBlock(join(tmp, 'does-not-exist.mjs'), '--x'), '', { ...process.env, MEERKAT_ALLOW_HOOK_FAIL: '' })
     expect(r.stderr).toContain('TOOL FAULT')
+    expect(r.status).toBe(1)
+  })
+
+  sh('MEERKAT_ALLOW_HOOK_FAIL=1 lets the push through (exit 0) and logs the bypass in hook.log', () => {
+    const logs = join(tmp, 'bypass-logs')
+    const r = runBlock(prePushBlock(join(tmp, 'does-not-exist.mjs'), '--x'), '', { ...process.env, MEERKAT_ALLOW_HOOK_FAIL: '1', MEERKAT_LOG_DIR: logs })
     expect(r.status).toBe(0)
+    expect(r.stderr).toContain('MEERKAT_ALLOW_HOOK_FAIL=1 is set')
+    const line = readFileSync(join(logs, 'hook.log'), 'utf8')
+    expect(line).toContain('pre-push fault bypassed with MEERKAT_ALLOW_HOOK_FAIL=1: meerkat not found')
   })
 
   sh('a real meerkat failure still blocks with exit 1', () => {

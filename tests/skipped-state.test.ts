@@ -59,7 +59,7 @@ describe('SKIPPED versus NOT RUN for style tools', () => {
   })
   test('the summary line counts SKIPPED apart from NOT RUN and does not fail the run', () => {
     const s = summarise('quick', [{ status: 'PASS' }, { status: 'SKIPPED' }, { status: 'SKIPPED' }], 0, 1000)
-    expect(s.line).toContain('0 not run, 2 skipped (not configured)')
+    expect(s.line).toContain('0 not run, 2 not configured, 0 skipped')
     expect(s.exitCode).toBe(0)
     const t = summarise('quick', [{ status: 'PASS' }, { status: 'NOT RUN' }], 0, 1000)
     expect(t.exitCode).toBe(1)
@@ -79,6 +79,6 @@ describe('the quick preset on a fixture with no eslint, prettier or stylelint co
     const out = String(run.stdout) + String(run.stderr)
     expect(out).toMatch(/SKIPPED\s+(eslint|prettier|stylelint): no \w+ configuration in this project/)
     expect(out).not.toMatch(/NOT RUN\s+(eslint|prettier|stylelint)/)
-    expect(out).toMatch(/skipped \(not configured\)/)
+    expect(out).toMatch(/\d+ not configured, \d+ skipped/)
   }, 150000)
 })
