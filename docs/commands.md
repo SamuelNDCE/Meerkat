@@ -16,7 +16,7 @@ meerkat <command> --help                help for any command (also: meerkat help
 
 | Command | Does | Also |
 |---|---|---|
-| `meerkat verify [folder]` | the quick checks (since 0.5.3 without the documentation and style-only checks: markdown, spelling, README and changelog form, whitespace, line length, `var`, `!important`, `@ts-ignore` notes; `full` still runs them) | alias of `meerkat quick`, `meerkat test` |
+| `meerkat verify [folder]` | the quick checks (since the gate-output release, without the documentation and style-only checks: markdown, spelling, README and changelog form, whitespace, line length, `var`, `!important`, `@ts-ignore` notes; `full` still runs them) | alias of `meerkat quick`, `meerkat test` |
 | `meerkat full [folder]` | every check | alias of `meerkat thorough`. Any run command (`verify`, `full`, `run <preset>`) takes `--ratchet` (fail only on findings not in the baseline) and the flags `--config`, `--no-config`, `--group`, `--fail-fast`, `--keep-going`, `--max-run-minutes` and `--timeout-scale`; `meerkat run --help` lists them |
 | `meerkat <preset> [folder]` | any preset: `bugs`, `security`, `ui`, `functionality`, `performance`, `refactor`, `ci`, `release`, and your own | `meerkat preset list` shows them |
 | `meerkat check <id>... [folder]` | only these checks | same as `--only` |

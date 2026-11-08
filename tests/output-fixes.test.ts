@@ -103,8 +103,9 @@ describe('3. every failure in the summary', () => {
     expect(line).toContain('45 failure(s) in total')
     expect(line).toContain('C:/logs/run')
   })
+  // Since 0.5.3 gateText prints a failing row's `places` (file:line list, see placeLines in lib/gate.mjs), not the raw `findings`, so the row carries both.
   it('gate and smoke text lists them under the check', () => {
-    const text = gateText('gate', { files: ['a'], rows: [{ id: 'lint', kind: 'fail', detail: 'first', findings: fs }], skipped: [], note: '', exitCode: 1, logDir: 'C:/logs/g' }, 'staged')
+    const text = gateText('gate', { files: ['a'], rows: [{ id: 'lint', kind: 'fail', detail: 'first', findings: fs, places: fs.map((f) => ({ file: f.file, line: f.line })) }], skipped: [], note: '', exitCode: 1, logDir: 'C:/logs/g' }, 'staged')
     expect(text).toContain('src/a3.ts:3')
     expect(text).toContain('logs: C:/logs/g')
   })

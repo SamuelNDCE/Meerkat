@@ -584,7 +584,7 @@ The `bugs` preset runs the quick checks without the checks and rules below, whic
 | `rp-async/rasync-runtime-built-per-call` | rule | tokio runtime built per call: informational performance note |
 <!-- checks:end -->
 
-## Accuracy notes (0.5.3)
+## Accuracy notes (gate-output release)
 
 - `risky-code`: an `innerHTML` assigned from a string literal, or from a same-file constant that is never reassigned, is not reported, including in a one-line helper. A value taken from request input still is.
 - `js-await-in-loop`: a loop whose body has a plain `break` or `return` (not under an `if`) runs at most one pass and is not reported. An unbounded loop that awaits with no exit, or exits only under an `if`, still is.
