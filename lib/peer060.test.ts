@@ -226,7 +226,7 @@ describe('verdict and top never go silent', () => {
     expect(r.status).toBe(2)
     expect(line(r)).toMatch(/^NO-RESULT: .*git.*next: /)
   })
-  test.each([['verdict'], ['top']])('%s: nothing changed is exit 1 with one NO-RESULT line', (w) => {
+  test.each([['verdict'], ['top']])('%s: nothing changed is exit 75 with an INCOMPLETE line', (w) => {
     initMain()
     git(app, ['checkout', '-q', '-b', 'feat'])
     const r = cli([w])
@@ -239,8 +239,8 @@ describe('verdict and top never go silent', () => {
     put('loose.js', LOOSE)
     commit()
     const r = cli([w], app, { MEERKAT_VERDICT_TIMEOUT_S: '0.05' })
-    expect(r.status).toBe(1)
-    expect(line(r)).toMatch(/^NO-RESULT: the gate did not finish in 0\.05s.*next: /)
+    expect(r.status).toBe(75)
+    expect(line(r)).toMatch(/^INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
   }, SLOW)
 })
 

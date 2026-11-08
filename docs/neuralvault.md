@@ -79,7 +79,7 @@ A project can carry its own code for Meerkat to run: `extraChecks` folders, `.me
 | `FAIL n blocking in changed files` | Run `meerkat top --base origin/main` or the MCP tool `meerkat_findings`, fix each one or dismiss it with a reason, run the verdict again. |
 | `FAIL-PRE-EXISTING only: n findings ...` | The branch did not cause these. Do not fix them in this branch unless asked. Report the count. |
 | `NO-RESULT: nothing changed compared with main ...` | Nothing to judge. Commit the change, or pass `--base <ref>`. Do not report PASS. |
-| `NO-RESULT: the gate did not finish in 900s ...` | Run `meerkat gate` in the background, or raise `MEERKAT_VERDICT_TIMEOUT_S`. Do not report PASS. |
+| `INCOMPLETE n of m checks finished, b blocking so far (not a pass)` (exit 75) | The limit (300 seconds by default, `MEERKAT_VERDICT_TIMEOUT_S`) stopped the run. Fix the blocking findings listed, or run `meerkat gate` in the background, or raise `MEERKAT_VERDICT_TIMEOUT_S` (900 for a full run). Do not report PASS. |
 | `NO-RESULT: ... git does not know that ref` | Fix the base name, for example `origin/main`. In CI fetch full history first. |
 | `NOT RUN` on a check | A tool or setting is missing. Run `meerkat doctor`, report what it says. A NOT RUN is never a pass. |
 | `this project's own check code was NOT run` | Section 6. Ask a person to run `meerkat trust`, or set `MEERKAT_TRUST_PROJECT=1` in CI. |

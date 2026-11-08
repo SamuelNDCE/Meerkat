@@ -217,11 +217,34 @@ describe('an early stop is never a pass', () => {
   test('verdict and top say INCOMPLETE and exit non-zero when --max-seconds cuts the run', () => {
     const d = join(root, 'gate-fx')
     const v = cli(['verdict', '--max-seconds', '3', '--base', 'main'], d)
-    expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, not a pass/)
+    expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
     expect(v.out).not.toMatch(/^PASS/m)
-    expect(v.code).not.toBe(0)
+    expect(v.code).toBe(75)
     const t = cli(['top', '--max-seconds', '3', '--base', 'main'], d)
     expect(t.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
     expect(t.code).not.toBe(0)
   }, 90000)
+})
+
+describe('the verdict time limit keeps partial results', () => {
+  test('a sleeping check and a 3 s limit print INCOMPLETE with counts and exit 75, not NO-RESULT alone', () => {
+    const d = join(root, 'gate-fx')
+    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '3' })
+    expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
+    expect(v.out).not.toMatch(/NO-RESULT/)
+    expect(v.code).toBe(75)
+    const t = cli(['top', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '3' })
+    expect(t.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
+    expect(t.code).toBe(75)
+  }, 90000)
+})
+
+describe('the verdict time limit default', () => {
+  test('300 seconds with nothing set, MEERKAT_VERDICT_TIMEOUT_S overrides it', async () => {
+    // @ts-expect-error plain .mjs module
+    const { HARD_SECONDS } = await import('./branchcmds.mjs')
+    expect(HARD_SECONDS({})).toBe(300)
+    expect(HARD_SECONDS({ MEERKAT_VERDICT_TIMEOUT_S: '900' })).toBe(900)
+    expect(HARD_SECONDS({ MEERKAT_VERDICT_TIMEOUT_S: 'x' })).toBe(300)
+  })
 })

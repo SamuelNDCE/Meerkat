@@ -4,7 +4,7 @@ Questions teams have actually asked. Each answer was checked by running the comm
 
 ## Why is `meerkat verdict` slow, or why does it look stuck?
 
-`verdict` and `top` run the full set of gate checks with the result cache off, so they do the whole work every time. They print nothing until they finish, then one line or one table. They give up after 900 seconds and print `NO-RESULT: the gate did not finish in 900s`. Start them in the background, or raise the limit: `MEERKAT_VERDICT_TIMEOUT_S=1800 meerkat verdict --base origin/main` (in PowerShell: set `$env:MEERKAT_VERDICT_TIMEOUT_S = '1800'` first).
+`verdict` and `top` run the full set of gate checks with the result cache off, so they do the whole work every time. They print nothing until they finish, then one line or one table. They stop after 300 seconds by default and print `INCOMPLETE n of m checks finished, b blocking so far (not a pass)` with the first 5 blocking findings, and exit 75. Start them in the background, or raise the limit: `MEERKAT_VERDICT_TIMEOUT_S=1800 meerkat verdict --base origin/main` (in PowerShell: set `$env:MEERKAT_VERDICT_TIMEOUT_S = '1800'` first).
 
 ## Why is `meerkat gate` faster the second time?
 
