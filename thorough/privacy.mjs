@@ -207,12 +207,15 @@ const piiPatternsInSource = (root) => {
 // ---- telemetry-calls: code that posts to a telemetry, analytics, metrics, usage, track or collect host, or starts an error or performance SDK
 const TELEMETRY_HOST = /https?:\/\/([a-z0-9.-]*(?:telemetry|analytics|metrics|usage|track|collect)[a-z0-9.-]*)/i
 const TELEMETRY_SDK = /@sentry\/|from ['"]sentry|require\(['"]@?sentry|Sentry\.init\(|@bugsnag\/|Bugsnag\.start\(|datadogRum|@datadog\/|datadog-browser|@newrelic\/|newrelic\.|NewRelic/
+// Hosts under names the standards keep for examples and tests (.test, .example, .invalid, .localhost, example.com) are sample text, not a collector.
+const RESERVED_HOST = /(^|\.)(test|example|invalid|localhost|example\.(com|org|net))$/i
 const telemetryHits = (root) => {
   const out = []
   for (const x of files(root, CODE)) {
     if (allowed(root, 'telemetry-calls', x)) continue
     lines(root, x).forEach((line, i) => {
-      const host = TELEMETRY_HOST.exec(line)
+      let host = TELEMETRY_HOST.exec(line)
+      if (host && RESERVED_HOST.test(host[1])) host = null
       const sdk = host ? null : TELEMETRY_SDK.exec(line)
       const what = host ? `posts to the ${host[1]} host` : sdk ? `starts the ${sdk[0].trim()} SDK` : null
       if (what) out.push(`${x}:${i + 1} ${what}`)
