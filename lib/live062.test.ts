@@ -248,3 +248,26 @@ describe('the verdict time limit default', () => {
     expect(HARD_SECONDS({ MEERKAT_VERDICT_TIMEOUT_S: 'x' })).toBe(300)
   })
 })
+
+describe('the cargo lock wait limit', () => {
+  test('a waiter with a 3 s limit gives up with exit 75 and names the holder, its command and how long it held', async () => {
+    const { spawn, spawnSync: sp } = await import('node:child_process')
+    const lockDir = join(root, 'limit.lock')
+    const e = { ...env, MEERKAT_CARGO_LOCK_DIR: lockDir } as NodeJS.ProcessEnv
+    const script = join(ROOT, 'lib', 'cargo-lock-run.mjs')
+    put(root, 'hold2.js', 'setTimeout(() => {}, 20000)\n')
+    const holder = spawn(process.execPath, [script, process.execPath, join(root, 'hold2.js')], { env: e, stdio: 'ignore' })
+    await new Promise((r) => setTimeout(r, 1500))
+    try {
+      const t0 = Date.now()
+      const w = sp(process.execPath, [script, process.execPath, join(root, 'quick.js')], { env: { ...e, MEERKAT_LOCK_MAX_WAIT: '3' }, encoding: 'utf8', timeout: 30000 })
+      expect(w.status).toBe(75)
+      expect(Date.now() - t0).toBeLessThan(15000)
+      expect(String(w.stderr)).toMatch(/gave up after \d+ s \(limit 3 s.*\): the lock is still held by process \d+ running .*hold2\.js, held for \d+ s/)
+      expect(String(w.stdout)).toMatch(/NOT RUN: waited 3 s/)
+    } finally {
+      holder.kill()
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  }, 60000)
+})
