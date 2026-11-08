@@ -76,3 +76,41 @@ describe('worktree paths', () => {
     expect(cli(['brief', 'src/a.js', '--app', wt]).stdout.split('\n')[0]).toContain('detached at')
   })
 })
+
+describe('snippet-keyed allow entries (real a11y rule through node lib/a11y.mjs)', () => {
+  const script = fileURLToPath(new URL('./a11y.mjs', import.meta.url))
+  const BTN = '<button class="x"><svg viewBox="0 0 8 8"><path d="M0 0h8v8z"/></svg></button>'
+  const rule = (root: string) => spawnSync(process.execPath, [script, 'a11y-button-name', '--root', root], { encoding: 'utf8' })
+  const commit = () => {
+    git(app, ['add', '-A'])
+    git(app, ['commit', '-q', '-m', 'x'])
+  }
+  test('a finding prints the exact snippet allow line; a snippet entry still suppresses it after the file gains 50 lines; line entries still work', () => {
+    put('bar.html', `<div>\n${BTN}\n</div>\n`)
+    commit()
+    const first = rule(app)
+    expect(first.status).toBe(1)
+    const m = /add to \.meerkat-a11y-allow: (.+)$/m.exec(first.stdout)
+    expect(m).not.toBeNull()
+    expect(m![1]).toContain(`a11y-button-name bar.html | ${BTN}`)
+    // paste the printed line, with a reason, as a person would
+    put('.meerkat-a11y-allow', `${m![1].replace('# reason', '# icon button is labelled by the parent')}\n`)
+    commit()
+    expect(rule(app).status).toBe(0)
+    // the file grows by 50 lines above the flagged one: the line number changes, the snippet does not
+    put('bar.html', `${'<p>filler</p>\n'.repeat(50)}<div>\n${BTN}\n</div>\n`)
+    commit()
+    expect(rule(app).status).toBe(0)
+    // a line-number entry for the OLD position no longer matches after the move (the failure this feature fixes), and a current one still works
+    put('.meerkat-a11y-allow', 'a11y-button-name bar.html:52 # moved\n')
+    commit()
+    expect(rule(app).status).toBe(0)
+    put('.meerkat-a11y-allow', 'a11y-button-name bar.html:2 # stale\n')
+    commit()
+    expect(rule(app).status).toBe(1)
+    // a snippet that is not on the flagged line suppresses nothing
+    put('.meerkat-a11y-allow', 'a11y-button-name bar.html | <button class="other"> # no\n')
+    commit()
+    expect(rule(app).status).toBe(1)
+  })
+})
