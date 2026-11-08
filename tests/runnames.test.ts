@@ -33,7 +33,7 @@ describe('run folder names', () => {
   it('makes the new folder name and sorts both shapes by time', () => {
     const env = { MEERKAT_LOG_DIR: logs() }
     const dir = makeRunDir(env, 'thorough', new Date(2026, 9, 31, 9, 14, 38), undefined, 'C:/Work/Plume')
-    expect(dir.endsWith('/20261031-091438-plume-thorough')).toBe(true)
+    expect(dir).toMatch(/\/20261031-091438-plume-[0-9a-f]{6}-thorough$/)
     expect(makeRunDir(env, 'fast', new Date(2026, 9, 31, 9, 14, 39)).endsWith('/20261031-091439-fast')).toBe(true)
     expect(sortRunNames(['20261031-091438-plume-thorough', '20261030-235959-fast', '20261031-091500-thorough'])).toEqual(['20261031-091500-thorough', '20261031-091438-plume-thorough', '20261030-235959-fast'])
   })

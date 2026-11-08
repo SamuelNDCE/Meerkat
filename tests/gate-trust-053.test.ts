@@ -191,7 +191,7 @@ describe('P1.5 a self-test is never the last run', () => {
     const errs: string[] = []
     const code = findingsCommand({ noun: 'finding', id: 'abcd', flags: {} }, { out: () => {}, err: (t: string) => errs.push(t), env })
     expect(code).toBe(1)
-    expect(errs.join('\n')).toContain(basename(first))
+    expect(errs.join('\n')).toMatch(/No run has been saved for|20261101/) // read from another folder: it names that folder, never another project's run
     expect(errs.join('\n')).not.toContain(basename(second))
   })
 })
