@@ -166,3 +166,48 @@ describe('meerkat test-run', () => {
     expect(r.err).toMatch(/not vitest, jest, cargo test or pytest/)
   })
 })
+
+describe('code-map queries', () => {
+  const d = repo('mapq-fx', {
+    'package.json': '{"name":"fx","version":"1.0.0","private":true,"type":"module"}',
+    'tsconfig.json': '{"compilerOptions":{"baseUrl":".","paths":{"@lib/*":["src/lib/*"]}}}',
+    'src/lib/util.js': 'export function computeTotal(a, b) {\n  return a + b\n}\nexport const other = 1\n',
+    'src/app.js': "import { computeTotal } from './lib/util.js'\nimport { other } from '@lib/util.js'\n\nexport function run() {\n  return computeTotal(1, 2) + other\n}\n",
+    'src/second.js': "import { computeTotal } from './lib/util.js'\n// computeTotal(9, 9) in a comment is not a call\nexport const v = computeTotal(3, 4)\n",
+    'tests/util.test.js': "import { computeTotal } from '../src/lib/util.js'\nconsole.log(computeTotal(1, 1))\n",
+    'tests/app.test.js': "// covers src/app.js by name\nconsole.log('app')\n",
+  })
+  test('who-calls lists file:line of each call site, not the declaration, import or comment', () => {
+    const r = cli(['who-calls', 'computeTotal'], d)
+    expect(r.code).toBe(0)
+    expect(r.out).toMatch(/3 call sites of computeTotal/)
+    expect(r.out).toMatch(/src\/app\.js:5/)
+    expect(r.out).toMatch(/src\/second\.js:3/)
+    expect(r.out).toMatch(/tests\/util\.test\.js:2/)
+    expect(r.out).not.toMatch(/src\/lib\/util\.js:1/)
+    expect(r.out).not.toMatch(/second\.js:2/)
+  })
+  test('who-calls not found says what was searched', () => {
+    const r = cli(['who-calls', 'nothingHere'], d)
+    expect(r.code).toBe(75)
+    expect(r.out).toMatch(/no call of nothingHere\( found\. Searched the text of \d+ mapped files/)
+  })
+  test('deps lists the resolved imports, and the alias used', () => {
+    const r = cli(['deps', 'src/app.js'], d)
+    expect(r.code).toBe(0)
+    expect(r.out).toMatch(/src\/app\.js imports 2 project files/)
+    expect(r.out).toMatch(/\.\/lib\/util\.js\s+src\/lib\/util\.js/)
+    expect(r.out).toMatch(/@lib\/util\.js\s+src\/lib\/util\.js\s+alias/)
+    expect(cli(['deps', 'nope.js'], d).out).toMatch(/not in the code map\. Searched \d+ mapped files/)
+  })
+  test('tests-for lists the test that imports the file and the one that names it', () => {
+    const u = cli(['tests-for', 'src/lib/util.js'], d)
+    expect(u.code).toBe(0)
+    expect(u.out).toMatch(/tests\/util\.test\.js\s+1\s+imports it/)
+    const a = cli(['tests-for', 'src/app.js'], d)
+    expect(a.out).toMatch(/tests\/app\.test\.js\s+1\s+names it/)
+    const none = cli(['tests-for', 'src/second.js'], d)
+    expect(none.code).toBe(75)
+    expect(none.out).toMatch(/no test imports or names src\/second\.js\. Searched \d+ test files/)
+  })
+})
