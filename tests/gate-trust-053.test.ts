@@ -1,7 +1,7 @@
 // Meerkat 0.5.3, first batch: the gate adds every pack that applies (P1.1), a project's own code needs a one-time trust (P1.2), a
 // self-test is never "the last run" (P1.5), and the gate prints failures plus one summary line by default (P3.11).
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { afterAll, describe, expect, test } from 'vitest'
@@ -114,12 +114,43 @@ describe('P1.2 follow-ups: same file list as the loader, import closure, safe pr
     put(d, 'mychecks/a.mjs', 'const n = "side"; export default (await import("./" + n + ".txt.mjs"), [])' + String.fromCharCode(10))
     put(d, 'mychecks/side.txt.mjs', 'export const x = 1' + String.fromCharCode(10))
     const args = { projectDir: d, where: d, extraChecks: ['mychecks'] }
-    const before = hashFiles(trustedFiles(args), d)
+    const before = hashFiles(trustedFiles(args).files, d)
     put(d, 'mychecks/side.txt.mjs', 'export const x = 2' + String.fromCharCode(10))
-    expect(hashFiles(trustedFiles(args), d)).not.toBe(before)
-    const mid = hashFiles(trustedFiles(args), d)
+    expect(hashFiles(trustedFiles(args).files, d)).not.toBe(before)
+    const mid = hashFiles(trustedFiles(args).files, d)
     put(d, 'package.json', '{"a":1}')
-    expect(hashFiles(trustedFiles(args), d)).not.toBe(mid)
+    expect(hashFiles(trustedFiles(args).files, d)).not.toBe(mid)
+  })
+  test('a symlink loop does not hang and is not followed', () => {
+    const d = mkdtempSync(join(root, 'loop-'))
+    put(d, 'mychecks/a.mjs', 'export default []')
+    put(d, 'outside/secret.txt', 'x')
+    try {
+      symlinkSync(join(d, 'mychecks'), join(d, 'mychecks', 'self'), 'junction')
+      symlinkSync(join(d, 'outside'), join(d, 'mychecks', 'out'), 'junction')
+    } catch {
+      return // this machine may not allow links: nothing to test
+    }
+    const r = trustedFiles({ projectDir: d, where: d, extraChecks: ['mychecks'] })
+    expect(r.refuse).toBeNull()
+    expect(r.files.some((f: string) => f.includes('secret.txt'))).toBe(false)
+    expect(r.files.filter((f: string) => f.endsWith('a.mjs')).length).toBe(1)
+  })
+  test('a cap hit refuses trust and names the cap', async () => {
+    const d = mkdtempSync(join(root, 'cap-'))
+    for (let i = 0; i < 4; i++) put(d, 'mychecks/f' + i + '.mjs', 'export default []')
+    expect(trustedFiles({ projectDir: d, where: d, extraChecks: ['mychecks'] }, { maxFiles: 2 }).refuse).toMatch(/file count cap/)
+    expect(trustedFiles({ projectDir: d, where: d, extraChecks: ['mychecks'] }, { maxBytes: 10 }).refuse).toMatch(/size cap/)
+    const said: string[] = []
+    const t = await makeTrust({ ...process.env, MEERKAT_LOG_DIR: join(d, 'l') } as any, { interactive: true, ask: async () => 'y', say: (l: string) => said.push(l), caps: { maxFiles: 2 } })({ projectDir: d, where: d, extraChecks: ['mychecks'] })
+    expect(t.trusted).toBe(false)
+    expect(said.join(' ')).toMatch(/file count cap/)
+  })
+  test('a node_modules inside a check folder refuses trust', () => {
+    const d = mkdtempSync(join(root, 'nm-'))
+    put(d, 'mychecks/a.mjs', 'export default []')
+    put(d, 'mychecks/node_modules/p/index.js', 'x')
+    expect(trustedFiles({ projectDir: d, where: d, extraChecks: ['mychecks'] }).refuse).toMatch(/node_modules/)
   })
   test('the prompt strips escape sequences from file names and the project path', () => {
     const t = promptText(['/p/evil\u001b[2Jname.mjs'], '/p\u001b]0;x\u0007')
