@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { afterAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
-import { gateMain, gateText } from '../lib/gate.mjs'
+import { gateMain, gateText, loadProjectChecks } from '../lib/gate.mjs'
 // @ts-expect-error plain .mjs module
 import { initConfig } from '../lib/init.mjs'
 // @ts-expect-error plain .mjs module
@@ -112,6 +112,21 @@ describe('P1.2 follow-ups: same file list as the loader, import closure, safe pr
     const t = promptText(['/p/evil\u001b[2Jname.mjs'], '/p\u001b]0;x\u0007')
     expect(t).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f]/)
     expect(t).toContain('evil')
+  })
+})
+
+describe('gate default preset (bugs)', () => {
+  test('the default gate leaves out quick-only style checks such as markdownlint; --all keeps them', async () => {
+    const d = mkdtempSync(join(root, 'preset-'))
+    git(d, 'init', '-q', '-b', 'main')
+    put(d, 'package.json', JSON.stringify({ name: 'fx', version: '1.0.0', private: true }))
+    put(d, 'README.md', '# x\n')
+    const env = { ...process.env, MEERKAT_NO_PROJECT_CODE: '1' }
+    const ids = async (all: boolean) => (await loadProjectChecks(d, d, env, { interactive: false, all })).checks.map((c: any) => c.id)
+    const withAll = await ids(true)
+    const byDefault = await ids(false)
+    expect(withAll).toContain('markdownlint')
+    expect(byDefault).not.toContain('markdownlint')
   })
 })
 
