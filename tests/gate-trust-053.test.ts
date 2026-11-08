@@ -12,7 +12,7 @@ import { initConfig } from '../lib/init.mjs'
 // @ts-expect-error plain .mjs module
 import { applyConfig } from '../lib/config.mjs'
 // @ts-expect-error plain .mjs module
-import { makeTrust, trustFile } from '../lib/trust.mjs'
+import { hashFiles, makeTrust, projectCodeFiles, promptText, trustFile } from '../lib/trust.mjs'
 // @ts-expect-error plain .mjs module
 import { latestRunDir, makeRunDir, usedRunLine, writeRunReport } from '../lib/runlog.mjs'
 // @ts-expect-error plain .mjs module
@@ -87,6 +87,31 @@ describe('P1.2 a project\'s own code needs a one-time trust', () => {
     const trust = makeTrust(env(), { interactive: true, ask: async () => 'n', say: () => {} })
     const applied = await applyConfig([], { packs: [], extraChecks: ['mychecks'] }, { file: join(d, 'meerkat.config.json'), projectDir: d, load: stub, trust })
     expect(applied.checks.some((c: any) => c.id === 'mine')).toBe(false)
+  })
+})
+
+describe('P1.2 follow-ups: same file list as the loader, import closure, safe prompt', () => {
+  test('a .git*.mjs check file is in the trusted list, because the loader imports it', () => {
+    const d = mkdtempSync(join(root, 'dot-'))
+    put(d, 'mychecks/.gitsneaky.mjs', 'export default []\n')
+    put(d, 'mychecks/a.mjs', 'export default []\n')
+    const files = projectCodeFiles({ projectDir: d, where: d, extraChecks: ['mychecks'] }).map((f: string) => basename(f))
+    expect(files).toEqual(['.gitsneaky.mjs', 'a.mjs'])
+  })
+  test('changing a helper that a check imports changes the hash, so trust is invalidated', () => {
+    const d = mkdtempSync(join(root, 'imp-'))
+    put(d, 'mychecks/a.mjs', "import { h } from '../helpers/h.js'\nexport default []\n")
+    put(d, 'helpers/h.js', "import './deep.js'\nexport const h = 1\n")
+    put(d, 'helpers/deep.js', 'export const d = 1\n')
+    const files = projectCodeFiles({ projectDir: d, where: d, extraChecks: ['mychecks'] })
+    const before = hashFiles(files, d)
+    put(d, 'helpers/deep.js', 'export const d = 2 // changed\n')
+    expect(hashFiles(files, d)).not.toBe(before)
+  })
+  test('the prompt strips escape sequences from file names and the project path', () => {
+    const t = promptText(['/p/evil\u001b[2Jname.mjs'], '/p\u001b]0;x\u0007')
+    expect(t).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f]/)
+    expect(t).toContain('evil')
   })
 })
 
