@@ -4,7 +4,7 @@
 // Where an expectation is looser than the ideal, the reason is written next to it.
 import { spawnSync } from 'node:child_process'
 import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
 import { FIXTURE, ROOT, fingerprint, git, hasStack, killTree, makeRunStore, makeSandbox, newestRunDir, runCli, spawnCli, startMcp } from './smoke-helpers.mjs'
@@ -144,24 +144,26 @@ describe('red: a damaged run store, baseline or dismissals file', () => {
     writeFileSync(join(dir, 'findings.json'), keep.slice(0, Math.floor(keep.length / 2)))
     // Ideal: say "damaged" and tell the person to run meerkat again. Today it says the file is missing ("older Meerkat, or the run did not finish"), which is
     // misleading for a damaged file but safe; the exit code and the absence of a stack are what is asserted.
-    for (const a of [['findings'], ['finding', 'abcd1234'], ['prompt', '--print', '--no-copy'], ['suggest']]) clean(runCli(sb, a), [1], { says: /findings\.json/, action: false })
+    const id = basename(dir) // name the run: folder-scoped commands read the folder's newest run, which is not this one after the earlier tests
+    for (const a of [['findings', id], ['finding', 'abcd1234', id], ['prompt', id, '--print', '--no-copy']]) clean(runCli(sb, a), [1], { says: /findings\.json/, action: false })
+    clean(runCli(sb, ['suggest']), [0, 1], { action: false }) // suggest takes no run argument: checked only for a clean answer
     writeFileSync(join(dir, 'findings.json'), keep)
   })
   test('an empty baseline file: the ratchet run and the baseline command both cope', () => {
-    runCli(sb, ['baseline'])
+    runCli(sb, ['baseline', basename(dir)]) // name the run: the folder's newest run is not `dir` after the earlier tests
     const f = join(sb.logs, 'baselines', readdirSync(join(sb.logs, 'baselines'))[0])
     writeFileSync(f, '')
     clean(runCli(sb, ['verify', ...V, '--ratchet']), [0, 1], { action: false })
-    clean(runCli(sb, ['baseline']), [0], { says: /Baseline saved/, action: false })
+    clean(runCli(sb, ['baseline', basename(dir)]), [0], { says: /Baseline saved/, action: false })
   })
   test('a dismissals file with bad ids and entries that are not objects: no crash (regression)', () => {
     const id = JSON.parse(readFileSync(join(dir, 'findings.json'), 'utf8')).findings[0].id
-    runCli(sb, ['dismiss', id, '--reason', 'red test'])
+    runCli(sb, ['dismiss', id, basename(dir), '--reason', 'red test'])
     const f = join(sb.logs, 'dismissals', readdirSync(join(sb.logs, 'dismissals'))[0])
     writeFileSync(f, JSON.stringify({ schemaVersion: 1, items: [{ id: '../../etc/passwd', reason: 5 }, null, { id: {} }, 7] }))
     clean(runCli(sb, ['dismissals']), [0], { action: false })
     clean(runCli(sb, ['dismissals', '--stats']), [0], { action: false })
-    clean(runCli(sb, ['dismiss', id, '--reason', 'again']), [0], { action: false })
+    clean(runCli(sb, ['dismiss', id, basename(dir), '--reason', 'again']), [0], { action: false })
   })
   test('dismiss and undismiss with a hostile id: exit 1, no path is touched, undismiss does not claim it removed something (regression)', () => {
     clean(runCli(sb, ['dismiss', '../../x', '--reason', 'r']), [1], { says: /No open finding/ })

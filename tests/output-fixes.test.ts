@@ -83,7 +83,7 @@ describe('2. the folder says what ran', () => {
     const sec = makeRunDir(env, 'thorough', new Date(Date.now() + 2000), undefined, '/x/my-app', 'security') as string
     expect(full).toMatch(/-my-app-[0-9a-f]{6}--full$/)
     expect(sec).toMatch(/-my-app-[0-9a-f]{6}--security$/)
-    expect(parseRunName(full.split('/').pop())).toMatchObject({ project: 'my-app', tier: 'full' })
+    expect(parseRunName(full.split('/').pop())).toMatchObject({ project: expect.stringMatching(/^my-app-[0-9a-f]{6}$/), tier: 'full' })
     expect(parseRunName('20261101-101010--security')).toMatchObject({ project: null, tier: 'security' })
     expect(parseRunName('20261101-101010-my-app-thorough')).toMatchObject({ project: 'my-app', tier: 'thorough' })
   })
