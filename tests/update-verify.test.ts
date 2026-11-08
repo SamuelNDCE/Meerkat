@@ -113,3 +113,48 @@ describe('meerkat update --yes', () => {
     expect(calls.some((a) => a[0] === 'merge' || a[0] === 'checkout')).toBe(false)
   })
 })
+
+describe('the verified commit is the installed commit (no moving ref)', () => {
+  const A = 'a'.repeat(40)
+  const B = 'b'.repeat(40)
+  // origin/main answers A the first time and B afterwards (the branch moved after verification); the SHA itself always resolves to itself unless told otherwise.
+  const make = (shaResolvesTo: (sha: string) => string) => {
+    const calls: string[][] = []
+    let mainReads = 0
+    const exec = (_c: string, args: string[]) => {
+      calls.push(args)
+      const k = args.join(' ')
+      if (k === 'rev-parse --show-toplevel') return `${process.cwd()}\n`
+      if (k.startsWith('symbolic-ref')) return 'origin/main\n'
+      if (k === 'rev-parse origin/main^{commit}') return `${mainReads++ === 0 ? A : B}\n`
+      if (k.startsWith('rev-parse ') && k.endsWith('^{commit}')) return `${shaResolvesTo(k.split(' ')[1].replace('^{commit}', ''))}\n`
+      if (k.startsWith('rev-list --count')) return '1\n'
+      if (k.startsWith('log --format=%s')) return 'Faster\n'
+      if (k.startsWith('show origin/main:package.json') || k.startsWith(`show ${A}:package.json`)) return '{"version":"0.5.3"}'
+      if (k === 'show HEAD:package.json') return '{"version":"0.5.2"}'
+      return ''
+    }
+    return { exec, calls }
+  }
+  const run = async (m: ReturnType<typeof make>, seen: string[]) => {
+    let text = ''
+    const code = await runUpdateCommand({ kind: 'update', action: 'apply', yes: true }, { repoDir: process.cwd(), exec: m.exec, releaseCheck: async (o: { commit: string }) => (seen.push(o.commit), { ok: true }), env: { MEERKAT_USER_CONFIG: join(mkdtempSync(join(tmpdir(), 'mk-upd-')), 'u.json') }, stdout: { write: (t: string) => ((text += t), true) } as never, home: process.cwd() })
+    return { code, text }
+  }
+  test('the merge uses the SHA that was verified, even though the branch moved afterwards', async () => {
+    const m = make((s) => s)
+    const seen: string[] = []
+    const r = await run(m, seen)
+    expect(seen).toEqual([A])
+    expect(r.code).toBe(0)
+    const merge = m.calls.find((a) => a[0] === 'merge')
+    expect(merge).toEqual(['merge', '--ff-only', A])
+  })
+  test('if the commit cannot be confirmed right before the merge, nothing is changed', async () => {
+    const m = make((s) => (s === A ? B : s))
+    const r = await run(m, [])
+    expect(r.code).toBe(1)
+    expect(r.text).toContain('can no longer be confirmed')
+    expect(m.calls.some((a) => a[0] === 'merge' || a[0] === 'checkout')).toBe(false)
+  })
+})
