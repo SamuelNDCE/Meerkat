@@ -37,9 +37,9 @@ const repo = (name: string, packs = ['security-plus', 'repo', 'refactor']) => {
 }
 const logs = join(root, 'logs')
 const env = () => ({ ...process.env, MEERKAT_NO_PROJECT_CODE: '1', MEERKAT_LOG_DIR: logs })
-async function gate(dir: string, args: string[]) {
+async function gate(dir: string, args: string[], plain = false) {
   const lines: string[] = []
-  const code = await gateMain(['--verbose', ...args, '--app', dir], { env: env(), cwd: dir, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
+  const code = await gateMain([...(plain ? [] : ['--verbose']), ...args, '--app', dir], { env: env(), cwd: dir, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
   return { code, text: lines.join(NL), lines }
 }
 
@@ -133,11 +133,9 @@ describe('file:line, editor format, PASS line, project-wide count (items 1, 5, 6
     const d = repo('wide')
     put(d, 'src/used.js', 'export const used = 3\n')
     git(d, 'add', 'src/used.js')
-    const first = await gate(d, ['--staged', '--no-cache'])
-    expect(first.text).toMatch(/project-wide, not blocking \(\d+\)/)
-    const second = await gate(d, ['--staged', '--no-cache'])
-    expect(second.text).toMatch(/\d+ project-wide items, not blocking; "meerkat gate --verbose" lists them/)
-    expect(second.text).not.toMatch(/package-fields:/)
+    const first = await gate(d, ['--staged', '--no-cache'], true)
+    expect(first.text).toMatch(/pre-existing: \d+ finding\(s\) in \d+ check\(s\) are not in the files you changed and do not block/)
+    expect(first.text).not.toMatch(/package-fields:/)
     const third = await gate(d, ['--staged', '--no-cache', '--verbose'])
     expect(third.text).toMatch(/project-wide, not blocking \(\d+\)/)
   })
