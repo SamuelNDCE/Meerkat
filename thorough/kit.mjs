@@ -82,16 +82,25 @@ export function isMeerkatIgnored(rules, file) {
 }
 
 export function applyMeerkatIgnore(root, list) {
-  let text
+  // ignorePaths from meerkat.config.json, set by the run for this preset (lib/ignorepaths.mjs).
+  let fromConfig = []
+  try {
+    const p = JSON.parse(process.env.MEERKAT_IGNORE_PATHS || '[]')
+    if (Array.isArray(p)) fromConfig = parseMeerkatIgnore(p.filter((x) => typeof x === 'string').join(String.fromCharCode(10)))
+  } catch {
+    /* a value that is not JSON leaves nothing out */
+  }
+  let text = null
   try {
     text = readFileSync(join(root, MEERKATIGNORE_FILE), 'utf8')
   } catch {
-    return list
+    /* no .meerkatignore */
   }
-  const rules = parseMeerkatIgnore(text)
-  if (!rules.length) return list
-  const kept = list.filter((f) => !isMeerkatIgnored(rules, f))
-  if (kept.length !== list.length) process.stderr.write(`ignored ${list.length - kept.length} files by ${MEERKATIGNORE_FILE}\n`)
+  const rules = text === null ? [] : parseMeerkatIgnore(text)
+  const all = [...rules, ...fromConfig]
+  if (!all.length) return list
+  const kept = list.filter((f) => !isMeerkatIgnored(all, f))
+  if (rules.length && kept.length !== list.length && !fromConfig.length) process.stderr.write(`ignored ${list.length - kept.length} files by ${MEERKATIGNORE_FILE}\n`)
   return kept
 }
 
