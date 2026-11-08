@@ -212,11 +212,16 @@ describe('code-map queries', () => {
   })
 })
 
-describe('verdict prints progress and stops at --max-seconds', () => {
-  test('verdict shows per-check lines and a stopped-early line', () => {
+
+describe('an early stop is never a pass', () => {
+  test('verdict and top say INCOMPLETE and exit non-zero when --max-seconds cuts the run', () => {
     const d = join(root, 'gate-fx')
-    const r = cli(['verdict', '--max-seconds', '3', '--base', 'HEAD'], d)
-    expect(r.err).toMatch(/\[\d+\/\d+\] /)
-    expect(r.err).toMatch(/still running after \d+s: nap|stopped early|\[\d+\/\d+\] nap \.\.\. /)
-  }, 60000)
+    const v = cli(['verdict', '--max-seconds', '3', '--base', 'main'], d)
+    expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, not a pass/)
+    expect(v.out).not.toMatch(/^PASS/m)
+    expect(v.code).not.toBe(0)
+    const t = cli(['top', '--max-seconds', '3', '--base', 'main'], d)
+    expect(t.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
+    expect(t.code).not.toBe(0)
+  }, 90000)
 })
