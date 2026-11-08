@@ -40,11 +40,11 @@ Meerkat's built-in cargo lock makes cargo jobs wait for each other on one machin
 
 ## How do I add a known failure?
 
-This build has no single known-failures list. To accept one finding with a reason: `meerkat findings` (find the id), then `meerkat dismiss <id> --reason "why this is fine"`. To accept everything that exists today: `meerkat baseline`, then run with `--ratchet`. Take a dismissal back with `meerkat undismiss <id>`.
+Put it in the known-failures file and pass it: `meerkat verdict --base origin/main --known known-failures.json`. Each entry is `{ "check": "<id>", "file": "<path>", "line": <optional number> }`. A match prints `KNOWN: ...` and does not block; an entry that no longer matches prints `STALE: ...`, so delete it. `--json` gives the same result as one object. To accept a single finding with a reason instead: `meerkat dismiss <id> --reason "why this is fine"`. Take it back with `meerkat undismiss <id>`. Details: [neuralvault.md](neuralvault.md).
 
 ## What does NO-RESULT mean?
 
-`verdict` could not judge, so it will not say PASS. The line holds a reason and a next step: `NO-RESULT: <reason>. next: <step>`. Exit code 1 means no result (nothing changed, no check could run, it timed out); exit 2 means a usage or git problem such as an unknown base ref. Do the next step once. Never read it as a pass.
+`verdict` could not judge, so it will not say PASS. The line holds a reason and a next step: `NO-RESULT: <reason>. next: <step>`. Exit code 1 means no result (nothing changed, no check could run, it timed out); exit 2 means a usage or git problem such as an unknown base ref or a bad `--known` file. `top` prints the same NO-RESULT lines. They are never silent. Do the next step once. Never read it as a pass.
 
 ## What does exit code 75 mean?
 

@@ -46,11 +46,23 @@ MCP results are short by default. `meerkat_summary` answers in a few lines: pass
 
 ## 5. Known failures
 
-This build has no single "known failures" list and `verdict` has no option for one; `meerkat verdict --help` shows its only options. Three things come closest, and each is a CLI command or MCP tool you can run:
+A team keeps a JSON file of accepted pre-existing failures and gives it to the verdict:
 
-- Pre-existing findings. `verdict` and `gate` already separate findings the branch did not cause. `meerkat gate --base origin/main --all-findings` lists the ones hidden.
-- Dismissals. `meerkat dismiss <id> --reason "..."` accepts one finding with a reason; `meerkat dismissals` lists them. MCP: `meerkat_dismiss`, `meerkat_dismissals`.
-- Baseline. `meerkat baseline` accepts all current findings; `meerkat verify --ratchet` then fails only on new ones.
+```
+[{ "check": "risky-code", "file": "src/a.js", "line": 5 }, { "check": "secret-scan", "file": "src/b.js" }]
+```
+
+`line` is optional. The file may also be `{ "known": [ ... ] }`.
+
+```
+meerkat verdict --base origin/main --known known-failures.json
+```
+
+With `--known`, the list replaces the base comparison: every finding in a changed file is judged against the list. A finding an entry matches is printed as `KNOWN: <check> <file>:<line>` and does not block. The first line then ends with the count, for example `FAIL 1 blocking in changed files (3 known)`. An entry that matches nothing is printed as `STALE: <check> <file> matches no finding any more; remove it from <file>`, so the list does not rot. The pass form is `PASS (m known)`; not reproduced here (a scratch run with every listed entry matched still had other pre-existing findings and gave `FAIL-PRE-EXISTING only: 2 findings ... (4 known)`). A missing or malformed file prints `NO-RESULT: the --known file <path> does not exist. next: ...` and exits 2.
+
+For a script, add `--json`: one object with `verdict`, `exitCode`, `blocking`, `known` (a count), `knownFindings`, `stale` and `reason`.
+
+Other ways to accept a failure: `meerkat dismiss <id> --reason "..."` (MCP: `meerkat_dismiss`), or `meerkat baseline` then `meerkat verify --ratchet`.
 
 ## 6. Project code needs trust
 
