@@ -114,3 +114,31 @@ describe('snippet-keyed allow entries (real a11y rule through node lib/a11y.mjs)
     expect(rule(app).status).toBe(1)
   })
 })
+
+describe('tool install hints', () => {
+  test('each missing system tool gets a hint with the platform name and a command or URL, per platform', async () => {
+    // @ts-expect-error plain .mjs module
+    const { installHint } = await import('./installhints.mjs')
+    for (const [platform, name] of [['win32', 'Windows'], ['darwin', 'macOS'], ['linux', 'Linux']]) {
+      for (const bin of ['hadolint', 'actionlint']) {
+        const h = installHint(bin, platform)
+        expect(h).toContain(name)
+        expect(h).toMatch(/https:\/\/|install /)
+        expect(h).toContain(bin)
+      }
+    }
+    expect(installHint('hadolint', 'win32')).toContain('scoop install hadolint')
+    expect(installHint('actionlint', 'darwin')).toContain('brew install actionlint')
+    expect(installHint('hadolint', 'linux')).toContain('https://github.com/hadolint/hadolint/releases')
+    expect(installHint('hadolint', 'win32')).not.toContain('winget')
+    expect(installHint('nope', 'linux')).toBeNull()
+  })
+  test('the real CLI (meerkat tools, empty PATH) prints a hint line naming this platform for hadolint and actionlint', () => {
+    const empty = join(tmp, 'emptybin')
+    mkdirSync(empty, { recursive: true })
+    const r = cli(['tools'], tmp, { PATH: empty, Path: empty, HOME: tmp, USERPROFILE: tmp })
+    const name = process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux'
+    expect(r.stdout).toMatch(new RegExp(`hint +hadolint on ${name}: .*(https://|install )`))
+    expect(r.stdout).toMatch(new RegExp(`hint +actionlint on ${name}: .*(https://|install )`))
+  })
+})
