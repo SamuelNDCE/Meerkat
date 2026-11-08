@@ -272,7 +272,7 @@ const PYPI_POPULAR = [
 const NPM = new Set(NPM_POPULAR)
 const PYPI = new Set(PYPI_POPULAR)
 // Scopes whose packages are known to be the publisher's own. A popular name under any other scope is the thing to look at.
-const NPM_SCOPES = new Set(['@types', '@babel', '@angular', '@vue', '@nestjs', '@testing-library', '@aws-sdk', '@google-cloud', '@azure', '@prisma', '@sveltejs', '@emotion', '@mui', '@reduxjs', '@tanstack', '@playwright', '@vitest', '@supabase', '@anthropic-ai', '@openai', '@sentry', '@stripe'])
+const NPM_SCOPES = new Set(['@types', '@babel', '@angular', '@vue', '@nestjs', '@testing-library', '@aws-sdk', '@google-cloud', '@azure', '@prisma', '@sveltejs', '@emotion', '@mui', '@reduxjs', '@tanstack', '@playwright', '@vitest', '@supabase', '@anthropic-ai', '@openai', '@sentry', '@stripe', '@lucide', '@xyflow', '@tsconfig'])
 
 // True when a and b differ by one insertion, deletion, substitution, or swap of two neighbouring letters (the Damerau case).
 const oneEdit = (a, b) => {
