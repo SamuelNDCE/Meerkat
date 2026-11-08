@@ -66,7 +66,7 @@ describe('findings file states', () => {
     const d = run('{"schemaVersion":1,"findings":[{"id":"a"')
     expect(classifyFindings(d).state).toBe('truncated')
     const t = missingFindingsText(d)
-    expect(t).toContain('findings file is truncated')
+    expect(t).toContain('a truncated findings.json')
     expect(t).toContain('not a version mismatch')
   })
   test('valid JSON of an older schema says older Meerkat wrote it', () => {
