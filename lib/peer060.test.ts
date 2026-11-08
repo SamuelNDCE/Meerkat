@@ -183,6 +183,18 @@ describe('repo test and build commands', () => {
     expect(b.stdout + b.stderr).not.toContain(esc)
     expect(marks()).toEqual([])
   })
+  test('a command with a bidi override or zero-width joiner is rejected, nothing runs, and the listing has no raw format characters', () => {
+    const bidi = String.fromCharCode(0x202e)
+    const zwj = String.fromCharCode(0x200d)
+    put('meerkat.config.json', JSON.stringify({ commands: { test: 'node mark.mjs test', build: `node mark.mjs ${bidi}build${zwj} 0`, deploy: `node mark.mjs deploy${zwj}` } }))
+    const l = cli(['commands'])
+    for (const c of [bidi, zwj]) expect(l.stdout + l.stderr).not.toContain(c)
+    expect(l.stdout).toContain('node mark.mjs test')
+    expect(l.stdout).not.toContain('build')
+    expect(l.stderr).toContain('control character')
+    expect(cli(['build'], app, { MEERKAT_TRUST_PROJECT: '1' }).status).toBe(2)
+    expect(marks()).toEqual([])
+  })
   test('with no commands block, meerkat build is a usage error and runs nothing', () => {
     rmSync(join(app, 'meerkat.config.json'))
     const r = cli(['build'])
