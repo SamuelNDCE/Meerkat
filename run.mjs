@@ -6,7 +6,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { cpus, freemem } from 'node:os'
 import { diffSnapshots, snapshotDigest, snapshotTree, violationText } from './lib/integrity.mjs'
 import { cacheFile, cacheHit, cacheKey, readCache, saveCache, updatedCache } from './lib/resultcache.mjs'
-import { acceptedSets, applyAccepted } from './lib/accepted.mjs'
+import { acceptedSets, applyAccepted, passInlineIgnored } from './lib/accepted.mjs'
 import { githubAnnotations } from './lib/ci-output.mjs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -546,10 +546,12 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
     // Accepted findings (lib/accepted.mjs): dismissed ones, and with --ratchet the baseline. A check whose findings are all accepted passes.
     const acceptedSetsNow = opts.selfTest ? null : acceptedSets({ env, projectPath: appDir, ratchet: Boolean(opts.ratchet) })
-    const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size))
+    const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size || acceptedSetsNow.expired?.size))
     // The ids come from the same builder that writes findings.json, so a dismissed id matches what the run lists.
-    const builtNow = anyAccepted ? safeBuild({ results, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env }) : null
-    const acceptedRecords = builtNow ? applyAccepted(results, ctx.findingsSink, acceptedSetsNow, builtNow.findings, builtNow.hiddenChecks) : []
+    const builtNow = anyAccepted || (!opts.selfTest && results.some((r) => r?.status === 'FAIL')) ? safeBuild({ results, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env }) : null
+    // A check whose every finding carries an inline meerkat-ignore comment passes (lib/accepted.mjs).
+    if (builtNow) passInlineIgnored(results, builtNow, ctx.findingsSink)
+    const acceptedRecords = anyAccepted && builtNow ? applyAccepted(results, ctx.findingsSink, acceptedSetsNow, builtNow.findings, builtNow.hiddenChecks) : []
     if (acceptedRecords.length) {
       try {
         writeFileSync(join(ctx.logDir, 'accepted.json'), JSON.stringify({ schemaVersion: 1, mode: opts.ratchet ? 'ratchet' : 'dismissed', items: acceptedRecords }, null, 2))
