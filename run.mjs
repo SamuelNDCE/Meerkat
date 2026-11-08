@@ -29,6 +29,7 @@ import { applicablePacks, detect, initConfig, presetPacks } from './lib/init.mjs
 import { finalReport } from './lib/report.mjs'
 import { compactSummary } from './lib/tui/results.mjs'
 import { buildFindings, saveFindings } from './lib/findingsdoc.mjs'
+import { folderProblem } from './lib/folderguard.mjs'
 import { createInterface } from 'node:readline/promises'
 import { verifyRunDir } from './lib/aiverify.mjs'
 import { failureLines, groupFailures, summaryLines } from './lib/failsummary.mjs'
@@ -303,9 +304,19 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
   }
   if (opts.init) {
-    const made = initConfig(appDir)
-    log(made.message)
-    return 0
+    const bad = folderProblem(appDir)
+    if (bad) {
+      fail(bad)
+      return 2
+    }
+    try {
+      const made = initConfig(appDir)
+      log(made.message)
+      return 0
+    } catch (e) {
+      fail(`could not write meerkat.config.json in ${appDir} (${e?.code ?? 'error'}): check that the folder is writable, or create the file by hand`)
+      return 1
+    }
   }
   // Reading back what the last run saved: nothing is run.
   if (opts.logs) {
