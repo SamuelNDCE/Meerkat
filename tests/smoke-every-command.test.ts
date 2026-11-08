@@ -60,6 +60,7 @@ const EXAMPLES: Record<string, Example> = {
   verdict: { args: ['verdict'], codes: [0, 1, 75], why: 'one line for a branch; the fixture may have no base branch, then it says so (75)' },
   top: { args: ['top'], codes: [0, 75], why: 'a table of changed-file findings; 75 when the fixture has no base to compare with' },
   commands: { args: ['commands'] },
+  trust: { args: ['trust'], codes: [0], why: 'the fixture defines no commands, so there is nothing to trust' },
   build: { args: ['build'], codes: [2], why: 'the fixture defines no commands.build, so it must say so and exit 2' },
   finding: { args: ['finding', '{id}'] },
   last: { args: ['last'] },
