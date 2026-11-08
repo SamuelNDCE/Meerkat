@@ -1,4 +1,4 @@
-// Peer-requested features (0.6.0): verdict, worktree reads its own branch, new findings only on a branch, repo commands, top. Real CLI in scratch git repos.
+// Peer-requested features: verdict, worktree reads its own branch, new findings only on a branch, repo commands, top. Real CLI in scratch git repos.
 import { spawnSync, execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
