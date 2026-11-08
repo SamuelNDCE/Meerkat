@@ -114,6 +114,22 @@ describe('new findings only on a branch', () => {
   }, SLOW)
 })
 
+describe('new-findings hole: a copy of an old finding is not hidden', () => {
+  test('a duplicate added on a changed line stays visible; the old one on an untouched line stays hidden', () => {
+    put('loose.js', LOOSE)
+    put('index.js', ["import './clean.js'", "import './loose.js'", ''].join('\n'))
+    initMain()
+    git(app, ['checkout', '-q', '-b', 'feat'])
+    put('loose.js', [LOOSE, 'if (v == 2) {}', ''].join('')) // the same finding text again, on a new line
+    commit()
+    const r = cli(['gate', '--base', 'main', '--no-input'])
+    expect(r.stdout).toMatch(/1 pre-existing finding\(s\) hidden/)
+    expect(r.stdout).toContain('loose.js:3')
+    expect(r.stdout).not.toContain('loose.js:2')
+    expect(r.status).toBe(1)
+  }, SLOW)
+})
+
 describe('repo test and build commands', () => {
   beforeEach(() => {
     put('mark.mjs', "import { appendFileSync } from 'node:fs'\nappendFileSync('marks.txt', process.argv[2] + '\\n')\nprocess.exit(Number(process.argv[3] ?? 0))\n")
