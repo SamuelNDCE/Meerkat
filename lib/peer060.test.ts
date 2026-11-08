@@ -297,6 +297,23 @@ describe('commands without a config', () => {
     expect(r.stdout).not.toContain('start')
     expect(r.stdout).toContain('to pin them')
   })
+  test('a monorepo with no root scripts lists the scripts one level down, prefixed with the folder; the list is capped', () => {
+    put('package.json', JSON.stringify({ name: 'root', private: true }))
+    put('apps/web/package.json', JSON.stringify({ name: 'web', scripts: { test: 'vitest run', build: 'vite build', dev: 'vite' } }))
+    put('tools/cli/package.json', JSON.stringify({ name: 'cli', scripts: { lint: 'eslint .' } }))
+    const r = cli(['commands'], tmp, { MEERKAT_APP_DIR: app })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toContain('apps/web  test  npm --prefix apps/web run test   (runs: vitest run)')
+    expect(r.stdout).toContain('apps/web  build')
+    expect(r.stdout).not.toContain('dev')
+    expect(r.stdout).not.toContain('tools/cli')
+    put('package.json', JSON.stringify({ name: 'root', workspaces: ['tools/*'] }))
+    expect(cli(['commands'], tmp, { MEERKAT_APP_DIR: app }).stdout).toContain('tools/cli  lint')
+    for (let i = 0; i < 12; i++) put(`packages/p${String(i).padStart(2, '0')}/package.json`, JSON.stringify({ scripts: { test: 'a', build: 'b', lint: 'c', typecheck: 'd' } }))
+    const big = cli(['commands'], tmp, { MEERKAT_APP_DIR: app }).stdout
+    expect(big).toMatch(/\.\.\. \d+ more omitted/)
+    expect(big.split('\n').filter((l) => l.includes('npm --prefix')).length).toBeLessThanOrEqual(41)
+  })
   test('with no package.json either it says so and still exits 0', () => {
     rmSync(join(app, 'package.json'))
     const r = cli(['commands'], tmp, { MEERKAT_APP_DIR: app })
