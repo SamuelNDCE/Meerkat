@@ -204,6 +204,57 @@ describe('repo test and build commands', () => {
   })
 })
 
+describe('verdict and top never go silent', () => {
+  const line = (r: { stdout: string }) => r.stdout.trim()
+  test.each([['verdict'], ['top']])('%s: a base ref that does not exist is exit 2 with one NO-RESULT line', (w) => {
+    initMain()
+    const r = cli([w, '--base', 'no-such-ref'])
+    expect(r.status).toBe(2)
+    expect(line(r)).toMatch(/^NO-RESULT: .*no-such-ref.*next: /)
+  }, SLOW)
+  test.each([['verdict'], ['top']])('%s: not a git repository is exit 2 with one NO-RESULT line', (w) => {
+    const r = cli([w])
+    expect(r.status).toBe(2)
+    expect(line(r)).toMatch(/^NO-RESULT: .*git.*next: /)
+  })
+  test.each([['verdict'], ['top']])('%s: nothing changed is exit 1 with one NO-RESULT line', (w) => {
+    initMain()
+    git(app, ['checkout', '-q', '-b', 'feat'])
+    const r = cli([w])
+    expect(r.status).toBe(1)
+    expect(line(r)).toMatch(/^NO-RESULT: nothing changed .*next: /)
+  }, SLOW)
+  test.each([['verdict'], ['top']])('%s: a run that times out is exit 1 with one NO-RESULT line', (w) => {
+    initMain()
+    git(app, ['checkout', '-q', '-b', 'feat'])
+    put('loose.js', LOOSE)
+    commit()
+    const r = cli([w], app, { MEERKAT_VERDICT_TIMEOUT_S: '0.05' })
+    expect(r.status).toBe(1)
+    expect(line(r)).toMatch(/^NO-RESULT: the gate did not finish in 0\.05s.*next: /)
+  }, SLOW)
+})
+
+describe('commands without a config', () => {
+  test('lists the package.json scripts read-only and says how to pin them', () => {
+    put('package.json', JSON.stringify({ name: 'fx', scripts: { test: 'vitest run', build: 'tsc -p .', lint: 'eslint .', start: 'node x.js' } }))
+    const r = cli(['commands'], tmp, { MEERKAT_APP_DIR: app })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toContain('npm run test   (runs: vitest run)')
+    expect(r.stdout).toContain('npm run build   (runs: tsc -p .)')
+    expect(r.stdout).toContain('npm run lint')
+    expect(r.stdout).not.toContain('start')
+    expect(r.stdout).toContain('to pin them')
+  })
+  test('with no package.json either it says so and still exits 0', () => {
+    rmSync(join(app, 'package.json'))
+    const r = cli(['commands'], tmp, { MEERKAT_APP_DIR: app })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toContain('no commands')
+    expect(r.stdout).toContain('meerkat.config.json')
+  })
+})
+
 describe('top', () => {
   test('lists the findings of changed files only, one table', () => {
     put('old.js', 'export const o = 1\nif (o == 9) {}\n')
