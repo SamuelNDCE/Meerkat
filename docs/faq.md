@@ -4,7 +4,7 @@ Questions teams have actually asked. Each answer was checked by running the comm
 
 ## Why is `meerkat verdict` slow, or why does it look stuck?
 
-`verdict` and `top` run the full set of gate checks with the result cache off, so they do the whole work every time. They print nothing until they finish, then one line or one table. They stop after 300 seconds by default and print `INCOMPLETE n of m checks finished, b blocking so far (not a pass)` with the first 5 blocking findings, and exit 75. Start them in the background, or raise the limit: `MEERKAT_VERDICT_TIMEOUT_S=1800 meerkat verdict --base origin/main` (in PowerShell: set `$env:MEERKAT_VERDICT_TIMEOUT_S = '1800'` first).
+`verdict` and `top` run the full set of gate checks with the result cache off, so they do the whole work every time. They print progress lines on stderr while they work (`[12/218] risky-code ... 0.2s FAIL`, and `still running after 30s: <check>` for a slow one), and the answer, one line or one table, on stdout when they finish. They stop after 300 seconds by default and print `INCOMPLETE n of m checks finished, b blocking so far (not a pass)` with the first 5 blocking findings, and exit 75. Start them in the background, or raise the limit: `MEERKAT_VERDICT_TIMEOUT_S=1800 meerkat verdict --base origin/main` (in PowerShell: set `$env:MEERKAT_VERDICT_TIMEOUT_S = '1800'` first).
 
 ## Why is `meerkat gate` faster the second time?
 
@@ -32,7 +32,7 @@ They are small by default. `meerkat_summary` and `meerkat_gate` answer in a few 
 
 ## How do I get progress on a long run?
 
-Today it depends on the command. A run started in a terminal draws a live board with a progress bar. With `--plain`, in CI or from an agent there is no board. `gate`, `verdict` and `top` print nothing until they finish; the progress lines are not yet on every command. For a long `meerkat_run` over MCP, start it and poll `meerkat_last`; do not sleep. `meerkat logs` prints the log folder, and each run has its own folder there.
+Today it depends on the command. A run started in a terminal draws a live board with a progress bar. With `--plain`, in CI or from an agent there is no board. `verdict` and `top` print a progress line on stderr for each check (`[n/total] check ... 0.2s FAIL`) and one line every 30 seconds for a check that is still running (`MEERKAT_GATE_HEARTBEAT_MS` changes the interval); the answer goes to stdout. `meerkat gate` shows progress in a terminal. For a long `meerkat_run` over MCP, start it and poll `meerkat_last`; do not sleep. `meerkat logs` prints the log folder, and each run has its own folder there.
 
 ## What does the cargo lock waiter output mean?
 

@@ -114,3 +114,7 @@ jobs:
 ```
 
 `ossf/scorecard-action` v2.4.3 resolves to `4eaacf0543bb3f2c246792bd56e8cdeffafb205a`; `github/codeql-action` v4.39.3 resolves to `33d7b85da1a04171e211befe2c739303b9a4c066`. The workflow was not run here.
+
+## Repository topics
+
+The GitHub topics match the `keywords` in `package.json`: verdict, branch-check, code-review, static-analysis, lint, security, ai-agents, mcp, code-map, pre-commit, pre-push, cli, ci, sarif, accessibility, developer-tools. They are set on GitHub, not by this repository; `gh repo edit --add-topic <name>` adds one. Not verified in this build: whether the live repository already carries them.
