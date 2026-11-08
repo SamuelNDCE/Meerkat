@@ -28,7 +28,7 @@ const whitespace = (root) => {
 }
 
 // ---- env-example: every environment variable the code reads is written down somewhere
-const COMMON_ENV = new Set(['NODE_ENV', 'PATH', 'HOME', 'USER', 'USERPROFILE', 'CI', 'PWD', 'TMPDIR', 'TEMP', 'TMP', 'SHELL', 'LANG', 'TERM', 'DEBUG', 'PORT', 'HOST', 'APPDATA', 'LOCALAPPDATA', 'NO_COLOR', 'FORCE_COLOR', 'APPIMAGE', 'PORTABLE_EXECUTABLE_FILE', 'PORTABLE_EXECUTABLE_DIR', 'VITE_DEV_SERVER_URL', 'ELECTRON_RUN_AS_NODE'])
+const COMMON_ENV = new Set(['NODE_ENV', 'PATH', 'HOME', 'USER', 'USERPROFILE', 'CI', 'PWD', 'TMPDIR', 'TEMP', 'TMP', 'SHELL', 'LANG', 'TERM', 'DEBUG', 'PORT', 'HOST', 'APPDATA', 'LOCALAPPDATA', 'NO_COLOR', 'FORCE_COLOR', 'APPIMAGE', 'PORTABLE_EXECUTABLE_FILE', 'PORTABLE_EXECUTABLE_DIR', 'VITE_DEV_SERVER_URL', 'ELECTRON_RUN_AS_NODE', 'XDG_DATA_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_RUNTIME_DIR'])
 // Set by the runtime or the packager, never by the person running the app: Electron's own ELECTRON_* switches, npm's npm_* and NODE_* variables, GitHub's GITHUB_*.
 const RUNTIME_ENV = /^(?:ELECTRON_[A-Z_]+|npm_[A-Za-z0-9_]+|NODE_[A-Z_]+|GITHUB_[A-Z_]+|RUNNER_[A-Z_]+)$/
 const envExample = (root) => {
@@ -36,15 +36,19 @@ const envExample = (root) => {
   const docs = files.filter((x) => /(^|\/)(\.env\.(example|sample|template)|README[^/]*|docs\/.*\.md)$/i.test(x)).map((x) => readText(root, x)).join('\n')
   const allow = allowList(root, '.meerkat-env-allow')
   const used = new Map()
+  const assigned = new Set() // a name the project's own code sets for its child processes (process.env.X = value) is plumbing, not something a person configures
+  const assign = /process\.env\.([A-Z][A-Z0-9_]{2,})\s*=(?![=>])(?!\s*process\.env\.)/g
   const re = /(?:process\.env\.([A-Z][A-Z0-9_]{2,})|process\.env\[['"]([A-Z][A-Z0-9_]{2,})['"]\]|os\.environ(?:\.get)?\(?\[?['"]([A-Z][A-Z0-9_]{2,})['"]|os\.getenv\(['"]([A-Z][A-Z0-9_]{2,})['"]|env::var\("([A-Z][A-Z0-9_]{2,})"\)|os\.Getenv\("([A-Z][A-Z0-9_]{2,})"\))/g
   for (const x of files) {
     if (!SOURCE.test(x) || TESTISH.test(x)) continue
-    for (const m of readText(root, x).matchAll(re)) {
+    const text = readText(root, x)
+    for (const m of text.matchAll(assign)) assigned.add(m[1])
+    for (const m of text.matchAll(re)) {
       const name = m.slice(1).find(Boolean)
       if (!used.has(name)) used.set(name, x)
     }
   }
-  const f = [...used].filter(([n]) => !COMMON_ENV.has(n) && !RUNTIME_ENV.test(n) && !allow.has(n) && !docs.includes(n)).map(([n, x]) => `${n} is read in ${x} but is not in .env.example or the README (add it, or list it in .meerkat-env-allow)`)
+  const f = [...used].filter(([n]) => !COMMON_ENV.has(n) && !RUNTIME_ENV.test(n) && !allow.has(n) && !assigned.has(n) && !docs.includes(n)).map(([n, x]) => `${n} is read in ${x} but is not in .env.example or the README (add it, or list it in .meerkat-env-allow)`)
   return finish('env-example', f, 'every environment variable the code reads is documented')
 }
 
