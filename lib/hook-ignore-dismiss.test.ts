@@ -48,6 +48,14 @@ describe('hook install --gate and remove', () => {
     expect(text).toContain('origin/HEAD')
     expect(text).not.toContain('--ratchet')
   })
+  test('each install message says only what its own hook runs', () => {
+    const gate = run(['hook', 'install', '--gate', repo('msg-gate')], tmp).text
+    expect(gate).toContain('meerkat gate --base <upstream branch>')
+    expect(gate).not.toContain('quick preset')
+    const whole = run(['hook', 'install', repo('msg-whole')], tmp).text
+    expect(whole).toContain('quick preset with --ratchet on the whole repository')
+    expect(whole).not.toContain('gate --base')
+  })
   test('install then remove leaves no file when none existed', () => {
     const dir = repo('none')
     run(['hook', 'install', dir], dir)
