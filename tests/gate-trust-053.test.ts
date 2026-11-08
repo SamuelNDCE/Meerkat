@@ -45,7 +45,7 @@ describe('P1.1 the gate adds every pack that applies', () => {
     const env = { ...process.env, MEERKAT_NO_PROJECT_CODE: '1', MEERKAT_LOG_DIR: join(root, 'logs-a') }
     const code = await gateMain(['--staged', '--no-cache', '--app', dir], { env, cwd: dir, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
     expect(code).toBe(1)
-    expect(lines.join('\n')).toMatch(/sql-concat\s+src\/bug\.js:1/)
+    expect(lines.join('\n')).toMatch(/FAIL\s+sql-concat \(1\)/)
   })
 })
 
@@ -215,7 +215,8 @@ describe('P3.11 gate output is failures plus one summary line by default', () =>
     expect(t).toContain('failing-check')
     expect(t).not.toMatch(/PASS\s+passing-check/)
     expect(t).not.toContain('unconfigured-check')
-    expect(t).toMatch(/gate: 1 passed, 1 failed, 0 tool failure\(s\), 0 not run, 1 not configured, exit 1/)
+    expect(t).toMatch(/MEERKAT gate: 1 blocking, 0 pre-existing \(not in the change\), 1 passed, 0 not run, exit 1/)
+    expect(gateText('gate', out, 'staged files', { verbose: true })).toMatch(/gate: 1 passed, 1 failed, 0 tool failure\(s\), 0 not run, 1 not configured, exit 1/)
   })
   test('--verbose (verbose: true) lists every check again', () => {
     const t = gateText('gate', { ...out, all: true }, 'staged files', { verbose: true })

@@ -52,12 +52,15 @@ describe('gate and smoke', () => {
     const r = await call(ctx, 'meerkat_gate', { staged: true })
     expect(isErr(r)).toBe(false)
     expect(cli[0]).toEqual(['gate', '--app', HERE, '--json', '--staged'])
-    expect(r.result.structuredContent.rows[0]).toMatchObject({ id: 'lint', result: 'pass' })
+    expect(r.result.structuredContent.status).toBe('pass')
+    const full = await call(ctx, 'meerkat_gate', { staged: true, full: true })
+    expect(cli[1]).toEqual(['gate', '--app', HERE, '--json', '--staged', '--full'])
+    expect(full.result.structuredContent.rows[0]).toMatchObject({ id: 'lint', result: 'pass' })
     expect(isErr(await call(ctx, 'meerkat_gate', { staged: 'yes' }))).toBe(true)
     expect(isErr(await call(ctx, 'meerkat_gate', { base: '--upload-pack=x' }))).toBe(true)
     expect(isErr(await call(ctx, 'meerkat_gate', { staged: true, base: 'main' }))).toBe(true)
     expect(isErr(await call(ctx, 'meerkat_gate', { nope: 1 }))).toBe(true)
-    expect(cli).toHaveLength(1)
+    expect(cli).toHaveLength(2)
   })
 
   test('smoke maps timeout to --timeout and rejects a bad one', async () => {

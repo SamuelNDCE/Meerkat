@@ -179,9 +179,9 @@ describe('the command', () => {
 describe('gate output says what to do', () => {
   test('a failed gate ends with a next-step line, and an empty staging area says how to stage', async () => {
     const failing = { id: 'x', kind: 'fail', detail: 'src/a.js:1 bad', findings: [] }
-    const text = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [failing], skipped: [], note: '' }, 'staged files')
+    const text = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [failing], skipped: [], note: '' }, 'staged files', { verbose: true })
     expect(text).toMatch(/\nnext: fix the checks listed under "in the files you changed"/)
-    const old = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [{ id: 'y', kind: 'fail', detail: 'no SECURITY.md', findings: [] }], skipped: [], note: '' }, 'staged files')
+    const old = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [{ id: 'y', kind: 'fail', detail: 'no SECURITY.md', findings: [] }], skipped: [], note: '' }, 'staged files', { verbose: true })
     expect(old).toMatch(/\nnext: no failure points into the files you changed/)
     expect(gateText('gate', { exitCode: EXIT.pass, files: [], rows: [], skipped: [], note: '' }, 'd')).not.toMatch(/next:/)
     const none = await runGate({ checks: [jsOk], files: [], repoRoot: dir, ...quiet })
