@@ -52,3 +52,42 @@ describe('gate prints progress', () => {
     expect(r.err).toMatch(/--max-seconds needs a number/)
   })
 })
+
+describe('meerkat lock status lists the waiters', () => {
+  test('two waiters show with their commands and pids', async () => {
+    const { spawn } = await import('node:child_process')
+    const lockDir = join(root, 'cargo.lock')
+    const e = { ...env, MEERKAT_CARGO_LOCK_DIR: lockDir, MEERKAT_LOCK_MAX_WAIT: '60' } as NodeJS.ProcessEnv
+    const script = join(ROOT, 'lib', 'cargo-lock-run.mjs')
+    put(root, 'hold.js', 'setTimeout(() => {}, 15000)\n')
+    put(root, 'quick.js', "console.log('done')\n")
+    const kids = [
+      spawn(process.execPath, [script, process.execPath, join(root, 'hold.js')], { env: e, stdio: 'ignore' }),
+    ]
+    await new Promise((r) => setTimeout(r, 1500))
+    kids.push(spawn(process.execPath, [script, process.execPath, join(root, 'quick.js'), 'first-waiter'], { env: e, stdio: 'ignore' }))
+    await new Promise((r) => setTimeout(r, 700))
+    kids.push(spawn(process.execPath, [script, process.execPath, join(root, 'quick.js'), 'second-waiter'], { env: e, stdio: 'ignore' }))
+    await new Promise((r) => setTimeout(r, 1500))
+    try {
+      const r = cli(['lock', 'status'], root, e)
+      expect(r.code).toBe(0)
+      expect(r.out).toMatch(/holder: pid \d+/)
+      expect(r.out).toMatch(/hold\.js/)
+      expect(r.out).toMatch(/waiting \(2\)/)
+      expect(r.out).toMatch(/pid \d+\s+waited \d+s\s+.*first-waiter/)
+      expect(r.out).toMatch(/pid \d+\s+waited \d+s\s+.*second-waiter/)
+      expect(r.out.indexOf('first-waiter')).toBeLessThan(r.out.indexOf('second-waiter'))
+      const j = JSON.parse(cli(['lock', 'status', '--json'], root, e).out)
+      expect(j.waiters).toHaveLength(2)
+    } finally {
+      for (const k of kids) k.kill()
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  }, 60000)
+
+  test('a free lock says so', () => {
+    const r = cli(['lock', 'status'], root, { MEERKAT_CARGO_LOCK_DIR: join(root, 'nobody.lock') })
+    expect(r.out).toMatch(/free/)
+  })
+})
