@@ -130,7 +130,7 @@ node tools/corpus/measure.mjs --corpus corpus/planted --out result.json
 
 Add `--all` to the second command to include the pedantic rules. To attack the checks with other tests, run `meerkat redtest --kind cleantwin` (kinds: mutation, faults, adversarial, regression, cleantwin, all).
 
-To add a check, see [writing-checks.md](writing-checks.md). The shortest way is `meerkat check new`, which takes a command and no code. Prove a new check with a `selfTest` on a broken sample, then run `meerkat self-test`.
+To add a check, see [writing-checks.md](writing-checks.md). The shortest way is `meerkat check new`, which takes a command and no code. Prove a new check with a `selfTest` on a broken sample, then run `meerkat self-test`. To add your own check, pack, preset or tool wrapper and keep it through updates, read [extending.md](extending.md).
 
 ## 7. Using an AI assistant
 
