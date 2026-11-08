@@ -723,14 +723,19 @@ const riskyCode = (root) => {
           }
         }
         if (!allow.has(`${x}:${lineOf(t, m.index)}`)) {
+          // innerHTML fed straight from request or URL input is the textbook XSS: say so, so the reader knows it is not a guess about "untrusted".
+          const rhsEnd = t.indexOf('\n', m.index + m[0].length)
+          const rhs = t.slice(m.index + m[0].length, rhsEnd < 0 ? t.length : rhsEnd)
+          const fromInput = why.startsWith('innerHTML') && /\b(?:req|request)\.|\blocation\.|\bsearchParams\b|\bquery\b|\bparams\b|\bbody\b/.test(rhs)
+          const why2 = fromInput ? `${why}; the value comes from request or URL input` : why
           // The finding carries the exact line that records the decision, so accepting it is a paste (the file is read from the project's own folder).
-          f.push(`${x}:${lineOf(t, m.index)} ${why}  [if it is safe, accept it by adding this line to .meerkat-risky-allow: ${x}:${lineOf(t, m.index)} # reason: say why it is safe]`)
+          f.push(`${x}:${lineOf(t, m.index)} ${why2}  [if it is safe, accept it by adding this line to .meerkat-risky-allow: ${x}:${lineOf(t, m.index)} # reason: say why it is safe]`)
           // Every hit is reported with its own severity: innerHTML with a value the code does not show to be safe is a medium risk (it depends on where the
           // value comes from), the other calls keep the check's own severity (high).
           // A plain variable on the right (el.innerHTML = icon) only says "check where it comes from": low. Built text (concatenation, a template with a
           // value in it, a call) is medium.
           const htmlSeverity = bareValue(t, m) ? 'low' : 'medium'
-          structured.push([why.startsWith('innerHTML') ? htmlSeverity : fallbackSeverity, why.startsWith('innerHTML') ? 'innerhtml-assignment' : 'risky-call', x, lineOf(t, m.index), why])
+          structured.push([why.startsWith('innerHTML') ? htmlSeverity : fallbackSeverity, why.startsWith('innerHTML') ? 'innerhtml-assignment' : 'risky-call', x, lineOf(t, m.index), why2])
         }
       }
     }
