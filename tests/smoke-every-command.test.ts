@@ -105,7 +105,7 @@ const EXAMPLES: Record<string, Example> = {
   init: { args: ['init'] },
   tools: { args: ['tools'] },
   'tools install': { args: ['tools', 'install', '--dry-run'], why: 'a real install downloads from the network; --dry-run lists what it would do' },
-  doctor: { args: ['doctor'] },
+  doctor: { args: ['doctor'], codes: [0, 1] }, // exit 1 when a tool a quick check needs is missing
   'self-test': { args: ['self-test', '--help'], why: 'self-test runs every check against its broken case (minutes)' },
   ai: { args: ['ai', 'status'] },
   'ai status': { args: ['ai', 'status'] },

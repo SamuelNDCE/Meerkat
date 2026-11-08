@@ -31,10 +31,12 @@ import { compactSummary } from './lib/tui/results.mjs'
 import { buildFindings, saveFindings } from './lib/findingsdoc.mjs'
 import { createInterface } from 'node:readline/promises'
 import { verifyRunDir } from './lib/aiverify.mjs'
-import { failureLines } from './lib/failsummary.mjs'
-import { appendRunLog, createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
+import { failureLines, groupFailures, summaryLines } from './lib/failsummary.mjs'
+import { appendRunLog, createRecorder, gitInfo, latestRunDir, latestRunDirForFolder, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
+import { selectForRun } from './lib/runselect.mjs'
+import { ignoreLine, ignoreSources, ignoreSummary } from './lib/ignorepaths.mjs'
 import { WINDOW_SKIP_REASON, createControl, runAll, selectChecks, stopOnSignals, summarise, table } from './lib/runner.mjs'
 import { sweepSpawned } from './lib/exec.mjs'
 import { DEFAULT_RUN_MINUTES, loadBudgets } from './lib/timeouts.mjs'
@@ -61,6 +63,21 @@ function headOf(root) {
   } catch {
     return null
   }
+}
+
+// The preset's one-line description for the header, without its written time claim ("5 to 10 minutes at most" was wrong for a 3 second run).
+// When an earlier run of this preset in this folder exists, its measured time is added; with none, nothing is.
+export function presetAboutLine(about, env, appDir, preset) {
+  const text = String(about ?? '').replace(/,?\s*\d+\s*(?:to|-)\s*\d+\s*(?:minutes?|min|seconds?|s)\s*(?:at most)?/i, '')
+  let prev = ''
+  try {
+    const dir = preset ? latestRunDirForFolder(env, appDir, { preset }) : null
+    const ms = dir ? JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8')).ms : null
+    if (Number.isFinite(ms) && ms >= 0) prev = ` (the last run of this preset here took ${ms < 60_000 ? `${(ms / 1000).toFixed(1)} s` : `${(ms / 60_000).toFixed(1)} min`})`
+  } catch {
+    /* no earlier run: nothing is said */
+  }
+  return `${text}${prev}`
 }
 
 // How a time estimate reads: "about 1 second", "about 5 seconds", "about 2.5 minutes".
@@ -141,6 +158,7 @@ export function parseArgs(argv) {
     else if (a === '--ui') o.ui = true
     else if (a === '--plain') o.plain = true
     else if (a === '--verbose') o.verbose = true
+    else if (a === '--full') o.full = true
     else if (a === '--no-input') o.noInput = true // a global option (meerkat describe): run.mjs never asks anything, so it changes nothing here, but it must be accepted by init, list and self-test
     else if (a === '--flat') o.grouped = false
     else if (a === '--grouped') o.grouped = true
@@ -295,7 +313,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
   if (opts.last || opts.why) {
-    const shown = opts.why ? showWhy(opts.why, env) : showLast(env, opts.lastProject)
+    const shown = opts.why ? showWhy(opts.why, env, 80, { folder: appDir }) : showLast(env, opts.lastProject, { folder: appDir })
     log(shown.text)
     return shown.ok ? 0 : 1
   }
@@ -367,7 +385,16 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     // With no config file, a preset that picks checks by kind (security, refactor, ui, ...) has nothing to pick from in the two starting packs,
     // so every pack that applies to the folder loads, as it does for quick and full. A project's config still decides for itself.
     read.config.packs = [...new Set([...(read.config.packs ?? []), ...presetPacks(chosen.preset, appDir), ...(configFile ? [] : applicablePacks(appDir))])]
-    if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
+    if (!opts.list) log(`preset ${chosen.preset.name}: ${presetAboutLine(chosen.preset.about, env, appDir, opts.preset)}`)
+  }
+  // ignorePaths (top level, and the chosen preset's own): left out of Meerkat's own file-walking checks; one line says how many files and by which key.
+  const ignoring = ignoreSummary(appDir, ignoreSources(read.config, chosen.preset?.name ?? null))
+  if (ignoring.patterns.length) {
+    env.MEERKAT_IGNORE_PATHS = process.env.MEERKAT_IGNORE_PATHS = JSON.stringify(ignoring.patterns)
+    if (!opts.list) log(ignoreLine(ignoring))
+  } else {
+    delete env.MEERKAT_IGNORE_PATHS
+    delete process.env.MEERKAT_IGNORE_PATHS
   }
   const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE), trust: makeTrust(env, { interactive: opts.noInput ? false : undefined }) })
   applyPresetExclusions(applied, chosen.preset)
@@ -463,7 +490,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       fail(order.error)
       return 2
     }
-    const sel = selectChecks(checks, { kindOrder: order.kinds ?? null, tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, windows: chosen.preset?.windows !== false || env.MEERKAT_WINDOWS === '1', skipCompile: chosen.preset?.skipCompile === true })
+    const sel = selectForRun(checks, { kindOrder: order.kinds ?? null, tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, preset: chosen.preset, env })
     settleSplash()
     if (opts.estimate) {
       // How long this run should take on this PC: the learned times, run through the same scheduling rules (lib/eta.mjs).
@@ -569,7 +596,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let full = enrichResults(results, ranChecks.length ? ranChecks : checks) // suite and sub-check counts for the saved files and --json
   // A check that could not run gets a short log too (why, and what to do), so `meerkat why <check>` always has something to show.
   if (!opts.selfTest) full = saveNotRunLogs(ctx.logDir, full, ranChecks.length ? ranChecks : checks)
-  const { line, exitCode: summaryCode } = summarise(opts.selfTest ? `${tier} self-test` : tier, results, skippedCount, Date.now() - started, estimatedMs ? estimateVsActualText(estimatedMs, Date.now() - started) : '')
+  const { line, exitCode: summaryCode } = summarise(opts.selfTest ? `${tier} self-test` : (opts.preset ?? tier), results, skippedCount, Date.now() - started, estimatedMs ? estimateVsActualText(estimatedMs, Date.now() - started) : '')
   const exitCode = interrupted ? 130 : summaryCode
   status?.stop(line)
   // A finished real run adds one entry to the run log the terminal UI's history view reads (home folder, never the repo).
@@ -594,8 +621,12 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
   if (findingsInfo && !opts.selfTest && !hush && !boardShown) log(findingsInfo.line)
   // Every failure of each check (count and file:line, cut at 20), not only the first one the check printed.
-  const failLines = findingsInfo?.doc?.findings?.length ? failureLines(findingsInfo.doc.findings.filter((f) => f.status !== 'fixed'), { logPath: ctx.logDir }) : []
-  if (failLines.length && !opts.selfTest && !hush && !boardShown) for (const l of ['Failures per check:', ...failLines]) log(l)
+  // Summary first (the blocking count, the failed checks by name, the run folder); the per-check list follows, cut to 12 checks unless --full.
+  const openFindings = findingsInfo?.doc?.findings?.length ? findingsInfo.doc.findings.filter((f) => f.status !== 'fixed') : []
+  const sumLines = summaryLines({ checks: groupFailures(openFindings).map((g) => ({ id: g.check, count: g.count })), runFolder: ctx.logDir, full: Boolean(opts.full) })
+  const allFail = openFindings.length ? failureLines(openFindings, { logPath: ctx.logDir }) : []
+  const failLines = [...sumLines, ...(opts.full || allFail.length <= 12 ? allFail : [...allFail.slice(0, 12), `  ... and ${allFail.length - 12} more failed checks (--full lists them all)`])]
+  if (failLines.length && !opts.selfTest && !hush && !boardShown) for (const l of failLines.length > sumLines.length ? [...sumLines, 'Failures per check:', ...failLines.slice(sumLines.length)] : failLines) log(l)
   // --format github: one workflow annotation per open finding, so GitHub Actions shows them on the changed lines (lib/ci-output.mjs).
   if (opts.format === 'github' && findingsInfo?.doc) for (const l of githubAnnotations(findingsInfo.doc)) process.stdout.write(`${l}\n`)
   const report = writeRunReport({ checks: ranChecks.length ? ranChecks : checks, interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs, runKey: opts.selfTest ? 'self-test' : null })
@@ -614,7 +645,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (note) for (const l of note.split('\n')) log(uiOk ? `\u001b[2m${l}\u001b[0m` : l)
   }
   // At a terminal with the board: a short summary stays in the scrollback; the results screen (meerkat) shows everything else.
-  if (boardShown && !opts.selfTest && failLines.length) for (const l of ['Failures per check:', ...failLines]) log(l)
+  if (boardShown && !opts.selfTest && failLines.length) for (const l of failLines.length > sumLines.length ? [...sumLines, 'Failures per check:', ...failLines.slice(sumLines.length)] : failLines) log(l)
   if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, estimatedMs, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)
   if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
   if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog)

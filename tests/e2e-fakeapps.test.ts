@@ -138,7 +138,7 @@ describe.each(Object.keys(APPS))('%s, quick preset', (name) => {
   test('the run folder is named with the project and the tier and holds the report files', () => {
     const { dir, root } = project(name, 'defective')
     const run = meerkat(dir, ['--preset', 'quick', '--only', app.defects[0].check, '--all'], root)
-    expect(run.runName).toMatch(new RegExp(`^\\d{8}-\\d{6}-${app.name}--quick$`))
+    expect(run.runName).toMatch(new RegExp(`^\\d{8}-\\d{6}-${app.name}-[0-9a-f]{6}--quick$`))
     for (const f of ['findings.json', 'findings.md', 'findings.sarif', 'summary.json', 'report.md', 'timeline.jsonl', 'detections.jsonl']) expect(existsSync(join(run.runDir, f)), f).toBe(true)
     expect(existsSync(join(run.logRoot, 'latest.json'))).toBe(true)
     expect(run.summary.project.name).toBe(app.name)
@@ -215,7 +215,7 @@ describe('the preset run on a clean app also passes the full preset where it is 
     const failed = run.summary.results.filter((r: any) => r.status === 'FAIL').map((r: any) => `${r.id}: ${String(r.detail).slice(0, 160)}`)
     expect(failed).toEqual([])
     expect(run.findings.counts.total).toBe(0)
-    expect(run.runName).toMatch(/-ledger-core--full$/)
+    expect(run.runName).toMatch(/-ledger-core-[0-9a-f]{6}--full$/)
     expect(hashTree(dir)).toBe(before)
   }, 600_000)
 })
