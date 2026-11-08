@@ -435,7 +435,9 @@ const unusedFiles = (root) => {
   const known = new Set(files)
   const texts = new Map(files.map((x) => [x, readText(root, x)]))
   const used = new Set()
-  for (const [x, t] of texts) {
+  // A file kept out of the report by .meerkatignore can still be the one that imports another file.
+  const importers = new Map([...texts, ...ignoredButReal(root, files, JS_FILE).map((x) => [x, readText(root, x)])])
+  for (const [x, t] of importers) {
     for (const m of t.matchAll(IMPORT)) {
       const target = posix.normalize(posix.join(posix.dirname(x), m[1]))
       const bare = target.replace(/\.(m?js|cjs|jsx)$/, '')
