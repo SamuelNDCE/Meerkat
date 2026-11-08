@@ -31,7 +31,7 @@ import { compactSummary } from './lib/tui/results.mjs'
 import { buildFindings, saveFindings } from './lib/findingsdoc.mjs'
 import { createInterface } from 'node:readline/promises'
 import { verifyRunDir } from './lib/aiverify.mjs'
-import { failureLines } from './lib/failsummary.mjs'
+import { failureLines, groupFailures, summaryLines } from './lib/failsummary.mjs'
 import { appendRunLog, createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
@@ -141,6 +141,7 @@ export function parseArgs(argv) {
     else if (a === '--ui') o.ui = true
     else if (a === '--plain') o.plain = true
     else if (a === '--verbose') o.verbose = true
+    else if (a === '--full') o.full = true
     else if (a === '--no-input') o.noInput = true // a global option (meerkat describe): run.mjs never asks anything, so it changes nothing here, but it must be accepted by init, list and self-test
     else if (a === '--flat') o.grouped = false
     else if (a === '--grouped') o.grouped = true
@@ -295,7 +296,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
   if (opts.last || opts.why) {
-    const shown = opts.why ? showWhy(opts.why, env) : showLast(env, opts.lastProject)
+    const shown = opts.why ? showWhy(opts.why, env, 80, { folder: appDir }) : showLast(env, opts.lastProject, { folder: appDir })
     log(shown.text)
     return shown.ok ? 0 : 1
   }
@@ -594,8 +595,12 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
   if (findingsInfo && !opts.selfTest && !hush && !boardShown) log(findingsInfo.line)
   // Every failure of each check (count and file:line, cut at 20), not only the first one the check printed.
-  const failLines = findingsInfo?.doc?.findings?.length ? failureLines(findingsInfo.doc.findings.filter((f) => f.status !== 'fixed'), { logPath: ctx.logDir }) : []
-  if (failLines.length && !opts.selfTest && !hush && !boardShown) for (const l of ['Failures per check:', ...failLines]) log(l)
+  // Summary first (the blocking count, the failed checks by name, the run folder); the per-check list follows, cut to 12 checks unless --full.
+  const openFindings = findingsInfo?.doc?.findings?.length ? findingsInfo.doc.findings.filter((f) => f.status !== 'fixed') : []
+  const sumLines = summaryLines({ checks: groupFailures(openFindings).map((g) => ({ id: g.check, count: g.count })), runFolder: ctx.logDir, full: Boolean(opts.full) })
+  const allFail = openFindings.length ? failureLines(openFindings, { logPath: ctx.logDir }) : []
+  const failLines = [...sumLines, ...(opts.full || allFail.length <= 12 ? allFail : [...allFail.slice(0, 12), `  ... and ${allFail.length - 12} more failed checks (--full lists them all)`])]
+  if (failLines.length && !opts.selfTest && !hush && !boardShown) for (const l of failLines.length > sumLines.length ? [...sumLines, 'Failures per check:', ...failLines.slice(sumLines.length)] : failLines) log(l)
   // --format github: one workflow annotation per open finding, so GitHub Actions shows them on the changed lines (lib/ci-output.mjs).
   if (opts.format === 'github' && findingsInfo?.doc) for (const l of githubAnnotations(findingsInfo.doc)) process.stdout.write(`${l}\n`)
   const report = writeRunReport({ checks: ranChecks.length ? ranChecks : checks, interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs, runKey: opts.selfTest ? 'self-test' : null })
@@ -614,7 +619,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (note) for (const l of note.split('\n')) log(uiOk ? `\u001b[2m${l}\u001b[0m` : l)
   }
   // At a terminal with the board: a short summary stays in the scrollback; the results screen (meerkat) shows everything else.
-  if (boardShown && !opts.selfTest && failLines.length) for (const l of ['Failures per check:', ...failLines]) log(l)
+  if (boardShown && !opts.selfTest && failLines.length) for (const l of failLines.length > sumLines.length ? [...sumLines, 'Failures per check:', ...failLines.slice(sumLines.length)] : failLines) log(l)
   if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, estimatedMs, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)
   if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
   if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog)
