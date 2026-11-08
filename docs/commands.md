@@ -52,7 +52,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat prompt [folder\|run-id] [--last] [--no-copy] [--print]` | write `meerkat-prompt-<date>-<time>-<preset>.md` into the run folder (every finding in full, plus what to do) and copy a short line to the clipboard that tells an AI to read it. The results screen does the same with `p` | `meerkat prompt --help` |
 | `meerkat verify --ai-verify [--ai-verify-max N] [--yes]` | after the run, ask your configured model to double-check each medium, high and critical finding (off by default; asks first unless `--yes`; see `meerkat ai use`) | `v` on the results screen |
 | `meerkat finding <id> [run-id]` | one finding in full: what, evidence, who detected it (check, rule, pack, script, tool), the log, how to fix it, first seen | |
-| `meerkat dismiss <id> --reason "..."` / `undismiss <id>` / `dismissals [--stats]` | accept a finding as not a problem, take it back, or list the dismissals | kept in your home folder |
+| `meerkat dismiss <id> --reason "..."` / `undismiss <id>` / `dismissals [--stats]` | accept a finding as not a problem, take it back, or list the dismissals | kept in your home folder; exit 2 when no finding id is given |
 | `meerkat baseline [--clear]` | accept the newest run's findings as they are; `meerkat run --ratchet` then fails only on new ones | |
 | `meerkat trend` | one line per recent run: findings by severity, new and fixed | |
 | `meerkat suggest` | suggested commands for the newest run's findings (never run for you) | |
@@ -85,7 +85,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat pack enable <name> [folder]` / `disable` | switch a pack on or off for a project (edits `meerkat.config.json`) |
 | `meerkat pack add <folder>` / `remove` | add or remove a folder of your own packs |
 | `meerkat root list` / `add <folder>` / `remove <folder>` | where project names are looked up |
-| `meerkat rules test <file.json>` | test a file of data rules: every bad sample is caught and every good one passes |
+| `meerkat rules test <file.json>` | test a file of data rules: every bad sample is caught and every good one passes. Exit 1 when a rule is wrong; exit 2 when the action or the file is missing |
 
 ## Set up and look after
 
@@ -120,6 +120,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 ## Output and machine use
 
 - Results go to stdout; progress, notes and errors go to stderr. `--json` prints one JSON object on stdout and nothing else.
+- The global options (`--help`, `--no-input`, `--no-color`, `--json`, `--quiet`, `--yes`, `--dry-run`) are accepted by every command; a test (`tests/global-flags.test.ts`) runs every command in `meerkat describe` with `--help` and `--no-input`. A usage error (a missing id or file, an unknown option) is always exit 2.
 - Without a terminal (a pipe, CI, an AI agent) there is no board, no colour and no prompt. Every prompt has an option that does the same thing, so nothing ever waits for typing: `--yes`, `--no-input`.
 - `NO_COLOR`, `MEERKAT_PLAIN=1` and `--no-color` turn colour and the board off.
 - Commands that change things (`preset delete`, `pack disable`, `update apply`) ask first in a terminal and accept `--yes` when scripted; `--dry-run` shows what they would do.

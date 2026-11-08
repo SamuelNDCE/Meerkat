@@ -41,6 +41,8 @@ import { notProjectJson, notProjectMessage, projectCheck } from './lib/projectga
 import { enrichResults, narrowSubs, rollup } from './lib/subchecks.mjs'
 import { packOfCheck, resolveOnly, suiteIdOf, suiteInfo } from './lib/suites.mjs'
 import { tipLine } from './lib/recommend.mjs'
+import { firstRunNote } from './lib/firstrun.mjs'
+import { runPathLines } from './lib/runpath.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
 import { applyPresetExclusions, mergePresets, parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
@@ -595,6 +597,13 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     appendRunLog(ctx.logDir, v.text)
   }
   if (report && !boardShown) log(`logs: ${ctx.logDir}   (meerkat last shows the report, meerkat why <check> one check's log)`)
+  // Where the logs are and how long they stay (lib/runpath.mjs); the board's own summary names the folder, the plain list above does too, this adds the retention.
+  if (report && !opts.selfTest && !opts.quiet) for (const l of runPathLines({ dir: ctx.logDir, env }).slice(1)) log(l)
+  // First run in a project with no config: said once (lib/firstrun.mjs). Never in --plain, --json or --quiet output.
+  if (!opts.selfTest && !hush) {
+    const note = firstRunNote({ dir: appDir, configFile, env, quiet: hush, plain: Boolean(opts.plain) })
+    if (note) for (const l of note.split('\n')) log(uiOk ? `\u001b[2m${l}\u001b[0m` : l)
+  }
   // At a terminal with the board: a short summary stays in the scrollback; the results screen (meerkat) shows everything else.
   if (boardShown && !opts.selfTest && failLines.length) for (const l of ['Failures per check:', ...failLines]) log(l)
   if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, estimatedMs, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)

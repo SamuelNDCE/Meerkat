@@ -330,6 +330,7 @@ For example, one medium check can run beside five tiny ones. On top of that:
 - **Order:** a check that others wait on starts first, and quick checks go ahead of it so a quick failure shows up at once.
 - **Memory is read each time**, so a PC busy with something else starts fewer checks. One check can always run alone, so a run never gets stuck.
 - **One Rust build at a time**, machine-wide, through a lock built into Meerkat. Several cargo builds at once once froze a machine.
+- **Waiting is shown, not hidden.** A check that is ready but cannot start yet is listed as `waiting for free processor or memory` (or `all N parallel slots busy`, `N windows already open`, `the <lane> lane is busy`). It starts as soon as slots and memory free up; one check can always run alone, so the run never deadlocks. The cargo lock waits at most 900 seconds (change it with `MEERKAT_LOCK_MAX_WAIT`, in seconds). It prints `wait started`, then `waiting for the lock held by process N` every 30 seconds, then `wait ended`. A holder whose process has died is cleared at once. When the wait runs out the check ends as `NOT RUN` with exit code 75 ("stop and report", not a failure of your code); do not retry in a loop, look at who holds the lock (`MEERKAT_CARGO_LOCK_DIR`, default `meerkat-cargo.lock` in the temp folder, has an `owner.json`).
 - **It learns your PC.** It keeps the real time of each passing check and uses it for the order, the bar and the countdown.
 - `budget.cpu` and `budget.maxParallel` in the config change the limits.
 
@@ -363,6 +364,8 @@ node run.mjs --last              print the report of the newest run
 node run.mjs --why eslint        print one check's log header and the end of its output
 node run.mjs --logs              print where the logs are
 ```
+
+At the end of a run Meerkat prints where the logs are and how long they stay: **run folders are kept until you delete them**. Meerkat removes none, except that `meerkat gate` and `meerkat smoke` keep only their newest run per project. The newest run of each preset is remembered in `latest-by-preset.json` in the log folder (the MCP tools' `preset` argument reads it). If `MEERKAT_LOG_DIR` points inside the operating system's temp folder, the end-of-run note warns that the system may empty it (lib/runpath.mjs).
 
 Details and the `summary.json` fields: [`docs/logs.md`](logs.md).
 
@@ -492,7 +495,7 @@ Everything is a plain file. Mistakes in a file are printed as notes and never st
 
 | File | What it is for |
 |---|---|
-| `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `override`, `budget`, `presets` |
+| `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `disableSubs`, `override`, `budget`, `presets`, `customChecks`, `suites`, `discover`, `workflow`, `memory`, `allowWrites`. A key that is not one of these is ignored and named in a note (with the closest known key), so a typo such as `"pakcs"` is not silent |
 | `.meerkat-budgets.json` | numbers some checks need: performance budgets, hygiene, static and refactor limits |
 | `.meerkat-secrets-allow` | secret-scan findings you have accepted (a path, or `rule: text`) |
 | `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`, optionally followed by a `#` and a reason). Read from the project's own folder; every risky-code finding prints the exact line to paste, for example `src/view.js:118 # reason: say why it is safe` |
@@ -536,7 +539,7 @@ A model can miss things and can be wrong: it is an extra reader, not a gate to r
 
 ## Updating
 
-Meerkat is a clone of this repository, so updating is a fast-forward from GitHub. **Meerkat looks up the latest version once a day (turn off with `meerkat update off`); it never installs without you.** The lookup is read-only, has a 3 second limit, and sends nothing but the request itself. When a newer version exists, the menu shows a yellow bar at the top with its version number; press `u` in the menu (or run `meerkat update`) and answer yes to install it.
+Meerkat is a clone of this repository, so updating is a fast-forward from GitHub, **but only for a release whose checksum checks out**. **Meerkat looks up the latest version once a day (turn off with `meerkat update off`); it never installs without you.** The lookup is read-only, has a 3 second limit, and sends nothing but the request itself. When a newer version exists, the menu shows a yellow bar at the top with its version number; press `u` in the menu (or run `meerkat update`) and answer yes to install it.
 
 | Command | What it does |
 |---|---|
@@ -545,6 +548,10 @@ Meerkat is a clone of this repository, so updating is a fast-forward from GitHub
 | `meerkat update auto` | the only mode that installs on its own: once a day, applies a clean fast-forward and says what changed |
 | `meerkat update off` | no daily lookup and no bar (except after a manual `meerkat update --check`) |
 | `meerkat update status` | shows the mode, the newest version it knows about and when it was checked |
+
+**Updates are verified, and refused when they cannot be.** Before anything is installed, Meerkat reads the GitHub release for the new version (`v<version>`), takes the SHA-256 checksum published with it (a `SHA256SUMS` asset, or `<64 hex>  <file>` lines in the release notes), downloads the release tarball and compares. A matching checksum lets the update go on; a mismatch is refused ("Do not use this release"); a release with no published checksum, an unreachable GitHub or an unknown version is refused too, with a message saying how to proceed (ask the maintainer to publish `SHA256SUMS`, or install the packaged copy with `npm install -g @samuelndce/meerkat@latest`, which npm verifies itself). There is no switch to skip this: the reason is that before 0.5.3 the update was a plain `git fetch` and nothing proved the code was the released code (lib/releaseverify.mjs). A signed tag is an accepted alternative source in the decision, but tag signatures are not checked yet. Limit: the checksum proves the published tarball, and the update then fast-forwards to the release branch; it does not compare the two byte for byte. Automatic updates (`meerkat update auto`) refuse the same way and change nothing.
+
+First run in a project: with no `meerkat.config.json`, one note is printed once per project (a marker in `~/.meerkat/first-run/`, or beside `MEERKAT_LOG_DIR`) listing the tools that are not installed (`hadolint`, `actionlint`, and `eslint` when the project has an eslint config) and suggesting `meerkat init --profile solo` or `--profile team`. It is never printed with `--plain`, `--json` or `--quiet`.
 
 An update first saves your uncommitted changes to tracked files as a patch file in the log folder, tries the new version in a temporary copy that carries your changes, and moves your folder only if that works. It is refused, with the files named and nothing touched, when a file you changed is also changed by the update and the two cannot be combined. PLACEHOLDER: this path is covered by unit tests (lib/smartupdate.test.ts, lib/updatedirty.test.ts) but has not been run against a real newer published release. This is the only code in Meerkat that contacts the network by itself. It sends nothing about you or your project.
 
