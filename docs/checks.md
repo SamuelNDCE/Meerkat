@@ -536,6 +536,13 @@ The `bugs` preset runs the quick checks without the checks and rules below, whic
 | `css-important-overuse` | check | count of !important in CSS, style |
 | `ts-ignore-comments` | check | whether @ts-ignore says why, comment style |
 | `js-var-usage` | check | var versus let and const, style |
+| `license` | check | a license is declared: project housekeeping |
+| `security-policy` | check | SECURITY.md exists: project housekeeping |
+| `ci-present` | check | a CI workflow exists: project housekeeping |
+| `gitignore-essentials` | check | .gitignore covers the usual folders: project housekeeping |
+| `test-presence` | check | the source has test files: project housekeeping |
+| `env-example` | check | every environment variable is documented in .env.example: project housekeeping |
+| `debug-leftovers` | check | console.log and debug prints left in: tidiness, not wrong behaviour |
 | `rp-api-ffi-wasm/rapi-pub-fn-undocumented` | rule | a public function has no /// comment: documentation |
 | `rp-api-ffi-wasm/rapi-pub-type-undocumented` | rule | a public type has no /// comment: documentation |
 | `rp-api-ffi-wasm/rapi-missing-docs-lint` | rule | no #![warn(missing_docs)] attribute: documentation policy |
@@ -577,7 +584,7 @@ The `bugs` preset runs the quick checks without the checks and rules below, whic
 | `rp-async/rasync-runtime-built-per-call` | rule | tokio runtime built per call: informational performance note |
 <!-- checks:end -->
 
-## Accuracy notes (0.5.3)
+## Accuracy notes (gate-output release)
 
 - `risky-code`: an `innerHTML` assigned from a string literal, or from a same-file constant that is never reassigned, is not reported, including in a one-line helper. A value taken from request input still is.
 - `js-await-in-loop`: a loop whose body has a plain `break` or `return` (not under an `if`) runs at most one pass and is not reported. An unbounded loop that awaits with no exit, or exits only under an `if`, still is.

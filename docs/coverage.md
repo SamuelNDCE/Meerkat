@@ -9,11 +9,11 @@ In short: Meerkat reads files as text and applies rules. It is a fast first line
 ## 1. What Meerkat scans
 
 <!-- coverage:start -->
-Counted from all 51 packs under `packs/`: **400 checks** in **50 suites** with **1443 rules** (sub-checks).
+Counted from all 51 packs under `packs/`: **403 checks** in **50 suites** with **1446 rules** (sub-checks).
 
-Run by default: 354 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
+Run by default: 357 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
 
-Checks that need an outside tool (NOT RUN without it): 39 of 400. The other 361 need only Node.
+Checks that need an outside tool (NOT RUN without it): 39 of 403. The other 364 need only Node.
 
 Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results inside them. **Runs by default**: quick = in `meerkat verify`; full = only in `meerkat full`; both = a mix; opt-in = only when you ask. **Tool**: yes means at least one check in the suite is NOT RUN without that outside tool; the others still work.
 
@@ -30,7 +30,7 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `accessibility` | HTML, JSX/TSX, Vue, Svelte, CSS | 10 | 10 | quick | no |
 | `html-and-css` | HTML, CSS, web manifests, templates | 10 | 35 | quick | yes: htmlhint, stylelint |
 | `seo-and-meta` | HTML pages, robots.txt, sitemap | 2 | 2 | quick | no |
-| `code-quality` | Source and text files (whitespace, leftovers, imports) | 10 | 10 | quick | no |
+| `code-quality` | Source and text files (whitespace, leftovers, imports) | 13 | 13 | quick | no |
 | `test-hygiene` | Test files; opt-in: runs your project | 21 | 68 | quick + opt-in | no |
 | `refactor` | Source files (JS/TS first) | 9 | 9 | quick | no |
 | `javascript` | JS and TS source | 7 | 7 | quick | no |
@@ -80,7 +80,7 @@ Legend. **DEEP**: 20 or more rules of Meerkat's own, and the rules were run agai
 
 | Area | Level | Own rules | Tools it can run | Note |
 |---|---|---|---|---|
-| JavaScript, TypeScript | DEEP | 35 | - |  |
+| JavaScript, TypeScript | DEEP | 38 | - |  |
 | Python | BASIC | 35 | - | rules not yet tried on real Python code |
 | Go | BASIC | 27 | go | use on real Go code not confirmed |
 | Rust | BASIC | 13 | cargo, cargo-audit, cargo-deny | rules tried on real Rust code (one corpus repo) |
