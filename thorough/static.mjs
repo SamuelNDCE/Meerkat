@@ -28,7 +28,7 @@ const whitespace = (root) => {
 }
 
 // ---- env-example: every environment variable the code reads is written down somewhere
-const COMMON_ENV = new Set(['NODE_ENV', 'PATH', 'HOME', 'USER', 'USERPROFILE', 'CI', 'PWD', 'TMPDIR', 'TEMP', 'TMP', 'SHELL', 'LANG', 'TERM', 'DEBUG', 'PORT', 'HOST', 'APPDATA', 'LOCALAPPDATA', 'NO_COLOR', 'FORCE_COLOR', 'APPIMAGE', 'PORTABLE_EXECUTABLE_FILE', 'PORTABLE_EXECUTABLE_DIR', 'VITE_DEV_SERVER_URL', 'ELECTRON_RUN_AS_NODE'])
+const COMMON_ENV = new Set(['NODE_ENV', 'PATH', 'HOME', 'USER', 'USERPROFILE', 'CI', 'PWD', 'TMPDIR', 'TEMP', 'TMP', 'SHELL', 'LANG', 'TERM', 'DEBUG', 'PORT', 'HOST', 'APPDATA', 'LOCALAPPDATA', 'NO_COLOR', 'FORCE_COLOR', 'APPIMAGE', 'PORTABLE_EXECUTABLE_FILE', 'PORTABLE_EXECUTABLE_DIR', 'VITE_DEV_SERVER_URL', 'ELECTRON_RUN_AS_NODE', 'XDG_DATA_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_RUNTIME_DIR'])
 // Set by the runtime or the packager, never by the person running the app: Electron's own ELECTRON_* switches, npm's npm_* and NODE_* variables, GitHub's GITHUB_*.
 const RUNTIME_ENV = /^(?:ELECTRON_[A-Z_]+|npm_[A-Za-z0-9_]+|NODE_[A-Z_]+|GITHUB_[A-Z_]+|RUNNER_[A-Z_]+)$/
 const envExample = (root) => {
@@ -36,15 +36,19 @@ const envExample = (root) => {
   const docs = files.filter((x) => /(^|\/)(\.env\.(example|sample|template)|README[^/]*|docs\/.*\.md)$/i.test(x)).map((x) => readText(root, x)).join('\n')
   const allow = allowList(root, '.meerkat-env-allow')
   const used = new Map()
+  const assigned = new Set() // a name the project's own code sets for its child processes (process.env.X = value) is plumbing, not something a person configures
+  const assign = /process\.env\.([A-Z][A-Z0-9_]{2,})\s*=(?![=>])(?!\s*process\.env\.)/g
   const re = /(?:process\.env\.([A-Z][A-Z0-9_]{2,})|process\.env\[['"]([A-Z][A-Z0-9_]{2,})['"]\]|os\.environ(?:\.get)?\(?\[?['"]([A-Z][A-Z0-9_]{2,})['"]|os\.getenv\(['"]([A-Z][A-Z0-9_]{2,})['"]|env::var\("([A-Z][A-Z0-9_]{2,})"\)|os\.Getenv\("([A-Z][A-Z0-9_]{2,})"\))/g
   for (const x of files) {
     if (!SOURCE.test(x) || TESTISH.test(x)) continue
-    for (const m of readText(root, x).matchAll(re)) {
+    const text = readText(root, x)
+    for (const m of text.matchAll(assign)) assigned.add(m[1])
+    for (const m of text.matchAll(re)) {
       const name = m.slice(1).find(Boolean)
       if (!used.has(name)) used.set(name, x)
     }
   }
-  const f = [...used].filter(([n]) => !COMMON_ENV.has(n) && !RUNTIME_ENV.test(n) && !allow.has(n) && !docs.includes(n)).map(([n, x]) => `${n} is read in ${x} but is not in .env.example or the README (add it, or list it in .meerkat-env-allow)`)
+  const f = [...used].filter(([n]) => !COMMON_ENV.has(n) && !RUNTIME_ENV.test(n) && !allow.has(n) && !assigned.has(n) && !docs.includes(n)).map(([n, x]) => `${n} is read in ${x} but is not in .env.example or the README (add it, or list it in .meerkat-env-allow)`)
   return finish('env-example', f, 'every environment variable the code reads is documented')
 }
 
@@ -700,6 +704,9 @@ const riskyCode = (root) => {
         if (!jsLike && (/^\s*(?:\/\/|\/\*|\*|#)/.test(before) || (!why.startsWith('a plain http') && /\.(rs|py|go)$/.test(x) && (before.match(/(?<!\\)"/g) ?? []).length % 2 === 1))) continue
         // Inside a comment: the scanner's own blanked copy has a space where the code has a character (a regex literal becomes 0, so a // inside one is not a comment).
         // Only when the file was read with certainty (blankFailed is false): a comment decision made from an unconfirmed string, template or regex state is not trusted.
+        // A line that starts with // is a comment, or text inside a template or string: either way this call is not run from it. This holds even when the file
+        // could not be read with certainty (blankFailed), because nothing on such a line is live code. The plain-http rule matches the string itself, so it is judged as before.
+        if (jsLike && before.trimStart().startsWith('//') && !why.startsWith('a plain http')) continue
         if (jsLike) {
           const b = blankComments(t, /\.[jt]sx$/.test(x))
           if (!blankFailed && b[m.index] === ' ' && t[m.index] !== ' ') continue
@@ -717,7 +724,9 @@ const riskyCode = (root) => {
           const around = t.split('\n').slice(Math.max(0, lineOf(t, m.index) - 4), lineOf(t, m.index) + 3).join('\n')
           const secretNear = /pass|pwd|secret|token|sign|auth|cert|hmac|credential|api[_-]?key|\bkey\b|session|nonce|salt|\botp\b|\bpin\b/i.test(around)
           const benign = /dedup|duplicate|checksum|etag|fingerprint|cache[_-]?key|content[_-]?hash|usedforsecurity\s*=\s*False|by_?hash|readFileSync|read_bytes|fs::read/i.test(around)
-          if (benign && !secretNear) {
+          // A digest cut to a short prefix on the same line (.slice(0, 6)) names a folder or a bucket: 12 hex characters or fewer cannot stand in for a secret or a signature.
+          const shortPrefix = /\.digest\([^)]*\)\s*\.(?:slice|substring|substr)\(\s*0\s*,\s*(?:[1-9]|1[0-2])\s*\)/.test(t.slice(ls, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index)))
+          if ((benign || shortPrefix) && !secretNear) {
             if (!allow.has(`${x}:${lineOf(t, m.index)}`)) structured.push(['info', 'risky-call', x, lineOf(t, m.index), `${why} (used as a content hash or checksum)`])
             continue
           }

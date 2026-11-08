@@ -344,6 +344,9 @@ const thenOnCaughtPromise = (code, top) => {
   const decls = [...code.matchAll(new RegExp(String.raw`(?:const|let|var)\s+${recv.replace(/\$/g, "\\$")}\s*=`, 'g'))]
   return decls.length === 1 && /\.catch[ \t]*\(/.test(topLevel(statementText(code, decls[0].index)))
 }
+// A name this file binds itself to something that is not an async function (const openSession = useStore(...), function run() {}) is that local value, not the async
+// function of the same name declared in another file.
+const boundLocallyNotAsync = (code, name) => new RegExp(String.raw`\b(?:const|let|var)\s+${name.replace(/\$/g, '\\$')}\s*=(?!\s*async\b)|(?<!async\s+)\bfunction\s+${name.replace(/\$/g, '\\$')}\s*\(`).test(code)
 const unhandledPromise = (root) => {
   const allow = allowSet(root)
   const f = []
@@ -365,7 +368,7 @@ const unhandledPromise = (root) => {
         const callee = /^[ \t]*(?:[A-Za-z_$][\w$]*[ \t]*\.[ \t]*)*([A-Za-z_$][\w$]*)[ \t]*\(/.exec(line)?.[1]
         // ipcMain.handle('channel', fn) and ipcRenderer.on(...) register a handler; the call itself returns nothing to await.
         const registers = /^[ \t]*(?:ipcMain|ipcRenderer)[ \t]*\./.test(line)
-        if (callee && asyncNames.has(callee) && !registers) f.push(`${x}:${lineOf(t, start)} calls the async function ${callee} without await or .catch, so a rejection goes unhandled (await it, or add .catch)`)
+        if (callee && asyncNames.has(callee) && !registers && !boundLocallyNotAsync(t, callee)) f.push(`${x}:${lineOf(t, start)} calls the async function ${callee} without await or .catch, so a rejection goes unhandled (await it, or add .catch)`)
       }
     }
   }
