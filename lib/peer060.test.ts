@@ -195,6 +195,15 @@ describe('repo test and build commands', () => {
     expect(cli(['build'], app, { MEERKAT_TRUST_PROJECT: '1' }).status).toBe(2)
     expect(marks()).toEqual([])
   })
+  test('a truncated config makes commands, build, test and trust exit 2 with the reason', () => {
+    put('meerkat.config.json', '{ "commands": { "test": "node mark.mjs test", ')
+    for (const w of ['commands', 'build', 'test', 'trust']) {
+      const r = cli([w], app, { MEERKAT_TRUST_PROJECT: '1' })
+      expect(r.status, w).toBe(2)
+      expect(r.stderr, w).toContain('could not be read as JSON')
+    }
+    expect(marks()).toEqual([])
+  })
   test('with no commands block, meerkat build is a usage error and runs nothing', () => {
     rmSync(join(app, 'meerkat.config.json'))
     const r = cli(['build'])
