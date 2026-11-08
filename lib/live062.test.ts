@@ -1,6 +1,6 @@
 // 0.6.2: gate progress on stderr. Every case runs the real CLI (bin/meerkat.mjs) in a scratch git repository.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { afterAll, describe, expect, test } from 'vitest'
@@ -89,5 +89,38 @@ describe('meerkat lock status lists the waiters', () => {
   test('a free lock says so', () => {
     const r = cli(['lock', 'status'], root, { MEERKAT_CARGO_LOCK_DIR: join(root, 'nobody.lock') })
     expect(r.out).toMatch(/free/)
+  })
+})
+
+describe('lock status is read-only and safe to print', () => {
+  test('an ESC sequence in a waiter command is stripped and a stale waiter file is not deleted', () => {
+    const lockDir = join(root, 'esc.lock')
+    mkdirSync(lockDir + '.waiters', { recursive: true })
+    const file = join(lockDir + '.waiters', `${process.pid}-abc123.json`)
+    writeFileSync(file, JSON.stringify({ pid: process.pid, since: new Date().toISOString(), cmd: 'cargo \u001b[31mRED\u001b]0;title\u0007 ' + 'x'.repeat(400) }))
+    const stale = join(lockDir + '.waiters', '99999999-dead01.json')
+    writeFileSync(stale, JSON.stringify({ pid: 99999999, since: new Date().toISOString(), cmd: 'gone' }))
+    const r = cli(['lock', 'status'], root, { MEERKAT_CARGO_LOCK_DIR: lockDir })
+    expect(r.out).toContain('waiting (1)')
+    expect(r.out).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/)
+    expect(r.out).toContain('RED')
+    expect(r.out.split('\n').find((l) => l.includes('cargo'))!.length).toBeLessThan(260)
+    expect(existsSync(stale)).toBe(true) // status never deletes
+  })
+
+  test('a symlinked waiters folder is refused and nothing outside it is touched', () => {
+    const lockDir = join(root, 'link.lock')
+    const outside = join(root, 'outside')
+    mkdirSync(outside, { recursive: true })
+    const victim = join(outside, '99999999-dead01.json')
+    writeFileSync(victim, JSON.stringify({ pid: 99999999, since: new Date().toISOString(), cmd: 'x' }))
+    const live = join(outside, `${process.pid}-live01.json`)
+    writeFileSync(live, JSON.stringify({ pid: process.pid, since: new Date().toISOString(), cmd: 'should not be listed' }))
+    symlinkSync(outside, lockDir + '.waiters', 'junction')
+    const r = cli(['lock', 'status'], root, { MEERKAT_CARGO_LOCK_DIR: lockDir })
+    expect(r.out).not.toContain('should not be listed')
+    expect(r.out).toMatch(/free/)
+    expect(existsSync(victim)).toBe(true)
+    expect(existsSync(live)).toBe(true)
   })
 })
