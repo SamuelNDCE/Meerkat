@@ -706,7 +706,7 @@ const riskyCode = (root) => {
         // Only when the file was read with certainty (blankFailed is false): a comment decision made from an unconfirmed string, template or regex state is not trusted.
         // A line that starts with // is a comment, or text inside a template or string: either way this call is not run from it. This holds even when the file
         // could not be read with certainty (blankFailed), because nothing on such a line is live code. The plain-http rule matches the string itself, so it is judged as before.
-        if (jsLike && /^\s*\/\//.test(before) && !why.startsWith('a plain http')) continue
+        if (jsLike && before.trimStart().startsWith('//') && !why.startsWith('a plain http')) continue
         if (jsLike) {
           const b = blankComments(t, /\.[jt]sx$/.test(x))
           if (!blankFailed && b[m.index] === ' ' && t[m.index] !== ' ') continue
