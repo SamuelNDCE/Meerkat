@@ -121,7 +121,7 @@ describe('P1.2 follow-ups: same file list as the loader, import closure, safe pr
     put(d, 'package.json', '{"a":1}')
     expect(hashFiles(trustedFiles(args).files, d)).not.toBe(mid)
   })
-  test('a symlink loop does not hang and is not followed', () => {
+  test('a symlinked folder inside a check folder refuses trust (and a loop does not hang)', () => {
     const d = mkdtempSync(join(root, 'loop-'))
     put(d, 'mychecks/a.mjs', 'export default []')
     put(d, 'outside/secret.txt', 'x')
@@ -132,9 +132,8 @@ describe('P1.2 follow-ups: same file list as the loader, import closure, safe pr
       return // this machine may not allow links: nothing to test
     }
     const r = trustedFiles({ projectDir: d, where: d, extraChecks: ['mychecks'] })
-    expect(r.refuse).toBeNull()
-    expect(r.files.some((f: string) => f.includes('secret.txt'))).toBe(false)
-    expect(r.files.filter((f: string) => f.endsWith('a.mjs')).length).toBe(1)
+    expect(r.refuse).toMatch(/symlinked folder/)
+    expect(r.files).toEqual([])
   })
   test('a cap hit refuses trust and names the cap', async () => {
     const d = mkdtempSync(join(root, 'cap-'))
