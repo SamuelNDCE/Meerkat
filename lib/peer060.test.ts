@@ -235,6 +235,48 @@ describe('verdict and top never go silent', () => {
   }, SLOW)
 })
 
+describe('verdict --known', () => {
+  beforeEach(() => {
+    initMain()
+    git(app, ['checkout', '-q', '-b', 'feat'])
+    put('loose.js', LOOSE)
+    put('index.js', ["import './clean.js'", "import './loose.js'", ''].join('\n'))
+    commit()
+  })
+  const known = (list: unknown) => put('known.json', JSON.stringify(list))
+  test('a known entry on a changed file passes and is printed as KNOWN; the same finding without the entry blocks', () => {
+    known([{ check: 'js-eqeqeq', file: 'loose.js' }])
+    const k = cli(['verdict', '--known', 'known.json'])
+    expect(k.stdout.split('\n')[0]).toBe('PASS (1 known)')
+    expect(k.stdout).toContain('KNOWN: js-eqeqeq loose.js:2')
+    expect(k.status).toBe(0)
+    const plain = cli(['verdict'])
+    expect(plain.stdout.trim()).toBe('FAIL 1 blocking in changed files')
+    expect(plain.status).toBe(1)
+  }, SLOW)
+  test('a known entry for another file does not hide the finding, and a stale entry is reported; --json is one object', () => {
+    known([{ check: 'js-eqeqeq', file: 'other.js' }])
+    const r = cli(['verdict', '--known', 'known.json'])
+    expect(r.stdout.split('\n')[0]).toBe('FAIL 1 blocking in changed files (0 known)')
+    expect(r.stdout).toContain('STALE: js-eqeqeq other.js')
+    expect(r.status).toBe(1)
+    const j = JSON.parse(cli(['verdict', '--known', 'known.json', '--json']).stdout)
+    expect(j).toMatchObject({ verdict: 'FAIL', exitCode: 1, blocking: 1, known: 0, stale: [{ check: 'js-eqeqeq', file: 'other.js' }] })
+    expect(typeof j.reason).toBe('string')
+  }, SLOW)
+  test('a missing or malformed --known file is NO-RESULT, exit 2, never ignored', () => {
+    const miss = cli(['verdict', '--known', 'nope.json'])
+    expect(miss.status).toBe(2)
+    expect(miss.stdout).toMatch(/^NO-RESULT: the --known file nope.json does not exist/)
+    put('bad.json', '{not json')
+    expect(cli(['verdict', '--known', 'bad.json']).status).toBe(2)
+    known([{ check: 'js-eqeqeq' }])
+    const shape = cli(['verdict', '--known', 'known.json', '--json'])
+    expect(shape.status).toBe(2)
+    expect(JSON.parse(shape.stdout)).toMatchObject({ verdict: 'NO-RESULT', exitCode: 2 })
+  })
+})
+
 describe('commands without a config', () => {
   test('lists the package.json scripts read-only and says how to pin them', () => {
     put('package.json', JSON.stringify({ name: 'fx', scripts: { test: 'vitest run', build: 'tsc -p .', lint: 'eslint .', start: 'node x.js' } }))
