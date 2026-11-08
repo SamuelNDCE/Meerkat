@@ -56,7 +56,7 @@ describe('scoped gate', () => {
     expect(r.text.split(String.fromCharCode(10))[0]).toMatch(/^MEERKAT gate: 1 blocking, scanned src\/bug\.js, \d+(\.\d)?s$/)
     expect(r.text).toMatch(/sql-concat\s+src\/bug\.js:1/)
     expect(r.text).toMatch(/project-wide, not blocking \(\d+\)/)
-    expect(r.text).toMatch(/security-policy: there is no SECURITY\.md/)
+    expect(r.text).toMatch(/lockfiles: /)
     // SECURITY.md is listed under the project-wide heading, not as a FAIL row.
     expect(r.text).not.toMatch(/^FAIL\s+security-policy/m)
   })
@@ -64,7 +64,7 @@ describe('scoped gate', () => {
     const r = await gate(['--staged', '--no-cache', '--json'])
     const j = JSON.parse(r.text)
     expect(kindOf(j, 'sql-concat')).toBe('fail')
-    expect(kindOf(j, 'security-policy')).toBe('wide')
+    expect(kindOf(j, 'lockfiles')).toBe('wide')
     expect(r.code).toBe(1)
   })
   test('--all restores the old behaviour: both fail and both block', async () => {
@@ -97,8 +97,9 @@ describe('scoped gate', () => {
 
 describe('gate result cache', () => {
   test('a repeat run on the same state reuses every result and gives the same verdict', async () => {
-    const first = JSON.parse((await gate(['--staged', '--json'])).text)
-    const second = await gate(['--staged', '--json'])
+    // --staged checks a snapshot of the index and is never cached, so the cache is exercised through the default (working tree) mode.
+    const first = JSON.parse((await gate(['--json'])).text)
+    const second = await gate(['--json'])
     const j = JSON.parse(second.text)
     expect(j.cached).toBeGreaterThan(0)
     expect(j.rows.map((r: any) => `${r.id}:${r.kind}`).sort()).toEqual(first.rows.map((r: any) => `${r.id}:${r.kind}`).sort())

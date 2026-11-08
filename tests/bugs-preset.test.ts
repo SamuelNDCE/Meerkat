@@ -54,7 +54,20 @@ describe('the bugs preset', () => {
     expect(preset.allPacks).toBe(true)
     expect(preset.excludeChecks.length).toBe(Object.keys(BUGS_EXCLUDED_CHECKS).length)
     const byId = new Map((await everyCheck()).map((c) => [c.id, c]))
-    for (const id of Object.keys(BUGS_EXCLUDED_CHECKS)) expect(byId.get(id).group, `${id} is a security check`).not.toBe('security')
+    // license and security-policy are housekeeping files that the registry files under security by kind; nothing that inspects code is excluded.
+    const housekeepingInSecurity = new Set(['license', 'security-policy'])
+    for (const id of Object.keys(BUGS_EXCLUDED_CHECKS)) if (!housekeepingInSecurity.has(id)) expect(byId.get(id).group, `${id} is a security check`).not.toBe('security')
+  })
+
+  test('the effective checks of the bugs preset hold none of the housekeeping checks (0.5.4)', async () => {
+    const { preset } = resolvePreset('bugs')
+    const checks = await everyCheck()
+    const applied: any = { checks: [...checks], all: checks, disabled: [], disabledSubs: [], notes: [] }
+    applyPresetExclusions(applied, preset)
+    const effective = new Set(applied.checks.map((c: any) => c.id))
+    for (const id of ['license', 'security-policy', 'ci-present', 'gitignore-essentials', 'test-presence', 'env-example', 'debug-leftovers']) {
+      expect(effective.has(id), `${id} is still in the bugs preset`).toBe(false)
+    }
   })
 
   test('it runs no excluded check and turns off every excluded rule', async () => {

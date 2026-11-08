@@ -140,6 +140,7 @@ export function parseArgs(argv) {
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
     else if (a === '--plain') o.plain = true
+    else if (a === '--verbose') o.verbose = true
     else if (a === '--no-input') o.noInput = true // a global option (meerkat describe): run.mjs never asks anything, so it changes nothing here, but it must be accepted by init, list and self-test
     else if (a === '--flat') o.grouped = false
     else if (a === '--grouped') o.grouped = true
@@ -179,7 +180,10 @@ const subsOffMap = (list = []) => {
   return m
 }
 const listJsonText = (checks) => JSON.stringify(checks.map((c) => ({ id: c.id, kind: c.group, tier: c.tier, lane: c.lane, seconds: c.estSeconds ?? null, title: c.title, optIn: c.optIn ?? null, pack: packOfCheck(c), suite: suiteIdOf(c), subs: c.subs ?? 1, origin: c.origin ?? 'bundled', ...(suiteInfo(suiteIdOf(c))?.project ? { suiteLabel: suiteInfo(suiteIdOf(c)).label, suitePurpose: suiteInfo(suiteIdOf(c)).purpose } : {}) })))
-function logDisabled(log, applied, configFile) {
+function logDisabled(log, applied, configFile, verbose = false) {
+  // Without --verbose the left-out checks are one line, not one line each (a first run printed dozens).
+  const total = applied.disabled.length + (applied.disabledSubs ?? []).length
+  if (!verbose && total > 3) return log(`${total} check(s)/rule(s) left out by the preset or the config (--verbose lists them)`)
   for (const d of applied.disabled) log(`[DISABLED] ${d.id}: ${d.preset ? `left out by preset ${d.preset}` : `turned off in ${configFile}${d.by ? ` (${d.by})` : ''}`}`)
   for (const ref of applied.disabledSubs ?? []) log(`[DISABLED] sub-check ${ref}: turned off in ${configFile}`)
 }
@@ -380,7 +384,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (!opts.list) {
     if (configFile) log(`config: ${configFile}`)
     for (const note of [...read.notes, ...applied.notes, ...(found?.result.notes ?? [])]) log(`config: ${note}`)
-    logDisabled(log, applied, configFile)
+    logDisabled(log, applied, configFile, opts.verbose)
     for (const d of found?.result.disabled ?? []) log(`config: found check ${d.id} is turned off by your config`)
     if (found?.checks.length) log(`found ${found.checks.length} test check${found.checks.length === 1 ? '' : 's'} of the project's own (meerkat discover lists them; "discover": false turns this off)`)
   }
@@ -569,7 +573,9 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // A finished real run adds one entry to the run log the terminal UI's history view reads (home folder, never the repo).
   if (!opts.selfTest) appendRun(historyPath(env), runEntry({ tier, summary: line, exitCode, ms: Date.now() - started, results }))
   if (!boardShown) log('')
-  if (!boardShown) log(table(results, { checks: ranChecks, grouped: opts.selfTest ? false : opts.grouped, spans: spansFromRecorder(recorder) }))
+  // The per-check list is hundreds of lines on a real project: only with --verbose (and always for self-test). Failures and checks that did not run are listed below either way.
+  if (!boardShown && (opts.verbose || opts.selfTest)) log(table(results, { checks: ranChecks, grouped: opts.selfTest ? false : opts.grouped, spans: spansFromRecorder(recorder) }))
+  else if (!boardShown) log(`${results.filter((r) => r.status === 'PASS').length} of ${results.length} checks passed (--verbose lists every check; failures are listed below)`)
   // What needs a look, repeated in full (failed output, reasons); a passing check shows nothing beyond its row above.
   if (!opts.selfTest && !boardShown) for (const l of finalReport({ results, tier, timings, totalMs: Date.now() - started, checks: ranChecks, grouped: opts.grouped, spans: spansFromRecorder(recorder) })) log(l)
   if (!boardShown) log(line)
