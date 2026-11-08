@@ -124,6 +124,9 @@ describe('imports resolved through tsconfig paths, baseUrl and workspace package
     expect(r('~/theme').status).toBe('unresolved')
     expect(impOf(fileOf(map, 'apps/admin/src/b.ts'), '@shared/z').resolution).toMatchObject({ status: 'local', target: 'packages/shared/src/z.ts' })
     expect(map.summary.aliasResolvedImports).toBe(5)
+    expect(map.summary.resolvedVia).toEqual({ tsconfigPaths: 2, baseUrl: 1, workspacePackage: 2 })
+    expect(map.summary.unresolvedByLanguage).toEqual({ typescript: 4 })
+    expect(codemapMarkdown(map)).toContain('tsconfig paths 2, baseUrl 1, workspace packages 2')
   })
 
   test('the top unresolved specifiers are counted so aliases can be told from real gaps', () => {

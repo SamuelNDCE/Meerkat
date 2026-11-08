@@ -89,3 +89,12 @@ describe('git repo with no commits', () => {
     expect(codemapMarkdown(buildCodemap(tmp))).toContain('(not a git work tree)')
   })
 })
+
+describe('codemap.md names the PowerShell files', () => {
+  test('a PowerShell section lists each path with its functions and line numbers', () => {
+    put('supabase/scripts/bug-inbox.ps1', '# Reads the bug inbox.\nfunction Get-Inbox { }\n\nfunction Close-Item { }\n')
+    const md = codemapMarkdown(buildCodemap(tmp))
+    expect(md).toContain('## PowerShell files')
+    expect(md).toContain('- supabase/scripts/bug-inbox.ps1 (4 lines): Reads the bug inbox. functions: Get-Inbox:2 Close-Item:4')
+  })
+})
