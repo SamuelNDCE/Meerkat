@@ -536,6 +536,13 @@ The `bugs` preset runs the quick checks without the checks and rules below, whic
 | `css-important-overuse` | check | count of !important in CSS, style |
 | `ts-ignore-comments` | check | whether @ts-ignore says why, comment style |
 | `js-var-usage` | check | var versus let and const, style |
+| `license` | check | a license is declared: project housekeeping |
+| `security-policy` | check | SECURITY.md exists: project housekeeping |
+| `ci-present` | check | a CI workflow exists: project housekeeping |
+| `gitignore-essentials` | check | .gitignore covers the usual folders: project housekeeping |
+| `test-presence` | check | the source has test files: project housekeeping |
+| `env-example` | check | every environment variable is documented in .env.example: project housekeeping |
+| `debug-leftovers` | check | console.log and debug prints left in: tidiness, not wrong behaviour |
 | `rp-api-ffi-wasm/rapi-pub-fn-undocumented` | rule | a public function has no /// comment: documentation |
 | `rp-api-ffi-wasm/rapi-pub-type-undocumented` | rule | a public type has no /// comment: documentation |
 | `rp-api-ffi-wasm/rapi-missing-docs-lint` | rule | no #![warn(missing_docs)] attribute: documentation policy |
