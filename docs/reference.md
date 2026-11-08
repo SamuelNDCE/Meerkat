@@ -595,6 +595,7 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 | `MEERKAT_APP_DIR` | the folder to check, if not given with `--app` |
 | `MEERKAT_FINDINGS` | `all` lists every finding, including the pedantic quality rules hidden by default (counted as "hidden by default"; the rules are in `lib/quarantine.mjs`) and the Rust style family, which is off by default |
 | `MEERKAT_WINDOWS` | `1` runs your project's own window checks (Electron, Playwright, click-through) in `full` and `thorough` too; they are left out by default |
+| `MEERKAT_IGNORE_PATHS` | set by Meerkat for the checks it runs: a JSON list of the path patterns the project ignores (from `meerkat.config.json`). Read it in your own scripts; setting it yourself has no effect |
 | `MEERKAT_BASE` | the branch changes are measured against (default: what `origin/HEAD` points at, else `main`, `master`, `dev`) |
 | `MEERKAT_PLAIN=1` | plain lines instead of the live board |
 | `NO_COLOR` | no colour |
