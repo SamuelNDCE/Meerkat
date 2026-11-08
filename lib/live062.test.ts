@@ -211,3 +211,12 @@ describe('code-map queries', () => {
     expect(none.out).toMatch(/no test imports or names src\/second\.js\. Searched \d+ test files/)
   })
 })
+
+describe('verdict prints progress and stops at --max-seconds', () => {
+  test('verdict shows per-check lines and a stopped-early line', () => {
+    const d = join(root, 'gate-fx')
+    const r = cli(['verdict', '--max-seconds', '3', '--base', 'HEAD'], d)
+    expect(r.err).toMatch(/\[\d+\/\d+\] /)
+    expect(r.err).toMatch(/still running after \d+s: nap|stopped early|\[\d+\/\d+\] nap \.\.\. /)
+  }, 60000)
+})
