@@ -57,6 +57,7 @@ const EXAMPLES: Record<string, Example> = {
   map: { args: ['map'] },
   blast: { args: ['blast', 'src/math.js#add'] },
   brief: { args: ['brief', 'src/math.js#add'] },
+  lock: { args: ['lock', 'status'] },
   'lock status': { args: ['lock', 'status'] },
   'test-run': { args: ['test-run', 'src/math.js'], codes: [2], why: 'the fixture defines no commands.test, so it must say so and exit 2' },
   'who-calls': { args: ['who-calls', 'add'], codes: [0, 75], why: '75 when the fixture has no call of the name' },
