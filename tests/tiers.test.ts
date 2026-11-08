@@ -229,7 +229,7 @@ describe('the run timeline records time properly', () => {
     writeFileSync(join(app, 'a.json'), '{"a":1}\n')
     const logs = join(dir, 'tl-logs')
     mkdirSync(logs)
-    const r = spawnSync(process.execPath, [join(__dirname, '..', 'run.mjs'), '--app', app, '--preset', 'quick', '--only', 'json-valid,whitespace,large-files,final-newline', '--plain'], { env: { ...process.env, MEERKAT_LOG_DIR: logs, MEERKAT_TIMINGS: join(dir, 'tl-timings.json'), NO_COLOR: '1' }, encoding: 'utf8', timeout: 90_000 })
+    const r = spawnSync(process.execPath, [join(__dirname, '..', 'run.mjs'), '--app', app, '--preset', 'full', '--only', 'json-valid,whitespace,large-files,final-newline', '--plain'], { env: { ...process.env, MEERKAT_LOG_DIR: logs, MEERKAT_TIMINGS: join(dir, 'tl-timings.json'), NO_COLOR: '1' }, encoding: 'utf8', timeout: 90_000 })
     expect(r.error).toBeUndefined()
     const runs = readdirSync(join(logs, 'runs'))
     expect(runs.length).toBe(1)

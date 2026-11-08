@@ -46,7 +46,7 @@ meerkat last
 | Feature | What it does |
 |---|---|
 | 🔍 [Checks and presets](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#checks-and-presets) | Runs the checks that fit your project; presets pick a set (`quick`, `bugs`, `full`, `ci`, `release`) |
-| 🚦 [Gate on changed files](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#gate) | Runs only the checks matching the files you changed; only failures in those files block, project-wide ones are listed and `--all` makes them block |
+| 🚦 [Gate on changed files](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#gate) | Runs only the checks matching the files you changed, with the `bugs` preset as its default set (no style or documentation rules); only failures in those files block, project-wide ones are listed and `--all` makes them block |
 | 💨 [Smoke](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#smoke) | `meerkat smoke` proves the checks chosen for your changes start and stop in time (it tests Meerkat, not your project); the `project-smoke` preset asks whether a change breaks your project |
 | 💥 [Blast radius](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius) | Lists what an edit to a file or symbol affects |
 | 📋 [Pre-edit brief](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#pre-edit-brief) | One fast call before an edit: callers, tests, findings, churn and a risk tier |

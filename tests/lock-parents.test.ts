@@ -1,6 +1,6 @@
 // Transitive lockfile findings name the direct dependency that pulls the package in (lib/lockparents.mjs), or say "transitive, parent unknown".
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -105,5 +105,18 @@ describe('wh-supply names who pulls a deprecated lockfile entry in', () => {
     }
     const r = run('thorough/web-hardening.mjs', 'wh-supply', project({ lockfileVersion: 3, packages }))
     expect(r.out).toMatch(/duplicate-version budget\)[^\n]*: 26 packages; for example p\d+@2\.0\.0 \(transitive, pulled in by holder/)
+  })
+})
+
+describe('every locked package has an owner or a stated reason', () => {
+  test('no package of this repository lockfile is "parent unknown"', () => {
+    const g = lockGraph(readFileSync(join(ROOT, 'package-lock.json'), 'utf8'), readFileSync(join(ROOT, 'package.json'), 'utf8'))
+    const unknown = Object.keys(g.packages).filter((k) => k && parentNote(g, k).includes('parent unknown'))
+    expect(unknown).toEqual([])
+  })
+  test('a tiny lockfile: optional and peer edges name their parent too', () => {
+    const g = lockGraph(JSON.stringify({ lockfileVersion: 3, packages: { '': { dependencies: { app: '1' } }, 'node_modules/app': { version: '1.0.0', optionalDependencies: { fsev: '1' }, peerDependencies: { react: '18' } }, 'node_modules/fsev': { version: '1.0.0' }, 'node_modules/react': { version: '18.0.0' } } }))
+    expect(parentNote(g, 'node_modules/fsev')).toBe('transitive, pulled in by app (app > fsev)')
+    expect(parentNote(g, 'node_modules/react')).toBe('transitive, pulled in by app (app > react)')
   })
 })

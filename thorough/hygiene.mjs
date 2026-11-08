@@ -73,6 +73,8 @@ const largeFiles = (root) => {
   return finish('large-files', f)
 }
 
+// Double-quoted and backticked text, and single-quoted text that opens after a non-word character (so the apostrophe in "don't ... it's" never pairs up).
+const QUOTED = /"[^"\n]*"|`[^`\n]*`|(?<![\w])'[^'\n]*'(?!\w)/g
 const markers = (root) => {
   const bad = limits(root).markers ?? ['FIXME', 'XXX']
   // A marker is a whole word that is not part of a code such as NV-XXX-000 or XXX_ID (no - _ or letter/digit on either side).
@@ -91,7 +93,9 @@ const markers = (root) => {
       if (/\bTODO\b/.test(l)) todo++
       // Only the comment text counts: a marker in code or in a string literal is a value, not a note.
       const at = commentAt(l)
-      if (at >= 0 && re.test(l.slice(at))) f.push(`${x}:${i + 1} ${l.trim().slice(0, 90)}`)
+      // A marker that is quoted ("FIXME", `FIXME`, 'FIXME') inside the comment is the comment talking ABOUT the marker, not a note left behind.
+      const note = at >= 0 ? l.slice(at).replace(QUOTED, ' ') : ''
+      if (at >= 0 && re.test(note)) f.push(`${x}:${i + 1} ${l.trim().slice(0, 90)}`)
     })
   }
   console.log(`(${todo} TODO notes counted; they do not fail the check)`)

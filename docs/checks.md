@@ -276,7 +276,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `js-var-usage` | fast | tiny | 1 s | No modern JavaScript or TypeScript declares a variable with var | lang |
 | `json-duplicate-keys` | fast | tiny | 1 s | No JSON object repeats a key | content |
 | `json-valid` | fast | tiny | 1 s | Every tracked JSON file parses | hygiene |
-| `large-commits` | fast | tiny | 1 s | No recent commit touches more files than the budget allows | git |
+| `large-commits` | fast | tiny | 1 s | No commit not yet on the default branch (the last 20 with none) touches more files than the budget allows | git |
 | `large-files` | fast | tiny | 1 s | No oversized file or committed binary | hygiene |
 | `large-json-or-data` | fast | tiny | 1 s | No tracked JSON, CSV or SQL file is over the size budget (content.maxDataKb, default 512 KB) | content |
 | `line-length` | fast | tiny | 1 s | No source line is over the length limit (default 200 characters) | quality |
@@ -297,7 +297,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `maven-compile` | fast | heavy | 2.0 min | Maven: the Java code compiles *(needs: mvn)* | java |
 | `maven-test` | fast | heavy | 2.0 min | Maven: the test suite *(needs: mvn)* | java |
 | `maven-validate` | fast | tiny | 10 s | Maven: the project file (pom.xml) is valid *(needs: mvn)* | java |
-| `merge-commit-noise` | fast | tiny | 1 s | Recent history does not fill up with "Merge branch" commits | git |
+| `merge-commit-noise` | fast | tiny | 1 s | Commits not yet on the default branch (the last 20 with none) do not fill up with "Merge branch" commits | git |
 | `model-files-in-git` | fast | tiny | 1 s | Large model files are stored with git-lfs, not plain git | data-science |
 | `mypy` | fast | light | 30 s | mypy: type errors *(needs: mypy)* | python |
 | `node-engines` | fast | tiny | 1 s | package.json declares engines.node, and .nvmrc is not below it | config |
@@ -573,3 +573,11 @@ The `bugs` preset runs the quick checks without the checks and rules below, whic
 | `rp-api-ffi-wasm/rapi-extern-block-no-link` | rule | extern block without #[link]: informational |
 | `rp-async/rasync-runtime-built-per-call` | rule | tokio runtime built per call: informational performance note |
 <!-- checks:end -->
+
+## Accuracy notes (0.5.3)
+
+- `risky-code`: an `innerHTML` assigned from a string literal, or from a same-file constant that is never reassigned, is not reported, including in a one-line helper. A value taken from request input still is.
+- `js-await-in-loop`: a loop whose body has a plain `break` or `return` (not under an `if`) runs at most one pass and is not reported. An unbounded loop that awaits with no exit, or exits only under an `if`, still is.
+- `markers`: a marker inside a string literal, or quoted ("FIXME", `FIXME`) inside a comment or markdown heading, is the text talking about the marker and is not reported.
+- `commit-message-format`, `merge-commit-noise` and `large-commits` judge only the commits not yet on the default branch (`git log <base>..HEAD`, base: origin/HEAD, origin/main, origin/master, main, master) and print the range. With no base, or with HEAD on the local default branch and no remote, they check the last 20 commits and say so.
+- Lockfile findings (`deprecated-deps`, `wh-supply`) name the direct dependency that pulls a transitive package in, or say "transitive, parent unknown" when the lockfile does not show it.

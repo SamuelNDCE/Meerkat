@@ -111,21 +111,25 @@ function defaultBase(root) {
   }
   return null
 }
-function commitsToCheck(root) {
-  const fields = '%H%x1f%P%x1f%an%x1f%ae%x1f%s'
+// Which commits a history check judges (shared by commit-message-format, merge-commit-noise and large-commits): { spec: 'base..HEAD', note, what }
+// for the commits not yet on the default branch, or { spec: null, fallback: true } for the last 20.
+function commitRange(root) {
   const base = defaultBase(root)
   if (base) {
     const remote = base.startsWith('origin/')
     const same = git(root, ['rev-parse', base])?.trim() === git(root, ['rev-parse', 'HEAD'])?.trim()
     // A local default branch that HEAD sits on says nothing about what is published: fall back. A remote ref does: nothing ahead means nothing to judge.
-    if (!(same && !remote)) {
-      const out = git(root, ['log', `--format=${fields}%x1e`, `${base}..HEAD`])
-      if (out === null) return null
-      return { rows: parseRows(out), note: `not yet on ${base}`, what: `commit(s) not yet on ${base}` }
-    }
+    if (!(same && !remote)) return { spec: `${base}..HEAD`, note: `not yet on ${base}`, what: `commit(s) not yet on ${base}` }
   }
-  const rows = recent(root, FALLBACK_COMMITS, fields)
-  return rows ? { rows, note: `no default branch to compare with, so the last ${FALLBACK_COMMITS} commits were checked`, what: `of the last ${FALLBACK_COMMITS} commit(s)`, fallback: true } : null
+  return { spec: null, note: `no default branch to compare with, so the last ${FALLBACK_COMMITS} commits were checked`, what: `of the last ${FALLBACK_COMMITS} commit(s)`, fallback: true }
+}
+const rangeArgs = (r) => (r.spec ? [r.spec] : [`-n${FALLBACK_COMMITS}`])
+const rangeText = (r) => (r.fallback ? r.note : `range ${r.spec}`)
+function commitsToCheck(root) {
+  const r = commitRange(root)
+  const out = git(root, ['log', '--format=%H%x1f%P%x1f%an%x1f%ae%x1f%s%x1e', ...rangeArgs(r)])
+  if (out === null) return null
+  return { rows: parseRows(out), note: r.note, what: r.what, fallback: r.fallback }
 }
 const parseRows = (out) => out.split('\x1e').map((r) => r.replace(/^\n+/, '')).filter((r) => r.trim() !== '').map((r) => r.split('\x1f'))
 function commitMessageFormat(root) {
@@ -156,13 +160,16 @@ function commitMessageFormat(root) {
 function mergeCommitNoise(root) {
   const skip = gate(root)
   if (skip !== null) return skip
-  const rows = recent(root, 200, '%H%x1f%s')
-  if (!rows) return notRun('could not read the commit log')
+  const range = commitRange(root)
+  const out = git(root, ['log', '--format=%H%x1f%s%x1e', ...rangeArgs(range)])
+  if (out === null) return notRun('could not read the commit log')
+  const rows = parseRows(out)
+  console.log(`merge-commit-noise: checked ${rangeText(range)}`)
   const max = budget(root, 'maxMergeBranchCommits', 10)
   const allow = allowList(root)
   const hits = rows.filter(([hash, subject = '']) => /^Merge branch /.test(clean(subject)) && !allowed(allow, 'merge-commit-noise', hash, true))
   const f = hits.length > max ? hits.map(([hash, subject = '']) => `${hash.slice(0, 10)} "${snip(subject, 60)}"`) : []
-  return finish('merge-commit-noise', f, `${hits.length} "Merge branch" commit(s) in the last ${rows.length} (budget ${max})`)
+  return finish('merge-commit-noise', f, `${hits.length} "Merge branch" commit(s) among ${rows.length} checked (${rangeText(range)}; budget ${max})`)
 }
 
 // ---- large-commits: no commit in the last 200 touches more files than the budget
@@ -171,8 +178,10 @@ function largeCommits(root) {
   if (skip !== null) return skip
   const shallow = shallowGate(root)
   if (shallow !== null) return shallow
-  const out = git(root, ['log', '-n200', '--no-merges', '--name-only', '--format=%x1e%H%x1f%s'])
+  const range = commitRange(root)
+  const out = git(root, ['log', ...rangeArgs(range), '--no-merges', '--name-only', '--format=%x1e%H%x1f%s'])
   if (out === null) return notRun('could not read the commit log')
+  console.log(`large-commits: checked ${rangeText(range)}`)
   const max = budget(root, 'maxFilesPerCommit', 200)
   const allow = allowList(root)
   const f = []
@@ -182,7 +191,7 @@ function largeCommits(root) {
     const n = files.filter((x) => x.trim()).length
     if (n > max && !allowed(allow, 'large-commits', hash, true)) f.push(`${hash.slice(0, 10)} "${snip(subject, 50)}" touches ${n} files (budget ${max})`)
   }
-  return finish('large-commits', f, `no commit in the last 200 touches more than ${max} files`)
+  return finish('large-commits', f, `no commit checked (${rangeText(range)}) touches more than ${max} files`)
 }
 
 // ---- binary-in-history: blobs over the size budget that the last 200 commits added (objects not reachable from 200 commits back)
