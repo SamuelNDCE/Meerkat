@@ -704,6 +704,9 @@ const riskyCode = (root) => {
         if (!jsLike && (/^\s*(?:\/\/|\/\*|\*|#)/.test(before) || (!why.startsWith('a plain http') && /\.(rs|py|go)$/.test(x) && (before.match(/(?<!\\)"/g) ?? []).length % 2 === 1))) continue
         // Inside a comment: the scanner's own blanked copy has a space where the code has a character (a regex literal becomes 0, so a // inside one is not a comment).
         // Only when the file was read with certainty (blankFailed is false): a comment decision made from an unconfirmed string, template or regex state is not trusted.
+        // A line that starts with // is a comment, or text inside a template or string: either way this call is not run from it. This holds even when the file
+        // could not be read with certainty (blankFailed), because nothing on such a line is live code. The plain-http rule matches the string itself, so it is judged as before.
+        if (jsLike && /^\s*\/\//.test(before) && !why.startsWith('a plain http')) continue
         if (jsLike) {
           const b = blankComments(t, /\.[jt]sx$/.test(x))
           if (!blankFailed && b[m.index] === ' ' && t[m.index] !== ' ') continue
@@ -721,7 +724,9 @@ const riskyCode = (root) => {
           const around = t.split('\n').slice(Math.max(0, lineOf(t, m.index) - 4), lineOf(t, m.index) + 3).join('\n')
           const secretNear = /pass|pwd|secret|token|sign|auth|cert|hmac|credential|api[_-]?key|\bkey\b|session|nonce|salt|\botp\b|\bpin\b/i.test(around)
           const benign = /dedup|duplicate|checksum|etag|fingerprint|cache[_-]?key|content[_-]?hash|usedforsecurity\s*=\s*False|by_?hash|readFileSync|read_bytes|fs::read/i.test(around)
-          if (benign && !secretNear) {
+          // A digest cut to a short prefix on the same line (.slice(0, 6)) names a folder or a bucket: 12 hex characters or fewer cannot stand in for a secret or a signature.
+          const shortPrefix = /\.digest\([^)]*\)\s*\.(?:slice|substring|substr)\(\s*0\s*,\s*(?:[1-9]|1[0-2])\s*\)/.test(t.slice(ls, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index)))
+          if ((benign || shortPrefix) && !secretNear) {
             if (!allow.has(`${x}:${lineOf(t, m.index)}`)) structured.push(['info', 'risky-call', x, lineOf(t, m.index), `${why} (used as a content hash or checksum)`])
             continue
           }
