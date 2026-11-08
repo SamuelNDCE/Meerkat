@@ -40,3 +40,5 @@ js-await-in-loop tools/corpus/measure.mjs
 js-await-in-loop tools/gen-accuracy-results.mjs
 # lib/inproc-worker.mjs copies the scanned run's environment into process.env inside a worker; process.env is not a plain object that reaches Object.prototype (DELIBERATE).
 js-prototype-pollution lib/inproc-worker.mjs
+# js-find-undefined: tools/preview.mjs reads c.notes from checks.find() for ids taken from the same list, so a miss cannot happen (DELIBERATE).
+js-find-undefined tools/preview.mjs

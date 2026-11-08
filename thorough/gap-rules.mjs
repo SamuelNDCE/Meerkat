@@ -83,7 +83,7 @@ function testNoAssert(root) {
       if (maskLines(lines, 'js').some((m, i) => m.length !== lines[i].length)) continue
       const helpers = assertingHelpers(text)
       for (const t of extractTests(text, 'js').filter(testable)) {
-        if (t.shouldFail || /^(?:clean ?up|tear ?down|set ?up)\b/i.test(t.name) || ASSERT.js.test(t.mbody) || !/[\w$\])]\s*\(/.test(t.mbody)) continue
+        if (t.shouldFail || /^(?:clean ?up|tear ?down|set ?up)\b/i.test(t.name) || ASSERT.js.test(t.mbody) || !/[\w$]/.test(t.mbody)) continue
         if ([...helpers].some((h) => new RegExp(String.raw`(?<![\w$.])${h.replace(/\$/g, '\\$')}\s*\(`).test(t.mbody))) continue
         add(f, t.line, 'medium', `test "${t.name}" runs code but never asserts (no expect, assert or should): check what it is meant to prove, and add the assertion (use expect(...).not.toThrow() if "does not throw" is the point)`)
       }
@@ -240,7 +240,7 @@ function paymentStatusUnchecked(root) {
 // ============================================================ fixtures: one broken folder and one clean twin per check
 export const BROKEN = {
   'key-in-config': { 'src/config.ts': "export const config = {\n  port: 3000,\n  paymentsKey: 'sk_test_FAKE_ONLY_1234567890',\n  githubToken: 'ghp_abcdefghijklmnopqrstuvwxyz0123456789',\n}\n" },
-  'test-no-assert': { 'test/a.test.ts': "import { it } from 'vitest'\nimport { name } from '../src/a'\n\nit('shows the name', () => {\n  const n = name({ id: 1 })\n  console.log(n)\n})\n" },
+  'test-no-assert': { 'test/a.test.ts': "import { it } from 'vitest'\nimport { name } from '../src/a'\n\nit('shows the name', () => {\n  const n = name({ id: 1 })\n  console.log(n)\n})\n\nit('app exists', () => {\n  const x = typeof app;\n})\n" },
   'img-alt-missing': { 'templates/a.html': '<main><img src="/hero.png" width="400"></main>\n', 'src/B.tsx': 'export const B = () => <img src={logo} />\n' },
   'scripts-binaries': { 'package.json': '{"name":"a","scripts":{"audit":"securitycheck-nope src","build":"node build.js"},"devDependencies":{"vitest":"^2.0.0"}}\n' },
   'payment-status-unchecked': { 'src/pay.ts': "export async function pay(user, amount) {\n  const result = await chargeCard(user, amount)\n  await setBalance(user, amount)\n  return { ok: true }\n}\n" },

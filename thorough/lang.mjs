@@ -156,7 +156,11 @@ const jsEqeqeq = (root) => {
       const after = t.slice(m.index + 2, m.index + 14)
       const before = t.slice(Math.max(0, m.index - 12), m.index)
       if (/^\s*null\b/.test(after) || /\bnull\s*$/.test(before)) continue
-      f.push(`${x}:${lineOf(t, m.index)} uses ${m[1]}, which converts types before comparing (use ${m[1]}=)`)
+      // Against a literal number, string or null, say what loose equality changes: that is where the surprise is real.
+      const raw = sourceOf(root, x)
+      const lit = /^\s*(?:-?\d|['"`])/.test(raw.slice(m.index + 2, m.index + 14)) || /(?:\d|['"`]|\bnull)\s*$/.test(raw.slice(Math.max(0, m.index - 12), m.index))
+      const extra = lit ? " Loose equality changes behaviour for pairs like 0 and '' or null and undefined, so this can be true when the values differ." : ''
+      f.push(`${x}:${lineOf(t, m.index)} uses ${m[1]}, which converts types before comparing (use ${m[1]}=).${extra}`)
     }
   }
   return finish('js-eqeqeq', f, 'comparisons use === and !== (except against null)')
@@ -589,10 +593,125 @@ const rustTodoMacros = (root) => {
   return finish('rust-todo-macros', f, 'no todo! or unimplemented! outside tests')
 }
 
+// ---- helpers for the three bug rules below: the end of a balanced bracket
+const closeOf = (t, open) => {
+  let d = 0
+  for (let i = open; i < t.length; i++) {
+    if ('([{'.includes(t[i])) d++
+    else if (')]}'.includes(t[i]) && --d === 0) return i
+  }
+  return -1
+}
+// True when the text before `i` ends a statement (so a call at `i` stands alone), not a continuation such as `await `, `return `, `= ` or `(`.
+const callStartsStatement = (t, i) => {
+  const before = t.slice(Math.max(0, i - 40), i).replace(/\s+$/, '')
+  if (before === '' && i < 40) return true
+  if (!/\n\s*$/.test(t.slice(Math.max(0, i - 40), i)) && !/[;{}]$/.test(before)) return false
+  if (/[;{})\]]$/.test(before)) return !/\b(?:if|for|while|switch|with)\s*\([^\n]*\)$/.test(before)
+  const w = /([\w$]+)$/.exec(before)?.[1]
+  return Boolean(w) && !/^(?:return|await|yield|typeof|void|new|case|throw|delete|in|of|instanceof)$/.test(w)
+}
+const escRe = (n) => n.replace(/[$.*+?^()[\]{}|\\]/g, '\\$&')
+
+// ---- js-missing-await: a promise from an async function declared in the same file is dropped or read as if it were the value
+const jsMissingAwait = (root) => {
+  const allow = allowSet(root)
+  const f = []
+  for (const x of files(root, JS, true)) {
+    if (allowed(allow, 'js-missing-await', x)) continue
+    const t = codeOnly(sourceOf(root, x), JS_OPTS)
+    const names = new Set()
+    for (const m of t.matchAll(/\basync\s+function\s*\*?\s*([\w$]+)/g)) names.add(m[1])
+    for (const m of t.matchAll(/\b(?:const|let|var)\s+([\w$]+)\s*=\s*async\b/g)) names.add(m[1])
+    for (const n of names) {
+      const e = escRe(n)
+      // a bare statement: the call starts a statement and nothing chains onto it, so the promise (and any rejection) is thrown away
+      for (const m of t.matchAll(new RegExp(String.raw`(?<![\w$.])${e}\s*\(`, 'g'))) {
+        if (!callStartsStatement(t, m.index)) continue
+        const end = closeOf(t, m.index + m[0].length - 1)
+        if (end < 0 || /^\s*\.\s*(then|catch|finally)\b/.test(t.slice(end + 1, end + 20)) || /^\s*[?:&|,)=.]/.test(t.slice(end + 1, end + 4))) continue
+        f.push(`${x}:${lineOf(t, m.index)} calls async ${n}() as a statement without await, so its promise is dropped and its errors and result are lost (add await)`)
+      }
+      // one assignment: const r = fn(); then r.something is read before r is awaited
+      for (const m of t.matchAll(new RegExp(String.raw`\b(?:const|let)\s+([\w$]+)\s*=\s*${e}\s*\(`, 'g'))) {
+        const end = closeOf(t, m.index + m[0].length - 1)
+        if (end < 0 || /^\s*(?:\.|\?\.|\[)/.test(t.slice(end + 1, end + 6))) continue
+        const rest = t.slice(end + 1, end + 1 + 1200)
+        const use = new RegExp(String.raw`(?<![\w$.])${escRe(m[1])}(?![\w$])`).exec(rest)
+        if (!use) continue
+        const after = rest.slice(use.index + m[1].length)
+        if (/^\.(?!\s*(?:then|catch|finally)\b)[\w$]/.test(after) || /^\s*\[/.test(after)) {
+          f.push(`${x}:${lineOf(t, m.index)} ${m[1]} holds the promise from async ${n}() (no await) and is then read as if it were the result (add await)`)
+        }
+      }
+    }
+  }
+  return finish('js-missing-await', f, 'every call to a same-file async function is awaited, returned or chained')
+}
+
+// ---- js-loop-bound: for (let i = 0; i <= items.length; i++) reads items[items.length], which does not exist
+const jsLoopBound = (root) => {
+  const allow = allowSet(root)
+  const f = []
+  for (const x of files(root, JS, true)) {
+    if (allowed(allow, 'js-loop-bound', x)) continue
+    const t = codeOnly(sourceOf(root, x), JS_OPTS)
+    for (const m of t.matchAll(/\bfor\s*\(\s*(?:let|var|const)?\s*([\w$]+)\s*=[^;]*;\s*\1\s*<=\s*([\w$.]+)\.length\s*;/g)) {
+      const open = t.indexOf('(', m.index)
+      const close = closeOf(t, open)
+      if (close < 0) continue
+      const skip = t.slice(close + 1, close + 40).search(/\S/)
+      const b0 = close + 1 + Math.max(0, skip)
+      const body = t[b0] === '{' ? t.slice(b0, closeOf(t, b0) + 1) : t.slice(b0, t.indexOf('\n', b0) < 0 ? t.length : t.indexOf('\n', b0))
+      if (new RegExp(String.raw`(?<![\w$])${escRe(m[2])}\s*\[\s*${escRe(m[1])}\s*\]`).test(body)) {
+        f.push(`${x}:${lineOf(t, m.index)} loops while ${m[1]} <= ${m[2]}.length and reads ${m[2]}[${m[1]}]: the last index is out of range (it is ${m[2]}.length - 1), so the final pass reads undefined (use <)`)
+      }
+    }
+  }
+  return finish('js-loop-bound', f, 'no loop runs one past the end of the array it indexes')
+}
+
+// ---- js-find-undefined: const u = list.find(...) (or map.get(...)), then u.field is read before any check that u was found
+const MAPLIKE = /(?:map|cache|registry|lookup|byid|table|index)$/i
+const jsFindUndefined = (root) => {
+  const allow = allowSet(root)
+  const f = []
+  for (const x of files(root, JS, true)) {
+    if (allowed(allow, 'js-find-undefined', x)) continue
+    const t = codeOnly(sourceOf(root, x), JS_OPTS)
+    const raw = sourceOf(root, x)
+    for (const m of t.matchAll(/\b(?:const|let)\s+([\w$]+)\s*=\s*([\w$.]+)\.(find|get)\s*\(/g)) {
+      if (m[3] === 'get' && !MAPLIKE.test(m[2])) continue
+      const end = closeOf(t, m.index + m[0].length - 1)
+      if (end < 0 || !/^\s*(?:;|\n|$)/.test(t.slice(end + 1, end + 6))) continue
+      let depth = 0
+      let stop = t.length
+      for (let i = end + 1; i < t.length; i++) {
+        if ('([{'.includes(t[i])) depth++
+        else if (')]}'.includes(t[i]) && --depth < 0) {
+          stop = i
+          break
+        }
+      }
+      const scope = raw.slice(end + 1, stop) // raw text: a use inside a template string is blanked in the code-only copy
+      const first = new RegExp(String.raw`(?<![\w$.])${escRe(m[1])}(?![\w$])`).exec(scope)
+      if (!first) continue
+      const after = scope.slice(first.index + m[1].length)
+      if (/^\.[\w$]/.test(after) && !/(?:!|\bif\s*\(|&&|\|\||\?)\s*$/.test(scope.slice(Math.max(0, first.index - 12), first.index))) {
+        f.push(`${x}:${lineOf(t, end + 1 + first.index)} reads ${m[1]}.${/^\.([\w$]+)/.exec(after)[1]} but ${m[1]} comes from ${m[2]}.${m[3]}(), which returns undefined when nothing matches, and nothing checks it first (add if (!${m[1]}) or use ?.)`)
+      }
+    }
+  }
+  return finish('js-find-undefined', f, 'every find() or map get() result is checked before a property is read')
+}
+
 const fx = (tree, run) => ({ fixture: () => withFixture(tree, run) })
 
 main({
   'js-eqeqeq': { run: jsEqeqeq, ...fx({ 'a.js': 'export const same = (a, b) => a == b\n' }, jsEqeqeq) },
+  'js-missing-await': { run: jsMissingAwait, ...fx({ 'a.js': "async function load(id) {\n  return fetchRow(id)\n}\n\nexport async function show(id) {\n  const row = load(id)\n  use(row.name)\n  load(id)\n}\n" }, jsMissingAwait) },
+  'js-loop-bound': { run: jsLoopBound, ...fx({ 'a.js': 'export function total(items) {\n  let sum = 0\n  for (let i = 0; i <= items.length; i++) {\n    sum += items[i].price\n  }\n  return sum\n}\n' }, jsLoopBound) },
+  'js-find-undefined': { run: jsFindUndefined, ...fx({ 'a.js': 'export function nameOf(users, id) {\n  const u = users.find((x) => x.id === id)\n  return u.name\n}\n' }, jsFindUndefined) },
   'js-var-usage': { run: jsVarUsage, ...fx({ 'a.js': 'var count = 0\nexport { count }\n' }, jsVarUsage) },
   'js-await-in-loop': { run: jsAwaitInLoop, ...fx({ 'a.js': 'export async function load(ids) {\n  for (const id of ids) {\n    await fetchOne(id)\n  }\n}\n' }, jsAwaitInLoop) },
   'js-unhandled-promise': { run: unhandledPromise, ...fx({ 'a.js': 'export function save(id) {\n  fetchUser(id).then((u) => store(u))\n}\n' }, unhandledPromise) },

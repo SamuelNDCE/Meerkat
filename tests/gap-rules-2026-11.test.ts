@@ -78,11 +78,16 @@ describe('key-in-config narrowing', () => {
 })
 
 describe('test-no-assert narrowing', () => {
-  test('a helper that asserts, a todo, a skip and a test with no call are quiet', () => {
+  test('a helper that asserts, a todo, a skip are quiet', () => {
     const r = run('test-no-assert', folder({
-      'a.test.ts': "import { test, expect } from 'vitest'\nconst same = (a: number, b: number) => expect(a).toBe(b)\ntest('x', () => {\n  same(add(1, 2), 3)\n})\ntest.todo('later')\ntest.skip('slow', () => {\n  add(1, 1)\n})\ntest('plain', () => {\n  const n = 3\n})\n",
+      'a.test.ts': "import { test, expect } from 'vitest'\nconst same = (a: number, b: number) => expect(a).toBe(b)\ntest('x', () => {\n  same(add(1, 2), 3)\n})\ntest.todo('later')\ntest.skip('slow', () => {\n  add(1, 1)\n})\n",
     }))
     expect(r.code).toBe(0)
+  })
+  test('a test body with a statement but no call and no assertion is found', () => {
+    const r = run('test-no-assert', folder({ 'test/app.test.js': "test('app', () => {\n  const x = typeof app;\n})\n" }))
+    expect(r.code).toBe(1)
+    expect(r.out).toMatch(/app\.test\.js:1 test "app"/)
   })
   test('a second test with no assertion in a file that asserts elsewhere is found, with its line', () => {
     const r = run('test-no-assert', folder({ 'a.test.js': "import { test, expect } from 'vitest'\ntest('a', () => {\n  expect(add(1, 2)).toBe(3)\n})\ntest('b', () => {\n  add(2, 2)\n})\n" }))
