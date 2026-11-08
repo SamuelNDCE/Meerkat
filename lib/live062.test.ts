@@ -124,3 +124,45 @@ describe('lock status is read-only and safe to print', () => {
     expect(existsSync(live)).toBe(true)
   })
 })
+
+describe('meerkat test-run', () => {
+  const fake = [
+    "const a = process.argv.slice(2).join(' ')",
+    "if (a.includes('hangs')) { setInterval(() => {}, 1000) }",
+    "else if (a.includes('fails')) { console.log(' FAIL  fails.test.ts > it breaks'); console.log(' Tests  1 failed | 1 passed | 1 skipped (3)'); process.exit(1) }",
+    "else { console.log(' Tests  2 passed | 1 skipped (3)'); process.exit(0) }",
+  ].join('\n') + '\n'
+  const d = repo('testrun-fx', {
+    'package.json': '{"name":"fx","version":"1.0.0","private":true}',
+    'meerkat.config.json': JSON.stringify({ packs: [], commands: { test: 'node vitest-fake.mjs' } }),
+    'vitest-fake.mjs': fake,
+    'passes.test.ts': '',
+    'fails.test.ts': '',
+    'hangs.test.ts': '',
+  })
+  test('a passing file gives one PASS line', () => {
+    const r = cli(['test-run', 'passes.test.ts'], d)
+    expect(r.code).toBe(0)
+    expect(r.out).toMatch(/PASS: 2 passed, 0 failed, 1 skipped in \d+\.\ds/)
+  })
+  test('a failing file gives FAIL, the failing names and a log path', () => {
+    const r = cli(['test-run', 'fails.test.ts'], d)
+    expect(r.code).toBe(1)
+    expect(r.out).toMatch(/FAIL: 1 passed, 1 failed, 1 skipped|FAIL: 0 passed, 1 failed/)
+    expect(r.out).toContain('fails.test.ts > it breaks')
+    expect(r.out).toMatch(/log: .*test-run-\d+\.log/)
+  })
+  test('a hanging file is killed at --timeout 2 and reported as a timeout', () => {
+    const t0 = Date.now()
+    const r = cli(['test-run', 'hangs.test.ts', '--timeout', '2'], d)
+    expect(r.code).toBe(124)
+    expect(r.out).toMatch(/TIMEOUT: hangs\.test\.ts did not finish in 2s, .*killed/)
+    expect(Date.now() - t0).toBeLessThan(30000)
+  })
+  test('a runner that cannot take one file is refused', () => {
+    const x = repo('testrun-refuse', { 'meerkat.config.json': JSON.stringify({ packs: [], commands: { test: 'make check' } }), 'a.test.ts': '' })
+    const r = cli(['test-run', 'a.test.ts'], x)
+    expect(r.code).toBe(2)
+    expect(r.err).toMatch(/not vitest, jest, cargo test or pytest/)
+  })
+})
