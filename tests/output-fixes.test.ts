@@ -38,12 +38,14 @@ describe('1. the last run per preset', () => {
   it('a later self-test run does not hide the app run', () => {
     const app = saveRun('full', 'thorough', 'app-test')
     const self = saveRun(undefined, 'fast', 'selfcheck', { runKey: 'self-test' })
-    expect(showLast(env).text).toContain('selfcheck') // the newest, as before
+    // 0.5.3 (P1.5): a self-test is never "the last run" any more, so the plain last run is still the app run.
+    expect(showLast(env).text).toContain('app-test')
     expect(pickRunDir(env, { preset: 'full' })).toEqual({ ok: true, dir: app })
     expect(pickRunDir(env, { preset: 'self-test' }).dir).toBe(self)
     expect(showLast(env, null, { preset: 'full' }).text).toContain('app-test')
     expect(showWhy('app-test', env, 80, { preset: 'full' }).text).toContain('log of app-test')
-    expect(showWhy('app-test', env, 80, {}).ok).toBe(false)
+    expect(showWhy('app-test', env, 80, {}).ok).toBe(true)
+    expect(showWhy('selfcheck', env, 80, {}).ok).toBe(false)
   })
   it('a run folder name picks that run, and a bad one is refused', () => {
     const app = saveRun('full', 'thorough', 'app-test')

@@ -149,7 +149,7 @@ describe('origin', () => {
     const p = await loadProject(app(), { env: { ...env, MEERKAT_NO_PROJECT_CODE: '1' } })
     expect(p.checks.map((c: any) => c.id)).toEqual(['e2e'])
     expect(p.notes.join('\n')).not.toMatch(/imported|boom/)
-    const full = await loadProject(app(), { env })
+    const full = await loadProject(app(), { env: { ...env, MEERKAT_TRUST_PROJECT: '1' } }) // 0.5.3: project code needs trust; this is the explicit yes
     expect(full.checks.some((c: any) => c.id.startsWith('bad-check-file'))).toBe(true) // it IS imported when allowed
   })
   test('a custom check with a bundled id is refused, not swapped in', async () => {
