@@ -224,13 +224,31 @@ const eolStyle = (t) => {
   if (bare && !crlf) return 'LF'
   return null
 }
+// The line endings of the files as COMMITTED: git's own report for the index ("i/lf", "i/crlf"; "i/mixed", "i/none" and "i/-text" are not
+// a single style). A file that is not in the index is not listed, so it is skipped. Returns null outside a git work tree (a bare folder: read the file).
+const indexEol = (root) => {
+  let out
+  try {
+    out = execFileSync('git', ['-C', root, 'ls-files', '--eol', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 256 * 2 ** 20 })
+  } catch {
+    return null
+  }
+  const map = new Map()
+  for (const rec of out.split('\0')) {
+    const m = /^i\/(\S+)\s+w\/\S+\s+attr\/\S*\s*\t(.*)$/s.exec(rec)
+    if (m) map.set(m[2], m[1] === 'lf' ? 'LF' : m[1] === 'crlf' ? 'CRLF' : null)
+  }
+  return map
+}
 const gitattributesEol = (root) => {
   if (/(^|\s)(text|eol)(=|\s|$)/m.test(readText(root, '.gitattributes'))) return finish('gitattributes-eol', [], '.gitattributes sets the line endings')
   const allow = allowSet(root)
   const by = { CRLF: [], LF: [] }
+  const index = indexEol(root)
   for (const x of files(root, EOL_TEXT)) {
     if (accepted(allow, 'gitattributes-eol', x)) continue
-    const s = eolStyle(readText(root, x))
+    // In a git work tree the committed line endings count, not the checkout's (a CRLF working tree over an LF index is not a finding).
+    const s = index ? index.get(x) : eolStyle(readText(root, x))
     if (s) by[s].push(x)
   }
   if (!by.CRLF.length || !by.LF.length) return finish('gitattributes-eol', [], 'the text files all use one line-ending style')
