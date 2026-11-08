@@ -142,6 +142,7 @@ The driver protocol is built and Meerkat schedules, times and reports a driver l
 | [docs/features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md) | Every feature, with its command and limits |
 | [docs/ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md) | Everything an AI needs |
 | [docs/adding-tests.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/adding-tests.md) | Adding checks, packs and presets |
+| [docs/extending.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/extending.md) | Add your own check, pack, preset or tool wrapper, and keep them through updates |
 | [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) | How accuracy is measured |
 | [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) | Every command and flag |
 | [docs/how-to.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/how-to.md) | How to run Meerkat efficiently: presets, the daily loop, pull requests, speed |

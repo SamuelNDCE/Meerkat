@@ -108,7 +108,8 @@ describe('tools', () => {
     expect(calls).toHaveLength(1)
     expect(calls[0].args).toEqual(['--app', root, '--preset', 'security', '--include', 'ai', '--only', 'build,e2e'])
     const res = r.result
-    expect(res.isError).toBe(true)
+    expect(res.isError).toBe(false) // a failed run is a result, not a tool error
+    expect(res.structuredContent.status).toBe('failed')
     expect(res.structuredContent.exitCode).toBe(1)
     expect(res.structuredContent.counts).toEqual({ passed: 2, failed: 1, notRun: 1, skipped: 0 })
     expect(res.structuredContent.failed.map((f: { id: string }) => f.id)).toEqual(['build', 'e2e'])

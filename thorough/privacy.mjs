@@ -157,7 +157,11 @@ const US_PHONE = /(?:\+1[\s.-]?)?\(?\b[2-9]\d{2}\)?[\s.-]\d{3}[\s.-]\d{4}\b/
 const IPV4 = /(?<![\w.])(\d{1,3}(?:\.\d{1,3}){3})(?![\w]|\.\d)/g
 const NINO = /\b(?!BG|GB|NK|KN|TN|NT|ZZ)[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]\d{6}[A-D]\b/
 const SSN = /\b(?!000|666|9\d{2})\d{3}-\d{2}-\d{4}\b/
+// A placeholder written to look like an address: one letter before the @ and one letter for the first domain label (a@b.com, x@y.org).
+const PLACEHOLDER_EMAIL = /^[a-z]$/i
+const PLACEHOLDER_IPV4 = /^(?:1\.2\.3\.4|192\.0\.0\.\d{1,3})$/ // the counting-up example address, and 192.0.0.0/24 (reserved for protocol use)
 const publicIpv4 = (ip) => {
+  if (PLACEHOLDER_IPV4.test(ip)) return false
   const o = ip.split('.').map(Number)
   if (o.some((n) => n > 255)) return false
   const [a, b] = o
@@ -182,7 +186,7 @@ const piiPatternsInSource = (root) => {
         const [local, domain] = [m[0].split('@')[0], m[0].split('@')[1]]
         // user:password@host (the @ right after the web address's own host part) is part of a URL, not an email address (credentials in URLs have their own check).
         if (/\w:\/\/[^\s"'`/?#]*$/.test(line.slice(0, m.index))) continue
-        if (GENERIC_LOCAL.test(local) || FAKE_DOMAIN.test(domain) || /noreply\.github\.com$/i.test(domain)) continue
+        if (GENERIC_LOCAL.test(local) || (PLACEHOLDER_EMAIL.test(local) && PLACEHOLDER_EMAIL.test(domain.split('.')[0])) || FAKE_DOMAIN.test(domain) || /noreply\.github\.com$/i.test(domain)) continue
         f.push(`${at} has the email address ${m[0]}`)
         break
       }
@@ -207,12 +211,15 @@ const piiPatternsInSource = (root) => {
 // ---- telemetry-calls: code that posts to a telemetry, analytics, metrics, usage, track or collect host, or starts an error or performance SDK
 const TELEMETRY_HOST = /https?:\/\/([a-z0-9.-]*(?:telemetry|analytics|metrics|usage|track|collect)[a-z0-9.-]*)/i
 const TELEMETRY_SDK = /@sentry\/|from ['"]sentry|require\(['"]@?sentry|Sentry\.init\(|@bugsnag\/|Bugsnag\.start\(|datadogRum|@datadog\/|datadog-browser|@newrelic\/|newrelic\.|NewRelic/
+// Hosts under names the standards keep for examples and tests (.test, .example, .invalid, .localhost, example.com) are sample text, not a collector.
+const RESERVED_HOST = /(^|\.)(test|example|invalid|localhost|example\.(com|org|net))$/i
 const telemetryHits = (root) => {
   const out = []
   for (const x of files(root, CODE)) {
     if (allowed(root, 'telemetry-calls', x)) continue
     lines(root, x).forEach((line, i) => {
-      const host = TELEMETRY_HOST.exec(line)
+      let host = TELEMETRY_HOST.exec(line)
+      if (host && RESERVED_HOST.test(host[1])) host = null
       const sdk = host ? null : TELEMETRY_SDK.exec(line)
       const what = host ? `posts to the ${host[1]} host` : sdk ? `starts the ${sdk[0].trim()} SDK` : null
       if (what) out.push(`${x}:${i + 1} ${what}`)
