@@ -1,5 +1,7 @@
 # The meerkat command
 
+New here? Start with [how-to.md](how-to.md).
+
 How the commands are laid out, and why. It follows the Command Line Interface Guidelines (clig.dev) and the habits of `gh`, `cargo` and `docker`: a small set of nouns, the same verbs on each, `--help` everywhere, and machine-readable output for scripts and AI agents.
 
 ## Shape
