@@ -1,6 +1,6 @@
 // The release scripts in tools/release/: changelog gate, pack file-list gate, fix-needs-a-test gate, audit judging, the tarball install test and the
 // upgrade test. The two smoke tests run against tiny fake packages built in a temp folder, so no network and no real Meerkat scan is needed.
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -257,5 +257,13 @@ describe('upgrade smoke test', () => {
     mkdirSync(join(home, '.meerkat', 'baselines'), { recursive: true })
     writeFileSync(join(home, '.meerkat', 'baselines', 'x.json'), '{}')
     expect(Object.keys(snapshotState(home))).toEqual(['baselines/x.json'])
+  })
+})
+
+describe('skills ship in the package', () => {
+  test('skills/ is an expected folder and package.json files lists it', () => {
+    expect(checkPackList(['package.json', 'skills/meerkat/SKILL.md'])).toEqual([])
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+    expect(pkg.files).toContain('skills/')
   })
 })
