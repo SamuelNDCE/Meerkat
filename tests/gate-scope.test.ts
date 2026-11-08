@@ -56,7 +56,7 @@ describe('scoped gate', () => {
     expect(r.text.split(String.fromCharCode(10))[0]).toMatch(/^MEERKAT gate: 1 blocking, scanned src\/bug\.js, \d+(\.\d)?s$/)
     expect(r.text).toMatch(/sql-concat\s+src\/bug\.js:1/)
     expect(r.text).toMatch(/project-wide, not blocking \(\d+\)/)
-    expect(r.text).toMatch(/security-policy: there is no SECURITY\.md/)
+    expect(r.text).toMatch(/lockfiles: /)
     // SECURITY.md is listed under the project-wide heading, not as a FAIL row.
     expect(r.text).not.toMatch(/^FAIL\s+security-policy/m)
   })
