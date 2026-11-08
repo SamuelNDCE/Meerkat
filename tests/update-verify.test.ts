@@ -19,27 +19,31 @@ const fakeFetch = (table: Record<string, unknown>) => async (url: string) => {
   return hit as never
 }
 const API = 'https://api.github.com/repos/SamuelNDCE/Meerkat/releases/tags/v0.5.3'
+const COMMIT = 'a'.repeat(40)
+const REF = 'https://api.github.com/repos/SamuelNDCE/Meerkat/git/ref/tags/v0.5.3'
+const TAGOBJ = `https://api.github.com/repos/SamuelNDCE/Meerkat/git/tags/${'b'.repeat(40)}`
+const tagMeta = { [REF]: json({ object: { type: 'commit', sha: COMMIT } }) }
 const TAR_URL = 'https://example.test/meerkat-0.5.3.tar.gz'
 const SUMS_URL = 'https://example.test/SHA256SUMS'
 
 describe('verifyRelease', () => {
   test('a matching checksum in a SHA256SUMS asset is accepted', async () => {
-    const f = fakeFetch({ [API]: json({ assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }, { name: 'SHA256SUMS', browser_download_url: SUMS_URL }] }), [SUMS_URL]: bytes(Buffer.from(`${SUM}  meerkat-0.5.3.tar.gz\n`)), [TAR_URL]: bytes(TAR) })
-    expect(await verifyRelease({ version: '0.5.3', fetchImpl: f })).toEqual({ ok: true, sha256: SUM })
+    const f = fakeFetch({ [API]: json({ tag_name: 'v0.5.3', assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }, { name: 'SHA256SUMS', browser_download_url: SUMS_URL }] }), [SUMS_URL]: bytes(Buffer.from(`${SUM}  meerkat-0.5.3.tar.gz\n`)), [TAR_URL]: bytes(TAR), ...tagMeta })
+    expect(await verifyRelease({ version: '0.5.3', commit: COMMIT, fetchImpl: f })).toEqual({ ok: true, sha256: SUM })
   })
   test('a matching checksum in the release notes is accepted', async () => {
-    const f = fakeFetch({ [API]: json({ body: `Notes\n${SUM}  meerkat-0.5.3.tar.gz`, assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }] }), [TAR_URL]: bytes(TAR) })
-    expect((await verifyRelease({ version: '0.5.3', fetchImpl: f })).ok).toBe(true)
+    const f = fakeFetch({ [API]: json({ tag_name: 'v0.5.3', body: `Notes\n${SUM}  meerkat-0.5.3.tar.gz`, assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }] }), [TAR_URL]: bytes(TAR), ...tagMeta })
+    expect((await verifyRelease({ version: '0.5.3', commit: COMMIT, fetchImpl: f })).ok).toBe(true)
   })
   test('a mismatch is refused and nothing is accepted', async () => {
-    const f = fakeFetch({ [API]: json({ body: `${'0'.repeat(64)}  meerkat-0.5.3.tar.gz`, assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }] }), [TAR_URL]: bytes(TAR) })
-    const r = await verifyRelease({ version: '0.5.3', fetchImpl: f })
+    const f = fakeFetch({ [API]: json({ tag_name: 'v0.5.3', body: `${'0'.repeat(64)}  meerkat-0.5.3.tar.gz`, assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }] }), [TAR_URL]: bytes(TAR), ...tagMeta })
+    const r = await verifyRelease({ version: '0.5.3', commit: COMMIT, fetchImpl: f })
     expect(r.ok).toBe(false)
     expect(r.reason).toContain('does not match')
   })
   test('a release with no checksum is refused and the message says how to proceed', async () => {
-    const f = fakeFetch({ [API]: json({ body: 'no sums here', assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }] }), [TAR_URL]: bytes(TAR) })
-    const r = await verifyRelease({ version: '0.5.3', fetchImpl: f })
+    const f = fakeFetch({ [API]: json({ tag_name: 'v0.5.3', body: 'no sums here', assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }] }), [TAR_URL]: bytes(TAR), ...tagMeta })
+    const r = await verifyRelease({ version: '0.5.3', commit: COMMIT, fetchImpl: f })
     expect(r.ok).toBe(false)
     expect(r.reason).toContain('SHA256SUMS')
     expect(r.reason).toContain('npm install -g @samuelndce/meerkat@latest')
@@ -51,6 +55,26 @@ describe('verifyRelease', () => {
   })
   test('parseChecksums reads sha256sum lines only', () => {
     expect(parseChecksums(`${SUM} *a.tgz\nnot a line\n`)).toEqual([{ hash: SUM, file: 'a.tgz' }])
+  })
+})
+
+describe('release commit binding', () => {
+  const base = { tag_name: 'v0.5.3', body: `${SUM}  meerkat-0.5.3.tar.gz`, assets: [{ name: 'meerkat-0.5.3.tar.gz', browser_download_url: TAR_URL }] }
+  test('an annotated tag is followed to its commit and matches', async () => {
+    const f = fakeFetch({ [API]: json(base), [TAR_URL]: bytes(TAR), [REF]: json({ object: { type: 'tag', sha: 'b'.repeat(40) } }), [TAGOBJ]: json({ object: { type: 'commit', sha: COMMIT } }) })
+    expect((await verifyRelease({ version: '0.5.3', commit: COMMIT, fetchImpl: f })).ok).toBe(true)
+  })
+  test('a ref commit that is not the tag commit is refused', async () => {
+    const f = fakeFetch({ [API]: json(base), [TAR_URL]: bytes(TAR), ...tagMeta })
+    const r = await verifyRelease({ version: '0.5.3', commit: 'c'.repeat(40), fetchImpl: f })
+    expect(r.ok).toBe(false)
+    expect(r.reason).toContain('not the commit release v0.5.3 points to')
+  })
+  test('no commit, or release metadata for another tag, is refused', async () => {
+    const f = fakeFetch({ [API]: json(base), [TAR_URL]: bytes(TAR), ...tagMeta })
+    expect((await verifyRelease({ version: '0.5.3', commit: null, fetchImpl: f })).ok).toBe(false)
+    const g = fakeFetch({ [API]: json({ ...base, tag_name: 'v9.9.9' }), [TAR_URL]: bytes(TAR), ...tagMeta })
+    expect((await verifyRelease({ version: '0.5.3', commit: COMMIT, fetchImpl: g })).ok).toBe(false)
   })
 })
 
