@@ -60,6 +60,7 @@ describe('worktree paths', () => {
     git(app, ['worktree', 'add', '-q', wt, 'wt-branch'])
     put('src/w.js', 'export const w = 1\n', wt)
     const g = cli(['gate', wt, '--no-input'])
+    g.stdout = g.stderr
     expect(g.stdout.split('\n')[0]).toContain(`folder: ${wt}`)
     expect(g.stdout.split('\n')[0]).toContain('branch wt-branch')
     expect(g.stdout.split('\n')[0]).toContain('git worktree')

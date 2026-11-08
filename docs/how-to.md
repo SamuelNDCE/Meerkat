@@ -20,7 +20,7 @@ meerkat last
 
 `verify` is the quick run. `last` shows the report of the newest run. To try it without installing, use `npx -y @samuelndce/meerkat verify` (the GitHub Action example uses `npx -y` the same way).
 
-The newest version published on npm when this page was written was 0.5.2. Some things here (the `bugs` preset as the gate default, a quick run without style rules, asking before running a project's own check code) are new in 0.5.3.
+The version printed by `meerkat --version` is the one this page describes. Some things here (the `bugs` preset as the gate default, a quick run without style rules, asking before running a project's own check code) are recent additions.
 
 ## 2. Pick a preset
 
@@ -28,7 +28,7 @@ Read the preset list with `meerkat presets`. Details come from `lib/presets.mjs`
 
 | Use it for | Preset | What it is |
 |---|---|---|
-| First look | `quick` (same as `fast`, and `verify` runs it) | Short static checks only. No builds and no test runs. In 0.5.3 it also leaves out documentation and style-only rules. |
+| First look | `quick` (same as `fast`, and `verify` runs it) | Short static checks only. No builds and no test runs. It also leaves out documentation and style-only rules. |
 | Before a commit | `meerkat gate --staged` | Not a preset name. It runs the `bugs` preset on the files you changed. |
 | Before a push | `quick` | The pre-push hook runs it with `--ratchet`. |
 | Pull request | `meerkat gate --base <ref>` | Same as above, against the branch you merge into. |
