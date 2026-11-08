@@ -1,0 +1,54 @@
+// 0.6.2: gate progress on stderr. Every case runs the real CLI (bin/meerkat.mjs) in a scratch git repository.
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
+import { afterAll, describe, expect, test } from 'vitest'
+
+const ROOT = resolve(__dirname, '..')
+const root = mkdtempSync(join(tmpdir(), 'meerkat-062-'))
+afterAll(() => rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
+const env = { ...process.env, MEERKAT_NO_PROJECT_CODE: '', MEERKAT_LOG_DIR: join(root, 'logs'), MEERKAT_GATE_HEARTBEAT_MS: '500' } as NodeJS.ProcessEnv
+const git = (dir: string, ...args: string[]) => {
+  const r = spawnSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8' })
+  if (r.status !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr}`)
+}
+const put = (dir: string, file: string, body: string) => {
+  mkdirSync(dirname(join(dir, file)), { recursive: true })
+  writeFileSync(join(dir, file), body)
+}
+const cli = (args: string[], cwd?: string, extra: NodeJS.ProcessEnv = {}) => {
+  const r = spawnSync(process.execPath, [join(ROOT, 'bin', 'meerkat.mjs'), ...args], { encoding: 'utf8', env: { ...env, ...extra }, cwd, timeout: 170000 })
+  return { code: r.status, out: String(r.stdout), err: String(r.stderr) }
+}
+const repo = (name: string, files: Record<string, string>) => {
+  const d = join(root, name)
+  mkdirSync(d, { recursive: true })
+  git(d, 'init', '-q', '-b', 'main')
+  for (const [f, b] of Object.entries(files)) put(d, f, b)
+  git(d, 'add', '-A')
+  git(d, 'commit', '-q', '-m', 'base')
+  return d
+}
+
+describe('gate prints progress', () => {
+  const config = JSON.stringify({ packs: [], discover: false, customChecks: [{ id: 'quick', title: 'Quick', cmd: 'node', args: ['quick.js'], tier: 'fast' }, { id: 'nap', title: 'Nap', cmd: 'node', args: ['nap.js'], tier: 'fast', timeoutSeconds: 120 }] })
+  const d = repo('gate-fx', { 'package.json': '{"name":"fx","version":"1.0.0","private":true}', 'a.js': 'export const a = 1\n', 'quick.js': "console.log('ok')\n", 'nap.js': 'setTimeout(() => {}, 20000)\n', 'meerkat.config.json': config })
+  put(d, 'a.js', 'export const a = 2\n')
+
+  test('one line per check start and finish, a still-running line, and a blocking count when the run is stopped', () => {
+    const r = cli(['gate', '--no-cache', '--max-seconds', '3'], d)
+    expect(r.err).toMatch(/\[\d+\/\d+\] quick \.\.\.\r?\n/)
+    expect(r.err).toMatch(/\[\d+\/\d+\] quick \.\.\. \d+\.\ds/)
+    expect(r.err).toMatch(/still running after \d+s: nap/)
+    expect(r.err).toMatch(/stopped early: \d+ blocking so far, \d+ of \d+ checks finished/)
+    expect(r.out).toMatch(/MEERKAT gate: \d+ blocking/)
+    expect(r.out).toMatch(/NOT RUN\s+nap/)
+  }, 60000)
+
+  test('--max-seconds needs a number', () => {
+    const r = cli(['gate', '--max-seconds', 'x'], d)
+    expect(r.code).toBe(2)
+    expect(r.err).toMatch(/--max-seconds needs a number/)
+  })
+})
