@@ -9,6 +9,7 @@ import { spawnRun } from '../lib/spawnrun.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { addRecent } from '../lib/userconfig.mjs'
 import { VERSION } from '../lib/version.mjs'
+import { startCostMeter } from '../lib/cost.mjs'
 
 // Everything below is loaded only by the command that needs it: `meerkat --help` and the look-up commands must not pay for the menu, the screens, the runner or the update code.
 const lazy = (path) => {
@@ -33,6 +34,7 @@ process.on('SIGINT', () => process.exit(130))
 const env = process.env
 const cwd = process.cwd()
 const argv = process.argv.slice(2)
+startCostMeter(argv, { env }) // lib/cost.mjs: one row per command in cost.jsonl, read back with `meerkat cost`
 if (argv.includes('--no-color')) env.NO_COLOR = '1'
 const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !env.CI && !argv.includes('--no-input')
 const out = (t) => process.stdout.write(`${t}\n`)
