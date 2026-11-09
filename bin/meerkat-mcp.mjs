@@ -3,6 +3,7 @@
 // Only JSON-RPC messages go to stdout. Anything else goes to stderr.
 import { createContext, createReader, handleLine, TOOLS } from '../lib/mcp.mjs'
 import { VERSION } from '../lib/version.mjs'
+import { installStopCleanup } from '../lib/childreg.mjs'
 
 // `node bin/meerkat-mcp.mjs --list-tools`: the version and the tools this server registers, read from the registration, then exit. Nothing is started.
 if (process.argv.includes('--list-tools')) {
@@ -33,8 +34,26 @@ process.stdin.on('data', (chunk) => {
       })
   }
 })
-process.stdin.on('end', () => {
+// The client is gone when stdin ends or closes, or when the process that started us is gone. Wait up to 2 s for requests in flight, then leave:
+// the exit handler (lib/childreg.mjs) stops every child still running. Nothing here keeps the process alive: the watcher timer is unref'd.
+const GRACE_MS = 2000
+const closed = () => {
+  if (ended) return
   ended = true
   maybeExit()
-})
+  setTimeout(() => process.exit(0), GRACE_MS).unref?.()
+}
+process.stdin.on('end', closed)
+process.stdin.on('close', closed)
+process.stdin.on('error', closed)
+const parent = process.ppid
+const watch = setInterval(() => {
+  try {
+    process.kill(parent, 0)
+  } catch (e) {
+    if (e?.code === 'ESRCH') closed()
+  }
+}, 2000)
+watch.unref?.()
+installStopCleanup()
 process.stderr.write(`meerkat-mcp ${ctx.version} ready (folder: ${ctx.cwd})\n`)
