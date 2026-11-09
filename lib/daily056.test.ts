@@ -128,7 +128,7 @@ describe('summary first', () => {
     const places = Array.from({ length: 500 }, (_, i) => ({ file: `src/f${i}.js`, line: 1, col: 0, message: 'line is 200 characters long' }))
     const rows = [{ id: 'line-length', kind: 'fail', detail: 'src/f0.js:1 too long', ms: 1, findings: places, places, files: ['src/f0.js'] }]
     const out: any = { exitCode: 1, files: ['src/f0.js'], rows, ran: ['line-length'], skipped: [], note: '', logDir: '/logs/runs/x', runDir: '/logs/runs/x', ms: 100 }
-    const text = gateText('gate', out, 'changed files')
+    const text = gateText('gate', out, 'changed files', { verbose: true }) // the plain gate default is now the compact text; the summary-first layout is the verbose one
     expect(text.split('\n')[2]).toMatch(/^summary: 500 blocking/)
     expect(text.length).toBeLessThan(2048)
     const j = gateJson('gate', 'changed files', out)
