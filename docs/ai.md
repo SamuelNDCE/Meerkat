@@ -9,6 +9,9 @@ Everything an AI needs to use Meerkat. This page agrees with [skills/meerkat/SKI
 | Before committing or opening a pull request | the gate: `meerkat gate` (`--staged` in a pre-commit hook, `--base <ref>` for a pull request) |
 | After a code change, to see what it affects | `meerkat blast <file>` or `meerkat blast <file>#<symbol>` |
 | Before editing a function or file, to get callers, tests, findings, churn and a risk tier in one call | `meerkat brief <file>` or `meerkat brief <file>#<symbol>` (add `--json` to parse it) |
+| One line for a branch: may it be promoted | `meerkat verdict --base <ref>` (add `--json` to parse it) |
+| Several branches in one gate, with the culprit named | `meerkat batch --base <ref> --app <repo> <branch> <branch> ...` |
+| The repo's own typecheck, test and build commands | `meerkat frontend --files <list>` (trusted `commands` block only) |
 | Before promoting or releasing | `meerkat full` for the merge gate, `meerkat run release` before shipping |
 | An unfamiliar codebase, or planning a refactor | `meerkat map --app <folder>`, then `meerkat blast` on the files you will change |
 | Checking that Meerkat itself works | the smoke self-check (it tests the tool, not your project); `meerkat self-test` proves each check fails on a broken sample |
@@ -55,6 +58,8 @@ Everything an AI needs to use Meerkat. This page agrees with [skills/meerkat/SKI
 | `meerkat_check_list` | The checks the project defines itself and the packs (enabled or not, tools missing). Read only. | `folder` |
 | `meerkat_prompt` | WRITES one file: the AI prompt for a run (`meerkat-prompt-<date>-<time>-<preset>.md` in the run folder). Never the clipboard. | `folder` (required), `run`, `preset` |
 | `meerkat_run_list` | Past runs of a folder: id, preset, exit code, time. | `folder`, `limit` (1 to 100, default 20) |
+| `meerkat_summary` | Runs the gate and answers in a few lines: pass or fail, blocking and pre-existing counts, failed check names, run folder. Writes a run record. | `folder`, `base` |
+| `meerkat_first_failure` | One line: the first blocking finding in the changed files as `file:line check: message`, or PASS, or the NO-RESULT or INCOMPLETE line. Runs the gate. | `folder`, `base` |
 
 `folder` must be inside the folder the server was started in, or one added with `meerkat root add`. Text read from logs is withheld if it looks like it contains a secret.
 
@@ -79,6 +84,84 @@ Four more tools: `meerkat_version` (the server version, the build commit when kn
 **Structured output.** Every tool returns a text block whose first line is a status (`meerkat_findings: ok. project app, run 20261107-100000-app--quick. 3 finding(s), 3 match`) and a `structuredContent` object with `schemaVersion` (currently 1) and, when a run was read, `context` (`project`, `projectPath`, `run`, `preset`). Each tool lists an `outputSchema` in `tools/list`. The server is written without an MCP SDK (the package has no dependencies), so `outputSchema` is the field defined by protocol revision 2025-06-18; a client on an older revision ignores it.
 
 The gate, smoke, blast, map and catalog are all MCP tools (`meerkat_gate`, `meerkat_smoke`, `meerkat_blast`, `meerkat_map`, `meerkat_tests`), and the same commands also exist in a shell. `meerkat_dismiss` and `meerkat_baseline` write, so keep the client's approval step on for them.
+
+## Verdict, batch and frontend (CLI only)
+
+There is no MCP tool for `verdict`, `batch` or `frontend`. Call the CLI. Confirm with `node bin/meerkat-mcp.mjs --list-tools`.
+
+### `meerkat verdict --json`
+
+```
+meerkat verdict --base origin/main --json
+```
+
+One object. Read these fields:
+
+| Field | Meaning |
+|---|---|
+| `verdict` | `PASS`, `FAIL`, `NO-RESULT` or `INCOMPLETE`. |
+| `exitCode` | The same number the command exits with (table below). |
+| `blocking` | New blocking findings in the files the branch changed. |
+| `checks` | One row per check: `check`, `status`, `seconds`, `cached`, `detail` and `places` (`file` and `line` of each failure). |
+| `checksTotal`, `checksFinished` | How many checks were planned and how many finished. Finished below total means the run did not complete. |
+| `skippedByPath` | Checks left out because no changed file matched them. Skipped is not passed. |
+| `unmatchedKnown` | Entries of your `--known` file that match nothing. Remove them. |
+| `behindBy` | How many commits the base is ahead of the branch, or null. A large number means rebase first. |
+
+Other fields: `schema`, `preExisting`, `known`, `knownFindings`, `reason` and `base`.
+
+| Exit code | Verdict | What to do |
+|---|---|---|
+| 0 | PASS | Go on. |
+| 1 | FAIL | Fix each finding in `checks[].places`, or dismiss it with a reason, then run again. |
+| 2 | NO-RESULT | Read `reason`. It names the cause and a next step. Fix that once. |
+| 75 | INCOMPLETE | Not a pass. See the decision guide. |
+
+### `meerkat batch`
+
+```
+meerkat batch --base origin/main --app . feat-a feat-b feat-c
+```
+
+Merges the branches onto the base in a temporary checkout (your own checkouts are not changed), runs one gate, and if it fails names the culprit branch. Use `--dry-run` first to see the plan. One line per branch, with these statuses:
+
+| Status | Meaning |
+|---|---|
+| PASS | Passed the gate. |
+| MERGEABLE | Passed a fresh gate after the culprit was left out. |
+| BLOCKED | The culprit: the failing check, file and line. A failure that is also on the base is marked pre-existing and not blamed. |
+| EXCLUDED | Left out: conflict, too big (`--max-lines`), not found, or past `--max-prs`. Not judged. |
+| STALE | The branch moved while the batch ran. Run it again. |
+| INCOMPLETE | Unfinished or unknown. Not a pass. |
+
+Exit codes: 0 every included branch is PASS or MERGEABLE, 1 at least one BLOCKED, 2 usage problem, 75 anything unknown, stale or unfinished. The result is written to `<Meerkat data folder>/batches/<batch id>.json`; `--json` prints the same document. If every failing check also fails on the base, the batch reports DEV-RED and blames nobody. Details: [batch.md](batch.md).
+
+### `meerkat frontend`
+
+```
+meerkat frontend --files src/a.ts,src/b.ts
+```
+
+Runs the repo's own typecheck, test and build commands in order, from the `commands` block of `meerkat.config.json`, and writes `frontend.json` for the gate. The block must be trusted first (section 6 of [neuralvault.md](neuralvault.md)). Each step has a status: `pass`, `fail`, `skipped`, `untrusted` or `timeout`. A step with no command is `skipped`, and an untrusted block is `untrusted`, not run. **A skipped or untrusted step is not a pass.** Exit 0 means every step passed or was skipped, so read the status of each step, not only the exit code.
+
+### Which one to use
+
+| Question | Use |
+|---|---|
+| Is this one branch safe to promote? | `meerkat verdict --base <ref> --json` |
+| I only want the first thing to fix | `meerkat verdict --first`, or the MCP tool `meerkat_first_failure` |
+| Do these several branches work together, and which one breaks it? | `meerkat batch` |
+| Do the repo's own typecheck, tests and build pass? | `meerkat frontend` |
+| I am about to commit | `meerkat gate --staged` |
+
+### When a run is INCOMPLETE (exit 75)
+
+An INCOMPLETE run stopped before every check finished. The limit is 1500 seconds by default. **Never treat a 75 as a pass.** Do one of these, once:
+
+1. Read `blocking` and `checks`. If any check failed, fix it and run again. The blocker is the answer even though the run is unfinished.
+2. If nothing failed, carry on with `meerkat verdict --resume <file>` (the stop prints the file). Checks that finished are not run again.
+3. Or run again with a longer limit: `MEERKAT_VERDICT_TIMEOUT_S=900` for a full run, or `--max-seconds <n>`.
+4. If it is still INCOMPLETE, stop and report the line. Do not retry in a loop, and do not report PASS.
 
 ## Resources and prompts
 

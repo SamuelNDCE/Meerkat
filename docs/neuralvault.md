@@ -38,7 +38,7 @@ Before a branch is promoted, ask for one line:
 meerkat verdict --base origin/main
 ```
 
-It prints one of three lines, or a NO-RESULT line. Exit code 0 means PASS, 1 means a FAIL or NO-RESULT, 2 means a usage problem such as a base ref git does not know. The verdict reads only files the branch changed. Findings already on the base are not counted against the branch, and findings in other files are reported as pre-existing. Use `meerkat top --base origin/main --limit 5` to see which findings they are.
+It prints PASS, a FAIL line, a NO-RESULT line or an INCOMPLETE line. Exit code 0 means PASS, 1 means FAIL, 2 means NO-RESULT (for example a base ref git does not know), 75 means INCOMPLETE (not a pass). For several branches in one gate use `meerkat batch` (see [batch.md](batch.md)); for the repo's own typecheck, test and build commands use `meerkat frontend`. Fields of `--json`: [ai.md](ai.md). The verdict reads only files the branch changed. Findings already on the base are not counted against the branch, and findings in other files are reported as pre-existing. Use `meerkat top --base origin/main --limit 5` to see which findings they are.
 
 ## 4. Keep results compact
 
@@ -60,7 +60,7 @@ meerkat verdict --base origin/main --known known-failures.json
 
 With `--known`, the list replaces the base comparison: every finding in a changed file is judged against the list. A finding an entry matches is printed as `KNOWN: <check> <file>:<line>` and does not block. The first line then ends with the count, for example `FAIL 1 blocking in changed files (3 known)`. An entry that matches nothing is printed as `STALE: <check> <file> matches no finding any more; remove it from <file>`, so the list does not rot. The pass form is `PASS (m known)`; not reproduced here (a scratch run with every listed entry matched still had other pre-existing findings and gave `FAIL-PRE-EXISTING only: 2 findings ... (4 known)`). A missing or malformed file prints `NO-RESULT: the --known file <path> does not exist. next: ...` and exits 2.
 
-For a script, add `--json`: one object with `verdict`, `exitCode`, `blocking`, `known` (a count), `knownFindings`, `stale` and `reason`.
+For a script, add `--json`: one object with `verdict`, `exitCode`, `blocking`, `known` (a count), `knownFindings`, `stale`, `unmatchedKnown`, `checks`, `checksTotal`, `checksFinished`, `skippedByPath`, `behindBy` and `reason`.
 
 Other ways to accept a failure: `meerkat dismiss <id> --reason "..."` (MCP: `meerkat_dismiss`), or `meerkat baseline` then `meerkat verify --ratchet`.
 
