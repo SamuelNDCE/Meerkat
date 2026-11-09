@@ -70,6 +70,7 @@ const EXAMPLES: Record<string, Example> = {
   top: { args: ['top'], codes: [0, 1, 2], why: 'a table of changed-file findings; 1 or 2 with a NO-RESULT line when there is nothing to compare' },
   commands: { args: ['commands'] },
   trust: { args: ['trust'], codes: [0], why: 'the fixture defines no commands, so there is nothing to trust' },
+  frontend: { args: ['frontend'], codes: [0], why: 'the fixture defines no commands, so every step is skipped with a line saying so' },
   build: { args: ['build'], codes: [2], why: 'the fixture defines no commands.build, so it must say so and exit 2' },
   finding: { args: ['finding', '{id}'] },
   last: { args: ['last'] },
