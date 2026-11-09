@@ -10,6 +10,8 @@ import { loadChecks } from '../lib/load-checks.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SCRIPT = 'thorough/lang.mjs'
+// Rules added in 0.5.3 (js-missing-await, js-loop-bound, js-find-undefined): their own cases live in bug-rules-054.test.ts, so they are only counted here.
+const ADDED_IN_054 = ['js-missing-await', 'js-loop-bound', 'js-find-undefined']
 const ALL = ['js-eqeqeq', 'js-var-usage', 'js-await-in-loop', 'js-unhandled-promise', 'js-prototype-pollution', 'ts-any-overuse', 'ts-ignore-comments', 'py-bare-except', 'py-mutable-default', 'py-assert-in-prod', 'go-ignored-errors', 'go-defer-in-loop', 'rust-unwrap-overuse', 'rust-todo-macros']
 
 const made: string[] = []
@@ -151,6 +153,11 @@ describe('the allow-list and the budgets are honoured', () => {
     expect(runCheck(['js-eqeqeq', '--root', dir]).code).toBe(0)
   })
 
+  test('ts-any-overuse does not count any in test files (clean fixture the old rule flagged)', () => {
+    const body = Array.from({ length: 40 }, (_, i) => `export const v${i}: any = ${i}\n`).join('')
+    expect(runCheck(['ts-any-overuse', '--root', folder({ 'tests/a.test.ts': body, 'src/b.ts': 'export const ok: number = 1\n' })]).code).toBe(0)
+  })
+
   test('ts-any-overuse counts against lang.maxAny', () => {
     const body = Array.from({ length: 26 }, (_, i) => `export const v${i}: any = ${i}\n`).join('')
     expect(runCheck(['ts-any-overuse', '--root', folder({ 'a.ts': body })]).code).toBe(1)
@@ -159,10 +166,10 @@ describe('the allow-list and the budgets are honoured', () => {
 })
 
 describe('the lang pack', () => {
-  test('loads 14 checks with no bad-check-file entries', async () => {
+  test('loads 17 checks with no bad-check-file entries', async () => {
     const checks = await loadChecks(join(ROOT, 'packs', 'lang'))
     expect(checks.filter((c) => c.id.startsWith('bad-check-file'))).toEqual([])
-    expect(checks).toHaveLength(14)
-    expect(checks.map((c) => c.id).sort()).toEqual([...ALL].sort())
+    expect(checks).toHaveLength(17)
+    expect(checks.map((c) => c.id).sort()).toEqual([...ALL, ...ADDED_IN_054].sort())
   })
 })

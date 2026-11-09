@@ -93,6 +93,7 @@ describe('gitattributes-eol calls mixed line endings a style choice', () => {
     made.push(dir)
     for (const [name, body] of [['a.js', 'a\r\nb\r\n'], ['b.js', 'a\r\nb\r\n'], ['c.js', 'a\nb\n']]) writeFileSync(join(dir, name), body)
     execFileSync('git', ['init', '-q'], { cwd: dir, stdio: 'ignore' })
+    execFileSync('git', ['-C', dir, 'config', 'core.autocrlf', 'false'], { stdio: 'ignore' })
     execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
     const r = runCheck(['gitattributes-eol', '--root', dir])
     expect(r.code).toBe(1)
@@ -103,5 +104,42 @@ describe('gitattributes-eol calls mixed line endings a style choice', () => {
     expect(r.out).toContain('.meerkat-config-allow')
     const { defaultSeverity } = await import('../lib/findings.mjs')
     expect(defaultSeverity({ id: 'gitattributes-eol', group: 'functionality' })).toBe('low')
+  })
+})
+
+describe('gitattributes-eol reads the committed (index) line endings', () => {
+  const CRLF = String.fromCharCode(13, 10)
+  const mk = (files: Record<string, string>) => {
+    const dir = mkdtempSync(join(tmpdir(), 'meerkat-eol-idx-'))
+    made.push(dir)
+    execFileSync('git', ['init', '-q'], { cwd: dir, stdio: 'ignore' })
+    execFileSync('git', ['-C', dir, 'config', 'core.autocrlf', 'false'], { stdio: 'ignore' })
+    for (const [name, body] of Object.entries(files)) writeFileSync(join(dir, name), body)
+    execFileSync('git', ['-C', dir, 'add', '-A'], { stdio: 'ignore' })
+    return dir
+  }
+  const lf = ['a', 'b', ''].join('\n')
+  const crlf = ['a', 'b', ''].join(CRLF)
+
+  test('LF in the index and CRLF in the working tree does not fire', () => {
+    const dir = mk({ 'a.js': lf, 'b.js': lf, 'c.js': lf })
+    writeFileSync(join(dir, 'c.js'), crlf)
+    expect(runCheck(['gitattributes-eol', '--root', dir]).code).toBe(0)
+  })
+
+  test('CRLF in the index and LF in the working tree does not fire either', () => {
+    const dir = mk({ 'a.js': crlf, 'b.js': crlf, 'c.js': crlf })
+    writeFileSync(join(dir, 'c.js'), lf)
+    expect(runCheck(['gitattributes-eol', '--root', dir]).code).toBe(0)
+  })
+
+  test('a file that is not in the index is skipped; a real mix in the index still fires', () => {
+    const dir = mk({ 'a.js': lf, 'b.js': lf })
+    writeFileSync(join(dir, 'new.js'), crlf)
+    expect(runCheck(['gitattributes-eol', '--root', dir]).code).toBe(0)
+    const mixed = mk({ 'a.js': lf, 'b.js': lf, 'c.js': crlf })
+    const r = runCheck(['gitattributes-eol', '--root', mixed])
+    expect(r.code).toBe(1)
+    expect(r.out).toContain('c.js uses CRLF')
   })
 })

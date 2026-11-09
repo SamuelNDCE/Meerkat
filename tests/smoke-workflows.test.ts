@@ -64,7 +64,7 @@ describe('(a) and (b) first run, a planted bug is blocked, the fix passes', () =
   test('gate --staged blocks the planted SQL concatenation and names the file', () => {
     appendFileSync(join(sb.app, 'src', 'index.js'), BUG)
     stage(sb, 'src/index.js')
-    const r = runCli(sb, ['gate', '--staged', '--no-cache'], { timeout: T })
+    const r = runCli(sb, ['gate', '--staged', '--no-cache', '--verbose'], { timeout: T })
     ok(r)
     expect(r.code, r.all.slice(0, 600)).toBe(1)
     expect(r.stdout).toMatch(/sql-concat[^\n]*src\/index\.js/)

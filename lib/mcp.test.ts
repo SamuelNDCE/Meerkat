@@ -62,7 +62,7 @@ describe('protocol', () => {
   test('tools/list names every registered tool, each with an input schema and a two line description', async () => {
     const { ctx } = makeCtx()
     const r = await handleMessage({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, ctx)
-    expect(r.result.tools.map((t: { name: string }) => t.name)).toEqual(['meerkat_run', 'meerkat_list', 'meerkat_presets', 'meerkat_last', 'meerkat_why', 'meerkat_self_test', 'meerkat_gate', 'meerkat_smoke', 'meerkat_blast', 'meerkat_map', 'meerkat_tests', 'meerkat_findings', 'meerkat_finding', 'meerkat_redtest', 'meerkat_dismiss', 'meerkat_baseline', 'meerkat_doctor', 'meerkat_discover', 'meerkat_recommend', 'meerkat_tools', 'meerkat_trend', 'meerkat_suggest', 'meerkat_pr_comment', 'meerkat_dismissals', 'meerkat_hook_status', 'meerkat_describe', 'meerkat_undismiss', 'meerkat_hook', 'meerkat_brief', 'meerkat_version', 'meerkat_check_list', 'meerkat_prompt', 'meerkat_run_list'])
+    expect(r.result.tools.map((t: { name: string }) => t.name)).toEqual(['meerkat_run', 'meerkat_list', 'meerkat_presets', 'meerkat_last', 'meerkat_why', 'meerkat_self_test', 'meerkat_gate', 'meerkat_summary', 'meerkat_smoke', 'meerkat_blast', 'meerkat_map', 'meerkat_tests', 'meerkat_findings', 'meerkat_finding', 'meerkat_redtest', 'meerkat_dismiss', 'meerkat_baseline', 'meerkat_doctor', 'meerkat_discover', 'meerkat_recommend', 'meerkat_tools', 'meerkat_trend', 'meerkat_suggest', 'meerkat_pr_comment', 'meerkat_dismissals', 'meerkat_hook_status', 'meerkat_describe', 'meerkat_undismiss', 'meerkat_hook', 'meerkat_brief', 'meerkat_version', 'meerkat_check_list', 'meerkat_prompt', 'meerkat_run_list', 'meerkat_first_failure'])
     for (const t of TOOLS) {
       expect(t.inputSchema.type).toBe('object')
       expect(t.description.length).toBeGreaterThan(20)
@@ -104,11 +104,12 @@ describe('protocol', () => {
 describe('tools', () => {
   test('meerkat_run builds the argument list and reports failures from summary.json', async () => {
     const { ctx, calls } = makeCtx()
-    const r = await call(ctx, 'meerkat_run', { preset: 'security', only: ['build', 'e2e'], include: ['ai'] })
+    const r = await call(ctx, 'meerkat_run', { preset: 'security', only: ['build', 'e2e'], include: ['ai'], full: true })
     expect(calls).toHaveLength(1)
     expect(calls[0].args).toEqual(['--app', root, '--preset', 'security', '--include', 'ai', '--only', 'build,e2e'])
     const res = r.result
-    expect(res.isError).toBe(true)
+    expect(res.isError).toBe(false) // a failed run is a result, not a tool error
+    expect(res.structuredContent.status).toBe('failed')
     expect(res.structuredContent.exitCode).toBe(1)
     expect(res.structuredContent.counts).toEqual({ passed: 2, failed: 1, notRun: 1, skipped: 0 })
     expect(res.structuredContent.failed.map((f: { id: string }) => f.id)).toEqual(['build', 'e2e'])

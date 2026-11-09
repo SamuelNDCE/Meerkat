@@ -1,0 +1,8 @@
+{
+  "pack": "neuralvault",
+  "detectFile": "scripts/electron-run.mjs",
+  "detectKind": "electron",
+  "detectWhy": "an Electron app with a window harness (scripts/electron-run.mjs)",
+  "needsAppFile": "scripts/electron-run.mjs",
+  "memoryAdapter": "export.mjs"
+}

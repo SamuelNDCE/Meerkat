@@ -4,6 +4,8 @@ import { COMMANDS, EXIT_CODES, allWords, commandHelp, describe, editDistance, na
 import { completionScript } from './completion.mjs'
 import { COMMAND_LIST, planCommand } from './cli.mjs'
 import { EXTRA_WORDS } from './extras-cli.mjs'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 const none = { user: {}, project: {} }
 const plan = (argv: string[]) => planCommand(argv, { cwd: '/work/app', env: {}, interactive: false, presets: none })
@@ -18,6 +20,22 @@ suite('help', () => {
       expect(h).not.toContain('—')
       expect(h.indexOf('Examples:')).toBeLessThan(h.indexOf('Usage:'))
     }
+  })
+  // The verdict parser (lib/branchcmds.mjs runVerdict) is read as text: every --option it accepts must be in the help, and the help must not name an output the verdict no longer prints.
+  test('meerkat verdict --help lists every option the verdict parser accepts', () => {
+    const src = readFileSync(fileURLToPath(new URL('./branchcmds.mjs', import.meta.url)), 'utf8').split(String.fromCharCode(13)).join('')
+    const start = src.indexOf('export async function runVerdict(')
+    const end = src.indexOf('async function runVerdictBatch(')
+    expect(start).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(start)
+    const body = src.slice(start, end)
+    const accepted = [...new Set([...body.matchAll(/'(--[a-z][a-z-]*)'/g)].map((m) => m[1]))].filter((o) => o !== '--all-findings') // --all-findings is passed to the gate by the code itself, not typed by a person
+    expect(accepted).toEqual(expect.arrayContaining(['--first', '--ready', '--branches', '--known', '--resume', '--base']))
+    const h = commandHelp('verdict') as string
+    const missing = accepted.filter((o) => !h.includes(o))
+    expect(missing, `add to the verdict entry in lib/help.mjs: ${missing.join(', ')}`).toEqual([])
+    expect(h).not.toContain('FAIL-PRE-EXISTING')
+    expect(h).toContain('pre-existing:')
   })
   // The registry test: a command that bin/meerkat.mjs dispatches (COMMAND_LIST in lib/cli.mjs, EXTRA_WORDS in lib/extras-cli.mjs) but the registry lacks is invisible to help and describe.
   test('meerkat help and meerkat describe list every command the binary dispatches', () => {

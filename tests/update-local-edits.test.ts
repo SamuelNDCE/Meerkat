@@ -150,7 +150,7 @@ describe('smart update with the user having edited Meerkat files', () => {
     write(clone, 'SECURITY.md', read(clone, 'SECURITY.md').replace('# Security policy', '# Security policy (my wording)'))
     process.env.MEERKAT_LOG_DIR = logDir
     const lines: string[] = []
-    const code = await runUpdateCommand({ action: 'update', yes: true }, { repoDir: clone, env: { ...process.env, MEERKAT_USER_CONFIG: join(root, 'cfg.json') }, stdout: { write: (t: string) => lines.push(t) } as any })
+    const code = await runUpdateCommand({ action: 'update', yes: true }, { repoDir: clone, releaseCheck: async () => ({ ok: true }), env: { ...process.env, MEERKAT_USER_CONFIG: join(root, 'cfg.json') }, stdout: { write: (t: string) => lines.push(t) } as any })
     const text = lines.join('')
     expect(code).toBe(1)
     expect(text).toContain('SECURITY.md')
@@ -184,7 +184,7 @@ describe('smart update with the user having edited Meerkat files', () => {
     expect(fingerprint(clone)).toBe(after)
     process.env.MEERKAT_LOG_DIR = logDir
     const lines: string[] = []
-    const code = await runUpdateCommand({ action: 'update', yes: true }, { repoDir: clone, env: { ...process.env, MEERKAT_USER_CONFIG: join(root, 'cfg2.json') }, stdout: { write: (t: string) => lines.push(t) } as any })
+    const code = await runUpdateCommand({ action: 'update', yes: true }, { repoDir: clone, releaseCheck: async () => ({ ok: true }), env: { ...process.env, MEERKAT_USER_CONFIG: join(root, 'cfg2.json') }, stdout: { write: (t: string) => lines.push(t) } as any })
     expect(code).toBe(0)
     expect(lines.join('')).toContain('up to date')
     expect(fingerprint(clone)).toBe(after)

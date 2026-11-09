@@ -17,7 +17,7 @@
 // Regexes are linear: bounded quantifiers ({0,200}) and no nested open spans, so a hostile 100 KB line cannot blow up.
 // Rules that need a sibling line (for example a handler body) look only at a fixed window of lines after the match.
 
-import { appDeniesWindowOpen, argIsModuleConstString, channelChecked, holesAllWrapped, inDevOnlyBlock, inIpcHandler, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked, withinCallBody } from './guards.mjs'
+import { appDeniesWindowOpen, argIsModuleConstString, channelChecked, templateHolesAllConstant, holesAllWrapped, inDevOnlyBlock, inIpcHandler, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked, withinCallBody } from './guards.mjs'
 import { rustTestLines } from './kit.mjs'
 const JS = ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'jsx', 'tsx']
 const HTML = ['html', 'htm']
@@ -181,7 +181,8 @@ export const EP_WINDOW = [
     'win.webContents.executeJavaScript(`window.user = ${input}`)',
     "win.webContents.executeJavaScript('window.ready = true')",
     // JSON.stringify(value) is a quoted, escaped JavaScript literal: a template whose every hole is one cannot change the shape of the script.
-    { unless: holesAllWrapped('executeJavaScript', 'JSON\\.stringify') }),
+    // A template whose holes are all numbers or module constants holding a literal is a fixed script, not an input (the parameter case still fires).
+    { unless: (l, ctx) => holesAllWrapped('executeJavaScript', 'JSON\\.stringify')(l) || templateHolesAllConstant('executeJavaScript')(l, ctx) }),
   js('ep-insert-css-variable', 'inserts CSS from a bare variable into a page; CSS can read and send page data through selectors and URLs',
     /\binsertCSS\(\s*[A-Za-z_$][\w$.]*\s*[,)]/,
     'contents.insertCSS(css)',
@@ -701,8 +702,20 @@ const commandBodies = (text) => {
           }
         }
         // A command that both resolves the path and checks it stays inside a folder is doing the check this rule asks for (one without the other is not enough).
-        const guarded = /\bcanonicali[sz]e\b/.test(body) && /\bstarts_with\b|\bstrip_prefix\b|\bis_allowed\b/.test(body)
-        out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names: guarded ? new Set() : names })
+        // Only the variable that is resolved AND then checked is cleared (with the parameters it was built from); another parameter in the same command stays reported (#60).
+        // A command that resolves and checks but where no single local can be tied to both keeps the old whole-body rule.
+        const resolved = new Map()
+        for (const l of body.matchAll(/\blet\s+(?:mut\s+)?(\w+)\s*(?::[^=;]{0,60})?=\s*([^;]{0,300});/g)) if (/\bcanonicali[sz]e\b/.test(l[2])) resolved.set(l[1], l[2])
+        const checked = (v) => new RegExp(`\\b${v}\\b[^;{}]{0,60}\\.\\s*(?:starts_with|strip_prefix)\\b|\\bis_allowed\\s*\\(\\s*&?${v}\\b`).test(body)
+        const cleared = new Set()
+        for (const [v, rhs] of resolved) {
+          if (!checked(v)) continue
+          cleared.add(v)
+          for (const n of names) if (new RegExp(`\\b${n}\\b`).test(rhs)) cleared.add(n)
+        }
+        const wholeBody = resolved.size === 0 && /\bcanonicali[sz]e\b/.test(body) && /\bstarts_with\b|\bstrip_prefix\b|\bis_allowed\b/.test(body)
+        const left = wholeBody ? new Set() : new Set([...names].filter((n) => !cleared.has(n)))
+        out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names: left })
         break
       }
     }

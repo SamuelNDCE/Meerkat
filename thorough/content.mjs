@@ -458,14 +458,21 @@ const spellCommonTypos = (root) => {
 }
 
 // ---- unicode-control-chars: bidirectional overrides and invisible characters in tracked text (the Trojan Source class)
+// A zero-width joiner between two emoji is how a family, a flag or a profession emoji is written; it is part of the emoji, not a hidden character.
+const EMOJI_BEFORE = /\p{Extended_Pictographic}[\uFE0F\u{1F3FB}-\u{1F3FF}]*$/u
+const EMOJI_AFTER = /^\p{Extended_Pictographic}/u
+const joinsEmoji = (line, m) => m[0] === '\u200D' && EMOJI_BEFORE.test(line.slice(0, m.index)) && EMOJI_AFTER.test(line.slice(m.index + 1))
+// Data files of a test suite (JSON samples and corpora) are read as data and never run, so the characters they hold on purpose are test input.
+const TEST_DATA = /(^|\/)(tests?|__tests__|fixtures?|corpus|corpora|testdata)\/.*\.json$/i
 const unicodeControlChars = (root) => {
   const id = 'unicode-control-chars'
   const allow = allowSet(root)
   const f = []
   for (const x of files(root, TEXT)) {
-    if (allowed(allow, id, x) || !small(root, x)) continue
+    if (allowed(allow, id, x) || !small(root, x) || TEST_DATA.test(x)) continue
     readText(root, x).split('\n').forEach((line, i) => {
       for (const m of line.matchAll(INVISIBLE)) {
+        if (joinsEmoji(line, m)) continue
         const cp = m[0].codePointAt(0).toString(16).toUpperCase().padStart(4, '0')
         const kind = BIDI.test(m[0]) ? 'a bidirectional control character' : 'an invisible zero-width character'
         f.push(`${x}:${i + 1} contains U+${cp}, ${kind} (the code can look different from what runs)`)

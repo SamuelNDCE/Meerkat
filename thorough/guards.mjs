@@ -242,7 +242,7 @@ export const ipcHandlerCallsSenderHelper = (_line, ctx) => {
   return callsSenderHelper([ctx.lines[ctx.index], ...(next < 0 ? rest : rest.slice(0, next))].join('\n'), ctx.text)
 }
 
-// ---- Electron false-alarm guards (round 5, from the NeuralVault audit of 2026-11-02) ----
+// ---- Electron false-alarm guards (round 5, from an Electron app audit of 2026-11-02) ----
 
 // The argument of a call on this line is a bare identifier that is a module-level constant holding a fixed string (or a template with no ${} hole):
 // `const DEV_SERVER = 'http://localhost:5273'` then `win.loadURL(DEV_SERVER)`. The address or script is fixed in the source, nothing from outside can reach it.
@@ -290,4 +290,17 @@ export const inIpcHandler = (_line, ctx) => ctx.lines.slice(Math.max(0, ctx.inde
 export const channelChecked = (_line, ctx) => {
   const above = ctx.lines.slice(Math.max(0, ctx.index - 12), ctx.index).join('\n')
   return /\b(?:includes|has)\(\s*(?:channel|ch|chan|topic)\s*\)|\b(?:is|assert|check|validate)\w*(?:Channel|Event)\w*\(\s*(?:channel|ch|chan|topic)\s*\)/i.test(above)
+}
+
+// A template literal passed to callName whose every ${...} hole is a number or a module-level const that holds a literal: the script is fixed at write time, so no input can change it.
+export const templateHolesAllConstant = (callName) => (line, ctx) => {
+  const m = new RegExp(`\\b${callName}\\(\\s*\`([^\`]*)\``).exec(line)
+  if (!m) return false
+  const holes = [...m[1].matchAll(/\$\{\s*([^}]*?)\s*\}/g)].map((h) => h[1])
+  if (!holes.length) return false
+  return holes.every((h) => {
+    if (/^\d+(?:\.\d+)?$/.test(h)) return true
+    if (!/^[A-Za-z_$][\w$]*$/.test(h)) return false
+    return new RegExp(`^(?:export\\s+)?const\\s+${h.replace(/\$/g, '\\$')}\\s*(?::[^=\\n]{1,60})?=\\s*(?:['"\`]|\\d)`, 'm').test(ctx.text)
+  })
 }

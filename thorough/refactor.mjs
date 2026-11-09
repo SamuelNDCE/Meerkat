@@ -12,12 +12,18 @@
 // Limits live in .meerkat-budgets.json under "refactor". Accepted dead names go in .meerkat-dead-allow, one per line.
 // The function finder (findFunctions) is a heuristic: it blanks out strings and comments first, then matches signatures per language.
 import { extname, join, posix } from 'node:path'
-import { finish, isTestFile, main, readBudgets, readText, sizeOf, trackedFiles, withFixture } from './kit.mjs'
+import { finish, isTestFile, listTrackedFiles, main, readBudgets, readText, sizeOf, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.refactor ?? {}
 const CODE = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.rs', '.py', '.go', '.svelte', '.vue', '.java', '.cs', '.c', '.cpp', '.h', '.rb', '.php', '.swift', '.kt'])
 const SKIP = /(^|\/)(node_modules|dist|build|target|vendor|generated|__snapshots__|fixtures?|\.svelte-kit)\//i
 const sources = (root) => trackedFiles(root).filter((x) => CODE.has(extname(x)) && !SKIP.test(x) && !isTestFile(x) && !/\.(min|d)\.(js|ts)$|\.lock$/.test(x))
+// Files .meerkatignore leaves out of the report still count as users of a name or importers of a file: a rule table kept out of the scan on purpose
+// is the code that imports the helper beside it. Only code files, and never node_modules or build output.
+const ignoredButReal = (root, kept, pattern) => {
+  const keep = new Set(kept)
+  return listTrackedFiles(root).filter((x) => !keep.has(x) && pattern.test(x) && !/(^|\/)(node_modules|dist|build)\//.test(x))
+}
 const allowList = (root, name) => new Set(readText(root, name).split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#')))
 const lineOf = (text, index) => text.slice(0, index).split('\n').length
 
@@ -69,7 +75,7 @@ const deadCode = (root) => {
   const max = cfg(root).maxDeadExports ?? 0
   const files = trackedFiles(root).filter((x) => /\.(m?[jt]sx?|svelte|vue)$/.test(x) && !/(^|\/)(node_modules|dist|build)\//.test(x))
   const texts = new Map(files.map((x) => [x, readText(root, x)]))
-  const all = [...texts.values()].join('\n')
+  const all = [...texts.values(), ...ignoredButReal(root, files, /\.(m?[jt]sx?|svelte|vue)$/).map((x) => readText(root, x))].join('\n')
   // How often each name appears as a whole word, counted in one pass over all the text. A whole-word match of a plain name is one maximal run of [\w$]
   // equal to it, so this gives the same count as one regex scan per name (that scan, names x all the text, was the cost of this check).
   const wordCount = new Map()
@@ -419,7 +425,7 @@ const packageEntries = (root) => {
     if (typeof v === 'string') out.push(...v.split(/\s+/))
     else if (v && typeof v === 'object') Object.values(v).forEach(walk)
   }
-  if (pkg) for (const k of ['main', 'bin', 'exports', 'scripts']) walk(pkg[k])
+  if (pkg) for (const k of ['main', 'bin', 'exports', 'scripts', 'files', 'build']) walk(pkg[k])
   return out.map((s) => posix.normalize(s.replace(/^\.\//, ''))).filter(Boolean)
 }
 
@@ -429,7 +435,9 @@ const unusedFiles = (root) => {
   const known = new Set(files)
   const texts = new Map(files.map((x) => [x, readText(root, x)]))
   const used = new Set()
-  for (const [x, t] of texts) {
+  // A file kept out of the report by .meerkatignore can still be the one that imports another file.
+  const importers = new Map([...texts, ...ignoredButReal(root, files, JS_FILE).map((x) => [x, readText(root, x)])])
+  for (const [x, t] of importers) {
     for (const m of t.matchAll(IMPORT)) {
       const target = posix.normalize(posix.join(posix.dirname(x), m[1]))
       const bare = target.replace(/\.(m?js|cjs|jsx)$/, '')
@@ -452,6 +460,10 @@ const unusedFiles = (root) => {
     if (used.has(x) || named.has(x) || ENTRY.test(x) || FRAMEWORK_ENTRY.test(x) || allow.has(x)) continue
     // A path written into another file counts as a reference: runners and packs name their scripts by path.
     if ([...texts].some(([y, t]) => y !== x && t.includes(x))) continue
+    // Electron loads a preload or a window page by a name relative to the file that calls it (path.join(__dirname, 'preload.js')), so a quoted basename in a file of the same folder is a reference too.
+    const base = posix.basename(x)
+    const dir = posix.dirname(x)
+    if ([...texts].some(([y, t]) => y !== x && posix.dirname(y) === dir && (t.includes(`'${base}'`) || t.includes(`"${base}"`)))) continue
     if (docs().some((d) => namedBy(d, x))) continue
     f.push(`${x} is not imported by any file and is not an entry point (delete it, or list it in .meerkat-unused-allow)`)
   }

@@ -395,7 +395,7 @@ describe('a real run', () => {
 function savedRun() {
   const logs = tmp()
   const d = project({ 'src/a.js': 'a\n' })
-  const env = { ...process.env, MEERKAT_LOG_DIR: logs }
+  const env = { ...process.env, MEERKAT_LOG_DIR: logs, MEERKAT_TEST_CWD: d }
   const fl = [
     { severity: 'critical', rule: 'k', file: 'src/a.js', line: 1, message: 'crit thing' },
     { severity: 'medium', rule: 'm', file: 'src/a.js', line: 1, message: 'medium thing' },
@@ -408,8 +408,9 @@ function savedRun() {
 const runCmd = (env: any, argv: string[]) => {
   const out: string[] = []
   const err: string[] = []
-  const plan = planCommand(argv, { cwd: process.cwd(), env })
-  const code = plan.kind === 'noun' ? findingsCommand(plan, { out: (t: string) => out.push(t), err: (t: string) => err.push(t), env, cwd: process.cwd() }) : -1
+  const cwd = env.MEERKAT_TEST_CWD ?? process.cwd() // the project the run was saved for: a read command reads the runs of the folder it is run in
+  const plan = planCommand(argv, { cwd, env })
+  const code = plan.kind === 'noun' ? findingsCommand(plan, { out: (t: string) => out.push(t), err: (t: string) => err.push(t), env, cwd }) : -1
   return { code, out: out.join('\n'), err: err.join('\n'), plan }
 }
 
@@ -419,7 +420,7 @@ describe('meerkat findings and meerkat finding', () => {
     const all = runCmd(env, ['findings'])
     expect(all.code).toBe(0)
     expect(all.out).toContain('crit thing')
-    expect(all.out).toMatch(/SEVERITY\s+RULE\s+WHERE\s+WHAT\s+STATUS/)
+    expect(all.out).toMatch(/ID\s+SEVERITY\s+RULE\s+WHERE\s+WHAT\s+STATUS/)
     expect(runCmd(env, ['findings', '--severity', 'medium']).out).not.toContain('low thing')
     expect(runCmd(env, ['findings', '--suite', 'nothing']).out).toContain('No findings match.')
     expect(runCmd(env, ['findings', '--check', 'risky', '--new']).out).toContain('medium thing')
@@ -443,7 +444,7 @@ describe('meerkat findings and meerkat finding', () => {
     const r = runCmd(env, ['finding', id.slice(0, 6)])
     expect(r.code).toBe(0)
     for (const w of ['what:', 'where:', 'detected by:', 'confidence:', 'log:', 'fix:', 'first seen:', 'crit thing']) expect(r.out).toContain(w)
-    expect(runCmd(env, ['finding', 'ffffffff']).code).toBe(1)
+    expect(runCmd(env, ['finding', 'ffffffff']).code).toBe(2)
     expect(findingDetailText(saved.doc.findings[0], saved.doc)).toContain('risky.mjs')
   })
   test('--export copies the saved file', () => {
@@ -468,7 +469,7 @@ describe('meerkat findings and meerkat finding', () => {
 function savedRunWith(fl: any[]) {
   const logs = tmp()
   const d = project({ 'src/a.js': 'a\n' })
-  const env = { ...process.env, MEERKAT_LOG_DIR: logs }
+  const env = { ...process.env, MEERKAT_LOG_DIR: logs, MEERKAT_TEST_CWD: d }
   saveRun(env, d, '20261031-100000-fast', [failing()], new Map([['risky', { findings: fl, output: '' }]]))
   writeFileSync(join(logs, 'latest.json'), JSON.stringify({ dir: join(logs, 'runs', '20261031-100000-fast') }))
   return env

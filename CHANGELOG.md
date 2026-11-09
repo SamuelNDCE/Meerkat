@@ -4,6 +4,98 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+## 0.5.3 (2026-11-08)
+
+Safer by default, quieter output, fewer false alarms.
+
+- Gate: `meerkat gate` applies every pack that fits the folder and uses the `bugs` preset by default (no style or documentation rules). `--all` runs everything. The output is the failures plus one summary line; `--verbose` lists every check.
+- Project code is never run unasked. Check files in `extraChecks` and `.meerkat/checks` need a one-time yes in a terminal; operators can set `MEERKAT_TRUST_PROJECT=1`. CI and runs with no terminal refuse project code and say so.
+- Trust covers the check files, the files they import by a relative path, and `package.json`. It refuses a `node_modules` folder or a symlinked folder inside a check folder, and fails closed when the file or size cap is hit.
+- The pre-push hook fails closed: if Meerkat cannot run, the push is blocked and the message says so. `MEERKAT_ALLOW_HOOK_FAIL=1` pushes anyway, and the bypass is written to `hook.log`.
+- `meerkat update` fetches the release tarball and checks its SHA-256 against the GitHub release, then checks that the commit matches the release tag, and installs that exact commit. It fails closed and has no bypass.
+- The last run is kept per project and per preset. Self-tests never replace it, and read commands (`last`, `findings`, `why` and the like) say which run they used.
+- First-run note, and log paths are printed.
+- `--no-input` is accepted by every command. `meerkat dismiss` and `meerkat rules test` exit 2 on usage errors. Unknown config keys are warned about. A cut-off findings list is named as truncated.
+- False-alarm fixes: an `innerHTML` set from a constant on one line, `break` inside loops, markers inside quotes, history rules judging new commits only, and `merge-commit-noise` and `large-commits` using the same commit range.
+- The `quick` preset no longer runs style-only and documentation-only checks.
+- Verdict JSON: a stopped run and a finished run carry the same fields: `blocking`, `known`, `knownFindings`, `stale`, `behindBy` (commits the base is ahead) and a `checks` array (one row per check with status, seconds, cached, detail and places). The verdict word matches the exit code (INCOMPLETE for 75, NO-RESULT for 2).
+- Verdict: a branch more than 20 commits behind its base returns NO-RESULT (exit 2) in every outcome, unless `--allow-stale` is given. Timing lines print by themselves for runs over 60 seconds.
+- Verdict: the overall run limit is 1500 seconds by default (`MEERKAT_VERDICT_TIMEOUT_S` overrides it). Before, it was 300 seconds, which cut Rust tests short.
+- Verdict: each complete run writes its summary to `<data folder>/verdicts/<repo>-<branch>.json`.
+- Verdict: an explicit line says whether the base comparison finished.
+- `rust-test` runs only the crates the change touches when the change is inside crates (a workspace-level change still runs everything), waits at most 300 s for the cargo lock, and says which crates and target directory it used.
+- Exit codes follow one table (0 pass, 1 fail, 2 nothing judged, 75 incomplete), and `docs/neuralvault-gate.md` describes it for NeuralVault use.
+- Added a Linux CI job. It has not been verified on GitHub yet.
+
+- Gate cache: the cache key includes a digest of the result code, so a code fix never reuses an old cached result.
+- Verdict JSON on a cargo-lock wait: `verdict` is INCOMPLETE (exit 75) and the object carries `checksTotal`, `checksFinished`, `checks` and `lockHolder`, the same fields as every other verdict.
+- The WAITING line names the lock holder's pid and command in both wordings the lock uses. It printed `?` and `unknown job` before.
+- Gate: a failed test always blocks, and a panic outside the diff is not treated as wide. A cargo test failure is a failing check named by its test, not a crash (it needs exit 101 and cargo's failure summary).
+- Timeouts: a written per-check time limit is a hard ceiling. Load or size no longer stretches it (`rust-test` is 1200 s).
+- Dev baseline: results are stored per exact base commit, and a new base commit is checked again.
+- Verdict JSON: `unmatchedKnown` carries the same value as `stale`, `skippedByPath` lists checks skipped because no changed file matched, and `checksTotal` and `checksFinished` count the same checks everywhere. Unclassified findings are INCOMPLETE (75), never PASS.
+- First-run note: shown once per machine.
+- `meerkat frontend`: a source file maps to its sibling test, and a test step takes only test files. Skipped steps are never a pass.
+- `meerkat batch`: the run cap is 12 gate runs (`MEERKAT_BATCH_MAX_RUNS`), and the status line names the cap when it is hit. Progress and lock-wait lines reach the terminal, and the result file records timings.
+
+### Renamed or changed output
+
+- `stale` keeps its meaning (known-file entries that matched nothing). `unmatchedKnown` is the same value under a clearer name.
+- `line 0` in `places` and `knownFindings` means a file-level finding, not a line.
+- Exit codes follow one table: 0 pass, 1 fail, 2 nothing judged or a usage error, 75 incomplete.
+
+### New commands
+
+- `meerkat batch --base <ref> --app <repo> <branch1> <branch2> ...`: gates several branches together in one run, names the branch whose change fails (and whether the same check fails on the base), re-gates without it, and writes a result file per batch plus a `latest.json` per repo. Refuses a batch over 3000 changed lines or 15 PRs unless `--max-lines`/`--max-prs` say otherwise; `--dry-run` only plans, and a refusal exits 75. Exit 0 all pass, 1 a branch blocked, 75 incomplete or refused.
+- `meerkat frontend --app <folder> [--files <list>]`: runs the commands block's typecheck, test and build steps and writes `frontend.json`. A step with no command, or a test step with no test file, is skipped and the run is not a pass (exit 75). The commands block must be trusted (`meerkat trust`).
+- `meerkat verdict`: one line for a branch, `PASS` or `FAIL n blocking in changed files`. Options: `--base <ref>`, `--json` (one object), `--known <file>` (accepted failures print `KNOWN`, an entry that matches nothing prints `STALE`), `--first` (only the first blocking `file:line: message`, or `PASS`), `--ready` (one `READY` or `NOT READY` line, no claim about tests) and `--branches a b` (one line per branch, each checked out in its own temporary worktree).
+- `meerkat top`: one table of the worst findings in the files the branch changed (`--limit`, `--line`).
+- `meerkat commands`: lists the repo's own test, build and typecheck commands, from the `commands` block of `meerkat.config.json` or the `package.json` scripts. `meerkat trust` approves the block; `meerkat test` and `meerkat build` run it.
+- `meerkat fix`: a unified diff for a finding when its check has a safe fix. A dry run by default; `--apply` writes only if the line is still the one the finding was made from.
+- `meerkat handoff`: one markdown file of under 60 lines (verdict, open findings in changed files, branch, commit, next command) written in the run folder. `--read` prints its header and next command.
+- `meerkat test-run`: run one test file or test name with a time limit through the repo's own runner (vitest, jest, cargo test or pytest). Exit 124 on a timeout.
+- `meerkat lock status`: who holds the machine-wide cargo lock and who waits, with pid, command and time. Read-only.
+- `meerkat who-calls`, `meerkat deps` and `meerkat tests-for`: answers read from the code map, which refreshes only changed files first.
+
+### Behaviour changes
+
+- Verdict exit codes: exit 1 only for a new blocking finding in a changed file. A finding the branch did not add prints `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. `NO-RESULT` is exit 1 or 2 and never a pass; a run stopped early is `INCOMPLETE n of m checks finished, not a pass`, exit 75.
+- `meerkat gate` uses the `bugs` preset unless you pass `--all`. Gate output is compact by default, in the command line and over MCP (`full: true` or `--full` asks for everything).
+- Progress lines (`[12/218] check ... 0.2s FAIL`) and a 5 second still-running line go to stderr, so the answer on stdout can be piped.
+- `gate`, `verdict` and `top` print the merge base they compared against, and the folder, branch and whether it is a worktree, on stderr.
+- `verdict` and `top` run with the result cache off, so they do the whole work each time. The default time limit is set by `MEERKAT_VERDICT_TIMEOUT_S`, and `--max-seconds` stops a run on purpose.
+- A damaged store file is moved aside and said so; an unreadable `meerkat.config.json` stops gate and verdict with exit 2. Every run folder gets a `summary.json`.
+
+### Fixes
+
+- Security: repo commands run only after `meerkat trust`; control characters and Unicode format and separator characters are rejected in them and stripped from everything printed; the `handoff` folder is always single-quoted and must be a real directory, and every written value is sanitised.
+- Security: `meerkat lock status` refuses a linked waiters folder and strips control characters.
+- #82: example scripts' imports of `cargoCmd`, `findBin` and `looksLikeStaging` from `thorough/lib.mjs` resolve, and a test checks every example import.
+- #83: discovery skips project scripts that start Meerkat, and a nested run discovers nothing.
+- #60: the Tauri fs-path guard clears only the variable it checked, and the Electron range uses its lowest allowed version.
+- #55: `docker-dockerignore-missing` reads the build context from CI workflows and Makefiles.
+- Fewer false alarms from several checks (`risky-code`, `unicode-control-chars`, `js-unhandled-promise`, `env-example`, `typosquat-names`, `pii-patterns-in-source`, `telemetry-calls`, `dead-code`, `unused-files`), and `gitattributes-eol` reads committed line endings.
+
+- verdict: `--branches` gives the same result as a plain verdict, and `--json` prints only JSON (one object, or an array for several branches). Every verdict JSON carries `schema: 1`.
+- verdict: `--known` also applies when the run is INCOMPLETE; accepted places are counted, not blocking.
+- Unknown options stop the small commands with exit 2 and write nothing.
+- `smoke` exits 1 on blocking findings, the same as `gate`.
+- `test` with no test command prints one line and exits 2 instead of running the quick check.
+- Exit codes: bad, unknown or missing ids, missing folders and non-git folders exit 2 (table in docs/reference.md).
+- Electron: a preload loaded by basename from its folder, and files named in package.json `build`/`files`, count as used. A constant template in executeJavaScript is not flagged.
+- Timing and history files live in the Meerkat data folder (`MEERKAT_LOG_DIR`, else `~/.meerkat`). Old `~/.meerkat-*.json` files are not migrated.
+
+_Not yet tested on real PRs (TBD):_ verdict exit for a no-diff branch (B17), `top` NO-RESULT exit (B12), the behind-base note, and the hadolint and actionlint messages.
+
+### Known limits
+
+- Not on this branch: `meerkat cost`, `meerkat team`, `meerkat impact`, evidence on `meerkat dismiss`, and editor output (`--format vscode` and `--format jetbrains`). They live on separate branches and are not part of this release. So the refusal of symlinked evidence and team files is not part of it either.
+- The whole test suite has not been run on this final head by this change. Run the checklist in docs/release-0.5.3-checklist.md before you tag.
+- `meerkat verdict --help` does not yet list `--first`, `--ready` or `--branches`; they are in docs/commands.md.
+- `meerkat update` and the trusted-publishing workflow are unit-tested but not verified against a real newer published release. Click-through reference drivers have not run against a real app. The Linux CI job has not been verified on GitHub. Rust findings are leads, and the false-alarm figure is from one project.
+
+Not in 0.5.3: a re-measure of recall, batching and speed work, designs aimed at AI use, a run of the GitHub Action, team features, and the gap features.
+
 ## 0.5.2 (2026-11-07)
 
 - Integration 6 sweep: the README has an Everyday commands table (scoped gate, pre-commit use, brief, blast, map, ratchet, run flags, findings for CI, MCP scope, SKIPPED, commit-message scope, workflow profiles, memory adapter, release tools, update, Windows guard, estimate) and its stale 'gate and smoke are not routed' notes are gone; `meerkat redtest` is listed in docs/commands.md; docs/reference.md describes the careful update path. Fixes found by merging: the release pack list now allows the `profiles/` folder that package.json ships (tools/release/pack-list.mjs, tests/release-tools.test.ts), a SKIPPED check's time is learned so the run estimate no longer keeps its written guess (lib/timings.mjs, lib/timings.test.ts), and four tests were updated to the new result shapes (`counts.skipped`, the MCP status line). PLACEHOLDER: the smoke and red suites (smoke-red-2026-11) are not merged.

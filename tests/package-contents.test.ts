@@ -19,6 +19,6 @@ describe('the npm package contents', () => {
     expect(bad).toEqual([])
   })
   test('stays small', () => {
-    expect(list().length).toBeLessThan(450)
+    expect(list().length).toBeLessThan(500)
   })
 })

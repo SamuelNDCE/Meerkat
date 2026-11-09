@@ -228,18 +228,19 @@ describe('4. severity gate and export', () => {
       const dir = join(logs, 'runs', '20261107-100000-fast')
       mkdirSync(dir, { recursive: true })
       const counts = { total: findings.length, new: 0, known: findings.length, fixed: 0 }
-      writeFileSync(join(dir, 'findings.json'), JSON.stringify({ schemaVersion: 1, run: { id: '20261107-100000-fast' }, counts, findings, fixed: [] }))
+      writeFileSync(join(dir, 'findings.json'), JSON.stringify({ schemaVersion: 1, run: { id: '20261107-100000-fast', project: { name: 'p', path: logs.split(String.fromCharCode(92)).join('/') } }, counts, findings, fixed: [] }))
       writeFileSync(join(dir, 'findings.md'), '# md\n')
       writeFileSync(join(dir, 'findings.sarif'), '{"version":"2.1.0"}')
       writeFileSync(join(logs, 'latest.json'), JSON.stringify({ dir: dir.split('\\').join('/') }))
-      return { MEERKAT_LOG_DIR: logs }
+      return { MEERKAT_LOG_DIR: logs, MEERKAT_TEST_CWD: logs }
     }
     const f = (sev: string, status: string) => ({ id: `${sev}${status}00000000`.slice(0, 16), severity: sev, rule: 'r', check: 'c', suite: 's', file: 'a.js', line: 1, message: 'm', status })
     const run = (env: any, argv: string[]) => {
       const out: string[] = []
       const err: string[] = []
-      const plan = planCommand(argv, { cwd: process.cwd(), env })
-      const code = plan.kind === 'noun' ? findingsCommand(plan, { out: (t: string) => out.push(t), err: (t: string) => err.push(t), env, cwd: process.cwd() }) : -1
+      const cwd = env.MEERKAT_TEST_CWD ?? process.cwd()
+      const plan = planCommand(argv, { cwd, env })
+      const code = plan.kind === 'noun' ? findingsCommand(plan, { out: (t: string) => out.push(t), err: (t: string) => err.push(t), env, cwd }) : -1
       return { code, out: out.join('\n'), err: err.join('\n'), plan }
     }
     test('--fail-on with --new counts only new findings', () => {

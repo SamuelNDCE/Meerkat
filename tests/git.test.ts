@@ -158,3 +158,48 @@ describe('commit-message-format judges only commits not yet on the default branc
     expect(out).toContain('the last 20 commits were checked')
   }, LIMIT)
 })
+
+describe('merge-commit-noise and large-commits judge only commits not yet on the default branch', () => {
+  const budget = (g: object) => ({ '.meerkat-budgets.json': JSON.stringify({ git: g }) })
+  const files = (prefix: string, n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`${prefix}${i}.txt`, `${i}\n`]))
+  const oldOnMain = () => {
+    const dir = newRepo()
+    commit(dir, 'Old work', { 'a.js': '1\n', ...budget({ maxMergeBranchCommits: 0 }) })
+    commit(dir, "Merge branch 'old' into main")
+    return dir
+  }
+  test('an old "Merge branch" commit on main is not counted, and the range is named', () => {
+    const dir = oldOnMain()
+    git(dir, ['checkout', '-q', '-b', 'feature'])
+    commit(dir, 'Add b', { 'b.js': '2\n' })
+    const { code, out } = runCheck(['merge-commit-noise', '--root', dir])
+    expect(code, out).toBe(0)
+    expect(out).toContain('main..HEAD')
+  }, LIMIT)
+  test('a "Merge branch" commit that is not yet on main is counted', () => {
+    const dir = oldOnMain()
+    git(dir, ['checkout', '-q', '-b', 'feature'])
+    commit(dir, "Merge branch 'x' into feature")
+    const { code, out } = runCheck(['merge-commit-noise', '--root', dir])
+    expect(code).toBe(1)
+    expect(out).toContain('Merge branch')
+  }, LIMIT)
+  test('merge-commit-noise with no default branch checks the last 20 and says so', () => {
+    const { out } = runCheck(['merge-commit-noise', '--root', oldOnMain()])
+    expect(out).toContain('the last 20 commits were checked')
+  }, LIMIT)
+  test('an old large commit on main is not judged, a new one is', () => {
+    const dir = newRepo()
+    commit(dir, 'Big old commit', { ...files('m', 6), ...budget({ maxFilesPerCommit: 3 }) })
+    git(dir, ['checkout', '-q', '-b', 'feature'])
+    commit(dir, 'Small change', { 'z.txt': 'z\n' })
+    const quiet = runCheck(['large-commits', '--root', dir])
+    expect(quiet.code, quiet.out).toBe(0)
+    expect(quiet.out).toContain('main..HEAD')
+    commit(dir, 'Big new commit', files('n', 6))
+    const loud = runCheck(['large-commits', '--root', dir])
+    expect(loud.code).toBe(1)
+    expect(loud.out).toContain('Big new commit')
+    expect(loud.out).not.toContain('Big old commit')
+  }, LIMIT)
+})

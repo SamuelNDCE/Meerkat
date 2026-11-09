@@ -25,6 +25,7 @@ import { configPath, finding, isFixture, isTestFile, isText, readText, trackedFi
 
 const VENDORED = /(^|\/)(node_modules|vendor|dist|build|target|\.git|coverage|out|release)\//i
 const MINIFIED = /\.min\.(js|css)$/i
+const MEMO_MAX_BYTES = 256 * 2 ** 20 // text, its lines and the line strings, estimated
 
 const wants = (rule, file) => {
   if (rule.ext) return rule.ext.includes((file.split('.').pop() ?? '').toLowerCase())
@@ -46,13 +47,13 @@ export function readAllow(root, allowFile) {
   return set
 }
 
-function matches(rule, text, file, project) {
+function matches(rule, text, file, project, splitLines) {
   const out = []
   if (rule.whole && rule.re) {
     if (rule.re.test(text)) out.push(1)
     return out
   }
-  const lines = text.split(/\r?\n/)
+  const lines = splitLines ?? text.split(/\r?\n/)
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
     if (rule.skipLine && rule.skipLine.test(line)) continue
@@ -72,7 +73,24 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
   const hits = [] // the same hits with file, line and severity, for the finding lines
   const na = []
   // Other files of the project, for a guard that must look beyond the file with the hit (read on demand).
-  const project = { files: usable, read }
+  // One read and one line split per file for the whole table: a table of N rules used to read and split each file N times. Nothing here writes a file.
+  const memo = new Map()
+  let memoBytes = 0
+  const readOnce = (f) => {
+    const m = memo.get(f)
+    if (m) return m.text
+    const t = read(f)
+    if (typeof t === 'string' && memoBytes + t.length * 6 <= MEMO_MAX_BYTES) {
+      memo.set(f, { text: t, lines: null })
+      memoBytes += t.length * 6
+    }
+    return t
+  }
+  const linesOf = (f, t) => {
+    const m = memo.get(f)
+    return m && m.text === t ? (m.lines ??= t.split(/\r?\n/)) : undefined
+  }
+  const project = { files: usable, read: readOnce }
   const everything = showAll() || process.argv.includes('--fixtures') // a check proves itself on its own fixture with every rule on
   for (const rule of rules) {
     // Pedantic style rules (undocumented Rust items, string errors, ...) are only evaluated when asked for with MEERKAT_FINDINGS=all.
@@ -87,9 +105,9 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
     }
     for (const f of mine) {
       if (allow.has(`${rule.id} ${f}`) || allow.has(`${rule.id} *`)) continue
-      const text = read(f)
+      const text = readOnce(f)
       if (typeof text !== 'string') continue
-      for (const n of matches(rule, text, f, project)) {
+      for (const n of matches(rule, text, f, project, linesOf(f, text))) {
         found.push({ rule: rule.id, text: `${f}:${n} ${rule.title}` })
         hits.push({ rule: rule.id, file: f, line: n, title: rule.title, severity: rule.severity })
       }

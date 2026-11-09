@@ -2,13 +2,13 @@
 // file, a stray fixture or a file outside the expected folders never ships. Nothing is published or written (`npm pack --dry-run`).
 //   node tools/release/pack-list.mjs [--root <dir>]       exit 0 clean, 1 a file broke the rule, 75 npm pack could not run
 // The rule (kept here, in one place):
-//   expected top-level folders: bin, lib, packs, thorough, profiles, fixtures, examples (the workflow profiles, the self-tests and the example packs ship on purpose)
+//   expected top-level folders: bin, lib, packs, thorough, profiles, fixtures, examples, skills (the workflow profiles, the self-tests and the example packs ship on purpose)
 //   expected top-level files:   package.json, README, LICENSE, CHANGELOG.md, llms.txt, run.mjs, meerkat.config.json
 //   fixtures only under fixtures/ or examples/<name>/fixtures/ (planted-defect folders the self-tests read); a fixture anywhere else fails
 //   never: .env files (except .env.example and .env.sample), key and certificate files, .npmrc, credentials and secrets files, test files and tests/ folders
 import { ROOT, first, isMain, run } from './common.mjs'
 
-export const TOP_DIRS = ['bin', 'lib', 'packs', 'thorough', 'profiles', 'fixtures', 'examples']
+export const TOP_DIRS = ['bin', 'lib', 'packs', 'thorough', 'profiles', 'fixtures', 'examples', 'skills']
 export const TOP_FILES = /^(package\.json|README(\.[a-z]+)?|LICENSE(\.[a-z]+)?|CHANGELOG\.md|llms\.txt|run\.mjs|meerkat\.config\.json)$/i
 const SECRET_NAME = [
   /(^|\/)\.env(\.(?!example$|sample$)[^/]*)?$/i,

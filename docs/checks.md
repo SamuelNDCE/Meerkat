@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**400 checks** in 50 suites with 1443 sub-checks (a check that declares no rules counts as one), across 51 packs: 355 quick, 45 thorough, 38 opt-in. [Security 124](#security-checks) · [Functionality 220](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
+**403 checks** in 50 suites with 1446 sub-checks (a check that declares no rules counts as one), across 51 packs: 358 quick, 45 thorough, 38 opt-in. [Security 124](#security-checks) · [Functionality 223](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -22,7 +22,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `accessibility` | Accessibility | 10 | 10 | ARIA, link text, focus, zoom, captions, table headers and colour contrast. |
 | `html-and-css` | HTML and CSS | 10 | 35 | Valid markup, duplicate ids, image sizes, stylesheet lint and !important overuse. |
 | `seo-and-meta` | SEO and meta | 2 | 2 | Title, description, robots and sitemap. |
-| `code-quality` | Code quality | 10 | 10 | Whitespace, indentation, leftovers, empty catches, TODO hygiene and broken imports. |
+| `code-quality` | Code quality | 13 | 13 | Whitespace, indentation, leftovers, empty catches, TODO hygiene and broken imports. |
 | `test-hygiene` | Test hygiene | 21 | 68 | Skipped or focused tests, duplicate test names and projects with no tests. |
 | `refactor` | Refactor | 9 | 9 | Duplicated code, dead code, long files and functions, deep nesting and complexity. |
 | `javascript` | JavaScript and TypeScript | 7 | 7 | Common JS and TS mistakes: loose equality, var, unhandled promises, any, ts-ignore. |
@@ -195,7 +195,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 
 ## Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 220 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 223 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -271,12 +271,15 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `indent-consistency` | fast | tiny | 1 s | No file mixes tab and space indentation | quality |
 | `js-await-in-loop` | fast | tiny | 1 s | No for or while loop awaits each step in turn | lang |
 | `js-eqeqeq` | fast | tiny | 1 s | JavaScript and TypeScript compare with === and !== (null checks aside) | lang |
+| `js-find-undefined` | fast | tiny | 1 s | No find() or map get() result is read before it is checked for undefined | lang |
+| `js-loop-bound` | fast | tiny | 1 s | No for loop runs to <= array.length while indexing the array | lang |
+| `js-missing-await` | fast | tiny | 1 s | No call to a same-file async function drops its promise or reads it as the result | lang |
 | `js-prototype-pollution` | fast | tiny | 1 s | No assignment can reach Object.prototype through __proto__ or a request key | lang |
 | `js-unhandled-promise` | fast | tiny | 1 s | No promise chain starts with .then and leaves its rejection unhandled | lang |
 | `js-var-usage` | fast | tiny | 1 s | No modern JavaScript or TypeScript declares a variable with var | lang |
 | `json-duplicate-keys` | fast | tiny | 1 s | No JSON object repeats a key | content |
 | `json-valid` | fast | tiny | 1 s | Every tracked JSON file parses | hygiene |
-| `large-commits` | fast | tiny | 1 s | No recent commit touches more files than the budget allows | git |
+| `large-commits` | fast | tiny | 1 s | No commit not yet on the default branch (the last 20 with none) touches more files than the budget allows | git |
 | `large-files` | fast | tiny | 1 s | No oversized file or committed binary | hygiene |
 | `large-json-or-data` | fast | tiny | 1 s | No tracked JSON, CSV or SQL file is over the size budget (content.maxDataKb, default 512 KB) | content |
 | `line-length` | fast | tiny | 1 s | No source line is over the length limit (default 200 characters) | quality |
@@ -297,7 +300,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `maven-compile` | fast | heavy | 2.0 min | Maven: the Java code compiles *(needs: mvn)* | java |
 | `maven-test` | fast | heavy | 2.0 min | Maven: the test suite *(needs: mvn)* | java |
 | `maven-validate` | fast | tiny | 10 s | Maven: the project file (pom.xml) is valid *(needs: mvn)* | java |
-| `merge-commit-noise` | fast | tiny | 1 s | Recent history does not fill up with "Merge branch" commits | git |
+| `merge-commit-noise` | fast | tiny | 1 s | Commits not yet on the default branch (the last 20 with none) do not fill up with "Merge branch" commits | git |
 | `model-files-in-git` | fast | tiny | 1 s | Large model files are stored with git-lfs, not plain git | data-science |
 | `mypy` | fast | light | 30 s | mypy: type errors *(needs: mypy)* | python |
 | `node-engines` | fast | tiny | 1 s | package.json declares engines.node, and .nvmrc is not below it | config |
@@ -533,6 +536,13 @@ The `bugs` preset runs the quick checks without the checks and rules below, whic
 | `css-important-overuse` | check | count of !important in CSS, style |
 | `ts-ignore-comments` | check | whether @ts-ignore says why, comment style |
 | `js-var-usage` | check | var versus let and const, style |
+| `license` | check | a license is declared: project housekeeping |
+| `security-policy` | check | SECURITY.md exists: project housekeeping |
+| `ci-present` | check | a CI workflow exists: project housekeeping |
+| `gitignore-essentials` | check | .gitignore covers the usual folders: project housekeeping |
+| `test-presence` | check | the source has test files: project housekeeping |
+| `env-example` | check | every environment variable is documented in .env.example: project housekeeping |
+| `debug-leftovers` | check | console.log and debug prints left in: tidiness, not wrong behaviour |
 | `rp-api-ffi-wasm/rapi-pub-fn-undocumented` | rule | a public function has no /// comment: documentation |
 | `rp-api-ffi-wasm/rapi-pub-type-undocumented` | rule | a public type has no /// comment: documentation |
 | `rp-api-ffi-wasm/rapi-missing-docs-lint` | rule | no #![warn(missing_docs)] attribute: documentation policy |
@@ -573,3 +583,11 @@ The `bugs` preset runs the quick checks without the checks and rules below, whic
 | `rp-api-ffi-wasm/rapi-extern-block-no-link` | rule | extern block without #[link]: informational |
 | `rp-async/rasync-runtime-built-per-call` | rule | tokio runtime built per call: informational performance note |
 <!-- checks:end -->
+
+## Accuracy notes (gate-output release)
+
+- `risky-code`: an `innerHTML` assigned from a string literal, or from a same-file constant that is never reassigned, is not reported, including in a one-line helper. A value taken from request input still is.
+- `js-await-in-loop`: a loop whose body has a plain `break` or `return` (not under an `if`) runs at most one pass and is not reported. An unbounded loop that awaits with no exit, or exits only under an `if`, still is.
+- `markers`: a marker inside a string literal, or quoted ("FIXME", `FIXME`) inside a comment or markdown heading, is the text talking about the marker and is not reported.
+- `commit-message-format`, `merge-commit-noise` and `large-commits` judge only the commits not yet on the default branch (`git log <base>..HEAD`, base: origin/HEAD, origin/main, origin/master, main, master) and print the range. With no base, or with HEAD on the local default branch and no remote, they check the last 20 commits and say so.
+- Lockfile findings (`deprecated-deps`, `wh-supply`) name the direct dependency that pulls a transitive package in, or say "transitive, parent unknown" when the lockfile does not show it.

@@ -72,6 +72,16 @@ const electronApp = (root) => {
 }
 
 // The lowest Electron major version named by a package.json in the project, or null when none can be read (a range such as ^41.0.0 counts as 41).
+// The lowest major version one range alternative allows. Comparators joined by spaces are an AND (>=12 <15 starts at 12); a hyphen range starts at its first
+// number; an alternative with only upper bounds (<9, <=9) starts at 0. Returns null when no number can be read.
+const lowestMajor = (alt) => {
+  const parts = String(alt).trim().split(/\s+/).filter((p) => p && p !== '-')
+  if (!parts.length || !/\d/.test(parts.join(''))) return null
+  const lower = parts.filter((p) => !/^<=?/.test(p))
+  if (!lower.length) return 0
+  const m = /(\d+)/.exec(lower[0])
+  return m ? Number(m[1]) : null
+}
 const electronMajor = (root) => {
   const majors = []
   for (const x of tracked(root, /(^|\/)package\.json$/)) {
@@ -79,8 +89,9 @@ const electronMajor = (root) => {
       const j = JSON.parse(readText(root, x))
       const v = j.dependencies?.electron ?? j.devDependencies?.electron ?? j.peerDependencies?.electron ?? j.optionalDependencies?.electron
       if (v === undefined) continue
-      // Every alternative in a range counts (^41.0.0 || ^9.0.0 is 9); a value with no number in it (latest, a workspace link) makes the version unknown.
-      const nums = String(v).split('||').map((alt) => /(\d+)/.exec(alt)).map((m) => (m ? Number(m[1]) : null))
+      // Every alternative in a range counts and the LOWEST version it allows is used: ^41.0.0 || ^9.0.0 is 9, and <9 || ^41 is 0 (an upper-bound-only
+      // alternative allows everything below it). A value with no number in it (latest, a workspace link) makes the version unknown.
+      const nums = String(v).split('||').map((alt) => lowestMajor(alt))
       if (nums.some((n) => n === null)) return null
       majors.push(...nums)
     } catch {

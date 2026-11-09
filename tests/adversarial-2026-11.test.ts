@@ -54,6 +54,7 @@ const envFor = (s: { logs: string; home: string }, extra: Record<string, string>
   MEERKAT_NO_TIP: '1',
   MEERKAT_PLAIN: '1',
   NO_COLOR: '1',
+  MEERKAT_TRUST_PROJECT: '1', // 0.5.3: these fixtures carry their own check code; without a terminal it is only run when the operator says so
   ...extra,
 })
 

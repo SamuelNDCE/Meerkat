@@ -17,6 +17,7 @@ const put = (rel: string, text: string) => {
 const pkg = (scripts: Record<string, string>) => put('package.json', JSON.stringify({ name: 'fx', scripts }))
 const ids = (r: { items: { id: string }[] }) => r.items.map((i) => i.id)
 beforeEach(() => {
+  delete process.env.MEERKAT_NESTED
   dir = mkdtempSync(join(tmpdir(), 'meerkat-disc-'))
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
@@ -255,5 +256,27 @@ describe('meerkat discover', () => {
     const r = await go(['discover'])
     expect(r.out).toMatch(/Turned off by your config/)
     expect(r.err).not.toMatch(/no such check/)
+  })
+})
+
+describe('Meerkat inside Meerkat (#83)', () => {
+  test('a script that starts Meerkat, directly or through a launcher file, is not found', () => {
+    pkg({ test: 'vitest run', verify: 'meerkat run --preset quick', 'verify:fast': 'node scripts/launch.cjs', 'verify:thorough': 'npx @samuelndce/meerkat run --preset thorough', smoke: 'node smoke.js' })
+    put('scripts/launch.cjs', "require('node:child_process').spawnSync('meerkat', ['run', '--preset', 'quick'])\n")
+    put('smoke.js', 'process.exit(0)\n')
+    const r = discover(dir)
+    expect(ids(r).sort()).toEqual(['found-smoke', 'found-test'])
+    expect(r.skipped.map((s: { what: string }) => s.what).join('\n')).toMatch(/verify:fast/)
+  })
+  test('with project code unreadable, a script line that names Meerkat is still skipped', () => {
+    pkg({ test: 'vitest run', verify: 'meerkat run' })
+    expect(ids(discover(dir, { noProjectCode: true }))).toEqual(['found-test'])
+  })
+  test('MEERKAT_NESTED turns discovery off for a nested run', () => {
+    pkg({ test: 'vitest run' })
+    expect(discoverChecks(dir, { env: {} }).checks.length).toBe(1)
+    const nested = discoverChecks(dir, { env: { MEERKAT_NESTED: '1' } })
+    expect(nested.checks).toEqual([])
+    expect(nested.result.notes.join(' ')).toMatch(/MEERKAT_NESTED/)
   })
 })

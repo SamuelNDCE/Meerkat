@@ -6,8 +6,36 @@
 //   rust-audit          cargo audit (known advisories in the dependencies)
 //   rust-build-release  cargo build --release (catches what only breaks in a release build), thorough
 // Cargo jobs share the machine-wide cargo lock, so only one Rust build runs at a time, however many checks there are.
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
 
+// rust-test runs only the crates the change touches when the change is inside crates. A change to the workspace itself (root Cargo.toml, Cargo.lock, the toolchain, .cargo) runs everything.
+const WORKSPACE_FILES = /^(?:Cargo\.toml|Cargo\.lock|rust-toolchain(?:\.toml)?|\.cargo\/)/
+function crateNameOf(manifest) {
+  const text = readFileSync(manifest, 'utf8')
+  const pkg = /^\[package\]([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(text)
+  return pkg ? (/^\s*name\s*=\s*"([^"]+)"/m.exec(pkg[1])?.[1] ?? null) : null
+}
+export function scopeRustTest(ctx) {
+  const files = (ctx.changedFiles ?? []).map((f) => String(f).replace(/\\/g, '/'))
+  if (!files.length || !ctx.repoRoot) return null
+  if (files.some((f) => WORKSPACE_FILES.test(f))) return null
+  const names = new Set()
+  for (const f of files) {
+    if (!/\.rs$|(^|\/)Cargo\.toml$/.test(f)) continue
+    let dir = dirname(join(ctx.repoRoot, f))
+    while (dir.length >= ctx.repoRoot.length) {
+      const m = join(dir, 'Cargo.toml')
+      if (existsSync(m)) { const n = crateNameOf(m); if (!n) return null; names.add(n); break }
+      if (dir === dirname(dir)) break
+      dir = dirname(dir)
+    }
+  }
+  if (!names.size) return null
+  const list = [...names].sort()
+  return { args: ['test', ...list.flatMap((n) => ['-p', n])], note: `rust-test ran only the changed crate(s) ${list.join(', ')} (target: ${ctx.env?.CARGO_TARGET_DIR ?? 'the repo default target/'}); cargo test --workspace runs the rest` }
+}
 const FIX = `${MK}/fixtures`
 const RUST_PATHS = ['**/*.rs', 'Cargo.toml', '**/Cargo.toml', 'Cargo.lock', '.cargo/**', 'rust-toolchain.toml']
 
@@ -45,9 +73,14 @@ const CHECKS = [
     cost: { cpu: 8, memGB: 4 },
     title: 'Rust tests (cargo test, the whole workspace)',
     estSeconds: 300, weight: 'heavy', scale: 'crates',
+    // A cold cargo build of the scoped crate can pass 300 s on a large dependency tree; the scoped run needs the room to finish.
+    timeoutSeconds: 1200,
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['test', '--workspace'], cwd: 'repo' },
+    scopeArgs: scopeRustTest,
+    // A verdict waits for the cargo lock at most 300 s before it reports NOT RUN with the holder, instead of the lock default of 900 s.
+    env: { MEERKAT_LOCK_MAX_WAIT: '300' },
     selfTest: { cmd: 'cargo', args: ['test', '--manifest-path', `${FIX}/test-broken/Cargo.toml`], cwd: 'repo', expectFail: true },
   },
   {

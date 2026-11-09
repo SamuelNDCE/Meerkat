@@ -38,12 +38,14 @@ describe('1. the last run per preset', () => {
   it('a later self-test run does not hide the app run', () => {
     const app = saveRun('full', 'thorough', 'app-test')
     const self = saveRun(undefined, 'fast', 'selfcheck', { runKey: 'self-test' })
-    expect(showLast(env).text).toContain('selfcheck') // the newest, as before
+    // 0.5.3 (P1.5): a self-test is never "the last run" any more, so the plain last run is still the app run.
+    expect(showLast(env).text).toContain('app-test')
     expect(pickRunDir(env, { preset: 'full' })).toEqual({ ok: true, dir: app })
     expect(pickRunDir(env, { preset: 'self-test' }).dir).toBe(self)
     expect(showLast(env, null, { preset: 'full' }).text).toContain('app-test')
     expect(showWhy('app-test', env, 80, { preset: 'full' }).text).toContain('log of app-test')
-    expect(showWhy('app-test', env, 80, {}).ok).toBe(false)
+    expect(showWhy('app-test', env, 80, {}).ok).toBe(true)
+    expect(showWhy('selfcheck', env, 80, {}).ok).toBe(false)
   })
   it('a run folder name picks that run, and a bad one is refused', () => {
     const app = saveRun('full', 'thorough', 'app-test')
@@ -79,9 +81,9 @@ describe('2. the folder says what ran', () => {
   it('is named after the command, not the tier', () => {
     const full = makeRunDir(env, 'thorough', new Date(), undefined, '/x/my-app', 'full') as string
     const sec = makeRunDir(env, 'thorough', new Date(Date.now() + 2000), undefined, '/x/my-app', 'security') as string
-    expect(full).toMatch(/-my-app--full$/)
-    expect(sec).toMatch(/-my-app--security$/)
-    expect(parseRunName(full.split('/').pop())).toMatchObject({ project: 'my-app', tier: 'full' })
+    expect(full).toMatch(/-my-app-[0-9a-f]{6}--full$/)
+    expect(sec).toMatch(/-my-app-[0-9a-f]{6}--security$/)
+    expect(parseRunName(full.split('/').pop())).toMatchObject({ project: expect.stringMatching(/^my-app-[0-9a-f]{6}$/), tier: 'full' })
     expect(parseRunName('20261101-101010--security')).toMatchObject({ project: null, tier: 'security' })
     expect(parseRunName('20261101-101010-my-app-thorough')).toMatchObject({ project: 'my-app', tier: 'thorough' })
   })
@@ -101,8 +103,10 @@ describe('3. every failure in the summary', () => {
     expect(line).toContain('45 failure(s) in total')
     expect(line).toContain('C:/logs/run')
   })
+  // Since 0.5.3 gateText prints a failing row's `places` (file:line list, see placeLines in lib/gate.mjs), not the raw `findings`, so the row carries both.
+  // the plain gate default is now the compact text (no per-finding lines); the listing is the verbose layout
   it('gate and smoke text lists them under the check', () => {
-    const text = gateText('gate', { files: ['a'], rows: [{ id: 'lint', kind: 'fail', detail: 'first', findings: fs }], skipped: [], note: '', exitCode: 1, logDir: 'C:/logs/g' }, 'staged')
+    const text = gateText('gate', { files: ['a'], rows: [{ id: 'lint', kind: 'fail', detail: 'first', findings: fs, places: fs.map((f) => ({ file: f.file, line: f.line })) }], skipped: [], note: '', exitCode: 1, logDir: 'C:/logs/g' }, 'staged', { verbose: true })
     expect(text).toContain('src/a3.ts:3')
     expect(text).toContain('logs: C:/logs/g')
   })

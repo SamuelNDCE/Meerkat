@@ -28,7 +28,7 @@ const whitespace = (root) => {
 }
 
 // ---- env-example: every environment variable the code reads is written down somewhere
-const COMMON_ENV = new Set(['NODE_ENV', 'PATH', 'HOME', 'USER', 'USERPROFILE', 'CI', 'PWD', 'TMPDIR', 'TEMP', 'TMP', 'SHELL', 'LANG', 'TERM', 'DEBUG', 'PORT', 'HOST', 'APPDATA', 'LOCALAPPDATA', 'NO_COLOR', 'FORCE_COLOR', 'APPIMAGE', 'PORTABLE_EXECUTABLE_FILE', 'PORTABLE_EXECUTABLE_DIR', 'VITE_DEV_SERVER_URL', 'ELECTRON_RUN_AS_NODE'])
+const COMMON_ENV = new Set(['NODE_ENV', 'PATH', 'HOME', 'USER', 'USERPROFILE', 'CI', 'PWD', 'TMPDIR', 'TEMP', 'TMP', 'SHELL', 'LANG', 'TERM', 'DEBUG', 'PORT', 'HOST', 'APPDATA', 'LOCALAPPDATA', 'NO_COLOR', 'FORCE_COLOR', 'APPIMAGE', 'PORTABLE_EXECUTABLE_FILE', 'PORTABLE_EXECUTABLE_DIR', 'VITE_DEV_SERVER_URL', 'ELECTRON_RUN_AS_NODE', 'XDG_DATA_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_RUNTIME_DIR'])
 // Set by the runtime or the packager, never by the person running the app: Electron's own ELECTRON_* switches, npm's npm_* and NODE_* variables, GitHub's GITHUB_*.
 const RUNTIME_ENV = /^(?:ELECTRON_[A-Z_]+|npm_[A-Za-z0-9_]+|NODE_[A-Z_]+|GITHUB_[A-Z_]+|RUNNER_[A-Z_]+)$/
 const envExample = (root) => {
@@ -36,15 +36,19 @@ const envExample = (root) => {
   const docs = files.filter((x) => /(^|\/)(\.env\.(example|sample|template)|README[^/]*|docs\/.*\.md)$/i.test(x)).map((x) => readText(root, x)).join('\n')
   const allow = allowList(root, '.meerkat-env-allow')
   const used = new Map()
+  const assigned = new Set() // a name the project's own code sets for its child processes (process.env.X = value) is plumbing, not something a person configures
+  const assign = /process\.env\.([A-Z][A-Z0-9_]{2,})\s*=(?![=>])(?!\s*process\.env\.)/g
   const re = /(?:process\.env\.([A-Z][A-Z0-9_]{2,})|process\.env\[['"]([A-Z][A-Z0-9_]{2,})['"]\]|os\.environ(?:\.get)?\(?\[?['"]([A-Z][A-Z0-9_]{2,})['"]|os\.getenv\(['"]([A-Z][A-Z0-9_]{2,})['"]|env::var\("([A-Z][A-Z0-9_]{2,})"\)|os\.Getenv\("([A-Z][A-Z0-9_]{2,})"\))/g
   for (const x of files) {
     if (!SOURCE.test(x) || TESTISH.test(x)) continue
-    for (const m of readText(root, x).matchAll(re)) {
+    const text = readText(root, x)
+    for (const m of text.matchAll(assign)) assigned.add(m[1])
+    for (const m of text.matchAll(re)) {
       const name = m.slice(1).find(Boolean)
       if (!used.has(name)) used.set(name, x)
     }
   }
-  const f = [...used].filter(([n]) => !COMMON_ENV.has(n) && !RUNTIME_ENV.test(n) && !allow.has(n) && !docs.includes(n)).map(([n, x]) => `${n} is read in ${x} but is not in .env.example or the README (add it, or list it in .meerkat-env-allow)`)
+  const f = [...used].filter(([n]) => !COMMON_ENV.has(n) && !RUNTIME_ENV.test(n) && !allow.has(n) && !assigned.has(n) && !docs.includes(n)).map(([n, x]) => `${n} is read in ${x} but is not in .env.example or the README (add it, or list it in .meerkat-env-allow)`)
   return finish('env-example', f, 'every environment variable the code reads is documented')
 }
 
@@ -561,7 +565,7 @@ const safeLiteralAssign = (t0, m, why, vouched = new Set()) => {
   if (full === null) return false
   const oneLine = !full.includes('\n')
   // A plain name or dotted path that is a top-level constant holding only text (const ICONS = { save: '<svg ...>' }) is author-written markup too.
-  const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*(?:\/\/.*)?$/.exec(rest)
+  const root = /^([A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*|\[(?:'[^']*'|"[^"]*")\])*\s*;?\s*\}*\s*(?:\/\/.*)?$/.exec(rest)
   if (oneLine && root && isConstantMarkup(t, root[1])) return true
   if (oneLine && root && !root[0].includes('.') && paramOnlyConstants(t, m.index, root[1])) return true
   // A constant by the ALL_CAPS convention (ICON.close, ICONS['x'], SPINNER_SVG) holds markup the author wrote, not input.
@@ -700,6 +704,9 @@ const riskyCode = (root) => {
         if (!jsLike && (/^\s*(?:\/\/|\/\*|\*|#)/.test(before) || (!why.startsWith('a plain http') && /\.(rs|py|go)$/.test(x) && (before.match(/(?<!\\)"/g) ?? []).length % 2 === 1))) continue
         // Inside a comment: the scanner's own blanked copy has a space where the code has a character (a regex literal becomes 0, so a // inside one is not a comment).
         // Only when the file was read with certainty (blankFailed is false): a comment decision made from an unconfirmed string, template or regex state is not trusted.
+        // A line that starts with // is a comment, or text inside a template or string: either way this call is not run from it. This holds even when the file
+        // could not be read with certainty (blankFailed), because nothing on such a line is live code. The plain-http rule matches the string itself, so it is judged as before.
+        if (jsLike && before.trimStart().startsWith('//') && !why.startsWith('a plain http')) continue
         if (jsLike) {
           const b = blankComments(t, /\.[jt]sx$/.test(x))
           if (!blankFailed && b[m.index] === ' ' && t[m.index] !== ' ') continue
@@ -717,20 +724,27 @@ const riskyCode = (root) => {
           const around = t.split('\n').slice(Math.max(0, lineOf(t, m.index) - 4), lineOf(t, m.index) + 3).join('\n')
           const secretNear = /pass|pwd|secret|token|sign|auth|cert|hmac|credential|api[_-]?key|\bkey\b|session|nonce|salt|\botp\b|\bpin\b/i.test(around)
           const benign = /dedup|duplicate|checksum|etag|fingerprint|cache[_-]?key|content[_-]?hash|usedforsecurity\s*=\s*False|by_?hash|readFileSync|read_bytes|fs::read/i.test(around)
-          if (benign && !secretNear) {
+          // A digest cut to a short prefix on the same line (.slice(0, 6)) names a folder or a bucket: 12 hex characters or fewer cannot stand in for a secret or a signature.
+          const shortPrefix = /\.digest\([^)]*\)\s*\.(?:slice|substring|substr)\(\s*0\s*,\s*(?:[1-9]|1[0-2])\s*\)/.test(t.slice(ls, t.indexOf('\n', m.index) < 0 ? t.length : t.indexOf('\n', m.index)))
+          if ((benign || shortPrefix) && !secretNear) {
             if (!allow.has(`${x}:${lineOf(t, m.index)}`)) structured.push(['info', 'risky-call', x, lineOf(t, m.index), `${why} (used as a content hash or checksum)`])
             continue
           }
         }
         if (!allow.has(`${x}:${lineOf(t, m.index)}`)) {
+          // innerHTML fed straight from request or URL input is the textbook XSS: say so, so the reader knows it is not a guess about "untrusted".
+          const rhsEnd = t.indexOf('\n', m.index + m[0].length)
+          const rhs = t.slice(m.index + m[0].length, rhsEnd < 0 ? t.length : rhsEnd)
+          const fromInput = why.startsWith('innerHTML') && /\b(?:req|request)\.|\blocation\.|\bsearchParams\b|\bquery\b|\bparams\b|\bbody\b/.test(rhs)
+          const why2 = fromInput ? `${why}; the value comes from request or URL input` : why
           // The finding carries the exact line that records the decision, so accepting it is a paste (the file is read from the project's own folder).
-          f.push(`${x}:${lineOf(t, m.index)} ${why}  [if it is safe, accept it by adding this line to .meerkat-risky-allow: ${x}:${lineOf(t, m.index)} # reason: say why it is safe]`)
+          f.push(`${x}:${lineOf(t, m.index)} ${why2}  [if it is safe, accept it by adding this line to .meerkat-risky-allow: ${x}:${lineOf(t, m.index)} # reason: say why it is safe]`)
           // Every hit is reported with its own severity: innerHTML with a value the code does not show to be safe is a medium risk (it depends on where the
           // value comes from), the other calls keep the check's own severity (high).
           // A plain variable on the right (el.innerHTML = icon) only says "check where it comes from": low. Built text (concatenation, a template with a
           // value in it, a call) is medium.
           const htmlSeverity = bareValue(t, m) ? 'low' : 'medium'
-          structured.push([why.startsWith('innerHTML') ? htmlSeverity : fallbackSeverity, why.startsWith('innerHTML') ? 'innerhtml-assignment' : 'risky-call', x, lineOf(t, m.index), why])
+          structured.push([why.startsWith('innerHTML') ? htmlSeverity : fallbackSeverity, why.startsWith('innerHTML') ? 'innerhtml-assignment' : 'risky-call', x, lineOf(t, m.index), why2])
         }
       }
     }

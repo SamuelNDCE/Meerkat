@@ -69,7 +69,7 @@ One entry of `findings[]`:
 
 | Field | Holds |
 |---|---|
-| `id` | the fingerprint: 16 hex characters, see below |
+| `id` | the fingerprint: 16 hex characters. It follows the code, not the line: check, rule, file and the message with every position removed (":12", "line 12", "L12", "(12, 5)", "col 5"; lib/findingid.mjs). `legacyId` is the id from before ids followed the code, when it differs: older dismissals and baselines still match by it |
 | `severity` | `critical`, `high`, `medium`, `low` or `info` |
 | `title`, `message` | the rule's title (else the message) and the message |
 | `suite`, `check`, `rule` | the suite, the check id, the rule id (the sub-check id) or null |

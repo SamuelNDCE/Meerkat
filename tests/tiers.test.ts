@@ -176,7 +176,7 @@ describe('time limits', () => {
     expect(effectiveTimeoutSeconds(normal, { load: 2 })).toBe(240)
     expect(effectiveTimeoutSeconds(normal, { load: () => 1.5 })).toBe(180)
     expect(effectiveTimeoutSeconds(normal, { load: 9 })).toBe(240) // the factor itself is capped
-    expect(effectiveTimeoutSeconds({ ...normal, timeoutSeconds: 7 }, { load: 2 })).toBe(14)
+    expect(effectiveTimeoutSeconds({ ...normal, timeoutSeconds: 7 }, { load: 2 })).toBe(7) // a written limit is a hard ceiling: load does not stretch it (29f83f4)
     expect(effectiveTimeoutSeconds(normal, { load: 2, budgets: { timeouts: { n: 900 } } })).toBe(900) // an exact limit stays exact
   })
   test('it grows with the project size, and an explicit larger pack timeout is kept', () => {
@@ -229,7 +229,7 @@ describe('the run timeline records time properly', () => {
     writeFileSync(join(app, 'a.json'), '{"a":1}\n')
     const logs = join(dir, 'tl-logs')
     mkdirSync(logs)
-    const r = spawnSync(process.execPath, [join(__dirname, '..', 'run.mjs'), '--app', app, '--preset', 'quick', '--only', 'json-valid,whitespace,large-files,final-newline', '--plain'], { env: { ...process.env, MEERKAT_LOG_DIR: logs, MEERKAT_TIMINGS: join(dir, 'tl-timings.json'), NO_COLOR: '1' }, encoding: 'utf8', timeout: 90_000 })
+    const r = spawnSync(process.execPath, [join(__dirname, '..', 'run.mjs'), '--app', app, '--preset', 'full', '--only', 'json-valid,whitespace,large-files,final-newline', '--plain'], { env: { ...process.env, MEERKAT_LOG_DIR: logs, MEERKAT_TIMINGS: join(dir, 'tl-timings.json'), NO_COLOR: '1' }, encoding: 'utf8', timeout: 90_000 })
     expect(r.error).toBeUndefined()
     const runs = readdirSync(join(logs, 'runs'))
     expect(runs.length).toBe(1)

@@ -126,6 +126,7 @@ describe('the end of a run in a terminal', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+  // Passes use the per-check table only with --verbose (docs/commands.md: failures are listed, --verbose lists every check), so the test asks for it.
   test('a run with no terminal prints the plain lines as before: the table, SUMMARY, the result line, no screens', () => {
     const app = mkdtempSync(join(tmpdir(), 'mk-app-'))
     const logs = mkdtempSync(join(tmpdir(), 'mk-logs-'))
@@ -133,7 +134,7 @@ describe('the end of a run in a terminal', () => {
       mkdirSync(join(app, 'src'))
       writeFileSync(join(app, 'package.json'), '{"name":"x","version":"1.0.0"}')
       writeFileSync(join(app, 'data.json'), '{}')
-      const out = execFileSync(process.execPath, [join(__dirname, '..', '..', 'run.mjs'), '--app', app, '--no-config', '--only', 'json-valid', '--all'], { encoding: 'utf8', env: { ...process.env, MEERKAT_LOG_DIR: logs, MEERKAT_PLAIN: '1', CI: '1' } })
+      const out = execFileSync(process.execPath, [join(__dirname, '..', '..', 'run.mjs'), '--app', app, '--no-config', '--only', 'json-valid', '--all', '--verbose'], { encoding: 'utf8', env: { ...process.env, MEERKAT_LOG_DIR: logs, MEERKAT_PLAIN: '1', CI: '1' } })
       expect(out).toMatch(/^(PASS|FAIL|NOT RUN)/m)
       expect(out).toContain('SUMMARY')
       expect(out).toMatch(/MEERKAT fast: \d+ passed/)

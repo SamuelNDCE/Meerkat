@@ -40,6 +40,9 @@ A NOT RUN is never a pass. Report what is missing.
 | Command | What it does |
 |---|---|
 | `meerkat gate` | Runs only the checks whose paths match files changed since the base ref (`--staged`, `--base <ref>`, `--against <ref>`, `--json`, `--thorough`). |
+| `meerkat verdict --base <ref>` | One line for a branch: PASS (0), FAIL (1), NO-RESULT (2) or INCOMPLETE (75, never a pass). `--json` for the fields. |
+| `meerkat batch --base <ref> --app <repo> <branch>...` | One gate for several branches; names the culprit. Statuses: PASS, MERGEABLE, BLOCKED, EXCLUDED, STALE, INCOMPLETE. |
+| `meerkat frontend` | Runs the repo's own typecheck, test and build commands (trusted block only). A skipped step is not a pass. |
 | `meerkat smoke` | Runs each selected check on the changed files with a tiny time limit. It fails when the tool misbehaves, not when your project has problems. |
 | `meerkat blast <file>[#symbol]` | Importers, modules, tests that reach the target, and unresolved imports (never counted as safe). `--json` for the full result. |
 | `meerkat brief <file>[#symbol]` | Declaration, callers, tests, findings from the last saved run, git churn, a risk tier with reasons and a checklist. Starts no scan. `--json` for the facts. |

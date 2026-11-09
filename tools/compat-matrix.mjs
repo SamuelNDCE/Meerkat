@@ -91,8 +91,8 @@ export async function runMatrix({ names = Object.keys(FIXTURES), dir, work, time
   const defs = await allCheckIds()
   mkdirSync(work, { recursive: true })
   const ids = defs.map((d) => d.id)
-  // EVERY pack on every project (not just the ones that apply), so each check shows how it behaves where it does not belong. The neuralvault
-  // example pack needs that app's own window harness and is not in packs/.
+  // EVERY pack on every project (not just the ones that apply), so each check shows how it behaves where it does not belong. The example
+  // packs need the app's own window harness and are not in packs/.
   const packs = [...new Set(defs.map((d) => d.pack))]
   const projects = makeFixtures(dir, names)
   const rows = []

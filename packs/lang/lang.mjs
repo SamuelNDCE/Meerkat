@@ -17,6 +17,9 @@ const make = (id, title) => ({
 
 export default [
   make('js-eqeqeq', 'JavaScript and TypeScript compare with === and !== (null checks aside)'),
+  make('js-missing-await', 'No call to a same-file async function drops its promise or reads it as the result'),
+  make('js-loop-bound', 'No for loop runs to <= array.length while indexing the array'),
+  make('js-find-undefined', 'No find() or map get() result is read before it is checked for undefined'),
   make('js-var-usage', 'No modern JavaScript or TypeScript declares a variable with var'),
   make('js-await-in-loop', 'No for or while loop awaits each step in turn'),
   make('js-unhandled-promise', 'No promise chain starts with .then and leaves its rejection unhandled'),

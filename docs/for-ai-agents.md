@@ -64,6 +64,9 @@ All of these print results on stdout and progress or errors on stderr. Add `--js
 | `meerkat run list\|show <id>\|log <check>` | Past runs (JSON with `--json`), one run, or one check's log from a run. | 0, 2 |
 | `meerkat logs` | The folder where logs are kept. | 0 |
 | `meerkat recommend [folder]` | Tests the project could run that no check covers yet. Writes nothing. | 0, 2 |
+| `meerkat verdict [folder] --base <ref> --json` | JSON: `verdict`, `exitCode`, `blocking`, `checks` (rows with `check`, `status`, `detail`, `places`), `checksTotal`, `checksFinished`, `skippedByPath`, `unmatchedKnown`, `behindBy`. See [ai.md](ai.md). | 0 PASS, 1 FAIL, 2 NO-RESULT, 75 INCOMPLETE (never a pass) |
+| `meerkat batch --base <ref> --app <repo> <branch>...` | One line per branch (PASS, MERGEABLE, BLOCKED, EXCLUDED, STALE, INCOMPLETE) and a result file; `--json` prints it. See [batch.md](batch.md). | 0, 1, 2, 75 |
+| `meerkat frontend [--files <list>]` | Runs the repo's own typecheck, test and build commands (trusted `commands` block) and writes `frontend.json`; a skipped or untrusted step is not a pass. | 0, 1, 2 |
 | `meerkat mcp serve` | Starts the MCP server (its tools are listed below; `node bin/meerkat-mcp.mjs --list-tools` prints the count). | 0 |
 
 Commands that change files exist too (`check new\|edit\|remove`, `preset new\|edit\|delete`, `pack enable\|disable`, `init`, `mcp install`, `update`). They need `--yes` when there is no terminal, `--dry-run` shows what they would do, and an agent should not use them to turn a check off to make a run pass (see the rules at the end).
@@ -234,6 +237,8 @@ Four more tools: `meerkat_version` (the server version, the build commit when kn
 | `meerkat_check_list` | `folder?` | The checks the project defines itself and the packs. Read only. |
 | `meerkat_prompt` | `folder` (required), `run?`, `preset?` | WRITES one file: the AI prompt for a run, in the run folder. Never the clipboard. |
 | `meerkat_run_list` | `folder?`, `limit?` (1 to 100) | Past runs of a folder: id, preset, exit code, time. |
+| `meerkat_summary` | `folder?`, `base?` | Runs the gate and answers in a few lines: pass or fail, blocking and pre-existing counts, failed check names, run folder. |
+| `meerkat_first_failure` | `folder?`, `base?` | One line: the first blocking finding in the changed files, or PASS, or the NO-RESULT or INCOMPLETE line. |
 
 The gate is `meerkat_gate` (changed files only) or `meerkat_run` with `preset: "full"` (everything). The catalog is `meerkat_tests`; blast and map are `meerkat_blast` and `meerkat_map`. `meerkat_dismiss` and `meerkat_baseline` write to the home folder: keep the client's approval step on for them.
 
@@ -250,6 +255,15 @@ Check ids, preset names and opt-in names must be lowercase letters, digits and d
 ## Suites and sub-checks
 
 Checks are grouped into suites (`meerkat suite list --json`). Run one with `meerkat check <suite>`, one check with `meerkat check <suite>/<check>`, one rule with `meerkat check <suite>/<check>/<rule>`; `meerkat verify --suite a,b` and `--only` take the same words. In the run summary (`--json`) every result has `suite`, `subs` (`{ id, status: PASS|FAIL|NA, reason }`) and `subTotal`, `subPass`, `subFail`, `subNa`; the run has `subTotals` (`total`, `pass`, `fail`, `na`) and `suites`. A check that reports no rules counts as one sub-check. `NA` (not applicable here) is never a failure. The MCP `meerkat_run` takes `suite` and `only` with the same words, and `meerkat_list` returns `suites`. To turn things off: `"disable": ["suite:web-security"]`, `"disableSubs": ["secret-scan/aws-access-key"]`. Details: docs/suites.md.
+
+## Decision guide: verdict, batch, INCOMPLETE
+
+- One branch, may it be promoted: `meerkat verdict --base <ref> --json`. Read `verdict`, `exitCode` and `blocking`. Exit 0 PASS, 1 FAIL, 2 NO-RESULT, 75 INCOMPLETE.
+- Several branches that must land together: `meerkat batch --base <ref> --app <repo> <branch>...`. Fix each BLOCKED branch. EXCLUDED and STALE branches were not judged; INCOMPLETE is not a pass.
+- The repo's own typecheck, tests and build: `meerkat frontend`. A skipped or untrusted step did not run and is not a pass.
+- INCOMPLETE (75): fix any blocking finding it lists, then continue with `--resume <file>` or run again with a longer limit (`MEERKAT_VERDICT_TIMEOUT_S`). If it stays INCOMPLETE, stop and report. Never treat a 75 as a pass.
+- `checksFinished` below `checksTotal`, a non-empty `skippedByPath` or `unmatchedKnown` are things to report, not hide.
+- There is no MCP tool for `verdict`, `batch` or `frontend`: call the CLI. Full field tables: [ai.md](ai.md).
 
 ## Rules for agents
 

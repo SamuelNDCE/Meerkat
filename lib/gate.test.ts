@@ -161,12 +161,12 @@ describe('the command', () => {
     expect(e).toContain('--staged')
     expect(e).toContain('--timeout')
   })
-  test('gateMain returns 2 for bad usage and 75 outside a git repo', async () => {
+  test('gateMain returns 2 for bad usage and for a folder outside a git repo', async () => {
     const out: string[] = []
     const io = { log: (l: string) => out.push(l), err: (l: string) => out.push(l) }
     expect(await gateMain(['--bogus'], io)).toBe(EXIT.usage)
     const plain = mkdtempSync(join(root, 'cmd-'))
-    expect(await gateMain(['--app', plain], { ...io, env: { ...process.env, MEERKAT_NO_PROJECT_CODE: '1' } })).toBe(EXIT.notRun)
+    expect(await gateMain(['--app', plain], { ...io, env: { ...process.env, MEERKAT_NO_PROJECT_CODE: '1' } })).toBe(EXIT.usage)
   })
   test('classify: exit 1 with findings is a fail, exit 1 with a stack trace is a crash', () => {
     expect(classify({ status: 'FAIL', exitCode: 1 }, 'src/a.js:1 problem')).toBe('fail')
@@ -179,9 +179,9 @@ describe('the command', () => {
 describe('gate output says what to do', () => {
   test('a failed gate ends with a next-step line, and an empty staging area says how to stage', async () => {
     const failing = { id: 'x', kind: 'fail', detail: 'src/a.js:1 bad', findings: [] }
-    const text = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [failing], skipped: [], note: '' }, 'staged files')
+    const text = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [failing], skipped: [], note: '' }, 'staged files', { verbose: true })
     expect(text).toMatch(/\nnext: fix the checks listed under "in the files you changed"/)
-    const old = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [{ id: 'y', kind: 'fail', detail: 'no SECURITY.md', findings: [] }], skipped: [], note: '' }, 'staged files')
+    const old = gateText('gate', { exitCode: EXIT.fail, files: ['src/a.js'], rows: [{ id: 'y', kind: 'fail', detail: 'no SECURITY.md', findings: [] }], skipped: [], note: '' }, 'staged files', { verbose: true })
     expect(old).toMatch(/\nnext: no failure points into the files you changed/)
     expect(gateText('gate', { exitCode: EXIT.pass, files: [], rows: [], skipped: [], note: '' }, 'd')).not.toMatch(/next:/)
     const none = await runGate({ checks: [jsOk], files: [], repoRoot: dir, ...quiet })

@@ -6,11 +6,15 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { cpus, freemem } from 'node:os'
 import { diffSnapshots, snapshotDigest, snapshotTree, violationText } from './lib/integrity.mjs'
 import { cacheFile, cacheHit, cacheKey, readCache, saveCache, updatedCache } from './lib/resultcache.mjs'
-import { acceptedSets, applyAccepted } from './lib/accepted.mjs'
+import { markLegacyNoticed, migrationNote, unnoticedLegacy } from './lib/findingid.mjs'
+import { acceptedSets, applyAccepted, passInlineIgnored } from './lib/accepted.mjs'
 import { githubAnnotations } from './lib/ci-output.mjs'
+import { applyTeam, readTeam, teamRunNotes } from './lib/team.mjs'
+import { EDITOR_FORMATS, editorOutput } from './lib/editor-output.mjs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { changedFiles as gitChangedFiles, inScopeFile, scopedFiles } from './lib/changed.mjs'
+import { examplePacks } from './lib/example-packs.mjs'
 import { appDirOf, appProblem, repoRootOf } from './lib/paths.mjs'
 import { loadOrder } from './lib/testorder.mjs'
 import { applyProfile } from './lib/profiles.mjs'
@@ -20,6 +24,7 @@ import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
 import { applyLearned, loadTimings, recordRun, saveTimings, timingsPath } from './lib/timings.mjs'
 import { applyConfig, findConfig, readConfig } from './lib/config.mjs'
+import { makeTrust } from './lib/trust.mjs'
 import { discoverChecks } from './lib/discover.mjs'
 import { estimateRemaining } from './lib/eta.mjs'
 import { estimateRunMs, estimateRunMsWithCache, estimateVsActualText } from './lib/runestimate.mjs'
@@ -28,19 +33,25 @@ import { applicablePacks, detect, initConfig, presetPacks } from './lib/init.mjs
 import { finalReport } from './lib/report.mjs'
 import { compactSummary } from './lib/tui/results.mjs'
 import { buildFindings, saveFindings } from './lib/findingsdoc.mjs'
+import { folderProblem } from './lib/folderguard.mjs'
 import { createInterface } from 'node:readline/promises'
 import { verifyRunDir } from './lib/aiverify.mjs'
-import { failureLines } from './lib/failsummary.mjs'
-import { appendRunLog, createRecorder, gitInfo, latestRunDir, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
+import { failureLines, groupFailures, summaryLines } from './lib/failsummary.mjs'
+import { appendRunLog, createRecorder, gitInfo, latestRunDir, latestRunDirForFolder, logRoot, makeRunDir, showLast, saveNotRunLogs, showWhy, writeRunReport } from './lib/runlog.mjs'
 import { createModel } from './lib/tui/model.mjs'
 import { spansFromRecorder } from './lib/tui/group.mjs'
+import { selectForRun } from './lib/runselect.mjs'
+import { ignoreLine, ignoreSources, ignoreSummary } from './lib/ignorepaths.mjs'
 import { WINDOW_SKIP_REASON, createControl, runAll, selectChecks, stopOnSignals, summarise, table } from './lib/runner.mjs'
 import { sweepSpawned } from './lib/exec.mjs'
+import { armProgress, endProgress } from './lib/progresslog.mjs'
 import { DEFAULT_RUN_MINUTES, loadBudgets } from './lib/timeouts.mjs'
 import { notProjectJson, notProjectMessage, projectCheck } from './lib/projectgate.mjs'
 import { enrichResults, narrowSubs, rollup } from './lib/subchecks.mjs'
 import { packOfCheck, resolveOnly, suiteIdOf, suiteInfo } from './lib/suites.mjs'
 import { tipLine } from './lib/recommend.mjs'
+import { firstRunNote } from './lib/firstrun.mjs'
+import { runPathLines } from './lib/runpath.mjs'
 import { appendRun, historyPath, loadHistory, runEntry } from './lib/tui/history.mjs'
 import { canUseUi, createTui } from './lib/tui/index.mjs'
 import { applyPresetExclusions, mergePresets, parseGroups, PRESETS, resolvePreset } from './lib/presets.mjs'
@@ -58,6 +69,21 @@ function headOf(root) {
   } catch {
     return null
   }
+}
+
+// The preset's one-line description for the header, without its written time claim ("5 to 10 minutes at most" was wrong for a 3 second run).
+// When an earlier run of this preset in this folder exists, its measured time is added; with none, nothing is.
+export function presetAboutLine(about, env, appDir, preset) {
+  const text = String(about ?? '').replace(/,?\s*\d+\s*(?:to|-)\s*\d+\s*(?:minutes?|min|seconds?|s)\s*(?:at most)?/i, '')
+  let prev = ''
+  try {
+    const dir = preset ? latestRunDirForFolder(env, appDir, { preset }) : null
+    const ms = dir ? JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8')).ms : null
+    if (Number.isFinite(ms) && ms >= 0) prev = ` (the last run of this preset here took ${ms < 60_000 ? `${(ms / 1000).toFixed(1)} s` : `${(ms / 60_000).toFixed(1)} min`})`
+  } catch {
+    /* no earlier run: nothing is said */
+  }
+  return `${text}${prev}`
 }
 
 // How a time estimate reads: "about 1 second", "about 5 seconds", "about 2.5 minutes".
@@ -137,6 +163,8 @@ export function parseArgs(argv) {
     else if (a === '--no-progress') o.progress = false
     else if (a === '--ui') o.ui = true
     else if (a === '--plain') o.plain = true
+    else if (a === '--verbose') o.verbose = true
+    else if (a === '--full') o.full = true
     else if (a === '--no-input') o.noInput = true // a global option (meerkat describe): run.mjs never asks anything, so it changes nothing here, but it must be accepted by init, list and self-test
     else if (a === '--flat') o.grouped = false
     else if (a === '--grouped') o.grouped = true
@@ -176,7 +204,10 @@ const subsOffMap = (list = []) => {
   return m
 }
 const listJsonText = (checks) => JSON.stringify(checks.map((c) => ({ id: c.id, kind: c.group, tier: c.tier, lane: c.lane, seconds: c.estSeconds ?? null, title: c.title, optIn: c.optIn ?? null, pack: packOfCheck(c), suite: suiteIdOf(c), subs: c.subs ?? 1, origin: c.origin ?? 'bundled', ...(suiteInfo(suiteIdOf(c))?.project ? { suiteLabel: suiteInfo(suiteIdOf(c)).label, suitePurpose: suiteInfo(suiteIdOf(c)).purpose } : {}) })))
-function logDisabled(log, applied, configFile) {
+function logDisabled(log, applied, configFile, verbose = false) {
+  // Without --verbose the left-out checks are one line, not one line each (a first run printed dozens).
+  const total = applied.disabled.length + (applied.disabledSubs ?? []).length
+  if (!verbose && total > 3) return log(`${total} check(s)/rule(s) left out by the preset or the config (--verbose lists them)`)
   for (const d of applied.disabled) log(`[DISABLED] ${d.id}: ${d.preset ? `left out by preset ${d.preset}` : `turned off in ${configFile}${d.by ? ` (${d.by})` : ''}`}`)
   for (const ref of applied.disabledSubs ?? []) log(`[DISABLED] sub-check ${ref}: turned off in ${configFile}`)
 }
@@ -189,10 +220,11 @@ const selfTestChecks = (checks, opts) => {
 // --json-stdout: stdout carries one JSON object and nothing else, so notes go to stderr. -q/--quiet: only the final result line.
 function outputStreams(opts, givenLog, env) {
   const baseLog = givenLog ?? ((l) => console.log(l))
-  const hush = Boolean(opts.jsonStdout || opts.quiet)
+  const editor = EDITOR_FORMATS.includes(opts.format) // --format vscode|jetbrains: stdout carries only the editor output, notes go to stderr
+  const hush = Boolean(opts.jsonStdout || opts.quiet || editor)
   const toErr = givenLog ?? ((l) => console.error(l))
   if (opts.noColor) env.NO_COLOR = process.env.NO_COLOR = '1'
-  return { baseLog, hush, log: opts.jsonStdout ? toErr : opts.quiet ? () => {} : baseLog, fail: hush ? toErr : baseLog }
+  return { baseLog, hush, log: opts.jsonStdout || editor ? toErr : opts.quiet ? () => {} : baseLog, fail: hush ? toErr : baseLog }
 }
 
 // The run's summary.json plus where it is saved, as the only thing on stdout.
@@ -278,9 +310,19 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
   }
   if (opts.init) {
-    const made = initConfig(appDir)
-    log(made.message)
-    return 0
+    const bad = folderProblem(appDir)
+    if (bad) {
+      fail(bad)
+      return 2
+    }
+    try {
+      const made = initConfig(appDir)
+      log(made.message)
+      return 0
+    } catch (e) {
+      fail(`could not write meerkat.config.json in ${appDir} (${e?.code ?? 'error'}): check that the folder is writable, or create the file by hand`)
+      return 1
+    }
   }
   // Reading back what the last run saved: nothing is run.
   if (opts.logs) {
@@ -288,7 +330,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
   if (opts.last || opts.why) {
-    const shown = opts.why ? showWhy(opts.why, env) : showLast(env, opts.lastProject)
+    const shown = opts.why ? showWhy(opts.why, env, 80, { folder: appDir }) : showLast(env, opts.lastProject, { folder: appDir })
     log(shown.text)
     return shown.ok ? 0 : 1
   }
@@ -360,9 +402,18 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     // With no config file, a preset that picks checks by kind (security, refactor, ui, ...) has nothing to pick from in the two starting packs,
     // so every pack that applies to the folder loads, as it does for quick and full. A project's config still decides for itself.
     read.config.packs = [...new Set([...(read.config.packs ?? []), ...presetPacks(chosen.preset, appDir), ...(configFile ? [] : applicablePacks(appDir))])]
-    if (!opts.list) log(`preset ${chosen.preset.name}: ${chosen.preset.about}`)
+    if (!opts.list) log(`preset ${chosen.preset.name}: ${presetAboutLine(chosen.preset.about, env, appDir, opts.preset)}`)
   }
-  const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE) })
+  // ignorePaths (top level, and the chosen preset's own): left out of Meerkat's own file-walking checks; one line says how many files and by which key.
+  const ignoring = ignoreSummary(appDir, ignoreSources(read.config, chosen.preset?.name ?? null))
+  if (ignoring.patterns.length) {
+    env.MEERKAT_IGNORE_PATHS = process.env.MEERKAT_IGNORE_PATHS = JSON.stringify(ignoring.patterns)
+    if (!opts.list) log(ignoreLine(ignoring))
+  } else {
+    delete env.MEERKAT_IGNORE_PATHS
+    delete process.env.MEERKAT_IGNORE_PATHS
+  }
+  const applied = await applyConfig([], read.config, { file: configFile, extraPackDirs: packDirs, personalChecks: user.customChecks, projectDir: appDir, noProjectCode: Boolean(env.MEERKAT_NO_PROJECT_CODE), trust: makeTrust(env, { interactive: opts.noInput ? false : undefined }) })
   applyPresetExclusions(applied, chosen.preset)
   // The project's own tests, found without being told (lib/discover.mjs): only for full, thorough and release (thorough tier with every pack; quick also has allPacks, so the tier decides), or
   // when asked for by name (`meerkat check discovered`). Never for quick or ci. "discover": false turns it off.
@@ -377,7 +428,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (!opts.list) {
     if (configFile) log(`config: ${configFile}`)
     for (const note of [...read.notes, ...applied.notes, ...(found?.result.notes ?? [])]) log(`config: ${note}`)
-    logDisabled(log, applied, configFile)
+    logDisabled(log, applied, configFile, opts.verbose)
     for (const d of found?.result.disabled ?? []) log(`config: found check ${d.id} is turned off by your config`)
     if (found?.checks.length) log(`found ${found.checks.length} test check${found.checks.length === 1 ? '' : 's'} of the project's own (meerkat discover lists them; "discover": false turns this off)`)
   }
@@ -396,6 +447,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
 
+  if (!opts.list && !opts.estimate) armProgress({ label: opts.preset || tier })
   const ctx = { timeoutScale: opts.timeoutScale ?? 1, control: createControl(), noIdleKill: opts.noIdleKill === true, repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, scope: opts.scope ?? [], disabledSubs: subsOffMap(applied.disabledSubs), findingsSink: new Map(), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier, new Date(), undefined, appDir, opts.selfTest ? null : opts.preset) }
   onControl?.(ctx.control)
   if (!ctx.logDir && !opts.list && !opts.estimate) log(`note: this run's logs cannot be saved (${logRoot(env)} is not a folder Meerkat can write to), so meerkat last, findings and baseline will not see it. Set MEERKAT_LOG_DIR to a writable folder.`)
@@ -433,8 +485,9 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let status = null
   let boardShown = false // the live board ran in this terminal: its end-of-run output is the results screen, not a dump of lines
   if (!opts.list) {
-    // The neuralvault example pack drives an Electron app through that app's own harness; other packs need no such folder.
-    const problem = read.config.packs?.includes('neuralvault') ? appProblem(appDir) : null
+    // An example pack can drive an app through that app's own harness (its pack.json says so); other packs need no such folder.
+    const needsApp = examplePacks().some((p) => p.needsAppFile && read.config.packs?.includes(p.pack))
+    const problem = needsApp ? appProblem(appDir) : null
     if (problem) {
       fail(problem)
       return 2
@@ -456,7 +509,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
       fail(order.error)
       return 2
     }
-    const sel = selectChecks(checks, { kindOrder: order.kinds ?? null, tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, windows: chosen.preset?.windows !== false || env.MEERKAT_WINDOWS === '1', skipCompile: chosen.preset?.skipCompile === true })
+    const sel = selectForRun(checks, { kindOrder: order.kinds ?? null, tier, only: opts.only, include: opts.include, mode, changedFiles: ctx.changedFiles, groups, suites: opts.suites, preset: chosen.preset, env })
     settleSplash()
     if (opts.estimate) {
       // How long this run should take on this PC: the learned times, run through the same scheduling rules (lib/eta.mjs).
@@ -539,10 +592,30 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
     // Accepted findings (lib/accepted.mjs): dismissed ones, and with --ratchet the baseline. A check whose findings are all accepted passes.
     const acceptedSetsNow = opts.selfTest ? null : acceptedSets({ env, projectPath: appDir, ratchet: Boolean(opts.ratchet) })
-    const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size))
+    // Team rules (lib/team.mjs, .meerkat-team.json at the repo root): one small file; every entry that does not suppress is said out loud.
+    const team = opts.selfTest ? null : readTeam(repoRoot)
+    if (team) for (const l of teamRunNotes(team)) fail(l)
+    const anyAcceptedBase = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size || acceptedSetsNow.expired?.size || acceptedSetsNow.stale?.size))
     // The ids come from the same builder that writes findings.json, so a dismissed id matches what the run lists.
-    const builtNow = anyAccepted ? safeBuild({ results, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env }) : null
-    const acceptedRecords = builtNow ? applyAccepted(results, ctx.findingsSink, acceptedSetsNow, builtNow.findings, builtNow.hiddenChecks) : []
+    const builtNow = anyAcceptedBase || (!opts.selfTest && results.some((r) => r?.status === 'FAIL')) ? safeBuild({ results, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env }) : null
+    // A check whose every finding carries an inline meerkat-ignore comment passes (lib/accepted.mjs).
+    if (builtNow) passInlineIgnored(results, builtNow, ctx.findingsSink)
+    // .meerkat-ignores.json (lib/repo-ignores.mjs): every suppression is said out loud with its reason and owner, and an unusable entry is named.
+    if (builtNow) for (const l of [...(builtNow.repoIgnored ?? []).map((x) => x.text), ...(builtNow.repoIgnoreProblems ?? []).map((p) => `IGNORE-FILE: ${p}`)]) fail(l)
+    if (builtNow && team?.entries.length) applyTeam(acceptedSetsNow, builtNow.findings, team)
+    const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size || acceptedSetsNow.expired?.size || acceptedSetsNow.stale?.size))
+    const acceptedRecords = anyAccepted && builtNow ? applyAccepted(results, ctx.findingsSink, acceptedSetsNow, builtNow.findings, builtNow.hiddenChecks) : []
+    // Dismissals and baseline entries written under an old id still match; say so once (lib/findingid.mjs).
+    {
+      const legacy = acceptedRecords.flatMap((x) => x.matchedLegacyIds ?? [])
+      const fresh = legacy.length ? unnoticedLegacy(env, appDir, legacy) : []
+      const note = migrationNote(fresh)
+      if (note) {
+        process.stderr.write(`meerkat: ${note}
+`)
+        markLegacyNoticed(env, appDir, fresh)
+      }
+    }
     if (acceptedRecords.length) {
       try {
         writeFileSync(join(ctx.logDir, 'accepted.json'), JSON.stringify({ schemaVersion: 1, mode: opts.ratchet ? 'ratchet' : 'dismissed', items: acceptedRecords }, null, 2))
@@ -560,13 +633,15 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let full = enrichResults(results, ranChecks.length ? ranChecks : checks) // suite and sub-check counts for the saved files and --json
   // A check that could not run gets a short log too (why, and what to do), so `meerkat why <check>` always has something to show.
   if (!opts.selfTest) full = saveNotRunLogs(ctx.logDir, full, ranChecks.length ? ranChecks : checks)
-  const { line, exitCode: summaryCode } = summarise(opts.selfTest ? `${tier} self-test` : tier, results, skippedCount, Date.now() - started, estimatedMs ? estimateVsActualText(estimatedMs, Date.now() - started) : '')
+  const { line, exitCode: summaryCode } = summarise(opts.selfTest ? `${tier} self-test` : (opts.preset ?? tier), results, skippedCount, Date.now() - started, estimatedMs ? estimateVsActualText(estimatedMs, Date.now() - started) : '')
   const exitCode = interrupted ? 130 : summaryCode
   status?.stop(line)
   // A finished real run adds one entry to the run log the terminal UI's history view reads (home folder, never the repo).
   if (!opts.selfTest) appendRun(historyPath(env), runEntry({ tier, summary: line, exitCode, ms: Date.now() - started, results }))
   if (!boardShown) log('')
-  if (!boardShown) log(table(results, { checks: ranChecks, grouped: opts.selfTest ? false : opts.grouped, spans: spansFromRecorder(recorder) }))
+  // The per-check list is hundreds of lines on a real project: only with --verbose (and always for self-test). Failures and checks that did not run are listed below either way.
+  if (!boardShown && (opts.verbose || opts.selfTest)) log(table(results, { checks: ranChecks, grouped: opts.selfTest ? false : opts.grouped, spans: spansFromRecorder(recorder) }))
+  else if (!boardShown) log(`${results.filter((r) => r.status === 'PASS').length} of ${results.length} checks passed (--verbose lists every check; failures are listed below)`)
   // What needs a look, repeated in full (failed output, reasons); a passing check shows nothing beyond its row above.
   if (!opts.selfTest && !boardShown) for (const l of finalReport({ results, tier, timings, totalMs: Date.now() - started, checks: ranChecks, grouped: opts.grouped, spans: spansFromRecorder(recorder) })) log(l)
   if (!boardShown) log(line)
@@ -583,10 +658,19 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const findingsInfo = opts.selfTest ? null : saveFindings({ dir: ctx.logDir, results: full, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env, version: meerkatVersion(), preset: opts.preset, tier, startedAtMs: started, ms: Date.now() - started, recorder, note: (m) => console.error(m) })
   if (findingsInfo && !opts.selfTest && !hush && !boardShown) log(findingsInfo.line)
   // Every failure of each check (count and file:line, cut at 20), not only the first one the check printed.
-  const failLines = findingsInfo?.doc?.findings?.length ? failureLines(findingsInfo.doc.findings.filter((f) => f.status !== 'fixed'), { logPath: ctx.logDir }) : []
-  if (failLines.length && !opts.selfTest && !hush && !boardShown) for (const l of ['Failures per check:', ...failLines]) log(l)
+  // Summary first (the blocking count, the failed checks by name, the run folder); the per-check list follows, cut to 12 checks unless --full.
+  const openFindings = findingsInfo?.doc?.findings?.length ? findingsInfo.doc.findings.filter((f) => f.status !== 'fixed') : []
+  const sumLines = summaryLines({ checks: groupFailures(openFindings).map((g) => ({ id: g.check, count: g.count })), runFolder: ctx.logDir, full: Boolean(opts.full) })
+  const allFail = openFindings.length ? failureLines(openFindings, { logPath: ctx.logDir }) : []
+  const failLines = [...sumLines, ...(opts.full || allFail.length <= 12 ? allFail : [...allFail.slice(0, 12), `  ... and ${allFail.length - 12} more failed checks (--full lists them all)`])]
+  if (failLines.length && !opts.selfTest && !hush && !boardShown) for (const l of failLines.length > sumLines.length ? [...sumLines, 'Failures per check:', ...failLines.slice(sumLines.length)] : failLines) log(l)
   // --format github: one workflow annotation per open finding, so GitHub Actions shows them on the changed lines (lib/ci-output.mjs).
   if (opts.format === 'github' && findingsInfo?.doc) for (const l of githubAnnotations(findingsInfo.doc)) process.stdout.write(`${l}\n`)
+  // --format vscode | jetbrains: the open findings for an editor, with the same ids as `meerkat findings` (lib/editor-output.mjs).
+  if (EDITOR_FORMATS.includes(opts.format) && findingsInfo?.doc) {
+    const text = editorOutput(findingsInfo.doc, opts.format)
+    process.stdout.write(`${text}${text ? '\n' : ''}`)
+  }
   const report = writeRunReport({ checks: ranChecks.length ? ranChecks : checks, interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs, runKey: opts.selfTest ? 'self-test' : null })
   // Optional (--ai-verify): a model double-checks the medium, high and critical findings. Off by default; it asks first unless --yes (lib/aiverify.mjs).
   if (opts.aiVerify && findingsInfo && !opts.selfTest && ctx.logDir) {
@@ -595,8 +679,17 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     appendRunLog(ctx.logDir, v.text)
   }
   if (report && !boardShown) log(`logs: ${ctx.logDir}   (meerkat last shows the report, meerkat why <check> one check's log)`)
+  // Where the logs are and how long they stay (lib/runpath.mjs); the board's own summary names the folder, the plain list above does too, this adds the retention.
+  if (report && !opts.selfTest && !opts.quiet) for (const l of runPathLines({ dir: ctx.logDir, env }).slice(1)) log(l)
+  // The latest results, by path, so nobody has to search for them.
+  if (report && !opts.selfTest && !opts.quiet) log(`results: ${String(ctx.logDir).replace(/[\/]+$/, '')}/summary.json ${String(ctx.logDir).replace(/[\/]+$/, '')}/findings.json`)
+  // First run in a project with no config: said once (lib/firstrun.mjs). Never in --plain, --json or --quiet output.
+  if (!opts.selfTest && !hush) {
+    const note = firstRunNote({ dir: appDir, configFile, env, quiet: hush, plain: Boolean(opts.plain) })
+    if (note) for (const l of note.split('\n')) log(uiOk ? `\u001b[2m${l}\u001b[0m` : l)
+  }
   // At a terminal with the board: a short summary stays in the scrollback; the results screen (meerkat) shows everything else.
-  if (boardShown && !opts.selfTest && failLines.length) for (const l of ['Failures per check:', ...failLines]) log(l)
+  if (boardShown && !opts.selfTest && failLines.length) for (const l of failLines.length > sumLines.length ? [...sumLines, 'Failures per check:', ...failLines.slice(sumLines.length)] : failLines) log(l)
   if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, estimatedMs, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)
   if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
   if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog)
@@ -604,6 +697,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (opts.quiet) baseLog(line)
   // Nothing this run started may outlive it: sweep whatever is still alive (a grandchild, a check the deadline missed).
   sweepSpawned()
+  endProgress(interrupted ? 'interrupt' : 'finished') // lib/progresslog.mjs: the last line of progress.log (a time limit was noted by the runner)
   return exitCode
 }
 

@@ -63,7 +63,7 @@ describe('the fixture', () => {
 
   test('schema fields and version', () => {
     expect(map.schemaVersion).toBe(2)
-    expect(Object.keys(map).sort()).toEqual(['app', 'build', 'entryPoints', 'files', 'generator', 'limits', 'moduleEdges', 'modules', 'mostImported', 'routes', 'routing', 'skipped', 'summary', 'tests', 'unresolved', 'schemaVersion'].sort())
+    expect(Object.keys(map).sort()).toEqual(['app', 'build', 'entryPoints', 'files', 'generator', 'limits', 'moduleEdges', 'modules', 'mostImported', 'routes', 'routing', 'skipped', 'summary', 'tests', 'unresolved', 'unresolvedTop', 'schemaVersion'].sort())
     for (const f of map.files) expect(Object.keys(f).sort()).toEqual(['exports', 'id', 'imports', 'language', 'lines', 'path', 'purpose', 'routes', 'symbols', 'testedBy'])
     expect(map.app.name).toBe('codemap')
     expect(JSON.stringify(map)).not.toMatch(/[A-Za-z]:[\\/]|Users/)

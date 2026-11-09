@@ -204,7 +204,9 @@ export const rbNotFoundRoute = (line) => /(?:to:\s*|=>\s*)['"][^'"\n]*#(?:not_fo
 // ---------------------------------------------------------------- JavaScript
 export const jsConstExec = firstArgIsConst(/(?<![\w$.])(?:(?:child_process|childProcess|cp)\.)?exec(?:Sync)?\(\s*([A-Za-z_$][\w$]*)\s*[,)]/, 'js')
 // spawn with a fixed program and an array of fixed words: the shell has nothing to parse but those words (npm needs shell: true on Windows).
-export const jsSpawnFixedArgs = (line) => /\bspawn(?:Sync)?\(\s*(['"])[^'"\n]*\1\s*,\s*\[\s*(?:(['"])[^'"\n]*\2\s*,?\s*)+\]\s*,\s*\{[^}\n]*\bshell\s*:\s*true\b/.test(cut(line))
+// spawn('fixed command line', { shell: true }): the whole command is one fixed string, so nothing can be injected.
+const jsSpawnFixedString = (line) => /\bspawn(?:Sync)?\(\s*(['"])[^'"\n]*\1\s*,\s*\{[^}\n]*\bshell\s*:\s*true\b/.test(cut(line))
+export const jsSpawnFixedArgs = (line) => jsSpawnFixedString(line) ||/\bspawn(?:Sync)?\(\s*(['"])[^'"\n]*\1\s*,\s*\[\s*(?:(['"])[^'"\n]*\2\s*,?\s*)+\]\s*,\s*\{[^}\n]*\bshell\s*:\s*true\b/.test(cut(line))
 // The same, when the words are in a name declared once in the file as an array of fixed strings (const args = ['deploy', '--json']) and never changed after.
 const FIXED_WORD = String.raw`(?:(['"])[^'"\n]*\1|\x60[^\x60\n$]*\x60|\d+)`
 export const jsSpawnFixedVar = (line, ctx) => {
