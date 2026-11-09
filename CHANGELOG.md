@@ -50,6 +50,17 @@ Safer by default, quieter output, fewer false alarms.
 - #55: `docker-dockerignore-missing` reads the build context from CI workflows and Makefiles.
 - Fewer false alarms from several checks (`risky-code`, `unicode-control-chars`, `js-unhandled-promise`, `env-example`, `typosquat-names`, `pii-patterns-in-source`, `telemetry-calls`, `dead-code`, `unused-files`), and `gitattributes-eol` reads committed line endings.
 
+- verdict: `--branches` gives the same result as a plain verdict, and `--json` prints only JSON (one object, or an array for several branches). Every verdict JSON carries `schema: 1`.
+- verdict: `--known` also applies when the run is INCOMPLETE; accepted places are counted, not blocking.
+- Unknown options stop the small commands with exit 2 and write nothing.
+- `smoke` exits 1 on blocking findings, the same as `gate`.
+- `test` with no test command prints one line and exits 2 instead of running the quick check.
+- Exit codes: bad, unknown or missing ids, missing folders and non-git folders exit 2 (table in docs/reference.md).
+- Electron: a preload loaded by basename from its folder, and files named in package.json `build`/`files`, count as used. A constant template in executeJavaScript is not flagged.
+- Timing and history files live in the Meerkat data folder (`MEERKAT_LOG_DIR`, else `~/.meerkat`). Old `~/.meerkat-*.json` files are not migrated.
+
+_Not yet tested on real PRs (TBD):_ verdict exit for a no-diff branch (B17), `top` NO-RESULT exit (B12), the behind-base note, and the hadolint and actionlint messages.
+
 ### Known limits
 
 - Not on this branch: `meerkat cost`, `meerkat team`, `meerkat impact`, evidence on `meerkat dismiss`, and editor output (`--format vscode` and `--format jetbrains`). They live on separate branches and are not part of this release. So the refusal of symlinked evidence and team files is not part of it either.
