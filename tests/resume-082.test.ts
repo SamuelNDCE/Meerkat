@@ -51,7 +51,7 @@ function fixture(name: string) {
   git(d, 'commit', '-q', '-m', 'change a')
   return { d, flag }
 }
-const stopRun = (d: string, word: string, extra: string[] = []) => cli([word, '--base', 'main', ...extra], d, { MEERKAT_VERDICT_TIMEOUT_S: '3' })
+const stopRun = (d: string, word: string, extra: string[] = []) => cli([word, '--base', 'main', ...extra], d, { MEERKAT_VERDICT_TIMEOUT_S: '12' })
 const resumeFileOf = (text: string) => {
   const m = text.match(/^resume: meerkat \S+ --resume (?:"([^"]+)"|(\S+))$/m)
   return m ? (m[1] ?? m[2]) : ''
@@ -159,7 +159,7 @@ describe('top and gate resume the same way', () => {
   test('gate: stop, resume, same rows as a full run; a resume made with --all is refused without it', () => {
     const { d, flag } = fixture('gate-fx')
     writeFileSync(flag, 'x')
-    const g = cli(['gate', '--no-cache', '--base', 'main', '--max-seconds', '3', '--json'], d)
+    const g = cli(['gate', '--no-cache', '--base', 'main', '--max-seconds', '12', '--json'], d)
     expect([1, 75]).toContain(g.code) // 75 not run, or 1 when the blocker already counts
     expect(g.err).toMatch(/stopped early: \d+ blocking so far, \d+ of \d+ checks finished/)
     expect(g.err).toMatch(/^resume: meerkat gate --resume /m)
@@ -174,7 +174,7 @@ describe('top and gate resume the same way', () => {
     expect(resumed.code).toBe(full.code)
     // a gate stopped with --all cannot be resumed as a plain gate
     writeFileSync(flag, 'x')
-    const all = cli(['gate', '--no-cache', '--all', '--base', 'main', '--max-seconds', '3'], d)
+    const all = cli(['gate', '--no-cache', '--all', '--base', 'main', '--max-seconds', '12'], d)
     const allFile = resumeFileOf(all.err)
     unlinkFlag(flag)
     expect(existsSync(allFile)).toBe(true)
