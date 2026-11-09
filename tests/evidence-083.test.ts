@@ -1,5 +1,5 @@
 // Evidence for dismissals (lib/evidence.mjs): VERIFIED, STALE and UNVERIFIED, end to end on the real CLI plus unit cases for each kind.
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
@@ -188,5 +188,32 @@ describe('end to end on the real CLI', () => {
     console.log(`LEGACY row: ${t}`)
     expect(t).toMatch(/^ACTIVE\s+legacyid0001.*evidence: UNVERIFIED note \(unverified, from before evidence was required\)/m)
     expect(acceptedSets({ env: sb.env, projectPath: sb.app }).dismissed.has('legacyid0001')).toBe(true)
+  })
+})
+
+describe('file safety (links and size)', () => {
+  test('a link that leads outside the project is refused; an oversize file is refused; a normal file still verifies', () => {
+    const outside = proj({ 'secret.txt': 'top secret line\n' })
+    const d = proj({ 'ok.js': 'const ok = 1\n', 'big.txt': 'x'.repeat(2 * 1024 * 1024 + 10) })
+    expect(buildEvidence('line:ok.js:1', { projectPath: d }).kind).toBe('line')
+    expect(() => buildEvidence('line:big.txt:1', { projectPath: d })).toThrow(/too large/)
+    let made = 0
+    try {
+      symlinkSync(join(outside, 'secret.txt'), join(d, 'link.txt'), 'file')
+      made++
+      expect(() => buildEvidence('line:link.txt:1', { projectPath: d })).toThrow(/symbolic link|outside the project/)
+    } catch (e: any) {
+      if (!/EPERM|EACCES|symbolic link|outside/.test(String(e?.code ?? e?.message))) throw e
+    }
+    try {
+      symlinkSync(outside, join(d, 'dirlink'), 'junction') // a link in a parent folder
+      made++
+      expect(() => buildEvidence('line:dirlink/secret.txt:1', { projectPath: d })).toThrow(/outside the project/)
+    } catch (e: any) {
+      if (!/EPERM|EACCES|outside/.test(String(e?.code ?? e?.message))) throw e
+    }
+    expect(made).toBeGreaterThan(0)
+    // a stored evidence that now points through a link is STALE, never read
+    expect(checkEvidence({ evidence: { kind: 'line', file: 'dirlink/secret.txt', line: 1, text: 'top secret line', exact: true } }, d).state).toBe('STALE')
   })
 })
