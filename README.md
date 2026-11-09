@@ -31,126 +31,117 @@ npm install -g @samuelndce/meerkat
 meerkat verify
 ```
 
+`verify` is the quick everyday run, `meerkat full` adds the slow checks, and `meerkat last` shows the saved results. `meerkat why <check>` shows one check's log and `meerkat findings` lists every finding, worst first. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage error, 3 nothing to run. Every command: [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md).
+
+## 🏁 Is this branch safe to merge?
+
+`meerkat verdict` answers with one line and an exit code. It counts only findings in files the branch changed.
+
 ```
-meerkat full
+meerkat verdict --base origin/main
 ```
 
 ```
-meerkat last
+FAIL 3 blocking in changed files
 ```
 
-`verify` is the quick everyday run, `full` adds the slow checks, and `last` shows the saved results. `meerkat why <check>` shows one check's log and `meerkat findings` lists every finding, worst first. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage error, 3 nothing to run. Every command: [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md).
+- `--base <ref>` is the branch to compare with (default: main or master). `--json` prints one object (verdict, exitCode, blocking, known, stale, reason).
+- `--known <file>` is a JSON list of failures your team accepted, `[{ "check", "file", "line"? }]`. A match is printed as `KNOWN` and does not block; an entry that matches nothing is printed as `STALE`.
+- `NO-RESULT: <reason>. next: <step>` means there is no answer (nothing changed, a bad ref, a timeout). It is never a pass.
+- `INCOMPLETE n of m checks finished, not a pass` means the run stopped early. Exit 75.
+
+## 📋 The worst findings in your change
+
+`meerkat top` prints one table of the worst findings in the files this branch changed, worst first (`--limit`, default 10).
+
+```
+meerkat top --base origin/main
+```
+
+```
+file  check         line  message
+----  ------------  ----  -------
+b.js  risky-code    2     eval() runs text as code
+b.js  js-eqeqeq     2     uses ==, which converts types before comparing
+b.js  unused-files  -     is not imported by any file and is not an entr
+```
+
+## 🔨 Your repo's test and build commands
+
+`meerkat commands` lists the repo's own test, build and typecheck commands from the `commands` block of `meerkat.config.json`, or from the `package.json` scripts when there is no block. It runs nothing. `meerkat trust` approves the block, after which `meerkat build` runs `commands.build` and `meerkat test` runs `commands.test` (with no `commands.test` set, `meerkat test` is the same as `meerkat verify`).
+
+```
+meerkat commands
+```
+
+```
+no commands block (there is no meerkat.config.json); these are the package.json scripts (nothing here is run):
+test   npm run test   (runs: node --test)
+build  npm run build   (runs: node -e 0)
+to pin them: add { "commands": { "test": "npm run test", "build": "npm run build" } } to meerkat.config.json, then run meerkat trust
+```
+
+## 🤏 Short output by default
+
+`meerkat gate` prints one summary line, one line per failed check (its name and count) and the log folder. `--full` lists every finding, and `findings.json` in the run folder always has them all. The MCP tools `meerkat_summary` and `meerkat_gate` are short in the same way, which keeps an AI's context small; `full: true` asks for everything.
+
+## ⏱ Progress and timeouts
+
+`verdict` and `top` print one progress line per check on stderr, `[12/218] risky-code ... 0.2s FAIL`, and `still running after 30s: <check>` for a slow one. The answer goes to stdout, so piping it is safe. They give up after 900 seconds (this build's default) with `NO-RESULT: the gate did not finish in 900s`. Raise the limit with `MEERKAT_VERDICT_TIMEOUT_S` (seconds), or stop a run on purpose with `--max-seconds`, which ends in `INCOMPLETE`. More: [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md).
+
+## 🤖 Using Meerkat from an AI assistant
+
+`meerkat mcp install` registers the MCP server with Claude Code; the AI then calls the same checks as tools. Tools that read a run take `folder`, `run` and `preset`, and a NOT RUN is never a pass. Guide: [docs/ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md), and for NeuralVault [docs/neuralvault.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault.md).
 
 ## 🧩 Features at a glance
 
 | Feature | What it does |
 |---|---|
-| 🔍 [Checks and presets](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#checks-and-presets) | Runs the checks that fit your project; presets pick a set (`quick`, `bugs`, `full`, `ci`, `release`) |
-| 🚦 [Gate on changed files](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#gate) | Runs only the checks matching the files you changed, with the `bugs` preset as its default set (no style or documentation rules); only failures in those files block, project-wide ones are listed and `--all` makes them block |
-| 💨 [Smoke](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#smoke) | `meerkat smoke` proves the checks chosen for your changes start and stop in time (it tests Meerkat, not your project); the `project-smoke` preset asks whether a change breaks your project |
-| 💥 [Blast radius](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius) | Lists what an edit to a file or symbol affects |
-| 📋 [Pre-edit brief](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#pre-edit-brief) | One fast call before an edit: callers, tests, findings, churn and a risk tier |
-| 🗺 [Codebase map](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#codebase-map) | Writes a map of files, functions with line numbers, routes, tests and imports; only changed files are re-read, `meerkat map --check` says if it is current ([details](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md)) |
-| 🧭 [Workflow profiles](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#workflow-profiles) | `meerkat init --profile` solo, team, ai-agent, legacy, monorepo or ci-only prints a starting config and the commands for that workflow |
-| 📝 [Memory hook](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#memory-hook) | `meerkat memory` hands the newest run to an adapter you name in the config, which keeps it as a note outside the project |
-| 🧪 [Red testing](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#red-testing) | `meerkat redtest` attacks Meerkat itself with planted bugs and clean twins (repository checkout only) |
-| 📏 [Real-code benchmark](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md#real-code-benchmark) | Measures false alarms on real Rust code (repository checkout only) |
-| 📚 [Test catalog](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#catalog-and-tests-command) | `meerkat tests --json` lists every kind of test and what it proves |
-| 🔌 [MCP server](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#mcp-tools) | Offers the checks to an AI as tools, resources and prompts |
-| 🧠 [Skills](https://github.com/SamuelNDCE/Meerkat/blob/main/skills/README.md) | Short guides that tell an AI when to reach for Meerkat |
-| 🖱 [Click-through](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md) | Opens your real app and presses controls through a driver you supply |
-| 🪝 [Hook safety](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#hook-safety) | A git pre-push hook that runs the quick preset; removable cleanly |
+| [🔍 Checks and presets](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#checks-and-presets) | Runs the checks that fit your project; presets pick a set (`quick`, `bugs`, `full`, `ci`, `release`) |
+| [🚦 Gate on changed files](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#gate) | Runs only the checks matching the files you changed; only failures in those files block |
+| [🏁 Branch verdict](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) | One line for a branch: `PASS`, `FAIL`, or `FAIL-PRE-EXISTING only` |
+| [💨 Smoke](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#smoke) | Proves the checks chosen for your changes start and stop in time (it tests Meerkat, not your project) |
+| [💥 Blast radius and brief](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius) | What an edit to a file or symbol affects, and a one-call pre-edit brief |
+| [🗺 Codebase map](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md) | Files, functions with line numbers, routes, tests and imports; only changed files are re-read |
+| [🧭 Workflow profiles](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#workflow-profiles) | `meerkat init --profile` prints a starting config for solo, team, ai-agent, legacy, monorepo or ci-only |
+| [📝 Memory hook](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault.md) | Hands the newest run to an adapter you name in the config, outside the project |
+| [🧪 Red testing and benchmark](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) | Attacks Meerkat with planted bugs and measures false alarms on real Rust code (repository checkout only) |
+| [🔌 MCP server and skills](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md) | Offers the checks to an AI as tools, resources and prompts, with short guides for when to use them |
+| [🖱 Click-through](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md) | Opens your real app and presses controls through a driver you supply |
+| [🪝 Hook safety](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#hook-safety) | A git pre-push hook that runs the quick preset; removable cleanly |
 
 <!-- counts:start -->
 **403 checks · 1446 sub-checks · 50 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
 <!-- counts:end -->
 
-How many checks exist: see [docs/features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md), or run `meerkat tests --json`.
 
-## 🧰 Everyday commands
-
-Each example was run on a small test project. Counts of tools and checks are not typed here: `node bin/meerkat-mcp.mjs --list-tools` and `meerkat tests --json` print them. Full detail for each row: [docs/features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md).
-
-| Feature | What it does | Example |
-|---|---|---|
-| Gate, scoped | Checks the files you changed; failures elsewhere are listed, not blocking. `--all` blocks on everything, `--no-cache` re-runs every check | `meerkat gate --base origin/main` |
-| Pre-commit | Call the gate from your own `.git/hooks/pre-commit`. `meerkat hook install` writes a pre-push hook (quick preset, ratchet), not a pre-commit one | `meerkat gate --staged` |
-| Brief | One call before an edit: callers, tests, last-run findings, churn, risk tier | `meerkat brief src/app.ts#createApp` |
-| Blast radius | What imports a file or symbol and which tests reach it | `meerkat blast src/app.ts` |
-| Map | Writes `codemap.json` and `codemap.md`; `--check` exits 1 when the saved map is stale; `blast`, `brief` and the MCP map tool re-read stale files first | `meerkat map --check` |
-| Ratchet | Accept today's findings, then fail only on new ones | `meerkat baseline`, then `meerkat run quick --ratchet` |
-| Run flags | `--config`, `--no-config`, `--group`, `--fail-fast`, `--keep-going`, `--max-run-minutes`, `--timeout-scale` | `meerkat run --help` |
-| Findings for CI | `--fail-on` sets the exit code, `--new` counts only new findings, `--export` points at the saved file | `meerkat findings --fail-on high --new` |
-| Prompt for an AI | Every finding in full, with what to do | `meerkat prompt --print` |
-| MCP scope | Tools that read a run take `folder`, `run` and `preset`, so a call stays on one project. Also `meerkat_version`, `meerkat_check_list`, `meerkat_prompt`, `meerkat_run_list`; `meerkat_run` takes `ratchet` and the run flags | `meerkat mcp install` |
-| SKIPPED | A style tool the project never configured (eslint, prettier, stylelint) is SKIPPED with the reason, counted apart, and does not change the exit code. NOT RUN stays for a configured tool that cannot run | `meerkat last` |
-| Commit messages | `commit-message-format` judges only commits not yet on the default branch (`git log <base>..HEAD`); with no base it checks the last 20 and says so | `meerkat why commit-message-format` |
-| Workflow profiles | A starting config and the commands for `solo`, `team`, `ai-agent`, `legacy`, `monorepo` or `ci-only`; writes only with `--write` | `meerkat init --profile team` |
-| Memory adapter | `meerkat memory` hands the newest run to the adapter named by the `memory` key in `meerkat.config.json` (shipped: `examples/neuralvault`, which needs `NV_VAULT_PATH` or `~/.neuralvault-vault-path`); nothing happens without the key | `meerkat memory --dry-run` |
-| Release tools | The release gate (changelog, pack list, audit, secret scan, fix-needs-a-test), plus tarball and upgrade smoke tests. Repository checkout only. See [docs/release.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/release.md) | `node tools/release/gate.mjs` |
-| Update | Looks up the latest version once a day, installs only when you say so | `meerkat update --check` |
-| Windows guard | On Windows a `!` in a command run through cmd.exe is refused when delayed expansion is on, or when the registry cannot be read in 3 seconds. No effect on Linux or macOS | automatic |
-| Run estimate | The time estimate follows the newest runs and counts cached checks as nearly free | `meerkat quick --estimate` |
-
-## Planned
-
-The advisory scan, an offline match of declared packages against an advisory snapshot, is planned and not built as a command. Details: [docs/features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#advisory-scan).
+More everyday commands (ratchet, pre-commit, CI flags, updates): [docs/everyday.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/everyday.md). What Meerkat does, by job: [docs/capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md).
 
 ## 🎯 Accuracy (summary)
 
-Measured 2026-11-06 with `tools/corpus/gen-planted.mjs` and `tools/corpus/measure.mjs` (planted bugs and clean twins) and `benchmarks/real-rust/measure.mjs` (real code).
+Measured 2026-11-06 with `tools/corpus/gen-planted.mjs`, `tools/corpus/measure.mjs` (planted bugs and clean twins) and `benchmarks/real-rust/measure.mjs` (real code).
 
-| Measure | Result |
-|---|---|
-| Planted-bug recall, default run | 99.77% (1735 of 1739). The 4 misses are lock-unwrap defects, hidden by design in the default run |
-| Planted-bug recall, pedantic run (`--all`) | 100% |
-| False alarms on real code (NeuralVault Rust benchmark) | 4.6%: 6 of 130 labelled findings were false, 124 true |
-| False alarms on clean twins | 0 of 1739 |
-| Real-code mutation run (200 mutants) | default 37%, all rules 98% |
+- Planted-bug recall, default run: 99.77% (1735 of 1739). The 4 misses are lock-unwrap defects, hidden by design in the default run. Pedantic run (`--all`): 100%.
+- False alarms on real code (NeuralVault Rust benchmark): 4.6%, 6 of 130 labelled findings were false. On clean twins: 0 of 1739.
+- Real-code mutation run (200 mutants): default 37%, all rules 98%.
 
-**Caveat.** The planted corpus is built from each rule's own samples, so high recall there shows the rules do what they were written to do, not that they find every real bug. The real-code numbers matter more, and they cover one project in one language. Details, commands and what is not measured yet: [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md).
-
-## 🤖 Using it with AI
-
-- **MCP server:** `meerkat mcp serve` offers its tools (`meerkat_list` or `node bin/meerkat-mcp.mjs --list-tools` gives the count and the names), read-only resources (`meerkat://run/latest/...`) and prompts. Tools that read a run take `folder`, `run` and `preset`, so an AI stays on its own project. `meerkat mcp install` registers it with Claude Code.
-- **Skills:** the [skills](https://github.com/SamuelNDCE/Meerkat/blob/main/skills/README.md) folder holds short guides (before a commit, before a PR, blast radius before an edit, mapping unfamiliar code, and more).
-- **Rule for agents:** a NOT RUN is never a pass, and never edit the config or turn a check off to make a run pass.
-
-Everything an AI needs: [docs/ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md).
-
-## 🔧 Extending Meerkat
-
-Add a command as a check in one line (`meerkat check new`), write a check in JavaScript in a pack, make a preset (`meerkat preset new`), or silence a known finding with a reason (`meerkat dismiss`). Prove a new check with a `selfTest` on a broken sample. How-to: [docs/adding-tests.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/adding-tests.md) and [CONTRIBUTING.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CONTRIBUTING.md).
-
-## 🖱 Click-through
-
-The driver protocol is built and Meerkat schedules, times and reports a driver like any check. The reference drivers have not yet run against a real app, so treat the shipped examples as unproven. Exit 75 from a driver means it could not start, never a pass. Guide: [docs/click-through.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md).
+**Caveat.** The planted corpus is built from each rule's own samples, so high recall there shows the rules do what they were written to do, not that they find every real bug. The real-code numbers matter more, and they cover one project in one language. Details: [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md).
 
 ## ⚠ Known limits
 
 - Rust findings are leads to check, not verdicts; the false-alarm figure is from one project.
-- The smoke and red test files (`tests/smoke-*.test.ts`, `tests/red-failures.test.ts`) run in `npm test` on a copy of a small fixture project, not on your project; they check that every command and MCP tool starts, finishes and fails cleanly, not that checks find the right things. See [docs/ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md#smoke-and-red-suites).
-- PLACEHOLDER: `meerkat update` (verify the new version in a copy, keep local changes, save a patch) and the trusted-publishing workflow are unit-tested but have not been run against a real newer published release.
-- Red testing, the real-code benchmark and the release tools (`tools/release`) run from a repository checkout; the advisory scan is a library with no command yet.
-- Recall on planted bugs measures what was planted, not real-world accuracy.
+- Click-through: the driver protocol is built, but the reference drivers have not run against a real app, so treat the shipped examples as unproven ([guide](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md)).
+- `meerkat update` and the trusted-publishing workflow are unit-tested but not verified in this build against a real newer published release.
+- Red testing, the real-code benchmark and the release tools run from a repository checkout. The advisory scan (an offline match of declared packages against an advisory snapshot) is planned and not built as a command.
+- The smoke and red test files run on a copy of a small fixture project, not on yours ([details](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md#smoke-and-red-suites)).
 - If Meerkat reports something fine, open a [false alarm](https://github.com/SamuelNDCE/Meerkat/issues/new?template=false-positive.yml) issue; if it misses a real problem, open a [missed problem](https://github.com/SamuelNDCE/Meerkat/issues/new?template=missed-bug.yml) issue.
 
-## 🔗 Links
+## 🔗 More
 
-| Read | For |
-|---|---|
-| [docs/features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md) | Every feature, with its command and limits |
-| [docs/ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md) | Everything an AI needs |
-| [docs/adding-tests.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/adding-tests.md) | Adding checks, packs and presets |
-| [docs/extending.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/extending.md) | Add your own check, pack, preset or tool wrapper, and keep them through updates |
-| [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) | How accuracy is measured |
-| [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) | Every command and flag |
-| [docs/how-to.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/how-to.md) | How to run Meerkat efficiently: presets, the daily loop, pull requests, speed |
-| [docs/capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md) | What Meerkat does, by job, with every command and MCP tool |
-| [docs/neuralvault.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault.md) | Using Meerkat from NeuralVault: the MCP server, the verdict, trust and NO-RESULT |
-| [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md) | Questions teams have asked: slow gates, branch failures, trust, progress, the cargo lock |
-| [docs/release.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/release.md) | The release gate, tarball and upgrade tests, publishing and rollback |
-| [CONTRIBUTING.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CONTRIBUTING.md) | How to contribute |
-| [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md) | What changed |
+- Features and limits: [docs/features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md), [docs/capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md)
+- Every command and flag: [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md), [docs/how-to.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/how-to.md)
+- Extend it with your own check, pack or preset: [docs/extending.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/extending.md), [docs/adding-tests.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/adding-tests.md), [CONTRIBUTING.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CONTRIBUTING.md)
+- For AI and NeuralVault: [docs/ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md), [docs/neuralvault.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault.md)
+- Questions: [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md). Accuracy: [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md). Releases: [docs/release.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/release.md), [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md)
 
 Licence: [Perpetual Community Licence 1.0](https://github.com/SamuelNDCE/Meerkat/blob/main/LICENSE) ([notes](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/licence-notes.md)). Security problems: [SECURITY.md](https://github.com/SamuelNDCE/Meerkat/blob/main/SECURITY.md).
