@@ -12,7 +12,7 @@ Questions teams have actually asked. Each answer was checked by running the comm
 
 ## Why does my branch show failures it did not cause?
 
-Two rules. First, `verdict` counts only findings in files the branch changed, and reports the rest as `FAIL-PRE-EXISTING only: n findings in code this branch did not change`. Second, a gate on a feature branch hides findings that were already on the base; `meerkat gate --base origin/main` prints how many it hid. To see them: `meerkat gate --base origin/main --all-findings`. If you still see failures in files you did not touch, check which branch you are on (next question).
+Two rules. First, `verdict` counts only findings in files the branch changed, and counts the rest as pre-existing: it prints `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. Second, a gate on a feature branch hides findings that were already on the base; `meerkat gate --base origin/main` prints how many it hid. To see them: `meerkat gate --base origin/main --all-findings`. If you still see failures in files you did not touch, check which branch you are on (next question).
 
 ## Why does a worktree path read the wrong branch?
 

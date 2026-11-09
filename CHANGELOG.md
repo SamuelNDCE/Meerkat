@@ -20,6 +20,43 @@ Safer by default, quieter output, fewer false alarms.
 - The `quick` preset no longer runs style-only and documentation-only checks.
 - Added a Linux CI job. It has not been verified on GitHub yet.
 
+### New commands
+
+- `meerkat verdict`: one line for a branch, `PASS` or `FAIL n blocking in changed files`. Options: `--base <ref>`, `--json` (one object), `--known <file>` (accepted failures print `KNOWN`, an entry that matches nothing prints `STALE`), `--first` (only the first blocking `file:line: message`, or `PASS`), `--ready` (one `READY` or `NOT READY` line, no claim about tests) and `--branches a b` (one line per branch, each checked out in its own temporary worktree).
+- `meerkat top`: one table of the worst findings in the files the branch changed (`--limit`, `--line`).
+- `meerkat commands`: lists the repo's own test, build and typecheck commands, from the `commands` block of `meerkat.config.json` or the `package.json` scripts. `meerkat trust` approves the block; `meerkat test` and `meerkat build` run it.
+- `meerkat fix`: a unified diff for a finding when its check has a safe fix. A dry run by default; `--apply` writes only if the line is still the one the finding was made from.
+- `meerkat handoff`: one markdown file of under 60 lines (verdict, open findings in changed files, branch, commit, next command) written in the run folder. `--read` prints its header and next command.
+- `meerkat test-run`: run one test file or test name with a time limit through the repo's own runner (vitest, jest, cargo test or pytest). Exit 124 on a timeout.
+- `meerkat lock status`: who holds the machine-wide cargo lock and who waits, with pid, command and time. Read-only.
+- `meerkat who-calls`, `meerkat deps` and `meerkat tests-for`: answers read from the code map, which refreshes only changed files first.
+
+### Behaviour changes
+
+- Verdict exit codes: exit 1 only for a new blocking finding in a changed file. A finding the branch did not add prints `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. `NO-RESULT` is exit 1 or 2 and never a pass; a run stopped early is `INCOMPLETE n of m checks finished, not a pass`, exit 75.
+- `meerkat gate` uses the `bugs` preset unless you pass `--all`. Gate output is compact by default, in the command line and over MCP (`full: true` or `--full` asks for everything).
+- Progress lines (`[12/218] check ... 0.2s FAIL`) and a 5 second still-running line go to stderr, so the answer on stdout can be piped.
+- `gate`, `verdict` and `top` print the merge base they compared against, and the folder, branch and whether it is a worktree, on stderr.
+- `verdict` and `top` run with the result cache off, so they do the whole work each time. The default time limit is set by `MEERKAT_VERDICT_TIMEOUT_S`, and `--max-seconds` stops a run on purpose.
+- A damaged store file is moved aside and said so; an unreadable `meerkat.config.json` stops gate and verdict with exit 2. Every run folder gets a `summary.json`.
+
+### Fixes
+
+- Security: repo commands run only after `meerkat trust`; control characters and Unicode format and separator characters are rejected in them and stripped from everything printed; the `handoff` folder is always single-quoted and must be a real directory, and every written value is sanitised.
+- Security: `meerkat lock status` refuses a linked waiters folder and strips control characters.
+- #82: example scripts' imports of `cargoCmd`, `findBin` and `looksLikeStaging` from `thorough/lib.mjs` resolve, and a test checks every example import.
+- #83: discovery skips project scripts that start Meerkat, and a nested run discovers nothing.
+- #60: the Tauri fs-path guard clears only the variable it checked, and the Electron range uses its lowest allowed version.
+- #55: `docker-dockerignore-missing` reads the build context from CI workflows and Makefiles.
+- Fewer false alarms from several checks (`risky-code`, `unicode-control-chars`, `js-unhandled-promise`, `env-example`, `typosquat-names`, `pii-patterns-in-source`, `telemetry-calls`, `dead-code`, `unused-files`), and `gitattributes-eol` reads committed line endings.
+
+### Known limits
+
+- Not on this branch: `meerkat cost`, `meerkat team`, `meerkat impact`, evidence on `meerkat dismiss`, and editor output (`--format vscode` and `--format jetbrains`). They live on separate branches and are not part of this release. So the refusal of symlinked evidence and team files is not part of it either.
+- The whole test suite has not been run on this final head by this change. Run the checklist in docs/release-0.5.3-checklist.md before you tag.
+- `meerkat verdict --help` does not yet list `--first`, `--ready` or `--branches`; they are in docs/commands.md.
+- `meerkat update` and the trusted-publishing workflow are unit-tested but not verified against a real newer published release. Click-through reference drivers have not run against a real app. The Linux CI job has not been verified on GitHub. Rust findings are leads, and the false-alarm figure is from one project.
+
 Not in 0.5.3: a re-measure of recall, batching and speed work, designs aimed at AI use, a run of the GitHub Action, team features, and the gap features.
 
 ## 0.5.2 (2026-11-07)
