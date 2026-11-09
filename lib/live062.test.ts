@@ -33,11 +33,11 @@ const repo = (name: string, files: Record<string, string>) => {
 
 describe('gate prints progress', () => {
   const config = JSON.stringify({ packs: [], discover: false, customChecks: [{ id: 'quick', title: 'Quick', cmd: 'node', args: ['quick.js'], tier: 'fast' }, { id: 'nap', title: 'Nap', cmd: 'node', args: ['nap.js'], tier: 'fast', timeoutSeconds: 120 }] })
-  const d = repo('gate-fx', { 'package.json': '{"name":"fx","version":"1.0.0","private":true}', 'a.js': 'export const a = 1\n', 'quick.js': "console.log('ok')\n", 'nap.js': 'setTimeout(() => {}, 20000)\n', 'meerkat.config.json': config })
+  const d = repo('gate-fx', { 'package.json': '{"name":"fx","version":"1.0.0","private":true}', 'a.js': 'export const a = 1\n', 'quick.js': "console.log('ok')\n", 'nap.js': 'setTimeout(() => {}, 120000)\n', 'meerkat.config.json': config })
   put(d, 'a.js', 'export const a = 2\n')
 
   test('one line per check start and finish, a still-running line, and a blocking count when the run is stopped', () => {
-    const r = cli(['gate', '--no-cache', '--max-seconds', '12'], d)
+    const r = cli(['gate', '--no-cache', '--max-seconds', '30'], d)
     expect(r.err).toMatch(/\[\d+\/\d+\] quick \.\.\.\r?\n/)
     expect(r.err).toMatch(/\[done \d+\/\d+\] quick \.\.\. \d+\.\ds/)
     expect(r.err).toMatch(/running: nap \(\d+s\)/)
@@ -216,11 +216,11 @@ describe('code-map queries', () => {
 describe('an early stop is never a pass', () => {
   test('verdict and top say INCOMPLETE and exit non-zero when --max-seconds cuts the run', () => {
     const d = join(root, 'gate-fx')
-    const v = cli(['verdict', '--max-seconds', '12', '--base', 'main'], d)
+    const v = cli(['verdict', '--max-seconds', '30', '--base', 'main'], d)
     expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
     expect(v.out).not.toMatch(/^PASS/m)
     expect(v.code).toBe(75)
-    const t = cli(['top', '--max-seconds', '12', '--base', 'main'], d)
+    const t = cli(['top', '--max-seconds', '30', '--base', 'main'], d)
     expect(t.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
     expect(t.code).not.toBe(0)
   }, 90000)
@@ -229,11 +229,11 @@ describe('an early stop is never a pass', () => {
 describe('the verdict time limit keeps partial results', () => {
   test('a sleeping check and a 3 s limit print INCOMPLETE with counts and exit 75, not NO-RESULT alone', () => {
     const d = join(root, 'gate-fx')
-    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '12' })
+    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '30' })
     expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
     expect(v.out).not.toMatch(/NO-RESULT/)
     expect(v.code).toBe(75)
-    const t = cli(['top', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '12' })
+    const t = cli(['top', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '30' })
     expect(t.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
     expect(t.code).toBe(75)
   }, 90000)
@@ -255,7 +255,7 @@ describe('the cargo lock wait limit', () => {
     const lockDir = join(root, 'limit.lock')
     const e = { ...env, MEERKAT_CARGO_LOCK_DIR: lockDir } as NodeJS.ProcessEnv
     const script = join(ROOT, 'lib', 'cargo-lock-run.mjs')
-    put(root, 'hold2.js', 'setTimeout(() => {}, 20000)\n')
+    put(root, 'hold2.js', 'setTimeout(() => {}, 120000)\n')
     const holder = spawn(process.execPath, [script, process.execPath, join(root, 'hold2.js')], { env: e, stdio: 'ignore' })
     await new Promise((r) => setTimeout(r, 1500))
     try {
@@ -278,9 +278,9 @@ describe('a stop lists every blocking place', () => {
       { id: 'blocker', title: 'Blocker', cmd: 'node', args: ['blocker.js'], tier: 'fast' },
       { id: 'nap', title: 'Nap', cmd: 'node', args: ['nap.js'], tier: 'fast', timeoutSeconds: 120 },
     ] })
-    const d = repo('stop-fx', { 'package.json': '{"name":"fx","version":"1.0.0","private":true}', 'a.js': 'export const a = 1\n', 'blocker.js': "console.log('a.js:1: bad thing here'); process.exit(1)\n", 'nap.js': 'setTimeout(() => {}, 20000)\n', 'meerkat.config.json': config })
+    const d = repo('stop-fx', { 'package.json': '{"name":"fx","version":"1.0.0","private":true}', 'a.js': 'export const a = 1\n', 'blocker.js': "console.log('a.js:1: bad thing here'); process.exit(1)\n", 'nap.js': 'setTimeout(() => {}, 120000)\n', 'meerkat.config.json': config })
     put(d, 'a.js', 'export const a = 2\n')
-    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '12' })
+    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '30' })
     expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far/)
     expect(v.out).toMatch(/a\.js:1 blocker: bad thing here/)
     expect(v.out).not.toMatch(/NO-RESULT/)
@@ -360,7 +360,7 @@ describe('the give-up line is safe to print', () => {
 describe('INCOMPLETE names what did not run and labels unclassified findings', () => {
   test('a run stopped before the base comparison lists the unfinished checks and the findings are unclassified', () => {
     const d = join(root, 'stop-fx')
-    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '12' })
+    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '30' })
     expect(v.code).toBe(75)
     expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
     expect(v.out).toMatch(/not run \(\d+\): .*nap/)
