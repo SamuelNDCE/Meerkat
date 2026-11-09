@@ -59,7 +59,7 @@ describe('meerkat lock status lists the waiters', () => {
     const lockDir = join(root, 'cargo.lock')
     const e = { ...env, MEERKAT_CARGO_LOCK_DIR: lockDir, MEERKAT_LOCK_MAX_WAIT: '60' } as NodeJS.ProcessEnv
     const script = join(ROOT, 'lib', 'cargo-lock-run.mjs')
-    put(root, 'hold.js', 'setTimeout(() => {}, 15000)\n')
+    put(root, 'hold.js', 'setTimeout(() => {}, 120000)\n')
     put(root, 'quick.js', "console.log('done')\n")
     const kids = [
       spawn(process.execPath, [script, process.execPath, join(root, 'hold.js')], { env: e, stdio: 'ignore' }),
