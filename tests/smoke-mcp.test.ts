@@ -37,6 +37,8 @@ const ARGS: Record<string, { args?: (ctx: { app: string; id: string }) => Record
   meerkat_gate: { args: () => ({ staged: true }) },
   meerkat_smoke: { args: () => ({ timeout: 20 }) },
   meerkat_tests: {},
+  meerkat_summary: {},
+  meerkat_first_failure: {},
   meerkat_doctor: {},
   meerkat_discover: {},
   meerkat_recommend: {},
