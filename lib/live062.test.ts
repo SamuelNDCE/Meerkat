@@ -271,3 +271,20 @@ describe('the cargo lock wait limit', () => {
     }
   }, 60000)
 })
+
+describe('a stop lists every blocking place', () => {
+  test('a blocking check and a sleeping one: INCOMPLETE with the file:line, not NO-RESULT', () => {
+    const config = JSON.stringify({ packs: [], discover: false, customChecks: [
+      { id: 'blocker', title: 'Blocker', cmd: 'node', args: ['blocker.js'], tier: 'fast' },
+      { id: 'nap', title: 'Nap', cmd: 'node', args: ['nap.js'], tier: 'fast', timeoutSeconds: 120 },
+    ] })
+    const d = repo('stop-fx', { 'package.json': '{"name":"fx","version":"1.0.0","private":true}', 'a.js': 'export const a = 1\n', 'blocker.js': "console.log('a.js:1: bad thing here'); process.exit(1)\n", 'nap.js': 'setTimeout(() => {}, 20000)\n', 'meerkat.config.json': config })
+    put(d, 'a.js', 'export const a = 2\n')
+    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '3' })
+    expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far/)
+    expect(v.out).toMatch(/a\.js:1 blocker: bad thing here/)
+    expect(v.out).not.toMatch(/NO-RESULT/)
+    expect(v.err).toMatch(/still running after \d+s: nap/)
+    expect(v.code).toBe(75)
+  }, 90000)
+})
