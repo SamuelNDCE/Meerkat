@@ -288,3 +288,26 @@ describe('a stop lists every blocking place', () => {
     expect(v.code).toBe(75)
   }, 90000)
 })
+
+describe('map queries read the working tree', () => {
+  test('a file added on a branch after the map was saved is found by tests-for, and a stale saved map is named', () => {
+    const d = repo('mapq-branch', {
+      'package.json': '{"name":"fx","version":"1.0.0","private":true,"type":"module"}',
+      'src/a.js': 'export function a() {}\n',
+      'tests/a.test.js': "import { a } from '../src/a.js'\na()\n",
+    })
+    const first = cli(['map', '--quiet'], d)
+    expect(first.code).toBe(0)
+    git(d, 'checkout', '-q', '-b', 'feat')
+    put(d, 'src/b.js', 'export function b() { return 1 }\n')
+    put(d, 'tests/b.test.js', "import { b } from '../src/b.js'\nb()\n")
+    git(d, 'add', '-A')
+    git(d, 'commit', '-q', '-m', 'feat')
+    const r = cli(['tests-for', 'src/b.js'], d)
+    expect(r.code).toBe(0)
+    expect(r.out).toMatch(/tests\/b\.test\.js\s+1\s+imports it/)
+    expect(r.err).toMatch(/map: the last saved map is from commit [0-9a-f]{9}, HEAD is [0-9a-f]{9}, \d+ files? differ/)
+    const w = cli(['who-calls', 'b'], d)
+    expect(w.out).toMatch(/tests\/b\.test\.js:2/)
+  }, 60000)
+})
