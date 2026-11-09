@@ -242,7 +242,7 @@ export const ipcHandlerCallsSenderHelper = (_line, ctx) => {
   return callsSenderHelper([ctx.lines[ctx.index], ...(next < 0 ? rest : rest.slice(0, next))].join('\n'), ctx.text)
 }
 
-// ---- Electron false-alarm guards (round 5, from the NeuralVault audit of 2026-11-02) ----
+// ---- Electron false-alarm guards (round 5, from an Electron app audit of 2026-11-02) ----
 
 // The argument of a call on this line is a bare identifier that is a module-level constant holding a fixed string (or a template with no ${} hole):
 // `const DEV_SERVER = 'http://localhost:5273'` then `win.loadURL(DEV_SERVER)`. The address or script is fixed in the source, nothing from outside can reach it.

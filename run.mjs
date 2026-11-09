@@ -11,6 +11,7 @@ import { githubAnnotations } from './lib/ci-output.mjs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { changedFiles as gitChangedFiles, inScopeFile, scopedFiles } from './lib/changed.mjs'
+import { examplePacks } from './lib/example-packs.mjs'
 import { appDirOf, appProblem, repoRootOf } from './lib/paths.mjs'
 import { loadOrder } from './lib/testorder.mjs'
 import { applyProfile } from './lib/profiles.mjs'
@@ -478,8 +479,9 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   let status = null
   let boardShown = false // the live board ran in this terminal: its end-of-run output is the results screen, not a dump of lines
   if (!opts.list) {
-    // The neuralvault example pack drives an Electron app through that app's own harness; other packs need no such folder.
-    const problem = read.config.packs?.includes('neuralvault') ? appProblem(appDir) : null
+    // An example pack can drive an app through that app's own harness (its pack.json says so); other packs need no such folder.
+    const needsApp = examplePacks().some((p) => p.needsAppFile && read.config.packs?.includes(p.pack))
+    const problem = needsApp ? appProblem(appDir) : null
     if (problem) {
       fail(problem)
       return 2

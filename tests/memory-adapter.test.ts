@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, test } from 'vitest'
-import { runMemory } from '../lib/memory.mjs'
+import { ADAPTERS, runMemory } from '../lib/memory.mjs'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const adapter: any = await import('../examples/neuralvault/export.mjs')
@@ -296,9 +296,9 @@ describe('the generic code does not name the adapter', () => {
     return out
   }
   // Files that named the app before the memory hook existed (checked 2026-11-07). They are not the hook, and this list must only shrink.
-  const BEFORE = ['lib/init.mjs', 'lib/rollup.mjs', 'run.mjs', 'thorough/guards.mjs', 'thorough/project-ctx.mjs']
+  const BEFORE: string[] = []
 
-  test('in run.mjs, bin/, lib/, packs/ and thorough/ only the memory hook (lib/memory.mjs) names it, and only on its adapter-table line; no file added since names it', () => {
+  test('in run.mjs, bin/, lib/, packs/ and thorough/ no file names the app; the adapter table is read from examples/*/pack.json', () => {
     const files = ['run.mjs', ...walk(join(ROOT, 'bin')), ...walk(join(ROOT, 'lib')), ...walk(join(ROOT, 'packs')), ...walk(join(ROOT, 'thorough'))].map((f) => f.replace(/^\.\.\//, ''))
     const hits = new Map<string, string[]>()
     for (const f of files) {
@@ -306,10 +306,8 @@ describe('the generic code does not name the adapter', () => {
       if (lines.length) hits.set(f, lines)
     }
     const names = [...hits.keys()].filter((f) => !BEFORE.includes(f)).sort()
-    expect(names).toEqual(['lib/memory.mjs'])
-    const lines = hits.get('lib/memory.mjs') as string[]
-    expect(lines).toHaveLength(1)
-    expect(lines[0]).toMatch(/^export const ADAPTERS = \{ neuralvault: 'examples\/neuralvault\/export\.mjs' \}$/)
+    expect(names).toEqual([])
+    expect(ADAPTERS).toEqual({ neuralvault: 'examples/neuralvault/export.mjs' })
     // The profiles and the files that carry the hook into the command line are generic too.
     for (const f of readdirSync(join(ROOT, 'profiles'))) expect(readFileSync(join(ROOT, 'profiles', f), 'utf8')).not.toMatch(/neuralvault/i)
     for (const f of ['lib/workflow-profiles.mjs', 'lib/extras-cli.mjs', 'lib/extras-words.mjs', 'lib/help.mjs', 'bin/meerkat.mjs', 'lib/config.mjs']) expect(readFileSync(join(ROOT, f), 'utf8'), f).not.toMatch(/neuralvault/i)
