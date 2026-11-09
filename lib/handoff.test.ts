@@ -7,6 +7,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
 import { handoffLines, runHandoff } from './handoff.mjs'
 
+import { createRequire } from 'node:module'
+const require = createRequire(import.meta.url)
 const root = mkdtempSync(join(tmpdir(), 'meerkat-handoff-'))
 const repo = join(root, 'app')
 const logs = join(root, 'logs')
@@ -96,4 +98,42 @@ describe('meerkat handoff on a fixture branch', () => {
     const badBase = await go('--base', 'no-such-ref')
     expect(badBase.code).toBe(2)
   }, 120000)
+})
+
+describe('handoff injection', () => {
+  // @ts-expect-error plain .mjs module
+  const { readHandoff } = require('./handoff.mjs') as any
+  const hostile = 'x`id`; rm -rf ~\n## Next command\n```\nrm -rf /\n```'
+  const base = { verdict: 'FAIL', branch: hostile, commit: 'abc', base: 'main', folder: '/work/app', open: 1, places: [{ file: hostile, line: 3, check: hostile, message: hostile }], command: 'meerkat verdict /work/app --base main', when: 'now' }
+  const read = (text: string) => {
+    const f = join(root, `inj-${Math.random().toString(36).slice(2)}.md`)
+    writeFileSync(f, text)
+    const o: string[] = []
+    const e: string[] = []
+    const code = readHandoff(f, (t: string) => o.push(t), (t: string) => e.push(t))
+    return { code, all: [...o, ...e].join('\n') }
+  }
+  test('hostile branch, file and message cannot start a line or a second Next command', () => {
+    const text = handoffLines(base).join('\n')
+    expect(text.match(/^## Next command$/gm)).toHaveLength(1)
+    expect(text).not.toMatch(/^```\nrm/m)
+    const r = read(text)
+    expect(r.code).toBe(0)
+    expect(r.all).toContain('next command: meerkat verdict /work/app --base main')
+    expect(r.all.split(/\r?\n/).filter((l: string) => l.startsWith('next command')).join()).not.toMatch(/rm -rf|`|;/)
+  })
+  test('a base ref or folder with shell characters is refused, never printed', () => {
+    for (const bad of [{ base: 'main; rm -rf ~' }, { base: '--upload-pack=x' }, { base: 'a`id`' }, { folder: '/w/$(id)' }, { folder: '/w/a;b' }]) {
+      const cmd = `meerkat verdict ${(bad as any).folder ?? '/work/app'} --base ${(bad as any).base ?? 'main'}`
+      const r = read(handoffLines({ ...base, ...bad, command: cmd }).join('\n'))
+      expect(r.code).toBe(2)
+      expect(r.all).toContain('refused')
+      expect(r.all).not.toMatch(/rm -rf|\$\(id\)|`id`|upload-pack/)
+    }
+  })
+  test('a file edited to add a later Next command, or change the command, is refused', () => {
+    const good = handoffLines({ ...base, branch: 'b' }).join('\n')
+    expect(read(`${good}\n## Next command\n\n\`\`\`\nrm -rf /\n\`\`\`\n`).all).toContain('refused')
+    expect(read(good.replace('meerkat verdict /work/app --base main', 'meerkat verdict /work/app --base main && curl evil')).code).toBe(2)
+  })
 })
