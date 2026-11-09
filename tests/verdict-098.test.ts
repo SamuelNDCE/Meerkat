@@ -71,7 +71,7 @@ describe('--format markdown', () => {
     expect(r.out).toMatch(/\| src\/second\.js \| 1 \| sql-concat \| /)
     expect(r.out).not.toContain('src/old.js')
     expect(r.out).toContain('Pre-existing findings (not in this diff, do not block): 1')
-    expect(r.out).toContain('Re-run: `meerkat verdict --base main --format markdown`')
+    expect(r.out).toContain('Re-run:\n\n```\nmeerkat verdict --base main --format markdown\n```')
   }, 180_000)
   test('a pass has no table', () => {
     git(dir, 'checkout', '-q', 'clean')
@@ -81,6 +81,25 @@ describe('--format markdown', () => {
     expect(r.out).toContain('**Meerkat verdict: PASS**')
     expect(r.out).not.toContain('| File')
   }, 180_000)
+})
+
+describe('markdown hardening', () => {
+  test('a message with a pipe, markup, html and a backtick run renders as escaped plain text; the re-run command keeps its fence', async () => {
+    const { cell, fenced, markdownBody } = await import('../lib/verdict-out.mjs')
+    const msg = 'a | b *bold* <script>alert(1)</script> [x](http://e) ``` `` # h'
+    const c = cell(msg)
+    expect(c).not.toMatch(/(^|[^\\])\|/)
+    expect(c).toContain('\\|')
+    expect(c).toContain('\\<script\\>')
+    expect(c).toContain('\\*bold\\*')
+    expect(c).toContain('\\[x\\]\\(http://e\\)')
+    expect(c).not.toMatch(/(^|[^\\])`/)
+    const rerun = 'meerkat verdict --base "a```b"'
+    expect(fenced(rerun)).toEqual(['````', rerun, '````'])
+    const body = markdownBody({ line: 'FAIL 1 blocking in changed files', places: [{ file: 'a|b.js', line: 2, check: 'c', message: msg }], pre: 0, rerun })
+    expect(body.filter((l) => l.startsWith('| ') && !l.startsWith('| File') && !l.startsWith('| ---'))).toHaveLength(1)
+    expect(body.join('\n')).toContain('````\n' + rerun + '\n````')
+  })
 })
 
 describe('--format github', () => {
