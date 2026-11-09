@@ -51,7 +51,7 @@ describe('behind-base count', () => {
     for (const run of [runVerdict, runTop]) {
       const errs: string[] = []
       await run(['--base', 'main'], { env, cwd: wt, out: () => {}, err: (t: string) => errs.push(t) })
-      expect(errs[0]).toBe('behind main by 25 commits (more than 20: rebase before trusting this verdict)')
+      expect(errs[0]).toBe('note: behind main by 25 commits (more than 20: rebase before trusting this verdict)')
     }
   }, 180_000)
   test('gate prints it first on stderr and says nothing alarming under 20', async () => {
@@ -63,7 +63,7 @@ describe('behind-base count', () => {
     } finally {
       ;(process.stderr as any).write = w
     }
-    expect(errs[0]).toMatch(/^behind main by 25 commits \(more than 20/)
+    expect(errs[0]).toMatch(/^note: behind main by 25 commits \(more than 20/)
   }, 180_000)
 })
 
