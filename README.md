@@ -2,6 +2,9 @@
 
 # Meerkat
 
+<a href="https://www.npmjs.com/package/@samuelndce/meerkat"><img src="https://img.shields.io/npm/v/@samuelndce/meerkat" alt="npm version"></a> <a href="https://github.com/SamuelNDCE/Meerkat"><img src="https://img.shields.io/github/stars/SamuelNDCE/Meerkat" alt="GitHub stars"></a><br>
+[npm package](https://www.npmjs.com/package/@samuelndce/meerkat) | [GitHub repository](https://github.com/SamuelNDCE/Meerkat) | Install: `npm install -g @samuelndce/meerkat`
+
 **A scanner for people, and a tool and scaffolding for AIs.**<br>
 Meerkat checks, maps and tests a project: security, correctness, accessibility, performance and code health, with every result saved and explained.
 
@@ -184,7 +187,7 @@ Measured 2026-11-06 with `tools/corpus/gen-planted.mjs`, `tools/corpus/measure.m
 ## 📚 All the docs
 
 - **Getting started:** [how-to.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/how-to.md) (short daily guide), [discover.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/discover.md) (finding your project's own tests), [customizing.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/customizing.md)
-- **Daily use:** [everyday.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/everyday.md), [findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md), [logs.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/logs.md), [scheduling.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/scheduling.md), [tiers.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/tiers.md) (time limits), [github.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/github.md) (GitHub Actions)
+- **Daily use:** [everyday.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/everyday.md), [findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md), [logs.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/logs.md), [scheduling.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/scheduling.md), [editor.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/editor.md) (use Meerkat from your editor), [tiers.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/tiers.md) (time limits), [github.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/github.md) (GitHub Actions)
 - **Commands:** [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md), [checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/checks.md) (every check, generated)
 - **Capabilities:** [capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md), [features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md), [suites.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/suites.md), [codemap.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md), [coverage.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/coverage.md), [compatibility.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/compatibility.md), [functionality-run.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/functionality-run.md), [robustness.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/robustness.md), [mutation.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/mutation.md), [click-through.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md)
 - **Accuracy:** [accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md), [accuracy-results.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy-results.md), [readme-accuracy-section.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/readme-accuracy-section.md)
