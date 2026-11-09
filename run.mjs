@@ -595,7 +595,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     const acceptedRecords = anyAccepted && builtNow ? applyAccepted(results, ctx.findingsSink, acceptedSetsNow, builtNow.findings, builtNow.hiddenChecks) : []
     // Dismissals and baseline entries written under an old id still match; say so once (lib/findingid.mjs).
     {
-      const legacy = acceptedRecords.map((x) => x.matchedLegacyId).filter(Boolean)
+      const legacy = acceptedRecords.flatMap((x) => x.matchedLegacyIds ?? [])
       const fresh = legacy.length ? unnoticedLegacy(env, appDir, legacy) : []
       const note = migrationNote(fresh)
       if (note) {
