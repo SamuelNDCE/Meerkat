@@ -83,3 +83,14 @@ describe('verdict --ready', () => {
     expect(r.code).toBe(1)
   }, 180_000)
 })
+
+describe('verdict --branches with space-separated names (0.8.5 stress)', () => {
+  test('a valid repo with one missing branch reports that branch as missing and runs the others', async () => {
+    const r = await run(['--base', 'main', '--branches', 'clean', 'bad', 'no-such-branch'])
+    expect(r.lines.join('\n')).not.toMatch(/not inside a git work tree/)
+    expect(r.lines).toHaveLength(3)
+    expect(r.lines[0]).toBe('clean: PASS')
+    expect(r.lines[1]).toMatch(/^bad: FAIL/)
+    expect(r.lines[2]).toMatch(/^no-such-branch: NO-RESULT: git does not know the branch no-such-branch/)
+  }, 180_000)
+})
