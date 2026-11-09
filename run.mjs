@@ -44,6 +44,7 @@ import { selectForRun } from './lib/runselect.mjs'
 import { ignoreLine, ignoreSources, ignoreSummary } from './lib/ignorepaths.mjs'
 import { WINDOW_SKIP_REASON, createControl, runAll, selectChecks, stopOnSignals, summarise, table } from './lib/runner.mjs'
 import { sweepSpawned } from './lib/exec.mjs'
+import { armProgress, endProgress } from './lib/progresslog.mjs'
 import { DEFAULT_RUN_MINUTES, loadBudgets } from './lib/timeouts.mjs'
 import { notProjectJson, notProjectMessage, projectCheck } from './lib/projectgate.mjs'
 import { enrichResults, narrowSubs, rollup } from './lib/subchecks.mjs'
@@ -446,6 +447,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 0
   }
 
+  if (!opts.list && !opts.estimate) armProgress({ label: opts.preset || tier })
   const ctx = { timeoutScale: opts.timeoutScale ?? 1, control: createControl(), noIdleKill: opts.noIdleKill === true, repoRoot, appDir, tier, env, platform: process.platform, exists: existsSync, changedFiles: null, scope: opts.scope ?? [], disabledSubs: subsOffMap(applied.disabledSubs), findingsSink: new Map(), logDir: opts.list || opts.estimate ? null : makeRunDir(env, opts.selfTest ? `${tier}-selftest` : tier, new Date(), undefined, appDir, opts.selfTest ? null : opts.preset) }
   onControl?.(ctx.control)
   if (!ctx.logDir && !opts.list && !opts.estimate) log(`note: this run's logs cannot be saved (${logRoot(env)} is not a folder Meerkat can write to), so meerkat last, findings and baseline will not see it. Set MEERKAT_LOG_DIR to a writable folder.`)
@@ -691,6 +693,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (opts.quiet) baseLog(line)
   // Nothing this run started may outlive it: sweep whatever is still alive (a grandchild, a check the deadline missed).
   sweepSpawned()
+  endProgress(interrupted ? 'interrupt' : 'finished') // lib/progresslog.mjs: the last line of progress.log (a time limit was noted by the runner)
   return exitCode
 }
 
