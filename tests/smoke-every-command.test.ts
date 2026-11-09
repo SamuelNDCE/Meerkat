@@ -62,6 +62,7 @@ const EXAMPLES: Record<string, Example> = {
   'test-run': { args: ['test-run', 'src/math.js'], codes: [2], why: 'the fixture defines no commands.test, so it must say so and exit 2' },
   'who-calls': { args: ['who-calls', 'add'], codes: [0, 75], why: '75 when the fixture has no call of the name' },
   deps: { args: ['deps', 'src/math.js'], codes: [0, 75], why: '75 when the file imports no project file' },
+  impact: { args: ['impact', '--base', 'HEAD'], codes: [0, 2], why: '2 when the fixture is not a git repository with that ref' },
   'tests-for': { args: ['tests-for', 'src/math.js'], codes: [0, 75], why: '75 when no test names the file' },
   verdict: { args: ['verdict'], codes: [0, 1, 2], why: 'one line for a branch; the fixture may have no base branch, then it prints a NO-RESULT line (1 or 2)' },
   top: { args: ['top'], codes: [0, 1, 2], why: 'a table of changed-file findings; 1 or 2 with a NO-RESULT line when there is nothing to compare' },
