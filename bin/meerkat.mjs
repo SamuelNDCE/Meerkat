@@ -3,6 +3,7 @@
 // Exit codes: 0 passed, 1 a check failed or could not run, 2 a usage or configuration error, 3 nothing to run (run and presets), 75 could not start or target not found (gate, smoke, blast), 130 interrupted.
 // Results go to stdout; notes, progress and errors go to stderr.
 import { helpText, loadPresets, packAdd, packRemove, planCommand, presetsText, rootCommand } from '../lib/cli.mjs'
+import { unknownOption } from '../lib/flagcheck.mjs'
 import { executeBasic } from '../lib/basic-commands.mjs'
 import { EXTRA_WORDS } from '../lib/extras-words.mjs'
 import { spawnRun } from '../lib/spawnrun.mjs'
@@ -43,6 +44,12 @@ const err = (t) => process.stderr.write(`${t}\n`)
 const version = () => VERSION // lib/version.mjs: package.json, read once
 
 async function main() {
+  // The small commands stop on an option they do not know (exit 2, with the usage line), before anything runs or is written.
+  const badOption = unknownOption(argv.filter((a) => a !== '--no-input' && a !== '--no-color'))
+  if (badOption) {
+    err(badOption.message)
+    return badOption.code
+  }
   // The accepted-findings, history, suggestion and CI commands (lib/extras-cli.mjs) are handled before the older parser sees them.
   // `meerkat <word> --help` is answered from the command registry (planCommand), not by the command.
   if ((EXTRA_WORDS.includes(argv[0]) || (argv[0] === 'init' && argv.includes('--profile'))) && !argv.includes('--help') && !argv.includes('-h')) {
