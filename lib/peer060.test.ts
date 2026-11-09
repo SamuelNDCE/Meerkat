@@ -53,7 +53,7 @@ describe('verdict', () => {
     expect(r.status).toBe(1)
   }, SLOW)
 
-  test('FAIL-PRE-EXISTING only when every finding is in code the branch did not change (exit 1)', () => {
+  test('findings only in code the branch did not change: PASS with a pre-existing note (exit 0)', () => {
     put('loose.js', LOOSE)
     put('index.js', "import './clean.js'\nimport './loose.js'\n")
     initMain()
@@ -61,8 +61,9 @@ describe('verdict', () => {
     put('clean.js', 'export const c = 2\n')
     commit()
     const r = cli(['verdict'])
-    expect(r.stdout.trim()).toBe('FAIL-PRE-EXISTING only: 1 findings in code this branch did not change')
-    expect(r.status).toBe(1)
+    // Corrected 2026-11-09: findings outside the diff (kind wide) no longer fail the verdict; they are listed as pre-existing. Was: FAIL-PRE-EXISTING, exit 1.
+    expect(r.stdout.trim()).toBe('PASS (1 pre-existing, not in this diff)')
+    expect(r.status).toBe(0)
   }, SLOW)
 })
 
