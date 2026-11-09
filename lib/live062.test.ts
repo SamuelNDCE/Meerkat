@@ -341,3 +341,30 @@ describe('a cargo lock wait is WAITING, not NO-RESULT', () => {
     }
   }, 180000)
 })
+
+describe('the give-up line is safe to print', () => {
+  test('an owner file with an ESC sequence and a non-integer pid prints no raw ESC and pid ?', async () => {
+    const { spawnSync: sp } = await import('node:child_process')
+    const lockDir = join(root, 'evil.lock')
+    mkdirSync(lockDir, { recursive: true })
+    // pid 0 counts as alive to process.kill (it signals the group), so the lock is held, and 0 is not a positive integer: it must print as ?
+    writeFileSync(join(lockDir, 'owner.json'), JSON.stringify({ pid: 0, since: new Date().toISOString(), cmd: 'evil \u001b[31mRED\u001b]0;x\u0007 end' }))
+    const w = sp(process.execPath, [join(ROOT, 'lib', 'cargo-lock-run.mjs'), process.execPath, join(root, 'quick.js')], { env: { ...env, MEERKAT_CARGO_LOCK_DIR: lockDir, MEERKAT_LOCK_MAX_WAIT: '2' }, encoding: 'utf8', timeout: 30000 })
+    const all = String(w.stdout) + String(w.stderr)
+    expect(w.status).toBe(75)
+    expect(all).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/)
+    expect(all).toMatch(/held by process \? running evil/)
+  }, 60000)
+})
+
+describe('INCOMPLETE names what did not run and labels unclassified findings', () => {
+  test('a run stopped before the base comparison lists the unfinished checks and the findings are unclassified', () => {
+    const d = join(root, 'stop-fx')
+    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '3' })
+    expect(v.code).toBe(75)
+    expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
+    expect(v.out).toMatch(/not run \(\d+\): .*nap/)
+    expect(v.out).toMatch(/unclassified \(base comparison did not finish\)/)
+    expect(v.out.indexOf('unclassified')).toBeLessThan(v.out.indexOf('blocker: bad thing here'))
+  }, 90000)
+})
