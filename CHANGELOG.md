@@ -28,6 +28,8 @@ Safer by default, quieter output, fewer false alarms.
 - Added a Linux CI job. It has not been verified on GitHub yet.
 
 - Gate cache: the cache key includes a digest of the result code, so a code fix never reuses an old cached result.
+- Verdict JSON on a cargo-lock wait: `verdict` is INCOMPLETE (exit 75) and the object carries `checksTotal`, `checksFinished`, `checks` and `lockHolder`, the same fields as every other verdict.
+- The WAITING line names the lock holder's pid and command in both wordings the lock uses. It printed `?` and `unknown job` before.
 - Gate: a failed test always blocks, and a panic outside the diff is not treated as wide. A cargo test failure is a failing check named by its test, not a crash (it needs exit 101 and cargo's failure summary).
 - Timeouts: a written per-check time limit is a hard ceiling. Load or size no longer stretches it (`rust-test` is 1200 s).
 - Dev baseline: results are stored per exact base commit, and a new base commit is checked again.

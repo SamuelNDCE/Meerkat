@@ -1,6 +1,6 @@
 # Gate use for NeuralVault
 
-One page for running `meerkat verdict` on NeuralVault PRs. Commands are from Meerkat 0.5.3. Several branches in one run: see [batch.md](batch.md).
+One page for running `meerkat verdict` on NeuralVault PRs. Commands are from the current Meerkat release. Several branches in one run: see [batch.md](batch.md).
 
 ## Which command for which PR
 
