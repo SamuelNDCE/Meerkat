@@ -26,7 +26,7 @@ function runOut(dir: string): string {
 }
 // FAIL if the check is in the final failure list, else PASS; followed by any IGNORED line of the run.
 
-const eq = (out: string) => `${/^FAIL {6}js-eqeqeq:/m.test(out) ? 'FAIL' : 'PASS'} ${out.split(/\r?\n/).filter((l) => l.startsWith('IGNORED ')).join(' | ')}`
+const eq = (out: string) => `${/^FAIL {6}js-eqeqeq:/m.test(out) ? 'FAIL' : 'PASS'} ${out.split(/\r?\n/).filter((l) => /^(FILE-WIDE )?IGNORED /.test(l) || l.startsWith('IGNORE-FILE:') || l.startsWith('STALE ')).join(' | ')}`
 
 describe('.meerkat-ignores.json', () => {
   test('without the file the loose equality fails (the buggy fixture still fails)', () => {
@@ -46,7 +46,25 @@ describe('.meerkat-ignores.json', () => {
   test('the line moved: the snippet still matches; without a snippet the old line does not', () => {
     const moved = '// a\n// b\n// c\n' + SRC
     const entry = { check: 'js-eqeqeq', path: 'src/a.js', line: 1, reason: 'deliberate', owner: 'samuel' }
-    expect(eq(runOut(repo([{ ...entry, snippet: 'a == b' }], moved)))).toContain('PASS')
+    expect(eq(runOut(repo([{ ...entry, snippet: 'export const same = (a, b) => a == b' }], moved)))).toContain('PASS')
     expect(eq(runOut(repo([entry], moved)))).toContain('FAIL')
   }, 240000)
+  test('a short snippet that is not the whole line does not match', () => {
+    const moved = ['// a', '// b', '// c', ''].join('\n') + SRC
+    expect(eq(runOut(repo([{ check: 'js-eqeqeq', path: 'src/a.js', line: 1, snippet: 'a == b', reason: 'deliberate', owner: 'samuel' }], moved)))).toContain('FAIL')
+  }, 120000)
+  test('an entry with no line is rejected with a reason and suppresses nothing', () => {
+    const out = eq(runOut(repo([{ check: 'js-eqeqeq', path: 'src/a.js', reason: 'deliberate', owner: 'samuel' }])))
+    expect(out).toContain('FAIL')
+    expect(out).toContain('has no line')
+  }, 120000)
+  test('a file-wide entry ("line": "*") passes the check and is labelled FILE-WIDE', () => {
+    const out = eq(runOut(repo([{ check: 'js-eqeqeq', path: 'src/a.js', line: '*', reason: 'whole file is legacy', owner: 'samuel' }])))
+    expect(out).toContain('PASS')
+    expect(out).toContain('FILE-WIDE IGNORED js-eqeqeq')
+  }, 120000)
+  test('an entry that matches nothing is reported STALE', () => {
+    const out = eq(runOut(repo([{ check: 'js-eqeqeq', path: 'src/a.js', line: 1, reason: 'deliberate', owner: 'samuel' }, { check: 'js-eqeqeq', path: 'src/gone.js', line: 3, reason: 'deliberate', owner: 'samuel' }])))
+    expect(out).toContain('STALE js-eqeqeq src/gone.js:3')
+  }, 120000)
 })
