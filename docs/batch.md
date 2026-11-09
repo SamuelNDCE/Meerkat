@@ -19,7 +19,7 @@ Branches can be separated by commas or spaces. Options:
 | `--max-prs <n>` | cap on branches per batch (default 15) |
 | `--json` | print the result as JSON |
 
-Environment: `MEERKAT_BATCH_MAX_RUNS` caps the gate runs in one batch (default 6). The result file goes under the Meerkat data folder (`MEERKAT_LOG_DIR`, or `~/.meerkat`).
+Environment: `MEERKAT_BATCH_MAX_RUNS` caps the gate runs in one batch (default 12). The result file goes under the Meerkat data folder (`MEERKAT_LOG_DIR`, or `~/.meerkat`).
 
 ## What it does
 
@@ -60,6 +60,6 @@ The gate's progress lines are shown with a `[batch gate]` prefix, including any 
 ## Limits
 
 - The dev-baseline store (`lib/devbaseline.mjs`) keeps results per base commit; a new base commit is checked again.
-- A batch of four or more branches that needs a culprit search can reach the default run cap and return 75. Raise `MEERKAT_BATCH_MAX_RUNS` to allow more.
+- A batch whose culprit search reaches the run cap (default 12) returns 75 with the cap named in its status line; it is never read as a pass. Raise `MEERKAT_BATCH_MAX_RUNS` to allow more.
 - There is no minimum batch size yet; small branches are batched only when you name them together.
 - The cargo lock is still taken when a changed file matches a Rust check's path filter. A toolchain pin (`rust-toolchain.toml`) matches it on purpose.
