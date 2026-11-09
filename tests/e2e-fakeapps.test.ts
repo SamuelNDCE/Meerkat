@@ -23,7 +23,13 @@ afterAll(() => {
 })
 
 type Defect = { check: string; rule?: string; file: string; severity: string; match?: string }
-type Run = { code: number | null; out: string; ms: number; runDir: string; runName: string; summary: any; findings: any; logRoot: string }
+type Counts = Record<string, number>
+type Reporter = { check: string; rule?: string | null }
+type Finding = { check: string; rule?: string | null; file?: string; severity: string; title?: string; message?: string; alsoReportedBy?: Reporter[] }
+type Doc = { schemaVersion: number; run: { project: { name: string } }; counts: { total: number; bySeverity: Counts }; findings: Finding[]; notRun: { check: string }[] }
+type Summary = { results: { id: string; status: string; detail?: unknown }[]; counts: Counts; project: { name: string }; files: { findings: string } }
+type App = { name: string; defects: Defect[]; clean: Record<string, string>; defective: Record<string, string> }
+type Run = { code: number | null; out: string; ms: number; runDir: string; runName: string; summary: Summary; findings: Doc; logRoot: string }
 
 // A hash of every file under a folder except .git, with sizes and times: any write to the project changes it.
 function hashTree(dir: string): string {
@@ -64,14 +70,14 @@ function meerkat(dir: string, args: string[], root: string): Run {
   const runs = join(logRoot, 'runs')
   const runName = existsSync(runs) ? readdirSync(runs).sort().pop() ?? '' : ''
   const runDir = join(runs, runName)
-  const read = (f: string) => (existsSync(join(runDir, f)) ? JSON.parse(readFileSync(join(runDir, f), 'utf8')) : null)
-  return { code: r.status, out: `${r.stdout}${r.stderr}`, ms, runDir, runName, summary: read('summary.json'), findings: read('findings.json'), logRoot }
+  const read = (f: string) => (existsSync(join(runDir, f)) ? (JSON.parse(readFileSync(join(runDir, f), 'utf8')) as unknown) : null)
+  return { code: r.status, out: `${r.stdout}${r.stderr}`, ms, runDir, runName, summary: read('summary.json') as Summary, findings: read('findings.json') as Doc, logRoot }
 }
 
-const found = (findings: any, d: Defect) =>
+const found = (findings: Doc | null, d: Defect) =>
   (findings?.findings ?? []).find(
     // a finding two checks reported is kept once: every reporter (lib/confirm.mjs alsoReportedBy) counts as having seen it
-    (f: any) => [{ check: f.check, rule: f.rule }, ...(f.alsoReportedBy ?? [])].some((r: any) => r.check === d.check && (d.rule === undefined || r.rule === d.rule || r.rule === null)) && f.file === d.file && SEVERITY.indexOf(f.severity) >= SEVERITY.indexOf(d.severity) && (d.match === undefined || `${f.title} ${f.message}`.includes(d.match)),
+    (f: Finding) => [{ check: f.check, rule: f.rule }, ...(f.alsoReportedBy ?? [])].some((r) => r.check === d.check && (d.rule === undefined || r.rule === d.rule || r.rule === null)) && f.file === d.file && SEVERITY.indexOf(f.severity) >= SEVERITY.indexOf(d.severity) && (d.match === undefined || `${f.title} ${f.message}`.includes(d.match)),
   )
 
 function project(name: string, variant: 'clean' | 'defective'): { dir: string; root: string } {
@@ -83,7 +89,7 @@ function project(name: string, variant: 'clean' | 'defective'): { dir: string; r
 describe('the fake apps are well formed', () => {
   test('every app has a clean and a defective variant and a defect list that names real files of the defective variant', () => {
     expect(Object.keys(APPS).sort()).toEqual(['clip-desk', 'express-api', 'ledger-core', 'notes-ui', 'tasks-app'])
-    for (const [name, app] of Object.entries(APPS) as [string, any][]) {
+    for (const [name, app] of Object.entries(APPS) as [string, App][]) {
       expect(app.defects.length, name).toBeGreaterThan(0)
       for (const d of app.defects as Defect[]) {
         expect(Object.keys(app.defective), `${name}: ${d.check}`).toContain(d.file)
@@ -104,17 +110,17 @@ describe('the fake apps are well formed', () => {
 })
 
 describe.each(Object.keys(APPS))('%s, quick preset', (name) => {
-  const app: any = (APPS as any)[name]
+  const app = (APPS as unknown as Record<string, App>)[name]
 
   test('the clean variant gives no failure and no finding', () => {
     const { dir, root } = project(name, 'clean')
     const before = hashTree(dir)
     const run = meerkat(dir, ['--preset', 'quick'], root)
     expect(run.summary, run.out.slice(-2000)).not.toBeNull()
-    const failed = run.summary.results.filter((r: any) => r.status === 'FAIL').map((r: any) => `${r.id}: ${String(r.detail).slice(0, 200)}`)
+    const failed = run.summary.results.filter((r) => r.status === 'FAIL').map((r) => `${r.id}: ${String(r.detail).slice(0, 200)}`)
     expect(failed).toEqual([])
     expect(run.summary.counts.fail).toBe(0)
-    expect(run.findings.counts.total, JSON.stringify(run.findings.findings.map((f: any) => [f.check, f.rule, f.file]))).toBe(0)
+    expect(run.findings.counts.total, JSON.stringify(run.findings.findings.map((f) => [f.check, f.rule, f.file]))).toBe(0)
     // 0 only when nothing was left unchecked; a missing optional outside tool is NOT RUN and makes the run 1, never a failure.
     expect(run.code).toBe(run.summary.counts.notRun === 0 ? 0 : 1)
     expect(run.summary.counts.pass).toBeGreaterThan(200)
@@ -130,7 +136,7 @@ describe.each(Object.keys(APPS))('%s, quick preset', (name) => {
     expect(run.code).toBe(1)
     expect(run.summary.counts.fail).toBeGreaterThan(0)
     const missed = (app.defects as Defect[]).filter((d) => !found(run.findings, d)).map((d) => `${d.check}${d.rule ? `/${d.rule}` : ''} in ${d.file}`)
-    expect(missed, `not detected: ${missed.join('; ')}\nreported: ${JSON.stringify(run.findings.findings.map((f: any) => [f.severity, f.check, f.rule, f.file]))}`).toEqual([])
+    expect(missed, `not detected: ${missed.join('; ')}\nreported: ${JSON.stringify(run.findings.findings.map((f) => [f.severity, f.check, f.rule, f.file]))}`).toEqual([])
     expect(run.ms).toBeLessThan(SANE_MS)
     expect(hashTree(dir)).toBe(before)
   })
@@ -191,11 +197,11 @@ describe('exit codes', () => {
     writeFileSync(join(dir, 'scripts', 'needs-service.mjs'), 'console.error("the service is not running")\nprocess.exit(75)\n')
     writeFileSync(join(dir, 'meerkat.config.json'), JSON.stringify({ packs: ['security'], discover: false, customChecks: [{ id: 'needs-service', title: 'Needs a service', cmd: 'node', args: ['scripts/needs-service.mjs'], tier: 'fast', group: 'functionality' }] }))
     const run = meerkat(dir, ['--only', 'needs-service', '--all'], root)
-    const r = run.summary.results.find((x: any) => x.id === 'needs-service')
+    const r = run.summary.results.find((x) => x.id === 'needs-service')
     expect(r?.status, run.out.slice(-1500)).toBe('NOT RUN')
     expect(run.summary.counts).toMatchObject({ fail: 0, notRun: 1 })
     expect(run.findings.counts.total).toBe(0)
-    expect(run.findings.notRun.map((x: any) => x.check)).toContain('needs-service')
+    expect(run.findings.notRun.map((x) => x.check)).toContain('needs-service')
     expect(run.code).toBe(1)
   })
 
@@ -212,7 +218,7 @@ describe('the preset run on a clean app also passes the full preset where it is 
     const before = hashTree(dir)
     const run = meerkat(dir, ['--preset', 'full'], root)
     expect(run.summary, run.out.slice(-1500)).not.toBeNull()
-    const failed = run.summary.results.filter((r: any) => r.status === 'FAIL').map((r: any) => `${r.id}: ${String(r.detail).slice(0, 160)}`)
+    const failed = run.summary.results.filter((r) => r.status === 'FAIL').map((r) => `${r.id}: ${String(r.detail).slice(0, 160)}`)
     expect(failed).toEqual([])
     expect(run.findings.counts.total).toBe(0)
     expect(run.runName).toMatch(/-ledger-core-[0-9a-f]{6}--full$/)
