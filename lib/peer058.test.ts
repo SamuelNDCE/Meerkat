@@ -44,7 +44,8 @@ describe('brief --ref', () => {
     expect(no.stdout).toContain('--ref feat')
     const yes = cli(['brief', 'src/only-feat.js#onlyFeat', '--app', app, '--ref', 'feat'])
     expect(yes.status).toBe(0)
-    expect(yes.stdout.split('\n')[0]).toContain('ref feat')
+    // Updated 2026-11-09: the folder line (524b9ee) is now line 1, so the ref label is line 2.
+    expect(yes.stdout.split('\n')[1]).toContain('ref feat')
     expect(yes.stdout).toContain('src/use.js')
     expect(cli(['brief', 'src/only-feat.js', '--app', app, '--ref', 'nope']).status).toBe(2)
     expect(cli(['brief', 'src/a.js', '--app', app, '--ref', 'feat', '--json']).stdout).toContain('"ref": "feat"')
@@ -61,10 +62,12 @@ describe('worktree paths', () => {
     put('src/w.js', 'export const w = 1\n', wt)
     const g = cli(['gate', wt, '--no-input'])
     g.stdout = g.stderr
-    expect(g.stdout.split('\n')[0]).toContain(`folder: ${wt}`)
-    expect(g.stdout.split('\n')[0]).toContain('branch wt-branch')
-    expect(g.stdout.split('\n')[0]).toContain('git worktree')
-    expect(g.stdout.split('\n')[0]).not.toContain('branch main')
+    // Updated 2026-11-09: the gate's "behind main" line (stderr) can come before the folder line (71b6e96), so find the folder line instead of pinning line 1.
+    const fl = g.stdout.split('\n').find((l) => l.startsWith('folder:')) ?? ''
+    expect(fl).toContain(`folder: ${wt}`)
+    expect(fl).toContain('branch wt-branch')
+    expect(fl).toContain('git worktree')
+    expect(fl).not.toContain('branch main')
     const b = cli(['brief', 'src/a.js', '--app', wt])
     expect(b.stdout.split('\n')[0]).toContain('branch wt-branch')
     expect(b.stdout.split('\n')[0]).toContain('git worktree')

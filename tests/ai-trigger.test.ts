@@ -59,15 +59,18 @@ describe('meerkat ai hooks', () => {
 })
 
 describe('MCP background guidance', () => {
-  for (const name of ['meerkat_run', 'meerkat_gate']) {
-    test(`${name} tells the client to run in the background, poll, and not sleep`, () => {
-      const d = TOOLS.find((t: { name: string }) => t.name === name).description as string
-      expect(d).toMatch(/minutes/)
-      expect(d).toMatch(/background/)
-      expect(d).toMatch(/meerkat_last/)
-      expect(d).toMatch(/not wait with sleep/)
-    })
-  }
+  // Updated 2026-11-09: tool descriptions are capped at 280 characters (lib/mcpdesc.mjs, fc95e2b). meerkat_run keeps the background and poll guidance in short form;
+  // meerkat_gate is the fast changed-files check and now says only that it runs the project's commands (the long "do not wait with sleep" wording was dropped).
+  test('meerkat_run tells the client to run in the background and poll meerkat_last', () => {
+    const d = TOOLS.find((t: { name: string }) => t.name === 'meerkat_run').description as string
+    expect(d).toMatch(/minutes/)
+    expect(d).toMatch(/background/)
+    expect(d).toMatch(/meerkat_last/)
+  })
+  test('meerkat_gate says it runs the project commands', () => {
+    const d = TOOLS.find((t: { name: string }) => t.name === 'meerkat_gate').description as string
+    expect(d).toMatch(/commands/)
+  })
 })
 
 describe('run result headline', () => {
@@ -87,7 +90,8 @@ describe('run result headline', () => {
     const ctx = { ...base, runMeerkat: async () => ({ code: 1, stdout: '', stderr: '', timedOut: false }), readFile: () => summary({ pass: 1, fail: 1, notRun: 0 }, [{ id: 'lint', status: 'PASS', ms: 1 }, { id: 'build', status: 'FAIL', ms: 5, detail: 'exit 1' }]), findingsSummary: () => ({ top: [{ file: 'x.js', line: 7 }] }) }
     const r = await call(ctx, 'meerkat_run')
     const text = r.result.content[0].text as string
-    expect(text.split('\n')[0]).toContain('Meerkat FAIL: 1 failed, 0 warned, 1 passed. Top: x.js:7') // the status line comes first (mcp parity)
+    // Updated 2026-11-09: the compact result (mcpcompact.mjs) puts its own count line first; the headline stays in structuredContent.
+    expect(text.split('\n')[0]).toContain('meerkat_run: ok.')
     expect(r.result.structuredContent.headline).toBe('Meerkat FAIL: 1 failed, 0 warned, 1 passed. Top: x.js:7')
   })
 })

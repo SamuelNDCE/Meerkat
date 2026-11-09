@@ -16,7 +16,8 @@ beforeAll(async () => {
   mod = await import(pathToFileURL(join(root, 'tools', 'accuracy-corpus.mjs')).href)
   out = mkdtempSync(join(tmpdir(), 'meerkat-fa-'))
   mod.generateCorpus(out)
-}, 120000)
+  // 2026-11-09: generateCorpus runs real git and tool subprocesses and takes about 80 s alone; under a full parallel run it passed 120 s and the hook timed out. 300 s is the load allowance.
+}, 300000)
 
 describe('severity of the rate-limit check', () => {
   test('rate-limit-present is a low note, other functionality checks keep medium', async () => {
