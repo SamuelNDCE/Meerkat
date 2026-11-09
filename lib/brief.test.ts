@@ -88,8 +88,8 @@ describe('brief honest answers', () => {
     expect(r.text).toContain('"nope" does not occur in src/core/calc.js')
   })
 
-  test('a file that is not there is exit code 75, a missing target is 2', () => {
-    expect(run(['src/none.js', '--app', 'app']).code).toBe(75)
+  test('a file that is not there is exit code 2 (file not found), a missing target is 2', () => {
+    expect(run(['src/none.js', '--app', 'app']).code).toBe(2)
     expect(run(['--app', 'app']).code).toBe(2)
     expect(run(['a.js', '--bogus']).code).toBe(2)
   })

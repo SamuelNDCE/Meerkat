@@ -444,7 +444,7 @@ describe('meerkat findings and meerkat finding', () => {
     const r = runCmd(env, ['finding', id.slice(0, 6)])
     expect(r.code).toBe(0)
     for (const w of ['what:', 'where:', 'detected by:', 'confidence:', 'log:', 'fix:', 'first seen:', 'crit thing']) expect(r.out).toContain(w)
-    expect(runCmd(env, ['finding', 'ffffffff']).code).toBe(1)
+    expect(runCmd(env, ['finding', 'ffffffff']).code).toBe(2)
     expect(findingDetailText(saved.doc.findings[0], saved.doc)).toContain('risky.mjs')
   })
   test('--export copies the saved file', () => {

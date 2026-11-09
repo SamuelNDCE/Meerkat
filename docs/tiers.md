@@ -48,7 +48,7 @@ The older single tier still exists and is what the corpus table and `docs/accura
 
 ## First-run estimates
 
-The written `estSeconds` is a guess for a project with no timing yet. Once a project has a recorded timing, that wins. Timings are kept per project (`~/.meerkat-timings.json`, `projects: { <folder>: { checks } }`); a time from a different project is never used. An older flat file is read as the project it names.
+The written `estSeconds` is a guess for a project with no timing yet. Once a project has a recorded timing, that wins. Timings are kept per project (`timings.json` in the Meerkat data folder (`MEERKAT_LOG_DIR`, else `~/.meerkat`; older versions used `~/.meerkat-timings.json`), `projects: { <folder>: { checks } }`); a time from a different project is never used. An older flat file is read as the project it names.
 
 | Check | Was | Now | Weight |
 |---|---|---|---|

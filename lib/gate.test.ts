@@ -161,12 +161,12 @@ describe('the command', () => {
     expect(e).toContain('--staged')
     expect(e).toContain('--timeout')
   })
-  test('gateMain returns 2 for bad usage and 75 outside a git repo', async () => {
+  test('gateMain returns 2 for bad usage and for a folder outside a git repo', async () => {
     const out: string[] = []
     const io = { log: (l: string) => out.push(l), err: (l: string) => out.push(l) }
     expect(await gateMain(['--bogus'], io)).toBe(EXIT.usage)
     const plain = mkdtempSync(join(root, 'cmd-'))
-    expect(await gateMain(['--app', plain], { ...io, env: { ...process.env, MEERKAT_NO_PROJECT_CODE: '1' } })).toBe(EXIT.notRun)
+    expect(await gateMain(['--app', plain], { ...io, env: { ...process.env, MEERKAT_NO_PROJECT_CODE: '1' } })).toBe(EXIT.usage)
   })
   test('classify: exit 1 with findings is a fail, exit 1 with a stack trace is a crash', () => {
     expect(classify({ status: 'FAIL', exitCode: 1 }, 'src/a.js:1 problem')).toBe('fail')
