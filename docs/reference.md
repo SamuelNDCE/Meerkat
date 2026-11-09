@@ -135,6 +135,16 @@ Everything the menu does is also a command, so scripts, CI and AI agents never n
 
 **Exit codes follow one rule.** Exit codes follow one rule: exit 1 only for a new blocking finding in a changed file; findings that were already there (not in this diff) are reported as pre-existing and do not change the exit code. `meerkat verdict` prints `PASS` (or `FAIL n blocking in changed files`) and, when there are pre-existing findings, a second line `pre-existing: N (not in this diff, does not block)`. `gate --json` carries the same rule in its `exitRule` field.
 
+**More ways to read a verdict.** None of these change the default output or the exit codes.
+
+- `meerkat verdict --format markdown` prints a pull request comment body: the verdict line, one table of the new blocking findings (file, line, check, message; at most 20 rows, then `and N more`), the pre-existing count and the exact command to re-run.
+- `meerkat verdict --format github` prints only GitHub Actions workflow commands: one `::error file=<f>,line=<n>,title=<check>::<message>` per new blocking finding and a `::notice::` with the verdict line.
+- `meerkat verdict --since <ref>` is a shorter `--base <ref>` that also prints `compared <ref>..HEAD: N commits`. Giving both is a usage error (exit 2).
+- `meerkat verdict --explain <finding-id>` runs no check: it prints one short block for one finding of the newest run of the project (check, file:line, why it fires, the fix hint when the rule has one, the `meerkat dismiss` command). An id or its first 4 characters works, as for `meerkat finding`.
+- `meerkat verdict --strict` counts pre-existing findings as blocking too (exit 1). It is off by default and the output line says `STRICT`.
+
+**`meerkat verdict --json` schema.** Every object has `"schema": 1` as its first key, so a consumer can check it before reading the rest. Version 1 fields: `schema`, `verdict` (`PASS`, `FAIL` or `NO-RESULT`), `exitCode`, `blocking`, `preExisting`, `known`, `knownFindings`, `stale`, `reason`; `strict` (true) and `range` (`{ ref, range, commits }`) appear only when `--strict` or `--since` is used. A change that removes or renames a field raises the number; adding a field does not.
+
 **The verdict result cache is off by default.** `verdict` and `top` run every check from scratch each time (the code passes `useCache: false`); only `meerkat gate` reuses a check's result when its inputs are unchanged, and `gate --no-cache` turns that off.
 
 The exit code is 0 when everything passed, 1 when something failed and 75 when something could not run, so `meerkat verify && git push` in a shell that has `&&` does what it says. The full list of flags: [docs/commands.md](commands.md).
