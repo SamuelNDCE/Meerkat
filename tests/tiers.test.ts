@@ -176,7 +176,7 @@ describe('time limits', () => {
     expect(effectiveTimeoutSeconds(normal, { load: 2 })).toBe(240)
     expect(effectiveTimeoutSeconds(normal, { load: () => 1.5 })).toBe(180)
     expect(effectiveTimeoutSeconds(normal, { load: 9 })).toBe(240) // the factor itself is capped
-    expect(effectiveTimeoutSeconds({ ...normal, timeoutSeconds: 7 }, { load: 2 })).toBe(14)
+    expect(effectiveTimeoutSeconds({ ...normal, timeoutSeconds: 7 }, { load: 2 })).toBe(7) // a written limit is a hard ceiling: load does not stretch it (29f83f4)
     expect(effectiveTimeoutSeconds(normal, { load: 2, budgets: { timeouts: { n: 900 } } })).toBe(900) // an exact limit stays exact
   })
   test('it grows with the project size, and an explicit larger pack timeout is kept', () => {
