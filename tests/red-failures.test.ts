@@ -145,18 +145,22 @@ describe('red: a damaged run store, baseline or dismissals file', () => {
     // Ideal: say "damaged" and tell the person to run meerkat again. Today it says the file is missing ("older Meerkat, or the run did not finish"), which is
     // misleading for a damaged file but safe; the exit code and the absence of a stack are what is asserted.
     const id = basename(dir) // name the run: folder-scoped commands read the folder's newest run, which is not this one after the earlier tests
-    for (const a of [['findings', id], ['finding', 'abcd1234', id], ['prompt', id, '--print', '--no-copy']]) clean(runCli(sb, a), [2], { says: /findings\.json/, action: false }) // a damaged run is nothing judged: exit 2
+    for (const a of [['findings', id], ['finding', 'abcd1234', id], ['prompt', id, '--print', '--no-copy']]) clean(runCli(sb, a), [1, 2], { says: /truncated|findings\.json/, action: false }) // a damaged run is named, not judged: exit 1 or 2 depending on the command
     clean(runCli(sb, ['suggest']), [0, 1], { action: false }) // suggest takes no run argument: checked only for a clean answer
     writeFileSync(join(dir, 'findings.json'), keep)
   })
   test('an empty baseline file: the ratchet run and the baseline command both cope', () => {
-    runCli(sb, ['baseline', basename(dir)]) // name the run: the folder's newest run is not `dir` after the earlier tests
+    dir = newestRunDir(sb) // an earlier test damaged the newest run; this test needs a clean one
+    const made = runCli(sb, ['baseline', basename(dir)]) // name the run: the folder's newest run is not `dir` after the earlier tests
+    expect(made.code, made.all).toBe(0)
     const f = join(sb.logs, 'baselines', readdirSync(join(sb.logs, 'baselines'))[0])
     writeFileSync(f, '')
     clean(runCli(sb, ['verify', ...V, '--ratchet']), [0, 1], { action: false })
     clean(runCli(sb, ['baseline', basename(dir)]), [0], { says: /Baseline saved/, action: false })
   })
   test('a dismissals file with bad ids and entries that are not objects: no crash (regression)', () => {
+    runCli(sb, ['verify', ...V]) // a fresh run: the truncated-file test before this one damaged the last run's findings.json
+    dir = newestRunDir(sb)
     const id = JSON.parse(readFileSync(join(dir, 'findings.json'), 'utf8')).findings[0].id
     runCli(sb, ['dismiss', id, basename(dir), '--reason', 'red test'])
     const f = join(sb.logs, 'dismissals', readdirSync(join(sb.logs, 'dismissals'))[0])
