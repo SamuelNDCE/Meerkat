@@ -184,6 +184,7 @@ To add a check, see [writing-checks.md](writing-checks.md). The shortest way is 
 
 ## More pages
 
+- [editor.md](editor.md): findings in VS Code and JetBrains (`--format vscode`, `--format jetbrains`).
 - [capabilities.md](capabilities.md): what Meerkat does, by job.
 - [neuralvault.md](neuralvault.md): using Meerkat from NeuralVault.
 - [faq.md](faq.md): questions teams have asked.
