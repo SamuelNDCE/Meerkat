@@ -83,7 +83,7 @@ describe('run identity: two projects with one folder name', () => {
   test('finding, dismiss and undismiss act on the run of this folder', () => {
     const idB = rb.saved.doc.findings[0].id
     expect(read(env, b, ['finding', idB.slice(0, 8)]).code).toBe(0)
-    expect(read(env, a, ['finding', idB.slice(0, 8)]).code).toBe(1) // that id is not in A's run
+    expect(read(env, a, ['finding', idB.slice(0, 8)]).code).toBe(2) // that id is not in A's run: a missing id is exit 2 (B12)
     const out: string[] = []
     const err: string[] = []
     const code = runExtra(['dismiss', idB.slice(0, 8), '--reason', 'test'], { env, cwd: b, out: (t: string) => out.push(t), err: (t: string) => err.push(t) })

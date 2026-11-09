@@ -233,14 +233,14 @@ describe('verdict and top never go silent', () => {
     git(app, ['checkout', '-q', '-b', 'feat'])
     const r = cli(['verdict'])
     expect(r.status).toBe(0)
-    expect(line(r)).toBe('PASS: already on main (no diff to judge)')
+    expect(line(r)).toBe('PASS: no diff against main (nothing to judge)')
     expect(JSON.parse(cli(['verdict', '--json']).stdout)).toMatchObject({ verdict: 'PASS', exitCode: 0 })
   }, SLOW)
-  test('top: nothing changed is exit 1 with one NO-RESULT line', () => {
+  test('top: nothing changed is exit 2 with one NO-RESULT line', () => {
     initMain()
     git(app, ['checkout', '-q', '-b', 'feat'])
     const r = cli(['top'])
-    expect(r.status).toBe(1)
+    expect(r.status).toBe(2)
     expect(line(r)).toMatch(/^NO-RESULT: nothing changed .*next: /)
   }, SLOW)
   test('the behind-base line is an advisory note: and does not change the exit code', () => {
@@ -306,7 +306,7 @@ describe('legacy folders', () => {
     put('apps/old/loose.js', LOOSE)
     commit()
     const v = cli(['verdict'])
-    expect(v.stdout.trim()).toMatch(/^PASS: already on main/)
+    expect(v.stdout.trim()).toMatch(/^PASS: no diff against main/)
     expect(v.stderr).toContain('1 folder(s) hidden as legacy')
     put('apps/web/loose.js', LOOSE)
     commit()

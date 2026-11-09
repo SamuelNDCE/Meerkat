@@ -117,7 +117,7 @@ Each is described in [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/ma
 
 ## ⏱ Progress and timeouts
 
-`verdict` and `top` print one progress line per check on stderr, `[12/218] risky-code ... 0.2s FAIL`, and `still running after 30s: <check>` for a slow one. The answer goes to stdout, so piping it is safe. They give up after 900 seconds (this build's default) with `NO-RESULT: the gate did not finish in 900s`. Raise the limit with `MEERKAT_VERDICT_TIMEOUT_S` (seconds), or stop a run on purpose with `--max-seconds`, which ends in `INCOMPLETE`. More: [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md).
+`verdict` and `top` print one progress line per check on stderr, `[12/218] risky-code ... 0.2s FAIL`, and `still running after 30s: <check>` for a slow one. The answer goes to stdout, so piping it is safe. They give up after 1500 seconds (this build's default) with `NO-RESULT: the gate did not finish in 900s`. Raise the limit with `MEERKAT_VERDICT_TIMEOUT_S` (seconds), or stop a run on purpose with `--max-seconds`, which ends in `INCOMPLETE`. More: [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md).
 
 ## 🤖 Using Meerkat from an AI assistant
 

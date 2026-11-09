@@ -89,9 +89,9 @@ describe('red: folders', () => {
     const nogit = box({ commit: false })
     clean(runCli(nogit, ['verify', ...V]), [0, 1], { action: false })
   })
-  test('a project with no git: gate exits 75 and says it is not a git work tree', () => {
+  test('a project with no git: gate exits 2 and says it is not a git work tree', () => {
     const nogit = box({ commit: false })
-    clean(runCli(nogit, ['gate', '--staged']), [75], { says: /not inside a git work tree/, action: false })
+    clean(runCli(nogit, ['gate', '--staged']), [2], { says: /is not a git repository/, action: false })
   })
   test('a folder with shell metacharacters in its name is just a name', () => {
     const names = ['x$(echo)', 'x;y', 'x&y', 'x`y`'].concat(WIN ? [] : ['x|y']) // | is not allowed in a Windows file name
@@ -139,13 +139,13 @@ describe('red: a damaged run store, baseline or dismissals file', () => {
     clean(runCli(sb, ['verify', ...V]), [0, 1], { action: false })
     writeFileSync(f, keep)
   })
-  test('a truncated findings.json: exit 1 with a message that names the run, no stack', () => {
+  test('a truncated findings.json: exit 2 with a message that names the run, no stack', () => {
     const keep = readFileSync(join(dir, 'findings.json'), 'utf8')
     writeFileSync(join(dir, 'findings.json'), keep.slice(0, Math.floor(keep.length / 2)))
     // Ideal: say "damaged" and tell the person to run meerkat again. Today it says the file is missing ("older Meerkat, or the run did not finish"), which is
     // misleading for a damaged file but safe; the exit code and the absence of a stack are what is asserted.
     const id = basename(dir) // name the run: folder-scoped commands read the folder's newest run, which is not this one after the earlier tests
-    for (const a of [['findings', id], ['finding', 'abcd1234', id], ['prompt', id, '--print', '--no-copy']]) clean(runCli(sb, a), [1], { says: /findings\.json/, action: false })
+    for (const a of [['findings', id], ['finding', 'abcd1234', id], ['prompt', id, '--print', '--no-copy']]) clean(runCli(sb, a), [2], { says: /findings\.json/, action: false }) // a damaged run is nothing judged: exit 2
     clean(runCli(sb, ['suggest']), [0, 1], { action: false }) // suggest takes no run argument: checked only for a clean answer
     writeFileSync(join(dir, 'findings.json'), keep)
   })
@@ -166,8 +166,8 @@ describe('red: a damaged run store, baseline or dismissals file', () => {
     clean(runCli(sb, ['dismiss', id, basename(dir), '--reason', 'again']), [0], { action: false })
   })
   test('dismiss and undismiss with a hostile id: exit 1, no path is touched, undismiss does not claim it removed something (regression)', () => {
-    clean(runCli(sb, ['dismiss', '../../x', '--reason', 'r']), [1], { says: /No open finding/ })
-    clean(runCli(sb, ['undismiss', '../../x']), [1], { says: /Nothing is dismissed/ })
+    clean(runCli(sb, ['dismiss', '../../x', '--reason', 'r']), [2], { says: /No open finding/ })
+    clean(runCli(sb, ['undismiss', '../../x']), [2], { says: /Nothing is dismissed/ })
   })
   test('a log folder that is a file: the run still shows its result, and says the logs were not saved (regression)', () => {
     const bad = box()

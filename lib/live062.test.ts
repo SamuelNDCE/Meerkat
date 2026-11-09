@@ -39,7 +39,7 @@ describe('gate prints progress', () => {
   test('one line per check start and finish, a still-running line, and a blocking count when the run is stopped', () => {
     const r = cli(['gate', '--no-cache', '--max-seconds', '3'], d)
     expect(r.err).toMatch(/\[\d+\/\d+\] quick \.\.\.\r?\n/)
-    expect(r.err).toMatch(/\[\d+\/\d+\] quick \.\.\. \d+\.\ds/)
+    expect(r.err).toMatch(/\[done \d+\/\d+\] quick \.\.\. \d+\.\ds/)
     expect(r.err).toMatch(/running: nap \(\d+s\)/)
     expect(r.err).toMatch(/stopped early: \d+ blocking so far, \d+ of \d+ checks finished/)
     expect(r.out).toMatch(/MEERKAT gate: \d+ blocking/)
@@ -240,12 +240,12 @@ describe('the verdict time limit keeps partial results', () => {
 })
 
 describe('the verdict time limit default', () => {
-  test('300 seconds with nothing set, MEERKAT_VERDICT_TIMEOUT_S overrides it', async () => {
+  test('1500 seconds with nothing set, MEERKAT_VERDICT_TIMEOUT_S overrides it', async () => {
     // @ts-expect-error plain .mjs module
     const { HARD_SECONDS } = await import('./branchcmds.mjs')
-    expect(HARD_SECONDS({})).toBe(300)
+    expect(HARD_SECONDS({})).toBe(1500)
     expect(HARD_SECONDS({ MEERKAT_VERDICT_TIMEOUT_S: '900' })).toBe(900)
-    expect(HARD_SECONDS({ MEERKAT_VERDICT_TIMEOUT_S: 'x' })).toBe(300)
+    expect(HARD_SECONDS({ MEERKAT_VERDICT_TIMEOUT_S: 'x' })).toBe(1500)
   })
 })
 
