@@ -64,6 +64,7 @@ const EXAMPLES: Record<string, Example> = {
   deps: { args: ['deps', 'src/math.js'], codes: [0, 75], why: '75 when the file imports no project file' },
   impact: { args: ['impact', '--base', 'HEAD'], codes: [0, 2], why: '2 when the fixture is not a git repository with that ref' },
   'tests-for': { args: ['tests-for', 'src/math.js'], codes: [0, 75], why: '75 when no test names the file' },
+  batch: { args: ['batch', '--dry-run', 'main'], codes: [0, 2], why: 'plans a batch and runs nothing; with no base branch in the fixture it says so (2)' },
   verdict: { args: ['verdict'], codes: [0, 1, 2], why: 'one line for a branch; the fixture may have no base branch, then it prints a NO-RESULT line (1 or 2)' },
   fix: { args: ['fix'], codes: [0, 2], why: 'the fixture has no fixable finding, so it says no automatic fix (2) or has nothing to fix (0)' },
   handoff: { args: ['handoff'], codes: [0, 1, 2], why: 'the verdict is needed; with no base branch it says so (1 or 2)' },
