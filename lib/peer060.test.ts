@@ -62,7 +62,7 @@ describe('verdict', () => {
     commit()
     const r = cli(['verdict'])
     // Corrected 2026-11-09: findings outside the diff (kind wide) no longer fail the verdict; they are listed as pre-existing. Was: FAIL-PRE-EXISTING, exit 1.
-    expect(r.stdout.trim()).toBe('PASS (1 pre-existing, not in this diff)')
+    expect(r.stdout.trim()).toBe('PASS' + String.fromCharCode(10) + 'pre-existing: 1 (not in this diff, does not block)')
     expect(r.status).toBe(0)
   }, SLOW)
 })

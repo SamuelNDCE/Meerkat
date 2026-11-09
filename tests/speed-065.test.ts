@@ -185,3 +185,41 @@ describe('verdict and findings outside the diff', () => {
     expect(verdictCounts(out)).toEqual({ blocking: 0, preExisting: 0, wide: 2 })
   })
 })
+
+describe('exit rule, worktree line and silence', () => {
+  test('gate --json states the exit rule', async () => {
+    const lines: string[] = []
+    await gateMain(['--base', 'main', '--json', '--app', dir], { env: env(), cwd: dir, log: (l: string) => lines.push(l), err: () => {} })
+    expect(JSON.parse(lines.join('\n')).exitRule).toMatch(/exit 1 only for a new blocking finding/)
+  }, 120_000)
+  test('verdict exits 1 for a new blocking finding and 0 with a pre-existing line when the only findings are old ones', async () => {
+    const a: string[] = []
+    expect(await runVerdict(['--base', 'main', '--app', dir], { env: env(), cwd: dir, out: (l: string) => a.push(l), err: () => {} })).toBe(1)
+    expect(a[0]).toMatch(/^FAIL \d+ blocking/)
+    // A branch that only touches a file with an old finding: the finding is on the base, so nothing new blocks.
+    git(dir, 'checkout', '-q', '-b', 'docsonly', 'main')
+    put(dir, 'README.md', '# hi\n')
+    git(dir, 'add', '-A')
+    git(dir, 'commit', '-q', '-m', 'docs')
+    const b: string[] = []
+    const code = await runVerdict(['--base', 'main', '--app', dir], { env: env(), cwd: dir, out: (l: string) => b.push(l), err: () => {} })
+    git(dir, 'checkout', '-q', 'feature')
+    expect(code).toBe(0)
+    expect(b[0]).toBe('PASS')
+    if (b.length > 1) expect(b[1]).toMatch(/^pre-existing: \d+ \(not in this diff, does not block\)$/)
+  }, 180_000)
+  test('verdict names a sleeping check within 6 seconds of its start and still ends with a result line', async () => {
+    const d = join(root, 'sleepy')
+    git(d, 'checkout', '-q', 'feat')
+    const t0 = Date.now()
+    const beats: { at: number; line: string }[] = []
+    const out: string[] = []
+    const code = await runVerdict(['--base', 'main', '--app', d], { env: env(), cwd: d, out: (l: string) => out.push(l), err: (l: string) => beats.push({ at: Date.now() - t0, line: l }) })
+    const start = beats.find((b) => b.line.startsWith('[') && b.line.endsWith('sleepy ...'))
+    const beat = beats.find((b) => b.line.startsWith('\u2026') && b.line.includes('running: sleepy'))
+    expect(start && beat, beats.map((b) => b.line).join('\n')).toBeTruthy()
+    expect(beat!.at - start!.at).toBeLessThan(6000)
+    expect(out.length).toBeGreaterThan(0)
+    expect([0, 1]).toContain(code)
+  }, 120_000)
+})

@@ -133,6 +133,10 @@ Everything the menu does is also a command, so scripts, CI and AI agents never n
 | update Meerkat | `meerkat update` (see [Updating](#updating)) |
 | print a bug report to paste into an issue | `meerkat bug` |
 
+**Exit codes follow one rule.** Exit codes follow one rule: exit 1 only for a new blocking finding in a changed file; findings that were already there (not in this diff) are reported as pre-existing and do not change the exit code. `meerkat verdict` prints `PASS` (or `FAIL n blocking in changed files`) and, when there are pre-existing findings, a second line `pre-existing: N (not in this diff, does not block)`. `gate --json` carries the same rule in its `exitRule` field.
+
+**The verdict result cache is off by default.** `verdict` and `top` run every check from scratch each time (the code passes `useCache: false`); only `meerkat gate` reuses a check's result when its inputs are unchanged, and `gate --no-cache` turns that off.
+
 The exit code is 0 when everything passed, 1 when something failed and 75 when something could not run, so `meerkat verify && git push` in a shell that has `&&` does what it says. The full list of flags: [docs/commands.md](commands.md).
 
 ## The meerkat command
