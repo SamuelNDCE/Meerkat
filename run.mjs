@@ -679,6 +679,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (report && !boardShown) log(`logs: ${ctx.logDir}   (meerkat last shows the report, meerkat why <check> one check's log)`)
   // Where the logs are and how long they stay (lib/runpath.mjs); the board's own summary names the folder, the plain list above does too, this adds the retention.
   if (report && !opts.selfTest && !opts.quiet) for (const l of runPathLines({ dir: ctx.logDir, env }).slice(1)) log(l)
+  // The latest results, by path, so nobody has to search for them.
+  if (report && !opts.selfTest && !opts.quiet) log(`results: ${String(ctx.logDir).replace(/[\/]+$/, '')}/summary.json ${String(ctx.logDir).replace(/[\/]+$/, '')}/findings.json`)
   // First run in a project with no config: said once (lib/firstrun.mjs). Never in --plain, --json or --quiet output.
   if (!opts.selfTest && !hush) {
     const note = firstRunNote({ dir: appDir, configFile, env, quiet: hush, plain: Boolean(opts.plain) })

@@ -1,7 +1,7 @@
 // 0.9.8 verdict capabilities: --format markdown, --format github, --since, --explain, --strict and "schema": 1 in the JSON. Every test runs the real CLI
 // on a fixture repo; the default output and exit codes are checked too.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
@@ -107,10 +107,11 @@ describe('--format github', () => {
     const r = meerkat(dir, 'verdict', '--base', 'main', '--format', 'github')
     expect(r.code).toBe(1)
     const lines = r.out.trim().split('\n')
-    expect(lines).toHaveLength(3)
+    expect(lines).toHaveLength(4)
     expect(lines[0]).toMatch(/^::error file=src\/new\.js,line=1,title=sql-concat::/)
     expect(lines[1]).toMatch(/^::error file=src\/second\.js,line=1,title=sql-concat::/)
     expect(lines[2]).toBe('::notice::FAIL 2 blocking in changed files')
+    expect(lines[3]).toMatch(/^::notice::base [0-9a-f]{12} \(main\)$/)
     for (const l of lines) expect(l).toMatch(/^::(error|notice)/)
   }, 180_000)
 })
@@ -180,6 +181,53 @@ describe('--explain', () => {
   }, 60_000)
 })
 
+describe('base line, --timings, --rerun-failed, results line', () => {
+  test('the base commit is named on stderr as base <sha12> (<ref>) and in the JSON', () => {
+    const sha = git(dir, 'merge-base', 'main', 'HEAD').trim().slice(0, 12)
+    const r = meerkat(dir, 'verdict', '--base', 'main')
+    expect(r.err).toContain(`base ${sha} (main)`)
+    expect(r.out).toBe('FAIL 2 blocking in changed files\npre-existing: 1 (not in this diff, does not block)\n')
+    const doc = JSON.parse(meerkat(dir, 'verdict', '--base', 'main', '--json').out)
+    expect(doc.base).toEqual({ sha, ref: 'main' })
+  }, 180_000)
+
+  test('--timings prints a table of at most 15 checks, slowest first, after the normal output', () => {
+    const r = meerkat(dir, 'verdict', '--base', 'main', '--timings')
+    const lines = r.out.trimEnd().split('\n')
+    const at = lines.findIndex((l) => l.startsWith('timings: top'))
+    expect(at).toBe(2)
+    expect(lines[at + 1]).toMatch(/^check\s+seconds\s+status$/)
+    const rows = lines.slice(at + 2)
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows.length).toBeLessThanOrEqual(15)
+    const secs = rows.map((l) => Number(l.trim().split(/\s+/).at(-2)))
+    expect(secs).toEqual([...secs].sort((a, b) => b - a))
+    expect(r.code).toBe(1)
+  }, 180_000)
+
+  test('--rerun-failed with no earlier run is NO-RESULT; after a run it runs only the failed checks and says so', () => {
+    const fresh = { ...env, MEERKAT_LOG_DIR: join(root, 'logs-fresh') } as NodeJS.ProcessEnv
+    const none = spawnSync(process.execPath, [cli, 'verdict', '--base', 'main', '--rerun-failed'], { cwd: dir, env: fresh, encoding: 'utf8' })
+    expect(none.status).toBe(1)
+    expect(none.stdout).toMatch(/^NO-RESULT: --rerun-failed found no earlier verdict run/)
+    const first = meerkat(dir, 'verdict', '--base', 'main')
+    expect(first.code).toBe(1)
+    const again = meerkat(dir, 'verdict', '--base', 'main', '--rerun-failed')
+    expect(again.out.split('\n')[0]).toBe('rerun-failed: ran only the 1 check(s) that failed last time: sql-concat')
+    expect(again.out).toContain('FAIL 2 blocking in changed files')
+    expect(again.err).toMatch(/running checks \(1 loaded\)/)
+    expect(again.code).toBe(1)
+  }, 240_000)
+
+  test('a run prints a results line naming summary.json and findings.json that exist', () => {
+    const r = meerkat(dir, 'run', 'quick', '--no-input')
+    const m = /^results: (\S+\/summary\.json) (\S+\/findings\.json)$/m.exec(`${r.out}\n${r.err}`)
+    expect(m).toBeTruthy()
+    expect(existsSync(m![1])).toBe(true)
+    expect(existsSync(m![2])).toBe(true)
+  }, 180_000)
+})
+
 describe('usage and help', () => {
   test('a bad format and --json with --format are exit 2', () => {
     expect(meerkat(dir, 'verdict', '--format', 'xml').code).toBe(2)
@@ -187,6 +235,6 @@ describe('usage and help', () => {
   }, 60_000)
   test('verdict --help lists every new option', () => {
     const r = meerkat(dir, 'verdict', '--help')
-    for (const flag of ['--format', '--since', '--explain', '--strict']) expect(r.out).toContain(flag)
+    for (const flag of ['--format', '--since', '--explain', '--strict', '--timings', '--rerun-failed']) expect(r.out).toContain(flag)
   }, 60_000)
 })
