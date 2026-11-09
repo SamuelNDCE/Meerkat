@@ -39,7 +39,7 @@ describe('brief --ref', () => {
   })
   test('without --ref the error names the ref that has the file; with --ref feat it is found and the ref is on the first line', () => {
     const no = cli(['brief', 'src/only-feat.js', '--app', app])
-    expect(no.status).toBe(75)
+    expect(no.status).toBe(2) // a file that is not on the checked-out branch is a missing file: exit 2 (B16)
     expect(no.stdout).toContain('checked out: main')
     expect(no.stdout).toContain('--ref feat')
     const yes = cli(['brief', 'src/only-feat.js#onlyFeat', '--app', app, '--ref', 'feat'])
