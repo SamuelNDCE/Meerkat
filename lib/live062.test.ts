@@ -311,3 +311,33 @@ describe('map queries read the working tree', () => {
     expect(w.out).toMatch(/tests\/b\.test\.js:2/)
   }, 60000)
 })
+
+describe('a cargo lock wait is WAITING, not NO-RESULT', () => {
+  test('a held lock and a 3 s limit: verdict, top and gate print WAITING and exit 75', async () => {
+    const { spawn } = await import('node:child_process')
+    const lockDir = join(root, 'waiting.lock')
+    const e = { MEERKAT_CARGO_LOCK_DIR: lockDir, MEERKAT_LOCK_MAX_WAIT: '3' } as NodeJS.ProcessEnv
+    const d = repo('waiting-fx', {
+      'meerkat.config.json': JSON.stringify({ packs: ['rust'], discover: false }),
+      'Cargo.toml': '[package]\nname = "fx"\nversion = "0.1.0"\nedition = "2021"\n',
+      'src/lib.rs': 'pub fn a() -> u32 { 1 }\n',
+    })
+    put(d, 'src/lib.rs', 'pub fn a() -> u32 { 2 }\n')
+    put(root, 'hold3.js', 'setTimeout(() => {}, 60000)\n')
+    const holder = spawn(process.execPath, [join(ROOT, 'lib', 'cargo-lock-run.mjs'), process.execPath, join(root, 'hold3.js')], { env: { ...env, ...e }, stdio: 'ignore' })
+    await new Promise((r) => setTimeout(r, 1500))
+    try {
+      for (const word of ['verdict', 'top', 'gate']) {
+        const r = cli([word, '--base', 'main'], d, e)
+        expect(r.out, word).toMatch(/WAITING: cargo lock held by pid \d+ \(.*hold3\.js\), waited \d+s, limit 3s; not a result/)
+        expect(r.out, word).not.toMatch(/NO-RESULT/)
+        // gate exits 1 instead when another check in the pack found a real blocking finding; verdict and top put the lock wait first
+        if (word === 'gate') expect([1, 75]).toContain(r.code)
+        else expect(r.code, word).toBe(75)
+      }
+    } finally {
+      holder.kill()
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  }, 180000)
+})
