@@ -18,6 +18,13 @@ Safer by default, quieter output, fewer false alarms.
 - `--no-input` is accepted by every command. `meerkat dismiss` and `meerkat rules test` exit 2 on usage errors. Unknown config keys are warned about. A cut-off findings list is named as truncated.
 - False-alarm fixes: an `innerHTML` set from a constant on one line, `break` inside loops, markers inside quotes, history rules judging new commits only, and `merge-commit-noise` and `large-commits` using the same commit range.
 - The `quick` preset no longer runs style-only and documentation-only checks.
+- Verdict JSON: a stopped run and a finished run carry the same fields: `blocking`, `known`, `knownFindings`, `stale`, `behindBy` (commits the base is ahead) and a `checks` array (one row per check with status, seconds, cached, detail and places). The verdict word matches the exit code (INCOMPLETE for 75, NO-RESULT for 2).
+- Verdict: a branch more than 20 commits behind its base returns NO-RESULT (exit 2) in every outcome, unless `--allow-stale` is given. Timing lines print by themselves for runs over 60 seconds.
+- Verdict: the overall run limit is 1500 seconds by default (`MEERKAT_VERDICT_TIMEOUT_S` overrides it). Before, it was 300 seconds, which cut Rust tests short.
+- Verdict: each complete run writes its summary to `<data folder>/verdicts/<repo>-<branch>.json`.
+- Verdict: an explicit line says whether the base comparison finished.
+- `rust-test` runs only the crates the change touches when the change is inside crates (a workspace-level change still runs everything), waits at most 300 s for the cargo lock, and says which crates and target directory it used.
+- Exit codes follow one table (0 pass, 1 fail, 2 nothing judged, 75 incomplete), and `docs/neuralvault-gate.md` describes it for NeuralVault use.
 - Added a Linux CI job. It has not been verified on GitHub yet.
 
 ### New commands
