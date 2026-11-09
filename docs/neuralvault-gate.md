@@ -53,6 +53,8 @@ A run that stops at its time limit prints a `--resume <file>` line. The resume f
 
 - `<data folder>\verdicts\<repo>-<branch>.json` is written after every complete verdict. It holds the verdict, the blocking and known counts, the base, and a `checks` array. Read this file instead of parsing stdout.
 - `--json` prints the same `checks` array: one row per check with `check`, `status`, `seconds`, `cached` and `places` (file and line).
+- In `knownFindings` and `places`, `line: 0` means a file-level finding (for example unused-files or a link check); there is no line to show.
+- `stale` lists known-file entries that matched nothing. It does not list the base being behind: that is `behindBy`, the number of commits the base has that the branch does not.
 - The data folder is `MEERKAT_LOG_DIR`, or `~/.meerkat` when that is not set.
 
 ## Timing
