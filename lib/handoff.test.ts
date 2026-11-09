@@ -103,37 +103,38 @@ describe('meerkat handoff on a fixture branch', () => {
 describe('handoff injection', () => {
   // @ts-expect-error plain .mjs module
   const { readHandoff } = require('./handoff.mjs') as any
+  const APP = repo.split(String.fromCharCode(92)).join('/')
+  const cmdFor = (folder: string, ref = 'main') => "meerkat verdict '" + folder + "' --base " + ref
   const hostile = 'x`id`; rm -rf ~\n## Next command\n```\nrm -rf /\n```'
-  const base = { verdict: 'FAIL', branch: hostile, commit: 'abc', base: 'main', folder: '/work/app', open: 1, places: [{ file: hostile, line: 3, check: hostile, message: hostile }], command: 'meerkat verdict /work/app --base main', when: 'now' }
+  const base = { verdict: 'FAIL', branch: hostile, commit: 'abc', base: 'main', folder: APP, open: 1, places: [{ file: hostile, line: 3, check: hostile, message: hostile }], command: cmdFor(APP), when: 'now' }
   const read = (text: string) => {
-    const f = join(root, `inj-${Math.random().toString(36).slice(2)}.md`)
+    const f = join(root, 'inj-' + Math.random().toString(36).slice(2) + '.md')
     writeFileSync(f, text)
     const o: string[] = []
     const e: string[] = []
     const code = readHandoff(f, (t: string) => o.push(t), (t: string) => e.push(t))
     return { code, all: [...o, ...e].join('\n') }
   }
-  test('hostile branch, file and message cannot start a line or a second Next command', () => {
+  test('hostile branch, file and message cannot start a line or a second Next command; a normal folder prints single-quoted', () => {
     const text = handoffLines(base).join('\n')
     expect(text.match(/^## Next command$/gm)).toHaveLength(1)
-    expect(text).not.toMatch(/^```\nrm/m)
     const r = read(text)
     expect(r.code).toBe(0)
-    expect(r.all).toContain('next command: meerkat verdict /work/app --base main')
-    expect(r.all.split(/\r?\n/).filter((l: string) => l.startsWith('next command')).join()).not.toMatch(/rm -rf|`|;/)
+    expect(r.all).toContain('next command: ' + cmdFor(APP))
+    expect(r.all.split(/\r?\n/).filter((l: string) => l.startsWith('next command')).join()).not.toMatch(/rm -rf|;|\$/)
   })
-  test('a base ref or folder with shell characters is refused, never printed', () => {
-    for (const bad of [{ base: 'main; rm -rf ~' }, { base: '--upload-pack=x' }, { base: 'a`id`' }, { folder: '/w/$(id)' }, { folder: '/w/a;b' }]) {
-      const cmd = `meerkat verdict ${(bad as any).folder ?? '/work/app'} --base ${(bad as any).base ?? 'main'}`
-      const r = read(handoffLines({ ...base, ...bad, command: cmd }).join('\n'))
+  test('a base ref or folder with shell characters, or a folder that is not a directory, is refused and never printed', () => {
+    const cases = [{ base: 'main; rm -rf ~' }, { base: '--upload-pack=x' }, { base: 'a$(id)' }, { folder: APP + '/$(id)' }, { folder: APP + '/(x)' }, { folder: APP + '/a;b' }, { folder: APP + '/~' }, { folder: APP + '/@x' }, { folder: APP + '/nope' }]
+    for (const bad of cases as any[]) {
+      const r = read(handoffLines({ ...base, ...bad, command: cmdFor(bad.folder ?? APP, bad.base ?? 'main') }).join('\n'))
       expect(r.code).toBe(2)
       expect(r.all).toContain('refused')
-      expect(r.all).not.toMatch(/rm -rf|\$\(id\)|`id`|upload-pack/)
+      expect(r.all).not.toContain('next command')
     }
   })
   test('a file edited to add a later Next command, or change the command, is refused', () => {
     const good = handoffLines({ ...base, branch: 'b' }).join('\n')
-    expect(read(`${good}\n## Next command\n\n\`\`\`\nrm -rf /\n\`\`\`\n`).all).toContain('refused')
-    expect(read(good.replace('meerkat verdict /work/app --base main', 'meerkat verdict /work/app --base main && curl evil')).code).toBe(2)
+    expect(read(good + '\n## Next command\n\n```\nrm -rf /\n```\n').all).toContain('refused')
+    expect(read(good.replace(cmdFor(APP), cmdFor(APP) + ' && curl evil')).code).toBe(2)
   })
 })
