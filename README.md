@@ -16,6 +16,14 @@ Meerkat checks, maps and tests a project: security, correctness, accessibility, 
 
 </div>
 
+## What is new in 0.5.3
+
+This release refines the workflows (batch gating, frontend checks, verdict JSON) and improves how an AI uses the tool. Please re-read the docs, starting with [docs/batch.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/batch.md) and [docs/neuralvault-gate.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault-gate.md). The full list is in [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md).
+
+- `meerkat batch` gates several branches in one run and names the culprit.
+- `meerkat frontend` runs typecheck, test and build steps from a trusted commands block.
+- Verdict JSON carries `checks` rows, `behindBy`, `unmatchedKnown` and a verdict word that matches the exit code.
+
 ## 💡 Why Meerkat
 
 - **One command, an honest answer.** `meerkat verify` works out what applies to your project and says whether it is safe to ship. A check that could not run is NOT RUN, and the run fails.
@@ -47,7 +55,7 @@ FAIL  unused-files (1)
 FAIL  js-eqeqeq (1)
 ```
 
-`verdict` gives the one-line answer for the branch, for example `FAIL 3 blocking in changed files` (the section below explains each answer). `meerkat verify` is the quick everyday run, `meerkat full` adds the slow checks, `meerkat last` shows the saved results, `meerkat why <check>` shows one check's log and `meerkat findings` lists every finding, worst first. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage error, 3 nothing to run. Every command: [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md).
+`verdict` gives the one-line answer for the branch, for example `FAIL 3 blocking in changed files` (the section below explains each answer). `meerkat verify` is the quick everyday run, `meerkat full` adds the slow checks, `meerkat last` shows the saved results, `meerkat why <check>` shows one check's log and `meerkat findings` lists every finding, worst first. Exit codes for `verdict`, `top`, `batch` and `gate`: 0 pass, 1 fail, 2 nothing judged or a usage error, 75 incomplete (never a pass). Every command: [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md).
 
 ## 🏁 Is this branch safe to merge?
 
@@ -61,7 +69,7 @@ meerkat verdict --base origin/main
 FAIL 3 blocking in changed files
 ```
 
-- `--base <ref>` is the branch to compare with (default: main or master). `--json` prints one object (verdict, exitCode, blocking, known, stale, reason).
+- `--base <ref>` is the branch to compare with (default: main or master). `--json` prints one object: `schema`, `verdict`, `exitCode`, `blocking`, `preExisting`, `known`, `knownFindings`, `stale` (also `unmatchedKnown`, the same value), `behindBy`, `checksTotal`, `checksFinished`, `skippedByPath` and a `checks` array (status, seconds, cached, detail, places). The verdict word matches the exit code: PASS 0, FAIL 1, NO-RESULT 2, INCOMPLETE 75.
 - `--first` prints only the first blocking `file:line: message`, or `PASS`. `--ready` prints one `READY` or `NOT READY` line. `--branches a b` prints one verdict line per branch.
 - Findings the branch did not add (already on the base, or outside the diff) do not fail the verdict: it prints `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. Exit 1 only for a new blocking finding in a changed file.
 - `--known <file>` is a JSON list of failures your team accepted, `[{ "check", "file", "line"? }]`. A match is printed as `KNOWN` and does not block; an entry that matches nothing is printed as `STALE`.
@@ -117,7 +125,7 @@ Each is described in [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/ma
 
 ## ⏱ Progress and timeouts
 
-`verdict` and `top` print one progress line per check on stderr, `[12/218] risky-code ... 0.2s FAIL`, and `still running after 30s: <check>` for a slow one. The answer goes to stdout, so piping it is safe. They give up after 1500 seconds (this build's default) with `NO-RESULT: the gate did not finish in 1500s`. Raise the limit with `MEERKAT_VERDICT_TIMEOUT_S` (seconds), or stop a run on purpose with `--max-seconds`, which ends in `INCOMPLETE`. More: [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md).
+`verdict` and `top` print one progress line per check on stderr, `[12/218] risky-code ... 0.2s FAIL`, and `still running after 30s: <check>` for a slow one. The answer goes to stdout, so piping it is safe. They give up after the overall limit (1500 seconds by default) with `NO-RESULT: the gate did not finish in 1500s`. Raise the limit with `MEERKAT_VERDICT_TIMEOUT_S` (seconds), or stop a run on purpose with `--max-seconds`, which ends in `INCOMPLETE`. More: [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md).
 
 ## 🤖 Using Meerkat from an AI assistant
 

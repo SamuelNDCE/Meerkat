@@ -1,6 +1,6 @@
 # Gate use for NeuralVault
 
-One page for running `meerkat verdict` on NeuralVault PRs. Commands are from the build on `m053-integration`. Run them from the Meerkat checkout, or use the installed `meerkat` once the next release is out.
+One page for running `meerkat verdict` on NeuralVault PRs. Commands are from Meerkat 0.5.3. Several branches in one run: see [batch.md](batch.md).
 
 ## Which command for which PR
 
@@ -13,7 +13,7 @@ One page for running `meerkat verdict` on NeuralVault PRs. Commands are from the
 | Several branches at once | `meerkat verdict --branches a,b,c --app <repo>` |
 | Machine-readable | `meerkat verdict ... --json` |
 
-Rust PRs: `rust-test` and `rust-clippy` can run past the time limit. They then show as NOT RUN and the result is INCOMPLETE, not a pass. A scoped run that checks only the changed crates is not built yet.
+Rust PRs: `rust-test` runs only the crates the change touches (its note names them and the cargo target directory), waits at most 300 s for the cargo lock, and has a 1200 s limit that is a hard ceiling. A check that does not finish shows as NOT RUN and the result is INCOMPLETE, not a pass. A failing cargo test is a failing check named by its test, and a failed test always blocks.
 
 ## Known-file format
 
@@ -52,9 +52,9 @@ A run that stops at its time limit prints a `--resume <file>` line. The resume f
 ## Output files
 
 - `<data folder>\verdicts\<repo>-<branch>.json` is written after every complete verdict. It holds the verdict, the blocking and known counts, the base, and a `checks` array. Read this file instead of parsing stdout.
-- `--json` prints the same `checks` array: one row per check with `check`, `status`, `seconds`, `cached` and `places` (file and line).
+- `--json` prints the same `checks` array: one row per check with `check`, `status`, `seconds`, `cached`, `detail` and `places` (file and line). It also has `checksTotal`, `checksFinished`, `skippedByPath` and a `verdict` word that matches the exit code.
 - In `knownFindings` and `places`, `line: 0` means a file-level finding (for example unused-files or a link check); there is no line to show.
-- `stale` lists known-file entries that matched nothing. It does not list the base being behind: that is `behindBy`, the number of commits the base has that the branch does not.
+- `stale` lists known-file entries that matched nothing; `unmatchedKnown` carries the same value. It does not list the base being behind: that is `behindBy`, the number of commits the base has that the branch does not.
 - The data folder is `MEERKAT_LOG_DIR`, or `~/.meerkat` when that is not set.
 
 ## Timing

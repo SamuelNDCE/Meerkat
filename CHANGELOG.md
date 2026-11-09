@@ -27,6 +27,21 @@ Safer by default, quieter output, fewer false alarms.
 - Exit codes follow one table (0 pass, 1 fail, 2 nothing judged, 75 incomplete), and `docs/neuralvault-gate.md` describes it for NeuralVault use.
 - Added a Linux CI job. It has not been verified on GitHub yet.
 
+- Gate cache: the cache key includes a digest of the result code, so a code fix never reuses an old cached result.
+- Gate: a failed test always blocks, and a panic outside the diff is not treated as wide. A cargo test failure is a failing check named by its test, not a crash (it needs exit 101 and cargo's failure summary).
+- Timeouts: a written per-check time limit is a hard ceiling. Load or size no longer stretches it (`rust-test` is 1200 s).
+- Dev baseline: results are stored per exact base commit, and a new base commit is checked again.
+- Verdict JSON: `unmatchedKnown` carries the same value as `stale`, `skippedByPath` lists checks skipped because no changed file matched, and `checksTotal` and `checksFinished` count the same checks everywhere. Unclassified findings are INCOMPLETE (75), never PASS.
+- First-run note: shown once per machine.
+- `meerkat frontend`: a source file maps to its sibling test, and a test step takes only test files. Skipped steps are never a pass.
+- `meerkat batch`: the run cap is 12 gate runs (`MEERKAT_BATCH_MAX_RUNS`), and the status line names the cap when it is hit. Progress and lock-wait lines reach the terminal, and the result file records timings.
+
+### Renamed or changed output
+
+- `stale` keeps its meaning (known-file entries that matched nothing). `unmatchedKnown` is the same value under a clearer name.
+- `line 0` in `places` and `knownFindings` means a file-level finding, not a line.
+- Exit codes follow one table: 0 pass, 1 fail, 2 nothing judged or a usage error, 75 incomplete.
+
 ### New commands
 
 - `meerkat batch --base <ref> --app <repo> <branch1> <branch2> ...`: gates several branches together in one run, names the branch whose change fails (and whether the same check fails on the base), re-gates without it, and writes a result file per batch plus a `latest.json` per repo. Refuses a batch over 3000 changed lines or 15 PRs unless `--max-lines`/`--max-prs` say otherwise; `--dry-run` only plans, and a refusal exits 75. Exit 0 all pass, 1 a branch blocked, 75 incomplete or refused.
