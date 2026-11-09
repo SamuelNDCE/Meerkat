@@ -148,11 +148,12 @@ describe('meerkat batch (fake gate, real git)', () => {
     expect(r.code).toBe(0)
   })
 
-  test('--dry-run prints the plan, runs no gate, writes no result file, exits 0', async () => {
+  test('--dry-run prints the plan, runs no gate, writes no result file, exits 75 when any branch is refused', async () => {
     calls.length = 0
     const before = existsSync(join(logs, 'batches')) ? readdirSync(join(logs, 'batches')).length : 0
     const r = await run(['--base', 'main', '--app', dir, 'clean1', 'conflict', 'nope', '--dry-run'])
-    expect(r.code).toBe(0)
+    // A refused branch is never a clean plan: exit 75 even in a dry run, so a script cannot read it as success.
+    expect(r.code).toBe(75)
     expect(calls).toHaveLength(0)
     expect(r.lines[0]).toMatch(/^PLAN /)
     expect(r.lines.join('\n')).toMatch(/clean1: would be merged/)
