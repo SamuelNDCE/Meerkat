@@ -66,7 +66,7 @@ Use these to find problems in the whole project.
 
 ## The MCP tools
 
-The server reports 34 tools (`node bin/meerkat-mcp.mjs --list-tools` prints the count and the names). "Changes state" means the tool writes something: a run folder, a map, a file, a dismissal or a hook. The first six carry no read-only hint in the code, so their line below comes from reading what they do.
+The server reports 35 tools (`node bin/meerkat-mcp.mjs --list-tools` prints the count and the names). "Changes state" means the tool writes something: a run folder, a map, a file, a dismissal or a hook. The first six carry no read-only hint in the code, so their line below comes from reading what they do.
 
 | Tool | Reads only or changes state |
 |---|---|
