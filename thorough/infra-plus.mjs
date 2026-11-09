@@ -17,6 +17,66 @@ const isWorkload = (t) => /^kind:\s*["']?(Deployment|StatefulSet|DaemonSet|Repli
 // Folder-level rules: each returns { id, title, fails: [path], na } and is skipped when the family has no files.
 // Docker reads .dockerignore from the root of the BUILD CONTEXT, which is not always the Dockerfile's folder: a compose file next to it can name another one
 // (`context: ../..`), and a Dockerfile in a subfolder often says it is built from the project root. All of those places count.
+// `docker build -f <Dockerfile> ... <context>` on one command line: { file, ctx } with both relative to `base` (the repo root for CI, the Makefile's folder for make).
+// A context or file that is built from a variable ($VAR, $(VAR)) cannot be known and is skipped.
+const FLAGS_WITH_VALUE = new Set(['-t', '--tag', '-f', '--file', '--build-arg', '--platform', '--target', '--label', '--cache-from', '--cache-to', '--secret', '--ssh', '--network', '--output', '-o', '--progress', '--builder', '--add-host', '--iidfile'])
+const dockerBuildLine = (line, base) => {
+  const m = /\bdocker(?:\s+buildx)?\s+build\b(.*)$/.exec(line)
+  if (!m) return null
+  const toks = m[1].split(/\s+/).filter(Boolean)
+  let file = null
+  const pos = []
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i]
+    if (t === '-f' || t === '--file') file = toks[++i] ?? null
+    else if (/^--file=/.test(t)) file = t.slice(7)
+    else if (/^-f./.test(t) && !t.startsWith('--')) file = t.slice(2)
+    else if (FLAGS_WITH_VALUE.has(t)) i++
+    else if (t.startsWith('-')) continue
+    else if (/^[;&|>]/.test(t)) break
+    else pos.push(t)
+  }
+  const ctx = pos[0]
+  const clean = (x) => (x ?? '').replace(/^["']|["']$/g, '')
+  const c = clean(ctx)
+  const fl = clean(file)
+  if (!c || !fl || /[$`]/.test(c + fl)) return null
+  const norm = (x) => join(base, x).replace(/\\/g, '/').replace(/^\.\/?$/, '')
+  return { file: norm(fl), ctx: norm(c) }
+}
+// The (Dockerfile, build context) pairs that GitHub Actions workflows (run: docker build, docker/build-push-action) and Makefiles name. Cached per root.
+const ciPairs = new Map()
+const buildPairs = (root) => {
+  if (ciPairs.has(root)) return ciPairs.get(root)
+  const out = []
+  for (const x of trackedFiles(root)) {
+    const isWf = /(^|\/)\.github\/workflows\/[^/]+\.ya?ml$/i.test(x)
+    const isMake = /(^|\/)(?:GNUmakefile|Makefile|makefile)$|\.mk$/.test(x)
+    if (!isWf && !isMake) continue
+    const lines = (readText(root, x) ?? '').replace(/\\\r?\n/g, ' ').split(/\r?\n/)
+    const base = isMake ? (dirname(x) === '.' ? '' : dirname(x)) : ''
+    for (let i = 0; i < lines.length; i++) {
+      const p = dockerBuildLine(lines[i], base)
+      if (p) out.push(p)
+      if (isWf && /\buses:\s*docker\/build-push-action\b/.test(lines[i])) {
+        let ctx = '.'
+        let file = null
+        for (let j = i + 1; j < Math.min(lines.length, i + 25) && !/^\s*-\s+\w+:/.test(lines[j]); j++) {
+          const c = /^\s*context:\s*["']?([^\s"'#]+)/.exec(lines[j])
+          const d = /^\s*file:\s*["']?([^\s"'#]+)/.exec(lines[j])
+          if (c) ctx = c[1]
+          if (d) file = d[1]
+        }
+        if (!/[$`]/.test(ctx + (file ?? ''))) {
+          const norm = (y) => y.replace(/^\.\//, '').replace(/^\.$/, '').replace(/\/$/, '')
+          out.push({ file: norm(file ?? join(ctx, 'Dockerfile').replace(/\\/g, '/')), ctx: norm(ctx) })
+        }
+      }
+    }
+  }
+  ciPairs.set(root, out)
+  return out
+}
 const buildContexts = (root, f, readOf) => {
   const dir = dirname(f)
   const out = new Set([dir === '.' ? '' : dir])
@@ -24,6 +84,7 @@ const buildContexts = (root, f, readOf) => {
   for (const c of sibling) {
     for (const m of readOf(c).matchAll(/^\s*context:\s*["']?([^\s"'#]+)/gm)) out.add(join(dir === '.' ? '' : dir, m[1]).replace(/\\/g, '/').replace(/^\.\/?$/, ''))
   }
+  for (const p of buildPairs(root)) if (p.file === f) out.add(p.ctx)
   if (/\b(?:workspace|repo(?:sitory)?|project)\s+root\b|\bdocker\s+build\b[^\n]*\s-f\s+\S+[^\n]*\s\.\s*$/im.test(readOf(f))) out.add('')
   return [...out]
 }

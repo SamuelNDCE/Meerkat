@@ -701,8 +701,20 @@ const commandBodies = (text) => {
           }
         }
         // A command that both resolves the path and checks it stays inside a folder is doing the check this rule asks for (one without the other is not enough).
-        const guarded = /\bcanonicali[sz]e\b/.test(body) && /\bstarts_with\b|\bstrip_prefix\b|\bis_allowed\b/.test(body)
-        out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names: guarded ? new Set() : names })
+        // Only the variable that is resolved AND then checked is cleared (with the parameters it was built from); another parameter in the same command stays reported (#60).
+        // A command that resolves and checks but where no single local can be tied to both keeps the old whole-body rule.
+        const resolved = new Map()
+        for (const l of body.matchAll(/\blet\s+(?:mut\s+)?(\w+)\s*(?::[^=;]{0,60})?=\s*([^;]{0,300});/g)) if (/\bcanonicali[sz]e\b/.test(l[2])) resolved.set(l[1], l[2])
+        const checked = (v) => new RegExp(`\\b${v}\\b[^;{}]{0,60}\\.\\s*(?:starts_with|strip_prefix)\\b|\\bis_allowed\\s*\\(\\s*&?${v}\\b`).test(body)
+        const cleared = new Set()
+        for (const [v, rhs] of resolved) {
+          if (!checked(v)) continue
+          cleared.add(v)
+          for (const n of names) if (new RegExp(`\\b${n}\\b`).test(rhs)) cleared.add(n)
+        }
+        const wholeBody = resolved.size === 0 && /\bcanonicali[sz]e\b/.test(body) && /\bstarts_with\b|\bstrip_prefix\b|\bis_allowed\b/.test(body)
+        const left = wholeBody ? new Set() : new Set([...names].filter((n) => !cleared.has(n)))
+        out.push({ from: blanked.slice(0, m.index).split('\n').length, to: blanked.slice(0, i).split('\n').length, names: left })
         break
       }
     }
