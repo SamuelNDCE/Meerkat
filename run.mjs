@@ -9,6 +9,7 @@ import { cacheFile, cacheHit, cacheKey, readCache, saveCache, updatedCache } fro
 import { acceptedSets, applyAccepted, passInlineIgnored } from './lib/accepted.mjs'
 import { githubAnnotations } from './lib/ci-output.mjs'
 import { applyTeam, readTeam, teamRunNotes } from './lib/team.mjs'
+import { EDITOR_FORMATS, editorOutput } from './lib/editor-output.mjs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { changedFiles as gitChangedFiles, inScopeFile, scopedFiles } from './lib/changed.mjs'
@@ -217,10 +218,11 @@ const selfTestChecks = (checks, opts) => {
 // --json-stdout: stdout carries one JSON object and nothing else, so notes go to stderr. -q/--quiet: only the final result line.
 function outputStreams(opts, givenLog, env) {
   const baseLog = givenLog ?? ((l) => console.log(l))
-  const hush = Boolean(opts.jsonStdout || opts.quiet)
+  const editor = EDITOR_FORMATS.includes(opts.format) // --format vscode|jetbrains: stdout carries only the editor output, notes go to stderr
+  const hush = Boolean(opts.jsonStdout || opts.quiet || editor)
   const toErr = givenLog ?? ((l) => console.error(l))
   if (opts.noColor) env.NO_COLOR = process.env.NO_COLOR = '1'
-  return { baseLog, hush, log: opts.jsonStdout ? toErr : opts.quiet ? () => {} : baseLog, fail: hush ? toErr : baseLog }
+  return { baseLog, hush, log: opts.jsonStdout || editor ? toErr : opts.quiet ? () => {} : baseLog, fail: hush ? toErr : baseLog }
 }
 
 // The run's summary.json plus where it is saved, as the only thing on stdout.
@@ -648,6 +650,11 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   if (failLines.length && !opts.selfTest && !hush && !boardShown) for (const l of failLines.length > sumLines.length ? [...sumLines, 'Failures per check:', ...failLines.slice(sumLines.length)] : failLines) log(l)
   // --format github: one workflow annotation per open finding, so GitHub Actions shows them on the changed lines (lib/ci-output.mjs).
   if (opts.format === 'github' && findingsInfo?.doc) for (const l of githubAnnotations(findingsInfo.doc)) process.stdout.write(`${l}\n`)
+  // --format vscode | jetbrains: the open findings for an editor, with the same ids as `meerkat findings` (lib/editor-output.mjs).
+  if (EDITOR_FORMATS.includes(opts.format) && findingsInfo?.doc) {
+    const text = editorOutput(findingsInfo.doc, opts.format)
+    process.stdout.write(`${text}${text ? '\n' : ''}`)
+  }
   const report = writeRunReport({ checks: ranChecks.length ? ranChecks : checks, interrupted, findingsInfo, dir: ctx.logDir, tier, preset: opts.preset, results: full, line, exitCode, ms: Date.now() - started, argv, configFile, env, version: meerkatVersion(), recorder, selection, scheduler: schedulerUsed, git: gitInfo(repoRoot), startedAtMs: started, freeMemGBAtStart, estimatedMs, runKey: opts.selfTest ? 'self-test' : null })
   // Optional (--ai-verify): a model double-checks the medium, high and critical findings. Off by default; it asks first unless --yes (lib/aiverify.mjs).
   if (opts.aiVerify && findingsInfo && !opts.selfTest && ctx.logDir) {
