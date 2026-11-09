@@ -106,14 +106,14 @@ b.js  unused-files  -     is not imported by any file and is not an entry point
 | [Blast radius and brief](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius) | What an edit to a file or symbol affects, and a brief before you edit. |
 | [Codebase map](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md) | Files, functions with line numbers, routes, tests and imports. Only changed files are re-read. |
 | [Workflow profiles](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#workflow-profiles) | `meerkat init --profile` gives a starting config: solo, team, ai-agent, legacy, monorepo or ci-only. |
-| [AI assistants (MCP)](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md) | 35 MCP tools, resources and prompts, plus short guides for when to use each. |
+| [AI assistants (MCP)](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md) | MCP tools, resources and prompts, plus short guides for when to use each. |
 | [NeuralVault memory hook](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault.md) | Hands the newest run to an adapter you name in the config, outside the project. |
 | [Red testing and benchmark](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md) | Plants bugs and measures false alarms on real code. Repository checkout only. |
 | [Click-through](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md) | Opens your real app and presses controls through a driver you supply. |
 | [Hook safety](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#hook-safety) | A git pre-push hook that runs the quick preset. Removable cleanly. |
 
 <!-- counts:start -->
-**403 checks · 1446 sub-checks · 50 suites.** A check is one scan or tool run. A sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships; any you add are extra.
+**403 checks · 1446 sub-checks · 50 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
 <!-- counts:end -->
 
 Output is short by default: one summary line, one line per failed check, and the log folder. `--full` lists every finding. `findings.json` in the run folder always has them all.
