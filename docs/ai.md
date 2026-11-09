@@ -112,7 +112,7 @@ To choose tests, run `meerkat tests --json`. It lists every kind and family with
 | 1 | A check failed, or could not run (NOT RUN). |
 | 2 | A usage or configuration problem. The message says what to change. |
 | 3 | Nothing to run: the preset selected no checks here. |
-| 75 | `gate`, `smoke`, `blast` and `brief` only: not run (no base ref, no checks loaded, or the file is not in the map). Not a pass. |
+| 75 | `gate`, `smoke`, `blast` and `brief` only: not run (no base ref, no checks loaded, or the file exists but is not in the map). Not a pass. |
 | 130 | Interrupted. |
 
 A NOT RUN is never a pass. Report what is missing instead of treating it as success.

@@ -149,6 +149,18 @@ Everything the menu does is also a command, so scripts, CI and AI agents never n
 
 The exit code is 0 when everything passed, 1 when something failed and 75 when something could not run, so `meerkat verify && git push` in a shell that has `&&` does what it says. The full list of flags: [docs/commands.md](commands.md).
 
+**Exit codes by situation (one rule for every command).** A bad argument, an unknown or missing id, a folder or file that is not there and a folder that is not a git repository are usage errors: exit 2. A command that judges (`verdict`, `top`) and has nothing to judge reports NO-RESULT with the same exit 2 (open point: `top` still exits 1 for NO-RESULT until it follows `verdict`). "Nothing to do" is not an error: `fix` with no safe fix prints `no automatic fix available` and exits 0. Exit 1 is only a failed check or a blocking finding, and 75 means the run could not start here.
+
+| Situation | Exit |
+|---|---|
+| everything passed, or nothing to fix | 0 |
+| a check failed, or a new blocking finding | 1 |
+| usage error, unknown option, unknown or missing finding id, missing folder or file, not a git repository | 2 |
+| `verdict` NO-RESULT (nothing to judge) | 2 |
+| `run`/presets selected no checks | 3 |
+| `gate`/`smoke` could not start (no base ref, no checks loaded); `blast`/`brief` file not in the code map | 75 |
+| interrupted | 130 |
+
 ## The meerkat command
 
 Type it the way you type any command. Words, not flags:
