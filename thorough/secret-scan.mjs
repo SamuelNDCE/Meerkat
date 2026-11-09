@@ -173,7 +173,7 @@ export function scan(root) {
     const before = findings.length
     let isBinary = false
     try {
-      for (const part of chunkedLines(full, CHUNK_BYTES)) {
+      for (const part of chunkedLines(full, Math.min(CHUNK_BYTES, size + 1))) {
         if (part.binary) {
           isBinary = true
           break
