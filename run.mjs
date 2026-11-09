@@ -586,7 +586,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
     // Accepted findings (lib/accepted.mjs): dismissed ones, and with --ratchet the baseline. A check whose findings are all accepted passes.
     const acceptedSetsNow = opts.selfTest ? null : acceptedSets({ env, projectPath: appDir, ratchet: Boolean(opts.ratchet) })
-    const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size || acceptedSetsNow.expired?.size))
+    const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size || acceptedSetsNow.expired?.size || acceptedSetsNow.stale?.size))
     // The ids come from the same builder that writes findings.json, so a dismissed id matches what the run lists.
     const builtNow = anyAccepted || (!opts.selfTest && results.some((r) => r?.status === 'FAIL')) ? safeBuild({ results, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env }) : null
     // A check whose every finding carries an inline meerkat-ignore comment passes (lib/accepted.mjs).
