@@ -153,6 +153,11 @@ describe('the allow-list and the budgets are honoured', () => {
     expect(runCheck(['js-eqeqeq', '--root', dir]).code).toBe(0)
   })
 
+  test('ts-any-overuse does not count any in test files (clean fixture the old rule flagged)', () => {
+    const body = Array.from({ length: 40 }, (_, i) => `export const v${i}: any = ${i}\n`).join('')
+    expect(runCheck(['ts-any-overuse', '--root', folder({ 'tests/a.test.ts': body, 'src/b.ts': 'export const ok: number = 1\n' })]).code).toBe(0)
+  })
+
   test('ts-any-overuse counts against lang.maxAny', () => {
     const body = Array.from({ length: 26 }, (_, i) => `export const v${i}: any = ${i}\n`).join('')
     expect(runCheck(['ts-any-overuse', '--root', folder({ 'a.ts': body })]).code).toBe(1)
