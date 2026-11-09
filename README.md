@@ -81,6 +81,8 @@ build  npm run build   (runs: node -e 0)
 to pin them: add { "commands": { "test": "npm run test", "build": "npm run build" } } to meerkat.config.json, then run meerkat trust
 ```
 
+In a monorepo with no root scripts the first line is instead `no commands block (there is no meerkat.config.json) and no root scripts; these are the scripts of the packages one level down (nothing here is run):`, followed by rows like `packages/a  test  npm --prefix packages/a run test   (runs: echo)`.
+
 ## 🤏 Short output by default
 
 `meerkat gate` prints one summary line, one line per failed check (its name and count) and the log folder. `--full` lists every finding, and `findings.json` in the run folder always has them all. The MCP tools `meerkat_summary` and `meerkat_gate` are short in the same way, which keeps an AI's context small; `full: true` asks for everything.

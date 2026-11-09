@@ -33,7 +33,7 @@ Use these to find problems in the whole project.
 
 - `meerkat map`: writes `codemap.json` and `codemap.md` for the project. Only changed files are read again. `meerkat map --check` exits 1 when the map is stale.
 - `meerkat blast <file>`: what imports a file or symbol, which modules it touches, which tests reach it. Read only. Exit 75 when the file is not in the map.
-- `meerkat brief <file>`: callers, tests, last-run findings, churn, a risk tier (LOW, MEDIUM, HIGH) and a checklist. Read only. It prints the folder line first.
+- `meerkat brief <file>`: callers, tests, last-run findings, churn, a risk tier (LOW, MEDIUM, HIGH) and a checklist. Read only. Without `--ref` it prints the folder line first (`folder: <path> | branch <name> | main checkout (not a worktree)`, or `... | git worktree` inside a worktree). With `--ref <ref>` it prints `# ref <ref> (<sha>)` first and no folder line. The last line, `brief: cache in <N> ms`, shows how long the per-file result cache took: results are cached per file and keyed by its content, so a repeat call on an unchanged file is faster.
 - MCP: `meerkat_map` (writes the map files), `meerkat_blast` (read only), `meerkat_brief` (read only).
 
 ## Run the repo's own tests and build

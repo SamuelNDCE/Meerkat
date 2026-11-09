@@ -16,11 +16,11 @@ Two rules. First, `verdict` counts only findings in files the branch changed, an
 
 ## Why does a worktree path read the wrong branch?
 
-Meerkat reads the folder you give it, and the branch checked out there. `meerkat gate` and `meerkat brief` print a first line that says which: `folder: <path> | branch <name> | git worktree` (or `main checkout (not a worktree)`). Read that line first. Pass the worktree path with `--app <folder>` or as the folder argument: `meerkat gate --app ../my-worktree --base origin/main`. `verdict` and `top` do not print the folder line in this build, so run them from inside the worktree or pass the folder.
+Meerkat reads the folder you give it, and the branch checked out there. `meerkat gate` and `meerkat brief` print a first line that says which: `folder: <path> | branch <name> | git worktree` (or `main checkout (not a worktree)`). Read that line first. `meerkat brief --ref <ref>` is different: its first line is `# ref <ref> (<sha>)` and it prints no folder line. Pass the worktree path with `--app <folder>` or as the folder argument: `meerkat gate --app ../my-worktree --base origin/main`. `verdict` and `top` do not print the folder line in this build, so run them from inside the worktree or pass the folder.
 
 ## Why does `meerkat commands` say there is no config?
 
-Without a `meerkat.config.json` it reads the `package.json` scripts instead and prints `no commands block (there is no meerkat.config.json); these are the package.json scripts (nothing here is run)`. It lists test, build and typecheck scripts and the exact `commands` block to add. Run `meerkat commands` again after adding the block.
+Without a `meerkat.config.json` it reads the `package.json` scripts instead and prints `no commands block (there is no meerkat.config.json); these are the package.json scripts (nothing here is run):`. In a monorepo with no root scripts the line is `no commands block (there is no meerkat.config.json) and no root scripts; these are the scripts of the packages one level down (nothing here is run):`, followed by one row per package. It lists test, build and typecheck scripts and the exact `commands` block to add. Run `meerkat commands` again after adding the block.
 
 ## Why does `meerkat build` say the command was NOT run?
 
