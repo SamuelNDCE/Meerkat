@@ -21,17 +21,30 @@ Meerkat checks, maps and tests a project: security, correctness, accessibility, 
 
 ## 🚀 Quick start
 
-You need [Node.js](https://nodejs.org) 20 or newer. No other dependencies.
+You need [Node.js](https://nodejs.org) 20 or newer. No other dependencies. Three commands, run in a git repository:
 
 ```
 npm install -g @samuelndce/meerkat
 ```
 
 ```
-meerkat verify
+meerkat gate
 ```
 
-`verify` is the quick everyday run, `meerkat full` adds the slow checks, and `meerkat last` shows the saved results. `meerkat why <check>` shows one check's log and `meerkat findings` lists every finding, worst first. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage error, 3 nothing to run. Every command: [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md).
+```
+meerkat verdict --base main
+```
+
+`gate` runs the checks that match the files you changed and prints a summary like this (a branch with one new file):
+
+```
+MEERKAT gate: 3 blocking, 9 pre-existing (not in the change), 209 passed, 0 not run, exit 1, scanned b.js, 5.5s
+FAIL  risky-code (1)
+FAIL  unused-files (1)
+FAIL  js-eqeqeq (1)
+```
+
+`verdict` gives the one-line answer for the branch, for example `FAIL 3 blocking in changed files` (the section below explains each answer). `meerkat verify` is the quick everyday run, `meerkat full` adds the slow checks, `meerkat last` shows the saved results, `meerkat why <check>` shows one check's log and `meerkat findings` lists every finding, worst first. Exit codes: 0 passed, 1 a check failed or could not run, 2 usage error, 3 nothing to run. Every command: [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md).
 
 ## 🏁 Is this branch safe to merge?
 
@@ -117,7 +130,6 @@ In a monorepo with no root scripts the first line is instead `no commands block 
 <!-- counts:end -->
 
 
-More everyday commands (ratchet, pre-commit, CI flags, updates): [docs/everyday.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/everyday.md). What Meerkat does, by job: [docs/capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md).
 
 ## 🎯 Accuracy (summary)
 
@@ -138,12 +150,36 @@ Measured 2026-11-06 with `tools/corpus/gen-planted.mjs`, `tools/corpus/measure.m
 - The smoke and red test files run on a copy of a small fixture project, not on yours ([details](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md#smoke-and-red-suites)).
 - If Meerkat reports something fine, open a [false alarm](https://github.com/SamuelNDCE/Meerkat/issues/new?template=false-positive.yml) issue; if it misses a real problem, open a [missed problem](https://github.com/SamuelNDCE/Meerkat/issues/new?template=missed-bug.yml) issue.
 
-## 🔗 More
+## ✅ What it does
 
-- Features and limits: [docs/features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md), [docs/capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md)
-- Every command and flag: [docs/commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md), [docs/how-to.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/how-to.md)
-- Extend it with your own check, pack or preset: [docs/extending.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/extending.md), [docs/adding-tests.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/adding-tests.md), [CONTRIBUTING.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CONTRIBUTING.md)
-- For AI and NeuralVault: [docs/ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md), [docs/neuralvault.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault.md)
-- Questions: [docs/faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md). Accuracy: [docs/accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md). Releases: [docs/release.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/release.md), [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md)
+- Scans for bugs, security problems, accessibility, performance and code health: [capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md)
+- Runs only the checks that match your changed files (`meerkat gate`): [features.md#gate](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#gate)
+- Answers "is this branch safe to merge?" in one line: [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md)
+- Shows what an edit would affect before you make it: [features.md#blast-radius](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius)
+- Maps your codebase for people and AIs: [codemap.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md)
+- Saves every run with a log per check and one findings file: [logs.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/logs.md), [findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md)
+- Runs your own tests and build commands once you approve them: [discover.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/discover.md)
+- Works as an MCP server and skill for AI assistants: [ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md)
+- Takes your own checks, packs and presets: [extending.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/extending.md)
+
+## 🚫 What it does not do
+
+- It never edits your project, sends telemetry or uploads anything.
+- It does not scan declared packages for known vulnerabilities by itself yet. That is planned: [issue #26](https://github.com/SamuelNDCE/Meerkat/issues/26).
+- A clean run does not prove the code is bug-free: it covers what the checks can see ([coverage.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/coverage.md)).
+- It does not treat a check that could not run as a pass: that is NOT RUN, and the run fails.
+
+## 📚 All the docs
+
+- **Getting started:** [how-to.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/how-to.md) (short daily guide), [discover.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/discover.md) (finding your project's own tests), [customizing.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/customizing.md)
+- **Daily use:** [everyday.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/everyday.md), [findings.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/findings.md), [logs.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/logs.md), [scheduling.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/scheduling.md), [tiers.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/tiers.md) (time limits), [github.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/github.md) (GitHub Actions)
+- **Commands:** [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md), [checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/checks.md) (every check, generated)
+- **Capabilities:** [capabilities.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/capabilities.md), [features.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md), [suites.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/suites.md), [codemap.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md), [coverage.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/coverage.md), [compatibility.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/compatibility.md), [functionality-run.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/functionality-run.md), [robustness.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/robustness.md), [mutation.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/mutation.md), [click-through.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/click-through.md)
+- **Accuracy:** [accuracy.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy.md), [accuracy-results.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/accuracy-results.md), [readme-accuracy-section.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/readme-accuracy-section.md)
+- **AI use (MCP, skills, NeuralVault):** [ai.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/ai.md), [for-ai-agents.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/for-ai-agents.md), [neuralvault.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault.md)
+- **Extending:** [extending.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/extending.md), [writing-checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/writing-checks.md), [adding-tests.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/adding-tests.md), [developers.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/developers.md), [CONTRIBUTING.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CONTRIBUTING.md)
+- **Reference:** [reference.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/reference.md) (the full manual), [credits.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/credits.md), [licence-notes.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/licence-notes.md)
+- **FAQ:** [faq.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/faq.md)
+- **Release:** [release.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/release.md), [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md)
 
 Licence: [Perpetual Community Licence 1.0](https://github.com/SamuelNDCE/Meerkat/blob/main/LICENSE) ([notes](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/licence-notes.md)). Security problems: [SECURITY.md](https://github.com/SamuelNDCE/Meerkat/blob/main/SECURITY.md).
