@@ -120,7 +120,9 @@ describe('verdict: a stop is resumable', () => {
     expect(resumed.err).not.toMatch(/^\[\d+\/\d+\] blocker \.\.\./m)
     const full = cli(['verdict', '--base', 'main', '--json'], d)
     expect(full.err).toMatch(/\[\d+\/\d+\] quick-a \.\.\./)
-    expect(JSON.parse(resumed.out)).toEqual(JSON.parse(full.out))
+    // Per-check wall time and the cached flag differ between runs by design; the verdict and the rows must match.
+    const same = (o: string) => { const d = JSON.parse(o); d.checks = d.checks?.map(({ seconds, cached, ...rest }: any) => rest); return d }
+    expect(same(resumed.out)).toEqual(same(full.out))
     expect(JSON.parse(full.out).verdict).toBe('FAIL')
     expect(resumed.code).toBe(full.code)
     // the plain line too

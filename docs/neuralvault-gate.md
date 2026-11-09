@@ -1,6 +1,6 @@
-# Gate use for NeuralVault (0.5.3)
+# Gate use for NeuralVault
 
-One page for running `meerkat verdict` on NeuralVault PRs. Commands are from the 0.5.3 build on `m053-integration`. Run them from the Meerkat checkout, or use the installed `meerkat` once 0.5.3 is released.
+One page for running `meerkat verdict` on NeuralVault PRs. Commands are from the build on `m053-integration`. Run them from the Meerkat checkout, or use the installed `meerkat` once the next release is out.
 
 ## Which command for which PR
 
@@ -59,7 +59,7 @@ A run that stops at its time limit prints a `--resume <file>` line. The resume f
 
 A verdict longer than 60 seconds prints the 15 slowest checks after the result. `--timings` prints them every time.
 
-## Known limits (0.5.3)
+## Known limits
 
 - Rust test runs are not scoped to changed crates, so a Rust PR can hit the time limit.
 - The base comparison can take longer than the time limit on large repos.
