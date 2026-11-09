@@ -59,6 +59,8 @@ FAIL 3 blocking in changed files
 ```
 
 - `--base <ref>` is the branch to compare with (default: main or master). `--json` prints one object (verdict, exitCode, blocking, known, stale, reason).
+- `--first` prints only the first blocking `file:line: message`, or `PASS`. `--ready` prints one `READY` or `NOT READY` line. `--branches a b` prints one verdict line per branch.
+- Findings the branch did not add (already on the base, or outside the diff) do not fail the verdict: it prints `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. Exit 1 only for a new blocking finding in a changed file.
 - `--known <file>` is a JSON list of failures your team accepted, `[{ "check", "file", "line"? }]`. A match is printed as `KNOWN` and does not block; an entry that matches nothing is printed as `STALE`.
 - `NO-RESULT: <reason>. next: <step>` means there is no answer (nothing changed, a bad ref, a timeout). It is never a pass.
 - `INCOMPLETE n of m checks finished, not a pass` means the run stopped early. Exit 75.
@@ -96,6 +98,16 @@ to pin them: add { "commands": { "test": "npm run test", "build": "npm run build
 
 In a monorepo with no root scripts the first line is instead `no commands block (there is no meerkat.config.json) and no root scripts; these are the scripts of the packages one level down (nothing here is run):`, followed by rows like `packages/a  test  npm --prefix packages/a run test   (runs: echo)`.
 
+## 🧰 More commands for a branch
+
+Each is described in [commands.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md).
+
+- `meerkat fix`: a patch for a finding when its check can fix it safely. A dry run unless you add `--apply`.
+- `meerkat handoff`: one short file a new session can resume from.
+- `meerkat test-run`: run one test file or test name with a time limit, through the repo's own runner.
+- `meerkat lock status`: who holds the machine-wide cargo lock and who waits.
+- `meerkat who-calls`, `meerkat deps` and `meerkat tests-for`: ask the code map who calls a function, what a file imports and which tests cover it.
+
 ## 🤏 Short output by default
 
 `meerkat gate` prints one summary line, one line per failed check (its name and count) and the log folder. `--full` lists every finding, and `findings.json` in the run folder always has them all. The MCP tools `meerkat_summary` and `meerkat_gate` are short in the same way, which keeps an AI's context small; `full: true` asks for everything.
@@ -114,7 +126,7 @@ In a monorepo with no root scripts the first line is instead `no commands block 
 |---|---|
 | [🔍 Checks and presets](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#checks-and-presets) | Runs the checks that fit your project; presets pick a set (`quick`, `bugs`, `full`, `ci`, `release`) |
 | [🚦 Gate on changed files](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#gate) | Runs only the checks matching the files you changed; only failures in those files block |
-| [🏁 Branch verdict](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) | One line for a branch: `PASS`, `FAIL`, or `FAIL-PRE-EXISTING only` |
+| [🏁 Branch verdict](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/commands.md) | One line for a branch: `PASS` or `FAIL`; findings the branch did not add are counted, not blocking |
 | [💨 Smoke](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#smoke) | Proves the checks chosen for your changes start and stop in time (it tests Meerkat, not your project) |
 | [💥 Blast radius and brief](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#blast-radius) | What an edit to a file or symbol affects, and a one-call pre-edit brief |
 | [🗺 Codebase map](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/codemap.md) | Files, functions with line numbers, routes, tests and imports; only changed files are re-read |

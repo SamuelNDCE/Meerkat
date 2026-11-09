@@ -23,7 +23,7 @@ Use these to find problems in the whole project.
 
 ## Check a branch before merge
 
-- `meerkat verdict --base origin/main`: one line. `PASS`, `FAIL n blocking in changed files`, or `FAIL-PRE-EXISTING only: n findings in code this branch did not change`. Exit 0 only for PASS. When it cannot judge it prints `NO-RESULT: <reason>. next: <step>` (exit 1 or 2). `--known <file>` accepts listed pre-existing failures (lines `KNOWN:` and `STALE:`), and `--json` prints one object.
+- `meerkat verdict --base origin/main`: one line. `PASS` or `FAIL n blocking in changed files`. Findings the branch did not add print `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. Exit 1 only for a new blocking finding in a changed file. When it cannot judge it prints `NO-RESULT: <reason>. next: <step>` (exit 1 or 2). `--known <file>` accepts listed pre-existing failures (lines `KNOWN:` and `STALE:`), and `--json` prints one object.
 - `meerkat top --base origin/main --limit 5`: a table of the worst findings in the files the branch changed (file, check, line, message).
 - `meerkat gate --base origin/main --json`: the full answer for a pull request. `--all-findings` also shows findings that were already on the base.
 - `meerkat pr-comment`: markdown for a pull request comment from the newest run. Not run in this build.
