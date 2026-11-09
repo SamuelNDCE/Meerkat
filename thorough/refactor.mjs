@@ -425,7 +425,7 @@ const packageEntries = (root) => {
     if (typeof v === 'string') out.push(...v.split(/\s+/))
     else if (v && typeof v === 'object') Object.values(v).forEach(walk)
   }
-  if (pkg) for (const k of ['main', 'bin', 'exports', 'scripts']) walk(pkg[k])
+  if (pkg) for (const k of ['main', 'bin', 'exports', 'scripts', 'files', 'build']) walk(pkg[k])
   return out.map((s) => posix.normalize(s.replace(/^\.\//, ''))).filter(Boolean)
 }
 
@@ -460,6 +460,10 @@ const unusedFiles = (root) => {
     if (used.has(x) || named.has(x) || ENTRY.test(x) || FRAMEWORK_ENTRY.test(x) || allow.has(x)) continue
     // A path written into another file counts as a reference: runners and packs name their scripts by path.
     if ([...texts].some(([y, t]) => y !== x && t.includes(x))) continue
+    // Electron loads a preload or a window page by a name relative to the file that calls it (path.join(__dirname, 'preload.js')), so a quoted basename in a file of the same folder is a reference too.
+    const base = posix.basename(x)
+    const dir = posix.dirname(x)
+    if ([...texts].some(([y, t]) => y !== x && posix.dirname(y) === dir && (t.includes(`'${base}'`) || t.includes(`"${base}"`)))) continue
     if (docs().some((d) => namedBy(d, x))) continue
     f.push(`${x} is not imported by any file and is not an entry point (delete it, or list it in .meerkat-unused-allow)`)
   }

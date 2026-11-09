@@ -17,7 +17,7 @@
 // Regexes are linear: bounded quantifiers ({0,200}) and no nested open spans, so a hostile 100 KB line cannot blow up.
 // Rules that need a sibling line (for example a handler body) look only at a fixed window of lines after the match.
 
-import { appDeniesWindowOpen, argIsModuleConstString, channelChecked, holesAllWrapped, inDevOnlyBlock, inIpcHandler, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked, withinCallBody } from './guards.mjs'
+import { appDeniesWindowOpen, argIsModuleConstString, channelChecked, templateHolesAllConstant, holesAllWrapped, inDevOnlyBlock, inIpcHandler, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked, withinCallBody } from './guards.mjs'
 import { rustTestLines } from './kit.mjs'
 const JS = ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'jsx', 'tsx']
 const HTML = ['html', 'htm']
@@ -181,7 +181,8 @@ export const EP_WINDOW = [
     'win.webContents.executeJavaScript(`window.user = ${input}`)',
     "win.webContents.executeJavaScript('window.ready = true')",
     // JSON.stringify(value) is a quoted, escaped JavaScript literal: a template whose every hole is one cannot change the shape of the script.
-    { unless: holesAllWrapped('executeJavaScript', 'JSON\\.stringify') }),
+    // A template whose holes are all numbers or module constants holding a literal is a fixed script, not an input (the parameter case still fires).
+    { unless: (l, ctx) => holesAllWrapped('executeJavaScript', 'JSON\\.stringify')(l) || templateHolesAllConstant('executeJavaScript')(l, ctx) }),
   js('ep-insert-css-variable', 'inserts CSS from a bare variable into a page; CSS can read and send page data through selectors and URLs',
     /\binsertCSS\(\s*[A-Za-z_$][\w$.]*\s*[,)]/,
     'contents.insertCSS(css)',

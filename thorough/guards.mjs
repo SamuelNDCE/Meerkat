@@ -291,3 +291,16 @@ export const channelChecked = (_line, ctx) => {
   const above = ctx.lines.slice(Math.max(0, ctx.index - 12), ctx.index).join('\n')
   return /\b(?:includes|has)\(\s*(?:channel|ch|chan|topic)\s*\)|\b(?:is|assert|check|validate)\w*(?:Channel|Event)\w*\(\s*(?:channel|ch|chan|topic)\s*\)/i.test(above)
 }
+
+// A template literal passed to callName whose every ${...} hole is a number or a module-level const that holds a literal: the script is fixed at write time, so no input can change it.
+export const templateHolesAllConstant = (callName) => (line, ctx) => {
+  const m = new RegExp(`\\b${callName}\\(\\s*\`([^\`]*)\``).exec(line)
+  if (!m) return false
+  const holes = [...m[1].matchAll(/\$\{\s*([^}]*?)\s*\}/g)].map((h) => h[1])
+  if (!holes.length) return false
+  return holes.every((h) => {
+    if (/^\d+(?:\.\d+)?$/.test(h)) return true
+    if (!/^[A-Za-z_$][\w$]*$/.test(h)) return false
+    return new RegExp(`^(?:export\\s+)?const\\s+${h.replace(/\$/g, '\\$')}\\s*(?::[^=\\n]{1,60})?=\\s*(?:['"\`]|\\d)`, 'm').test(ctx.text)
+  })
+}
