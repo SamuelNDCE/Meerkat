@@ -103,13 +103,14 @@ describe('meerkat fix on a fixture repository', () => {
     expect(second.stdout).toContain('findings: none')
   }, 120000)
 
-  test('a finding whose check has no safe fix says why and exits 2; an unknown id exits 2', () => {
+  test('a finding whose check has no safe fix says why and exits 0; an unknown id exits 2', () => {
     writeFileSync(join(repo, 'db.js'), `const db = require('some-orm')\n${BAD}\n`)
     git('add', '-A')
     git('commit', '-q', '-m', 'second')
     scan()
     const r = run()
-    expect(r.code).toBe(2)
+    expect(r.code).toBe(0)
+    expect(r.out).toContain('no automatic fix available')
     expect(r.out).toContain('no automatic fix: the database driver is not pg, mysql or sqlite')
     expect(readFileSync(join(repo, 'db.js'), 'utf8')).toContain('${req.params.id}')
     expect(run('zzzzzzzz').code).toBe(2)
