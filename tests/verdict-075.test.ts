@@ -1,4 +1,4 @@
-// 0.7.5: verdict --branches (one line per branch).
+// 0.7.5: verdict --branches (one line per branch) and verdict --ready (one review-ready line).
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -66,3 +66,20 @@ describe('verdict --branches', () => {
   }, 180_000)
 })
 
+describe('verdict --ready', () => {
+  test('READY on a clean branch, one line, no claim about tests', async () => {
+    git(dir, 'checkout', '-q', 'clean')
+    const r = await run(['--ready', '--base', 'main'])
+    expect(r.lines).toEqual(['READY: no new blocking findings in changed files (verdict PASS, pre-existing 0)'])
+    expect(r.lines[0]).not.toMatch(/test/i)
+    expect(r.code).toBe(0)
+  }, 180_000)
+
+  test('NOT READY names the count and the first location', async () => {
+    git(dir, 'checkout', '-q', 'bad')
+    const r = await run(['--ready', '--base', 'main'])
+    expect(r.lines).toHaveLength(1)
+    expect(r.lines[0]).toMatch(/^NOT READY: \d+ new blocking findings in changed files, first at src\/new\.js:\d+$/)
+    expect(r.code).toBe(1)
+  }, 180_000)
+})
