@@ -78,6 +78,7 @@ const EXAMPLES: Record<string, Example> = {
   dismiss: { args: ['dismiss', '{id}', '--reason', 'smoke test: not a problem'] },
   dismissals: { args: ['dismissals'] },
   cost: { args: ['cost', '--last', '3'] },
+  ps: { args: ['ps'] },
   team: { args: ['team'] },
   undismiss: { args: ['undismiss', '{id}'] },
   baseline: { args: ['baseline'] },
