@@ -73,6 +73,8 @@ const CHECKS = [
     cost: { cpu: 8, memGB: 4 },
     title: 'Rust tests (cargo test, the whole workspace)',
     estSeconds: 300, weight: 'heavy', scale: 'crates',
+    // A cold cargo build of the scoped crate can pass 300 s on a large dependency tree; the scoped run needs the room to finish.
+    timeoutSeconds: 1200,
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['test', '--workspace'], cwd: 'repo' },
