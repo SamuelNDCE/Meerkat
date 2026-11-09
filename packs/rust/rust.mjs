@@ -34,7 +34,7 @@ export function scopeRustTest(ctx) {
   }
   if (!names.size) return null
   const list = [...names].sort()
-  return { args: ['test', ...list.flatMap((n) => ['-p', n])], note: `rust-test ran only the changed crate(s) ${list.join(', ')}; cargo test --workspace runs the rest` }
+  return { args: ['test', ...list.flatMap((n) => ['-p', n])], note: `rust-test ran only the changed crate(s) ${list.join(', ')} (target: ${ctx.env?.CARGO_TARGET_DIR ?? 'the repo default target/'}); cargo test --workspace runs the rest` }
 }
 const FIX = `${MK}/fixtures`
 const RUST_PATHS = ['**/*.rs', 'Cargo.toml', '**/Cargo.toml', 'Cargo.lock', '.cargo/**', 'rust-toolchain.toml']
