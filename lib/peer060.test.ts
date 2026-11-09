@@ -244,6 +244,41 @@ describe('verdict and top never go silent', () => {
   }, SLOW)
 })
 
+describe('legacy folders', () => {
+  beforeEach(() => {
+    put('package.json', JSON.stringify({ name: 'root', private: true }))
+    put('apps/web/package.json', JSON.stringify({ scripts: { test: 'vitest run' } }))
+    put('apps/old/package.json', JSON.stringify({ scripts: { test: 'old-runner', build: 'old-build' } }))
+    put('meerkat.config.json', JSON.stringify({ legacy: ['apps/old'] }))
+  })
+  test('commands skips a legacy folder and says how many were hidden', () => {
+    initMain()
+    const r = cli(['commands'])
+    expect(r.stdout).toContain('apps/web  test')
+    expect(r.stdout).not.toContain('apps/old')
+    expect(r.stdout).toContain('1 folder(s) hidden as legacy')
+    put('meerkat.config.json', JSON.stringify({ legacy: ['apps/o*'] }))
+    expect(cli(['commands']).stdout).not.toContain('apps/old')
+    put('meerkat.config.json', '{}')
+    expect(cli(['commands']).stdout).toContain('apps/old  test')
+  })
+  test('verdict and top ignore findings in a legacy folder and say so on stderr', () => {
+    initMain()
+    git(app, ['checkout', '-q', '-b', 'feat'])
+    put('apps/old/loose.js', LOOSE)
+    commit()
+    const v = cli(['verdict'])
+    expect(v.stdout.trim()).toMatch(/^NO-RESULT: nothing changed/)
+    expect(v.stderr).toContain('1 folder(s) hidden as legacy')
+    put('apps/web/loose.js', LOOSE)
+    commit()
+    const t = cli(['top'])
+    expect(t.stdout).toContain('apps/web/loose.js')
+    expect(t.stdout).not.toContain('apps/old')
+    expect(t.stderr).toContain('1 folder(s) hidden as legacy')
+  }, SLOW)
+})
+
 describe('verdict --known', () => {
   beforeEach(() => {
     initMain()
