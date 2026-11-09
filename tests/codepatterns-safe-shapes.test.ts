@@ -81,6 +81,12 @@ const CASES: Record<string, Case[]> = {
     { rule: 'js-exec-variable', file: 'e.js', safe: nl("const cmd = 'git --version'", 'exec(cmd, done)'), bad: nl('exec(cmd, done)') },
     { rule: 'js-require-variable', file: 'r.js', safe: nl("const PLUGINS = new Set(['csv', 'json'])", 'exports.load = (name) => {', "  if (!PLUGINS.has(name)) throw new Error('no')", '  return require(name)', '}'), bad: nl('exports.load = (name) => {', '  return require(name)', '}') },
     { rule: 'js-spawn-shell', file: 's.js', safe: nl("spawn('npm', ['ci'], { shell: true })"), bad: nl('spawn(cmd, [dir], { shell: true })') },
+    { rule: 'js-spawn-shell', file: 's2.js', safe: nl("spawn('git status --short', { shell: true })"), bad: nl('spawn("ls", [], { shell: true })') },
+    { rule: 'js-spawn-shell', file: 's3.js', safe: nl("spawnSync('npm run build', { cwd, shell: true })"), bad: nl('spawnSync(`npm run ${script}`, { cwd, shell: true })') },
+  ],
+  'cp-rust': [
+    { rule: 'rs-unsafe-no-safety', file: 'src/lib.rs', safe: nl('// SAFETY: p is valid for reads', '// and aligned, checked by the caller', '// (see the contract on the function)', '//', '// more detail here', '#[allow(clippy::deref_addrof)]', '', 'let x = unsafe { *p };'), bad: nl('let x = unsafe { *p };') },
+    { rule: 'rs-unsafe-no-safety', file: 'src/lib.rs', safe: nl('// SAFETY: p is valid', 'let x = unsafe { *p };'), bad: nl('// SAFETY: p is valid', 'let a = 1;', 'let b = 2;', 'let c = 3;', 'let x = unsafe { *p };') },
   ],
 }
 

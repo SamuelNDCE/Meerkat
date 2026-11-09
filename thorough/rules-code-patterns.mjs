@@ -379,9 +379,20 @@ export const GO = [
   GOF('go-template-html-unescaped', 'template.HTML marks a string as safe, so it is not escaped', /\btemplate\.HTML\(/, 'tpl := template.HTML(userInput)', 'tpl := template.HTMLEscapeString(userInput)', { unless: goHtmlLiteral }),
 ]
 
+// A SAFETY note directly above the unsafe block: walk up through blank lines, attributes and comment lines (a long note, or one with an attribute between) and stop at the first real code.
+const safetyNoteAbove = (ctx) => {
+  for (let i = ctx.index - 1; i >= 0 && i >= ctx.index - 40; i--) {
+    const l = ctx.lines[i].trim()
+    if (/SAFETY/i.test(l) && /^(?:\/\/|\/\*|\*)/.test(l)) return true
+    if (l === '' || /^#\[/.test(l) || /^(?:\/\/|\/\*|\*)/.test(l)) continue
+    return false
+  }
+  return false
+}
+
 // ---------------------------------------------------------------- Rust (cp-rust)
 export const RS = [
-  RSF('rs-unsafe-no-safety', 'an unsafe block has no SAFETY note in the three lines above it', undefined, 'let x = unsafe { *p };', '// SAFETY: p is valid for reads\nlet x = unsafe { *p };', { test: (line, ctx) => /\bunsafe\s*\{/.test(line) && !/SAFETY/i.test(ctx.lines.slice(Math.max(0, ctx.index - 3), ctx.index + 1).join('\n')) }),
+  RSF('rs-unsafe-no-safety', 'an unsafe block has no SAFETY note in the three lines above it', undefined, 'let x = unsafe { *p };', '// SAFETY: p is valid for reads\nlet x = unsafe { *p };', { test: (line, ctx) => /\bunsafe\s*\{/.test(line) && !/SAFETY/i.test(ctx.lines.slice(Math.max(0, ctx.index - 3), ctx.index + 1).join('\n')) && !safetyNoteAbove(ctx) }),
   RSF('rs-transmute', 'mem::transmute reinterprets bytes as another type (easy to get wrong)', /\bmem::transmute\b/, 'let f: f32 = mem::transmute(x);', 'let f = f32::from_bits(x);'),
   RSF('rs-forget-uninitialized', 'mem::forget or mem::uninitialized can leak or read undefined memory', /\bmem::(?:forget|uninitialized)\b/, 'mem::forget(buf);', 'drop(buf);'),
   RSF('rs-command-variable', 'Command::new gets a program name built with format! or taken from user, input, request or cmd data', /\bCommand::new\(\s*(?:&?format!\(|&?(?:user|input|req|param|untrusted|arg|cmd|command|query|body|payload)\w*\b)/, 'Command::new(cmd).arg(x).output()', 'Command::new("ls").arg("-l").output()'),
