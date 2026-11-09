@@ -600,6 +600,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     const builtNow = anyAcceptedBase || (!opts.selfTest && results.some((r) => r?.status === 'FAIL')) ? safeBuild({ results, checks: ranChecks.length ? ranChecks : checks, sink: ctx.findingsSink, appDir, repoRoot, env }) : null
     // A check whose every finding carries an inline meerkat-ignore comment passes (lib/accepted.mjs).
     if (builtNow) passInlineIgnored(results, builtNow, ctx.findingsSink)
+    // .meerkat-ignores.json (lib/repo-ignores.mjs): every suppression is said out loud with its reason and owner, and an unusable entry is named.
+    if (builtNow) for (const l of [...(builtNow.repoIgnored ?? []).map((x) => x.text), ...(builtNow.repoIgnoreProblems ?? []).map((p) => `IGNORE-FILE: ${p}`)]) fail(l)
     if (builtNow && team?.entries.length) applyTeam(acceptedSetsNow, builtNow.findings, team)
     const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size || acceptedSetsNow.expired?.size || acceptedSetsNow.stale?.size))
     const acceptedRecords = anyAccepted && builtNow ? applyAccepted(results, ctx.findingsSink, acceptedSetsNow, builtNow.findings, builtNow.hiddenChecks) : []

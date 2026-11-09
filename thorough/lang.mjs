@@ -428,7 +428,7 @@ const tsAnyOveruse = (root) => {
   const hits = []
   let total = 0
   for (const x of files(root, TS)) {
-    if (allowed(allow, 'ts-any-overuse', x)) continue
+    if (allowed(allow, 'ts-any-overuse', x) || isTestFile(x)) continue // test code is not shipped; the budget is about what ships
     const t = codeOnly(sourceOf(root, x), JS_OPTS)
     const n = [...t.matchAll(/(?::\s*any(?![\w$])|\bas\s+any(?![\w$]))/g)].length
     if (n) {
