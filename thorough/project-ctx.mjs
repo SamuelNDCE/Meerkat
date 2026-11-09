@@ -87,7 +87,7 @@ export function taintNames(t, reqRe) {
 }
 
 // Every regex metacharacter is escaped, so a parameter name that is not an identifier (a stray "(" from a parsed parameter list) cannot
-// throw "Invalid regular expression" and crash the whole check. Found on NeuralVault: the check then reported its own crash as a FAIL.
+// throw "Invalid regular expression" and crash the whole check. Found on a real Electron app: the check then reported its own crash as a FAIL.
 export const wordRe = (w) => new RegExp(`\\b${String(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`)
 
 // Helper hop: the sink on line `line` uses a parameter of its function (in `expr`), and some call of that function, in any file,
