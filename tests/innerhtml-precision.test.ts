@@ -291,8 +291,11 @@ describe('fail closed: unreadable regions report the assignment', () => {
     expect(js("const s = 'abc\nel.innerHTML = esc(a)").code).toBe(1)
     expect(js('const s = "abc\nel.innerHTML = esc(a)').code).toBe(1)
   })
-  test('a comment decision from an unconfirmed string state is not trusted', () => {
-    expect(js("const s = 'abc\n// el.innerHTML = raw").code).toBe(1)
+  // Changed on purpose (commit 5770b8c, tests/fp057-risky-code.test.ts): a line that STARTS with // is never live code, even in a file the scanner could not read with
+  // certainty (it is a comment, or text inside a string or template). A call after the unterminated string on a code line still reports (test above).
+  test('a // line after an unterminated string is skipped, but the same call on a code line reports', () => {
+    expect(js("const s = 'abc\nel.innerHTML = raw // x").code).toBe(1)
+    expect(js("const s = 'abc\n// el.innerHTML = raw").code).toBe(0)
   })
   test('a / after ) that could be a regex or a division reports', () => {
     expect(js('if (x) /re/.test(y)\nel.innerHTML = esc(a)').code).toBe(1)
