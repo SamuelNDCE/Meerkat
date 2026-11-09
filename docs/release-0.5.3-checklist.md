@@ -1,6 +1,8 @@
-# Release checklist: 0.5.3
+# Release checklist
 
-Steps to cut 0.5.3, in order. Run each command from the repository root, one at a time (no `&&`, so it pastes into PowerShell 5.1). Stop at the first failure and fix it before going on. The publish steps (9 to 11) are a person's job: nothing here runs them for you. Background: [release.md](release.md).
+Steps to cut the release, in order. Run each command from the repository root, one at a time (no `&&`, so it pastes into PowerShell 5.1). Stop at the first failure and fix it before going on. The publish steps (9 to 11) are a person's job: nothing here runs them for you. Background: [release.md](release.md).
+
+Replace `<version>` with the version in `package.json` wherever it appears.
 
 Before you start: be on the release branch with a clean `git status`, and Node 22.14 or later.
 
@@ -78,7 +80,7 @@ node tools/release/upgrade-smoke.mjs --previous @samuelndce/meerkat@<old version
 
 ## 7. Version bump
 
-- [ ] The version is already 0.5.3. Confirm `package.json` and `package-lock.json` agree.
+- [ ] The version is already the one in `package.json`. Confirm `package.json` and `package-lock.json` agree.
 
 ```
 node -p "require('./package.json').version"
@@ -100,16 +102,16 @@ git status --short
 
 ## 9. Tag (not run by this checklist)
 
-- [ ] Create the annotated tag on the tested head. `v0.5.3` must equal the `package.json` version; the publish workflow checks this.
+- [ ] Create the annotated tag on the tested head. `v<version>` must equal the `package.json` version; the publish workflow checks this.
 
 ```
-git tag -a v0.5.3 -m "Meerkat 0.5.3"
+git tag -a v<version> -m "Meerkat <version>"
 ```
 
 - [ ] Push the tag, only when you mean to release.
 
 ```
-git push origin v0.5.3
+git push origin v<version>
 ```
 
 ## 10. npm publish (not run by this checklist)
@@ -122,10 +124,10 @@ npm publish --access public
 
 ## 11. GitHub release (not run by this checklist)
 
-- [ ] Publish a release for the tag with the 0.5.3 changelog section as its notes. This starts the publish workflow.
+- [ ] Publish a release for the tag with this version's changelog section as its notes. This starts the publish workflow.
 
 ```
-gh release create v0.5.3 --title "Meerkat 0.5.3" --notes-file release-notes.md
+gh release create v<version> --title "Meerkat <version>" --notes-file release-notes.md
 ```
 
 ## 12. After publishing
