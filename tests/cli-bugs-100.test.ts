@@ -109,7 +109,9 @@ describe('B7 B8: verdict reuses the gate result cache for the same commit and ba
     const warm = meerkat(dir, 'logs-b7', 'verdict', '--json')
     const warmMs = Date.now() - t1
     expect(JSON.parse(cold.out)).toMatchObject({ verdict: 'FAIL', blocking: 1, preExisting: 1 })
-    expect(warm.out).toBe(cold.out)
+    // The per-check rows carry wall time and the cached flag, which differ between a cold and a warm run; everything else must match.
+    const stable = (o: string) => { const d = JSON.parse(o); d.checks = d.checks?.map(({ seconds, cached, ...rest }: any) => rest); return d }
+    expect(stable(warm.out)).toEqual(stable(cold.out))
     expect(warm.code).toBe(cold.code)
     expect(warmMs).toBeLessThan(coldMs)
     const f0 = meerkat(dir, 'logs-b7', 'verdict', '--first', '--no-cache')
