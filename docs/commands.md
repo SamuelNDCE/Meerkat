@@ -70,6 +70,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat suggest` | suggested commands for the newest run's findings (never run for you) | |
 | `meerkat pr-comment [--run-url <url>]` | markdown for a pull request comment | pipe it to `gh pr comment` |
 | `meerkat map [--check] [--quiet]` / `meerkat blast <file>[#symbol]` | a map of the codebase (`--check`: exit 1 if it is stale), and the blast radius of a file or symbol | map --check: exit 1 when stale; blast: exit 75 when the file is not in the map |
+| `meerkat impact [--base <ref>] [--json]` | what the change against the base touches: callers of the changed symbols, the tests that name them, and findings of the newest run on the changed lines (from git diff hunks, not whole files) | |
 | `meerkat who-calls <symbol>` / `meerkat deps <file>` / `meerkat tests-for <file>` [--app <folder>] [--json] | every call site (file:line) of a function, the project files a file imports, and the test files that import a file or name it | |
 | `meerkat memory [folder] [--dry-run] [--json]` | hand the newest run to the memory adapter named by `"memory": { "adapter": ... }` in `meerkat.config.json`; nothing happens without that key | exit 2 when no adapter is set |
 | `meerkat brief <file>[#symbol]` | a pre-edit brief: callers, tests, last-run findings, churn, risk tier and checklist | exit 2 on an unknown symbol, 75 when the file is not in the map |

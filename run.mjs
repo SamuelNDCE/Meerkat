@@ -6,6 +6,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { cpus, freemem } from 'node:os'
 import { diffSnapshots, snapshotDigest, snapshotTree, violationText } from './lib/integrity.mjs'
 import { cacheFile, cacheHit, cacheKey, readCache, saveCache, updatedCache } from './lib/resultcache.mjs'
+import { markLegacyNoticed, migrationNote, unnoticedLegacy } from './lib/findingid.mjs'
 import { acceptedSets, applyAccepted, passInlineIgnored } from './lib/accepted.mjs'
 import { githubAnnotations } from './lib/ci-output.mjs'
 import { applyTeam, readTeam, teamRunNotes } from './lib/team.mjs'
@@ -600,6 +601,17 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     if (builtNow && team?.entries.length) applyTeam(acceptedSetsNow, builtNow.findings, team)
     const anyAccepted = Boolean(acceptedSetsNow && (acceptedSetsNow.dismissed.size || acceptedSetsNow.baseline.size || acceptedSetsNow.expired?.size || acceptedSetsNow.stale?.size))
     const acceptedRecords = anyAccepted && builtNow ? applyAccepted(results, ctx.findingsSink, acceptedSetsNow, builtNow.findings, builtNow.hiddenChecks) : []
+    // Dismissals and baseline entries written under an old id still match; say so once (lib/findingid.mjs).
+    {
+      const legacy = acceptedRecords.flatMap((x) => x.matchedLegacyIds ?? [])
+      const fresh = legacy.length ? unnoticedLegacy(env, appDir, legacy) : []
+      const note = migrationNote(fresh)
+      if (note) {
+        process.stderr.write(`meerkat: ${note}
+`)
+        markLegacyNoticed(env, appDir, fresh)
+      }
+    }
     if (acceptedRecords.length) {
       try {
         writeFileSync(join(ctx.logDir, 'accepted.json'), JSON.stringify({ schemaVersion: 1, mode: opts.ratchet ? 'ratchet' : 'dismissed', items: acceptedRecords }, null, 2))
