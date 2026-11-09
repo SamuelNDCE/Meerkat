@@ -226,7 +226,7 @@ describe('meerkat team', () => {
   test('a broken file is shown, never silent, and exits 1', () => {
     const r = cmd([], repo(undefined, '{broken'))
     expect(r.code).toBe(1)
-    expect(r.out).toContain('could not be read')
+    expect(r.out).toContain('could not be read; check it is a plain JSON file')
   })
   test('teamText works on an empty list', () => {
     expect(teamText(readTeam(repo([]), NOW))).toContain('0 entries')
@@ -289,4 +289,34 @@ describe('a real run', () => {
     expect(r.stdout + r.stderr).toContain('no team rule was applied')
     expect(r.stdout).toContain('1 failed')
   }, 130000)
+})
+
+describe('symlinked and outside files', () => {
+  test('a symlinked team file is refused with the generic message and its target is not shown', async () => {
+    const { symlinkSync } = await import('node:fs')
+    const dir = repo(undefined)
+    const outside = join(tmp, 'secret-target.json')
+    writeFileSync(outside, '{ "TOPSECRET": nope')
+    try {
+      symlinkSync(outside, join(dir, '.meerkat-team.json'))
+    } catch {
+      return // this machine cannot create symlinks without a privilege
+    }
+    const t = readTeam(dir, NOW)
+    expect(t.error).toBe('the team file could not be read; check it is a plain JSON file in the repo root')
+    expect(t.entries).toEqual([])
+    const r = cmd([], dir)
+    expect(r.out + r.err).not.toContain('TOPSECRET')
+    expect(cmd(['--check'], dir).code).toBe(1)
+    expect(teamRunNotes(t)[0]).not.toContain('TOPSECRET')
+  })
+  test('a folder named like the team file is refused; a plain file still works; parse errors stay generic', () => {
+    const dir = repo(undefined)
+    mkdirSync(join(dir, '.meerkat-team.json'))
+    expect(readTeam(dir, NOW).error).toContain('plain JSON file')
+    expect(readTeam(repo([entry()]), NOW).entries).toHaveLength(1)
+    const bad = readTeam(repo(undefined, '{ "SECRETWORD": nope'), NOW)
+    expect(bad.error).toContain('plain JSON file')
+    expect(bad.error).not.toContain('SECRETWORD')
+  })
 })
