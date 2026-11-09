@@ -33,8 +33,8 @@ function fixture(name: string, commands: Record<string, string> = COMMANDS) {
   git(dir, 'init', '-q', '-b', 'main')
   put(dir, 'package.json', JSON.stringify({ name: 'fx', version: '1.0.0', private: true }))
   put(dir, 'check.js', "var bad = process.argv.slice(2).filter(function (f) { return f.indexOf('bad') >= 0 })\nif (bad.length) { console.error('FAIL ' + bad.join(',')); process.exit(3) }\nconsole.log('ok')\n")
-  put(dir, 'src/good.js', 'export const a = 1\n')
-  put(dir, 'src/bad.js', 'export const b = 2\n')
+  put(dir, 'src/good.test.js', 'export const a = 1\n')
+  put(dir, 'src/bad.test.js', 'export const b = 2\n')
   put(dir, 'meerkat.config.json', JSON.stringify({ commands }))
   git(dir, 'add', '-A')
   git(dir, 'commit', '-q', '-m', 'init')
@@ -52,7 +52,7 @@ describe('meerkat frontend', () => {
   const fx = fixture('main')
   test('runs typecheck, test and build in order; frontend.json has pass, fail and timeout', async () => {
     const t0 = Date.now()
-    const r = await run(fx.dir, fx.env, ['--app', fx.dir, '--files', 'src/good.js,src/bad.js'])
+    const r = await run(fx.dir, fx.env, ['--app', fx.dir, '--files', 'src/good.test.js,src/bad.test.js'])
     expect(Date.now() - t0).toBeLessThan(20000)
     expect(r.code).toBe(1)
     expect(r.lines.filter((l) => /^frontend (typecheck|test|build): start/.test(l)).length).toBe(3)
@@ -63,12 +63,12 @@ describe('meerkat frontend', () => {
     expect(doc.steps.map((s: any) => [s.key, s.status])).toEqual([['typecheck', 'pass'], ['test', 'fail'], ['build', 'timeout']])
     expect(doc.steps[0].exitCode).toBe(0)
     expect(doc.steps[1].exitCode).toBe(3)
-    expect(doc.steps[1].tail).toContain('FAIL src/bad.js')
+    expect(doc.steps[1].tail).toContain('FAIL src/bad.test.js')
     expect(doc.steps[2].exitCode).toBeNull()
     expect(doc.steps[2].durationSeconds).toBeGreaterThanOrEqual(2)
     expect(doc.steps[2].durationSeconds).toBeLessThan(10)
     expect(doc.commit).toBe(git(fx.dir, 'rev-parse', 'HEAD'))
-    expect(doc.steps[1].command).toContain('"src/good.js" "src/bad.js"')
+    expect(doc.steps[1].command).toContain('"src/good.test.js" "src/bad.test.js"')
     console.log(JSON.stringify(doc, null, 2))
   }, 30000)
 
@@ -118,9 +118,11 @@ describe('skips, trust and arguments', () => {
 
   test('{files} handling', () => {
     expect(testCommandFor('npm test', ['a.ts']).cmd).toBe('npm test')
-    expect(testCommandFor('vitest run {files}', ['a.ts', 'b c.ts']).cmd).toBe('vitest run "a.ts" "b c.ts"')
+    expect(testCommandFor('vitest run {files}', ['a.test.ts', 'b c.test.ts']).cmd).toBe('vitest run "a.test.ts" "b c.test.ts"')
+    // A source file with no test file is left out, and when nothing is left the step is skipped (not a pass).
+    expect(testCommandFor('vitest run {files}', ['a.ts']).skip).toMatch(/no test file/)
     expect(testCommandFor('vitest run {files}', []).cmd).toBe('vitest run')
-    expect(testCommandFor('vitest run {files}', ['a";rm -rf x']).cmd).toBe('vitest run')
+    expect(testCommandFor('vitest run {files}', ['a";rm -rf x.test.ts']).skip).toMatch(/no test file/)
   })
 
   test('arguments', async () => {
