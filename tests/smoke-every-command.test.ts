@@ -74,6 +74,7 @@ const EXAMPLES: Record<string, Example> = {
   logs: { args: ['logs'] },
   dismiss: { args: ['dismiss', '{id}', '--reason', 'smoke test: not a problem'] },
   dismissals: { args: ['dismissals'] },
+  team: { args: ['team'] },
   undismiss: { args: ['undismiss', '{id}'] },
   baseline: { args: ['baseline'] },
   trend: { args: ['trend'] },
