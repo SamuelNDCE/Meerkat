@@ -165,3 +165,15 @@ describe('heartbeat in the real gate path', () => {
     expect(first!.at - started!.at).toBeLessThan(6000)
   }, 120_000)
 })
+
+describe('merge base line', () => {
+  test('gate and verdict name the merge base sha they compared against on stderr', async () => {
+    const mb = git(dir, 'merge-base', 'main', 'HEAD').trim()
+    const g: string[] = []
+    await gateMain(['--base', 'main', '--first', '--app', dir], { env: env(), cwd: dir, banner: true, log: () => {}, err: (l: string) => g.push(l) })
+    expect(g.some((l) => l.includes('merge base ' + mb.slice(0, 12)))).toBe(true)
+    const v: string[] = []
+    await runVerdict(['--base', 'main', '--first', '--app', dir], { env: env(), cwd: dir, out: () => {}, err: (l: string) => v.push(l) })
+    expect(v.some((l) => l.includes('merge base ' + mb.slice(0, 12)))).toBe(true)
+  }, 180_000)
+})
