@@ -12,3 +12,13 @@ describe('cargo test output', () => {
     expect(classify({ status: 'FAIL', exitCode: 101 }, "thread 'main' panicked at src/main.rs:3:5")).toBe('crash')
   })
 })
+
+describe('a failed test always blocks', () => {
+  test('a failing test whose panic points outside the diff is not wide', async () => {
+    // @ts-expect-error plain .mjs module
+    const { scopeToChanged } = await import('../lib/gate.mjs')
+    const rows = [{ id: 'rust-test', kind: 'fail', detail: 'test failed: a::b', files: ['apps/nv-sidecar/src/x.rs'], places: [{ file: 'apps/nv-sidecar/src/x.rs', line: 1 }] }]
+    scopeToChanged(rows, new Set(['src/other.js']))
+    expect(rows[0].kind).toBe('fail')
+  })
+})
