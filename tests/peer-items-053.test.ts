@@ -15,7 +15,7 @@ const git = (cwd: string, ...args: string[]) => execFileSync('git', ['-C', cwd, 
 describe('checkRows', () => {
   test('one row per check with status, seconds and places', () => {
     const rows = checkRows({ rows: [{ id: 'cp-js', kind: 'fail', ms: 1500, places: [{ file: 'a.js', line: 3 }] }, { id: 'x', kind: 'pass', ms: 0 }] })
-    expect(rows[0]).toEqual({ check: 'cp-js', status: 'fail', seconds: 1.5, cached: false, places: [{ file: 'a.js', line: 3 }] })
+    expect(rows[0]).toEqual({ check: 'cp-js', status: 'fail', seconds: 1.5, cached: false, detail: '', places: [{ file: 'a.js', line: 3 }] })
     expect(rows[1].places).toEqual([])
   })
 })
