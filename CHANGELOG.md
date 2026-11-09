@@ -29,6 +29,8 @@ Safer by default, quieter output, fewer false alarms.
 
 ### New commands
 
+- `meerkat batch --base <ref> --app <repo> <branch1> <branch2> ...`: gates several branches together in one run, names the branch whose change fails (and whether the same check fails on the base), re-gates without it, and writes a result file per batch plus a `latest.json` per repo. Refuses a batch over 3000 changed lines or 15 PRs unless `--max-lines`/`--max-prs` say otherwise; `--dry-run` only plans, and a refusal exits 75. Exit 0 all pass, 1 a branch blocked, 75 incomplete or refused.
+- `meerkat frontend --app <folder> [--files <list>]`: runs the commands block's typecheck, test and build steps and writes `frontend.json`. A step with no command, or a test step with no test file, is skipped and the run is not a pass (exit 75). The commands block must be trusted (`meerkat trust`).
 - `meerkat verdict`: one line for a branch, `PASS` or `FAIL n blocking in changed files`. Options: `--base <ref>`, `--json` (one object), `--known <file>` (accepted failures print `KNOWN`, an entry that matches nothing prints `STALE`), `--first` (only the first blocking `file:line: message`, or `PASS`), `--ready` (one `READY` or `NOT READY` line, no claim about tests) and `--branches a b` (one line per branch, each checked out in its own temporary worktree).
 - `meerkat top`: one table of the worst findings in the files the branch changed (`--limit`, `--line`).
 - `meerkat commands`: lists the repo's own test, build and typecheck commands, from the `commands` block of `meerkat.config.json` or the `package.json` scripts. `meerkat trust` approves the block; `meerkat test` and `meerkat build` run it.
