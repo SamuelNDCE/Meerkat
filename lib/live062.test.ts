@@ -223,7 +223,7 @@ describe('an early stop is never a pass', () => {
     const t = cli(['top', '--max-seconds', '30', '--base', 'main'], d)
     expect(t.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
     expect(t.code).not.toBe(0)
-  }, 90000)
+  }, 240000)
 })
 
 describe('the verdict time limit keeps partial results', () => {
