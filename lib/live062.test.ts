@@ -40,7 +40,7 @@ describe('gate prints progress', () => {
     const r = cli(['gate', '--no-cache', '--max-seconds', '3'], d)
     expect(r.err).toMatch(/\[\d+\/\d+\] quick \.\.\.\r?\n/)
     expect(r.err).toMatch(/\[\d+\/\d+\] quick \.\.\. \d+\.\ds/)
-    expect(r.err).toMatch(/still running after \d+s: nap/)
+    expect(r.err).toMatch(/running: nap \(\d+s\)/)
     expect(r.err).toMatch(/stopped early: \d+ blocking so far, \d+ of \d+ checks finished/)
     expect(r.out).toMatch(/MEERKAT gate: \d+ blocking/)
     expect(r.out).toMatch(/NOT RUN\s+nap/)
@@ -269,5 +269,45 @@ describe('the cargo lock wait limit', () => {
       holder.kill()
       await new Promise((r) => setTimeout(r, 300))
     }
+  }, 60000)
+})
+
+describe('a stop lists every blocking place', () => {
+  test('a blocking check and a sleeping one: INCOMPLETE with the file:line, not NO-RESULT', () => {
+    const config = JSON.stringify({ packs: [], discover: false, customChecks: [
+      { id: 'blocker', title: 'Blocker', cmd: 'node', args: ['blocker.js'], tier: 'fast' },
+      { id: 'nap', title: 'Nap', cmd: 'node', args: ['nap.js'], tier: 'fast', timeoutSeconds: 120 },
+    ] })
+    const d = repo('stop-fx', { 'package.json': '{"name":"fx","version":"1.0.0","private":true}', 'a.js': 'export const a = 1\n', 'blocker.js': "console.log('a.js:1: bad thing here'); process.exit(1)\n", 'nap.js': 'setTimeout(() => {}, 20000)\n', 'meerkat.config.json': config })
+    put(d, 'a.js', 'export const a = 2\n')
+    const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '3' })
+    expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far/)
+    expect(v.out).toMatch(/a\.js:1 blocker: bad thing here/)
+    expect(v.out).not.toMatch(/NO-RESULT/)
+    expect(v.err).toMatch(/running: nap \(\d+s\)/)
+    expect(v.code).toBe(75)
+  }, 90000)
+})
+
+describe('map queries read the working tree', () => {
+  test('a file added on a branch after the map was saved is found by tests-for, and a stale saved map is named', () => {
+    const d = repo('mapq-branch', {
+      'package.json': '{"name":"fx","version":"1.0.0","private":true,"type":"module"}',
+      'src/a.js': 'export function a() {}\n',
+      'tests/a.test.js': "import { a } from '../src/a.js'\na()\n",
+    })
+    const first = cli(['map', '--quiet'], d)
+    expect(first.code).toBe(0)
+    git(d, 'checkout', '-q', '-b', 'feat')
+    put(d, 'src/b.js', 'export function b() { return 1 }\n')
+    put(d, 'tests/b.test.js', "import { b } from '../src/b.js'\nb()\n")
+    git(d, 'add', '-A')
+    git(d, 'commit', '-q', '-m', 'feat')
+    const r = cli(['tests-for', 'src/b.js'], d)
+    expect(r.code).toBe(0)
+    expect(r.out).toMatch(/tests\/b\.test\.js\s+1\s+imports it/)
+    expect(r.err).toMatch(/map: the last saved map is from commit [0-9a-f]{9}, HEAD is [0-9a-f]{9}, \d+ files? differ/)
+    const w = cli(['who-calls', 'b'], d)
+    expect(w.out).toMatch(/tests\/b\.test\.js:2/)
   }, 60000)
 })

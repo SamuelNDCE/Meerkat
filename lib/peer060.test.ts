@@ -81,7 +81,8 @@ describe('a worktree reads its own branch', () => {
     expect(b.stdout.split('\n')[0]).toContain('branch feat')
     expect(b.stdout.split('\n')[0]).toContain('git worktree')
     const g = cli(['gate', '--app', '../wt', '--no-input'], app)
-    expect(g.stdout.split('\n')[0]).toContain('branch feat')
+    // the folder banner goes to stderr (stdout stays the pure gate output)
+    expect(g.stderr).toContain('branch feat')
     expect(g.stdout).toContain('only-feat.js')
     expect(g.stderr).not.toMatch(/not found|does not exist/)
   }, SLOW)
@@ -100,14 +101,14 @@ describe('new findings only on a branch', () => {
     commit()
   })
   test('gate --base hides what the base already has, shows the new one and says how many were hidden', () => {
-    const r = cli(['gate', '--base', 'main', '--no-input'])
+    const r = cli(['gate', '--base', 'main', '--full', '--no-input'])  // --full: the compact default lists no per-finding lines
     expect(r.stdout).toMatch(/1 pre-existing finding\(s\) hidden: already on main/)
     expect(r.stdout).toContain('fresh.js:2')
     expect(r.stdout).not.toContain('loose.js:')
     expect(r.status).toBe(1)
   }, SLOW)
   test('--all-findings shows everything', () => {
-    const r = cli(['gate', '--base', 'main', '--all-findings', '--no-input'])
+    const r = cli(['gate', '--base', 'main', '--all-findings', '--full', '--no-input'])  // --full: the compact default lists no per-finding lines
     expect(r.stdout).toContain('fresh.js:2')
     expect(r.stdout).toContain('loose.js:4')
     expect(r.stdout).not.toContain('pre-existing finding(s) hidden')
@@ -122,7 +123,7 @@ describe('new-findings hole: a copy of an old finding is not hidden', () => {
     git(app, ['checkout', '-q', '-b', 'feat'])
     put('loose.js', [LOOSE, 'if (v == 2) {}', ''].join('')) // the same finding text again, on a new line
     commit()
-    const r = cli(['gate', '--base', 'main', '--no-input'])
+    const r = cli(['gate', '--base', 'main', '--full', '--no-input'])  // --full: the compact default lists no per-finding lines
     expect(r.stdout).toMatch(/1 pre-existing finding\(s\) hidden/)
     expect(r.stdout).toContain('loose.js:3')
     expect(r.stdout).not.toContain('loose.js:2')
@@ -241,6 +242,41 @@ describe('verdict and top never go silent', () => {
     const r = cli([w], app, { MEERKAT_VERDICT_TIMEOUT_S: '0.05' })
     expect(r.status).toBe(75)
     expect(line(r)).toMatch(/^INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
+  }, SLOW)
+})
+
+describe('legacy folders', () => {
+  beforeEach(() => {
+    put('package.json', JSON.stringify({ name: 'root', private: true }))
+    put('apps/web/package.json', JSON.stringify({ scripts: { test: 'vitest run' } }))
+    put('apps/old/package.json', JSON.stringify({ scripts: { test: 'old-runner', build: 'old-build' } }))
+    put('meerkat.config.json', JSON.stringify({ legacy: ['apps/old'] }))
+  })
+  test('commands skips a legacy folder and says how many were hidden', () => {
+    initMain()
+    const r = cli(['commands'])
+    expect(r.stdout).toContain('apps/web  test')
+    expect(r.stdout).not.toContain('apps/old')
+    expect(r.stdout).toContain('1 folder(s) hidden as legacy')
+    put('meerkat.config.json', JSON.stringify({ legacy: ['apps/o*'] }))
+    expect(cli(['commands']).stdout).not.toContain('apps/old')
+    put('meerkat.config.json', '{}')
+    expect(cli(['commands']).stdout).toContain('apps/old  test')
+  })
+  test('verdict and top ignore findings in a legacy folder and say so on stderr', () => {
+    initMain()
+    git(app, ['checkout', '-q', '-b', 'feat'])
+    put('apps/old/loose.js', LOOSE)
+    commit()
+    const v = cli(['verdict'])
+    expect(v.stdout.trim()).toMatch(/^NO-RESULT: nothing changed/)
+    expect(v.stderr).toContain('1 folder(s) hidden as legacy')
+    put('apps/web/loose.js', LOOSE)
+    commit()
+    const t = cli(['top'])
+    expect(t.stdout).toContain('apps/web/loose.js')
+    expect(t.stdout).not.toContain('apps/old')
+    expect(t.stderr).toContain('1 folder(s) hidden as legacy')
   }, SLOW)
 })
 

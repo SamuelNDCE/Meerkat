@@ -93,8 +93,8 @@ describe('compact gate and meerkat_summary over MCP', () => {
     const text = d.result.content[0].text as string
     expect(d.result.isError).toBe(true)
     expect(Buffer.byteLength(text)).toBeLessThan(2048)
-    expect(text).toMatch(/blocking, \d+ pre-existing/)
-    expect(text).toMatch(/FAIL {2}sql-concat \(\d+\)/)
+    expect(text.split('\n')[0]).toMatch(/blocking \d+, pre-existing \d+, passed \d+, failed \d+/)
+    expect(text).toMatch(/sql-concat \(\d+\)/)
     expect(d.result.structuredContent.blocking).toBeGreaterThan(100)
     const f = await call(ctx, 'meerkat_gate', { base: 'main', full: true })
     expect(f.result.content[0].text.length).toBeGreaterThan(text.length)
