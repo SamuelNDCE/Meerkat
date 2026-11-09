@@ -182,7 +182,7 @@ describe('verdict and findings outside the diff', () => {
   test('kind wide findings are counted as pre-existing, not in this diff, and do not fail the verdict', async () => {
     const { verdictCounts } = await import('../lib/branchcmds.mjs')
     const out: any = { rows: [{ id: 'local-links', kind: 'wide', places: [{ file: 'docs/other.md', line: 3 }, { file: 'docs/x.md', line: 9 }] }] }
-    expect(verdictCounts(out)).toEqual({ blocking: 0, preExisting: 0, wide: 2 })
+    expect(verdictCounts(out)).toEqual({ blocking: 0, preExisting: 0, unknown: 0, wide: 2 })
   })
 })
 
