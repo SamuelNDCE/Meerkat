@@ -162,12 +162,12 @@ describe('repo test and build commands', () => {
     expect(b.stderr).toContain('meerkat trust')
     expect(marks()).toEqual([])
     const u = cli(['test'])
-    expect(u.stderr).toContain('commands.test was NOT run')
-    expect(u.stderr).toContain('quick check')
+    expect(u.stderr).toContain('is not trusted yet')
+    expect(u.stderr).toContain('meerkat trust') // trust-ux: the one not-trusted line; the quick-check wording is gone
     expect(marks()).toEqual([])
   }, SLOW)
   test('meerkat trust without a terminal trusts nothing; a trusted config runs', () => {
-    expect(cli(['trust']).status).toBe(1)
+    expect(cli(['trust']).status).toBe(2) // trust-ux (d): no terminal and no --yes is status 400, exit 2
     expect(cli(['build']).status).toBe(1)
     expect(marks()).toEqual([])
     expect(cli(['build'], app, { MEERKAT_TRUST_PROJECT: '1' }).status).toBe(3)
