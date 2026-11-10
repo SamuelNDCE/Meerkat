@@ -51,8 +51,8 @@ describe('verdict --branches', () => {
   test('one prefixed line per branch, progress lines, a missing branch continues, exit 1 on a blocking branch', async () => {
     const r = await run(['--base', 'main', '--branches', 'clean,bad,nope'])
     expect(r.lines).toHaveLength(3)
-    expect(r.lines[0]).toBe('clean: PASS')
-    expect(r.lines[1]).toMatch(/^bad: FAIL \d+ blocking in changed files$/)
+    expect(r.lines[0]).toBe('clean: PASS [200]')
+    expect(r.lines[1]).toMatch(/^bad: FAIL \d+ blocking in changed files \[422\]$/)
     expect(r.lines[2]).toMatch(/^nope: NO-RESULT: git does not know the branch nope/)
     expect(r.errs.filter((l) => /^\[\d\/3\] /.test(l))).toEqual(['[1/3] clean ...', '[2/3] bad ...', '[3/3] nope ...'])
     expect(r.code).toBe(1)
@@ -60,7 +60,7 @@ describe('verdict --branches', () => {
 
   test('repeated --branch, all clean or unreadable, exits 0', async () => {
     const r = await run(['--base', 'main', '--branch', 'clean', '--branch', 'nope'])
-    expect(r.lines[0]).toBe('clean: PASS')
+    expect(r.lines[0]).toBe('clean: PASS [200]')
     expect(r.lines[1]).toMatch(/^nope: NO-RESULT/)
     expect(r.code).toBe(0)
   }, 180_000)
@@ -89,7 +89,7 @@ describe('verdict --branches with space-separated names (0.8.5 stress)', () => {
     const r = await run(['--base', 'main', '--branches', 'clean', 'bad', 'no-such-branch'])
     expect(r.lines.join('\n')).not.toMatch(/not inside a git work tree/)
     expect(r.lines).toHaveLength(3)
-    expect(r.lines[0]).toBe('clean: PASS')
+    expect(r.lines[0]).toBe('clean: PASS [200]')
     expect(r.lines[1]).toMatch(/^bad: FAIL/)
     expect(r.lines[2]).toMatch(/^no-such-branch: NO-RESULT: git does not know the branch no-such-branch/)
   }, 180_000)

@@ -135,6 +135,27 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 
 > \*Corrected 2026-11-10: a verdict that found no result (NO-RESULT) and a verdict on a base more than 20 commits ahead (STALE) both used to exit 2. They now exit 3 (NO_RESULT) and 4 (STALE). A script that tested exit 2 for a stale base must now test 4.
 
+### Verdict status (HTTP-style, next to the exit code)
+
+`meerkat verdict --json` carries `status` (a number) and `statusText` next to `exitCode`; the first line of the text answer ends with `[status]`, for example `FAIL 3 blocking in changed files [422]`. The exit codes above do not change: the status is an extra field, never a replacement.
+
+| Status | Text | When |
+|---|---|---|
+| 200 | OK | `PASS` |
+| 422 | Unprocessable | `FAIL`: a new blocking finding in a changed file |
+| 400 | Bad Request | a bad flag or value (exit 2) |
+| 404 | Not Found | the ref, folder or config was not found |
+| 204 | No Content | `NO_RESULT` for any other reason: nothing changed, no check ran on the changed files |
+| 409 | Conflict | `STALE`: the branch is too far behind its base |
+| 423 | Locked | `INCOMPLETE`, `incompleteReason` `lock-held`: the cargo lock was held |
+| 408 | Request Timeout | `INCOMPLETE`, `timeout`: the overall time limit was reached |
+| 499 | Client Closed | `INCOMPLETE`, `interrupted`: the run was interrupted |
+| 503 | Service Unavailable | `INCOMPLETE`, `tool-missing`: a required tool was missing or failed to start |
+| 206 | Partial Content | `INCOMPLETE`, `check-unfinished`: every check that ran passed, some did not run or did not finish. A result with a reason, never a pass (exit 75) |
+| 500 | Internal Error | Meerkat itself failed (an exception in Meerkat code, not in a check) |
+
+An `INCOMPLETE` answer also carries `incompleteReason` and `notRun` (the number of checks that did not run, or `"unknown"` when the run could not say).
+
 ## Output and machine use
 
 - Results go to stdout; progress, notes and errors go to stderr. `--json` prints one JSON object on stdout and nothing else.

@@ -65,7 +65,7 @@ describe('verdict: a stop is resumable', () => {
     writeFileSync(flag, 'x')
     const v = stopRun(d, 'verdict')
     expect(v.code).toBe(75)
-    expect(v.out).toMatch(/^INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)$/m)
+    expect(v.out).toMatch(/^INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\) \[\d+\]$/m)
     expect(v.out).toMatch(/a\.js:1 blocker: bad thing here/)
     file = resumeFileOf(v.out)
     expect(file).toMatch(/resume\.json$/)

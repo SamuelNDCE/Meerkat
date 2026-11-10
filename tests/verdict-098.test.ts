@@ -50,11 +50,11 @@ beforeAll(() => {
 describe('default output is unchanged', () => {
   test('FAIL line, pre-existing line, exit 1; PASS on a clean branch, exit 0', () => {
     const bad = meerkat(dir, 'verdict', '--base', 'main')
-    expect(bad.out).toBe('FAIL 2 blocking in changed files\npre-existing: 1 (not in this diff, does not block)\n')
+    expect(bad.out).toBe('FAIL 2 blocking in changed files [422]\npre-existing: 1 (not in this diff, does not block)\n')
     expect(bad.code).toBe(1)
     git(dir, 'checkout', '-q', 'clean')
     const ok = meerkat(dir, 'verdict', '--base', 'main')
-    expect(ok.out.split('\n')[0]).toBe('PASS')
+    expect(ok.out.split('\n')[0]).toBe('PASS [200]')
     expect(ok.code).toBe(0)
     git(dir, 'checkout', '-q', 'feature')
   }, 180_000)
@@ -120,7 +120,7 @@ describe('--since', () => {
   test('is --base plus the range it compared', () => {
     const r = meerkat(dir, 'verdict', '--since', 'main')
     expect(r.code).toBe(1)
-    expect(r.out.split('\n').slice(0, 3)).toEqual(['FAIL 2 blocking in changed files', 'compared main..HEAD: 1 commit', 'pre-existing: 1 (not in this diff, does not block)'])
+    expect(r.out.split('\n').slice(0, 3)).toEqual(['FAIL 2 blocking in changed files [422]', 'compared main..HEAD: 1 commit', 'pre-existing: 1 (not in this diff, does not block)'])
   }, 180_000)
   test('both --since and --base is a usage error, exit 2', () => {
     const r = meerkat(dir, 'verdict', '--since', 'main', '--base', 'main')
@@ -137,7 +137,7 @@ describe('--strict', () => {
     git(dir, 'checkout', '-q', 'feature')
     expect(normal.code).toBe(0)
     expect(strict.code).toBe(1)
-    expect(strict.out.split('\n')[0]).toBe('FAIL STRICT 1 blocking (0 new in changed files, 1 pre-existing)')
+    expect(strict.out.split('\n')[0]).toBe('FAIL STRICT 1 blocking (0 new in changed files, 1 pre-existing) [422]')
   }, 180_000)
 })
 
@@ -186,7 +186,7 @@ describe('base line, --timings, --rerun-failed, results line', () => {
     const sha = git(dir, 'merge-base', 'main', 'HEAD').trim().slice(0, 12)
     const r = meerkat(dir, 'verdict', '--base', 'main')
     expect(r.err).toContain(`base ${sha} (main)`)
-    expect(r.out).toBe('FAIL 2 blocking in changed files\npre-existing: 1 (not in this diff, does not block)\n')
+    expect(r.out).toBe('FAIL 2 blocking in changed files [422]\npre-existing: 1 (not in this diff, does not block)\n')
     const doc = JSON.parse(meerkat(dir, 'verdict', '--base', 'main', '--json').out)
     expect(doc.base).toEqual({ sha, ref: 'main' })
   }, 180_000)
