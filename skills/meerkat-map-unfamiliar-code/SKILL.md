@@ -1,9 +1,7 @@
 ---
 name: meerkat-map-unfamiliar-code
 description: |-
-  Use when you start work in a codebase you do not know, when you are asked to read or explain unfamiliar code, or when you are planning a refactor or a new feature and do not yet know where it belongs.
-  Runs Meerkat's code map, then you read the entry points and the most imported files first, before opening anything else.
-  Follow it with blast radius on the files you plan to change.
+  Use when starting in unknown code, asked to read or explain code, or planning a refactor or feature. Does run the code map; read entry points and most imported files first.
 ---
 
 # Meerkat map for unfamiliar code

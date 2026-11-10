@@ -1,9 +1,7 @@
 ---
 name: meerkat-click-through
 description: |-
-  Use when you have built or changed a web or desktop screen and need to know that every page opens and every button does something, before you say the UI works.
-  Status: PLANNED. The click-through guide is being written by another worker, so this skill only points at it and invents no commands.
-  Until the guide is finished, read docs/click-through.md and do not guess flags.
+  Use when you built or changed a screen and must prove each page opens and each button works. PLANNED: does point to docs/click-through.md, invents no commands.
 ---
 
 # Meerkat click-through (planned)

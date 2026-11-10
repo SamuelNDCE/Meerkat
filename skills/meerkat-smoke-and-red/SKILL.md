@@ -1,9 +1,7 @@
 ---
 name: meerkat-smoke-and-red
 description: |-
-  Use when you need to check that Meerkat itself works, when a Meerkat result looks wrong or empty, or when you want to test a project against deliberately broken inputs.
-  Explains smoke (a quick health test of the tool on your changes) and red testing (breaking things on purpose to see Meerkat catch them), and which one applies.
-  Not for checking your own project's code; use the gate for that.
+  Use when checking that Meerkat itself works, a result looks wrong or empty, or testing against deliberately broken inputs. Does explain smoke and red tests; not for your own code.
 ---
 
 # Meerkat smoke and red testing

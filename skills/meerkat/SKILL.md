@@ -1,8 +1,7 @@
 ---
 name: meerkat
 description: |-
-  Use when you start on a project and want to know which Meerkat check fits, or when any of these is about to happen: you are about to commit, you are about to open a pull request, you are about to edit a function that has callers, you are about to post a log or a secret, you are reading code you do not know, you changed docs, or you just added a feature.
-  This is the overview: every command, exit code and preset. Each trigger has its own skill (meerkat-before-commit, meerkat-before-pr, meerkat-blast-before-edit, meerkat-secrets-before-post, meerkat-map-unfamiliar-code, meerkat-docs-check).
+  Use when starting on a project, or before a commit, PR, edit with callers, post, unfamiliar code, doc change or new feature. Does give the overview: commands, exit codes, presets, skill index.
 ---
 
 # Meerkat
