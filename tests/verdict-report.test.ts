@@ -5,7 +5,9 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { runVerdict } from '../lib/branchcmds.mjs'
-import { blockLines, collectReport, headline, stateLines } from '../lib/verdict-report.mjs'
+import { blockLines, collectReport, headline, markdownReport, stateLines } from '../lib/verdict-report.mjs'
+import { runHandoff } from '../lib/handoff.mjs'
+import { verdictLine } from '../lib/branchcmds.mjs'
 
 const root = mkdtempSync(join(tmpdir(), 'meerkat-vreport-'))
 afterAll(() => rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
@@ -163,4 +165,34 @@ describe('(e) the four formats agree', () => {
     expect(md.lines[0]).toContain('(status 422)')
     expect(gh.lines.join('\n')).toContain('(status 422)')
   }, 240_000)
+})
+
+describe('verdictLine never passes with a tool problem', () => {
+  test('a crashed check and no finding is INCOMPLETE (503), not PASS', () => {
+    expect(verdictLine({ blocking: 0, preExisting: 0, toolProblems: 1 })).toMatch(/^INCOMPLETE .*503/)
+    expect(verdictLine({ blocking: 0, preExisting: 0 })).toBe('PASS')
+    expect(verdictLine({ blocking: 2, preExisting: 0, toolProblems: 1 })).toMatch(/^FAIL 2 blocking/)
+  })
+})
+
+describe('markdown output escapes file paths, rerun commands and messages', () => {
+  test('a path with * and a backtick and a message with | render as plain text', () => {
+    const file = 'src/a*b`c.js'
+    const rep = {
+      blocks: [{ file, line: 3, rule: 'r_1', severity: 'error', message: 'bad | value *x*', check: 'chk', origin: 'new', rerun: 'meerkat gate --only chk --base fe`at|x' }],
+      toolProblems: [], notRun: [], notFinished: { count: 0, total: 1, ids: [] }, files: [file],
+    }
+    const md = markdownReport({ head: `FAIL 1 new blocking finding in 1 file (status 422). Next: fix ${file}:3`, report: rep, pre: null, rerun: 'meerkat verdict --base fe`at|x' }).join('
+')
+    expect(md.split('
+')[0]).toBe('**Meerkat verdict: FAIL 1 new blocking finding in 1 file \(status 422\)\. Next: fix src/a\*b\`c.js:3**'.replace('\.', '.'))
+    expect(md).not.toMatch(/[^\]*b/)
+    const row = md.split('
+').find((l) => l.startsWith('| src'))!
+    expect(row).toContain('src/a\*b\`c.js')
+    expect(row).toContain('bad \| value \*x\*')
+    // the rerun command sits in a code span longer than any backtick run inside, with the pipe escaped
+    expect(row).toContain('`` meerkat gate --only chk --base fe`at\|x ``')
+    expect(md).toContain('Re-run: `` meerkat verdict --base fe`at\|x ``')
+  })
 })
