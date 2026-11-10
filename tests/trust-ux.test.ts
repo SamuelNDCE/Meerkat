@@ -7,7 +7,7 @@ import { afterAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
 import { runTrust } from '../lib/trustcmd.mjs'
 // @ts-expect-error plain .mjs module
-import { notTrustedLine, runNamedCommand, shellQuote } from '../lib/repocommands.mjs'
+import { notTrustedLine, runNamedCommand, trustCommand } from '../lib/repocommands.mjs'
 // @ts-expect-error plain .mjs module
 import { frontendGateLine, runFrontend } from '../lib/frontend.mjs'
 
@@ -18,7 +18,6 @@ const git = (dir: string, ...args: string[]) => {
   if (r.status !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr}`)
 }
 const slash = (p: string) => p.split(String.fromCharCode(92)).join('/')
-const q = (p: string) => shellQuote(p)
 let n = 0
 function fixture(commands: Record<string, string> = { test: 'node -e "process.exit(0)"', build: 'node -e "process.exit(0)"' }) {
   const dir = join(root, `fx${n++}`)
@@ -79,7 +78,7 @@ describe('meerkat trust', () => {
     const fx = fixture()
     const t = await trust([fx.dir], fx.env, root)
     expect(t.code).toBe(2)
-    expect(t.errs).toContain(`run: meerkat trust ${q(slash(fx.dir))} --yes`)
+    expect(t.errs).toContain(`run: ${trustCommand(slash(fx.dir), { yes: true })}`)
     expect((await trust(['--status', fx.dir], fx.env, root)).code).toBe(1)
   })
 
@@ -97,7 +96,7 @@ describe('meerkat trust', () => {
 
   test('(e) test, frontend and gate print the identical not-trusted line', async () => {
     const fx = fixture()
-    const want = `not run: ${slash(fx.dir)} is not trusted yet. Run: meerkat trust ${q(slash(fx.dir))}`
+    const want = `not run: ${slash(fx.dir)} is not trusted yet. Run: ${trustCommand(slash(fx.dir))}`
     const errs1: string[] = []
     const c1 = runNamedCommand('test', ['--app', fx.dir], { env: fx.env, cwd: root, out: () => {}, err: (t: string) => errs1.push(t) })
     expect(c1).toBe(1)
@@ -120,19 +119,14 @@ describe('meerkat trust', () => {
     expect(noTty.stderr).toContain('--yes')
   })
 
-  test('the copy-paste fix line quotes the folder for the shell', () => {
-    const dir = "C:/x/a b'c$(x)"
-    const win = notTrustedLine({ dir }, 'win32')
-    expect(win).toBe("not run: C:/x/a b'c$(x) is not trusted yet. Run: meerkat trust 'C:/x/a b''c$(x)'")
-    const posix = notTrustedLine({ dir }, 'linux')
-    const bs = String.fromCharCode(92)
-    expect(posix.endsWith(`meerkat trust 'C:/x/a b'${bs}''c$(x)'`)).toBe(true)
-    for (const line of [win, posix]) {
-      const cmd = line.slice(line.indexOf('Run: ') + 5)
-      expect(cmd).not.toContain('`')
-      // everything from the first quote on: $( only occurs inside single quotes
-      const unquoted = cmd.split(`'${bs}''`).join('').replace(/'[^']*'/g, '')
-      expect(unquoted).not.toContain('$(')
+  test('the copy-paste fix line: a plain folder is quoted, an unsafe name gets no pasteable command', () => {
+    expect(notTrustedLine({ dir: 'C:/x/a b' })).toBe("not run: C:/x/a b is not trusted yet. Run: meerkat trust 'C:/x/a b'")
+    const bad = ["C:/x/a b'c$(x)", 'C:/x/a' + String.fromCharCode(0x2019) + 'b', 'C:/x/a`b', 'C:/x/a&b', 'C:/x/a|b', 'C:/x/a<b', 'C:/x/a>b', 'C:/x/a^b', 'C:/x/a%b', 'C:/x/a"b', 'C:/x/a!b', 'C:/x/a;b']
+    for (const dir of bad) {
+      const line = notTrustedLine({ dir })
+      expect(line).toContain('copy this folder path and run meerkat trust on it yourself')
+      expect(line.split(String.fromCharCode(10)).pop()).toBe(dir)
+      expect(line).not.toMatch(/Run: meerkat trust/)
     }
   })
 })
