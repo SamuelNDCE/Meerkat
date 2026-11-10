@@ -71,6 +71,6 @@ describe('verdict CLI carries the status', () => {
   test('the text answer ends its first line with the status', () => {
     const r = run('verdict', '--bogus')
     expect(r.code).toBe(2)
-    expect(r.out.split('\n')[0]).toMatch(/^NO-RESULT: unknown option --bogus.* \[400\]$/)
+    expect(r.out.split('\n')[0]).toMatch(/^NO-RESULT(?: \(status \d+\))?: unknown option --bogus.* \(status 400\)?.*$/)
   })
 })

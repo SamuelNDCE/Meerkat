@@ -83,7 +83,7 @@ describe('verdict: a stop is resumable', () => {
   test('a missing, broken or foreign resume file is refused with the reason, exit 2, never ignored', () => {
     const missing = cli(['verdict', '--resume', join(root, 'nope.json')], d)
     expect(missing.code).toBe(2)
-    expect(missing.out).toMatch(/^NO-RESULT: the resume file .* does not exist\. next:/m)
+    expect(missing.out).toMatch(/^NO-RESULT(?: \(status \d+\))?: the resume file .* does not exist\. [nN]ext:/m)
     writeFileSync(join(root, 'bad.json'), '{not json')
     expect(cli(['verdict', '--resume', join(root, 'bad.json')], d).out).toMatch(/is not valid JSON/)
     writeFileSync(join(root, 'other.json'), '{"version":99}')
@@ -97,7 +97,7 @@ describe('verdict: a stop is resumable', () => {
     unlinkFlag(flag)
     const base = cli(['verdict', '--resume', file, '--base', 'HEAD'], d)
     expect(base.code).toBe(2)
-    expect(base.out).toMatch(/^NO-RESULT: --resume refused: .*a different base/m)
+    expect(base.out).toMatch(/^NO-RESULT(?: \(status \d+\))?: --resume refused: .*a different base/m)
     put(d, 'a.js', 'export const a = 3\n')
     const dirty = cli(['verdict', '--resume', file], d)
     expect(dirty.code).toBe(2)
@@ -128,7 +128,7 @@ describe('verdict: a stop is resumable', () => {
     // the plain line too
     const line = cli(['verdict', '--resume', file], d)
     expect(line.out.split('\n')[0]).toBe(cli(['verdict', '--base', 'main'], d).out.split('\n')[0])
-    expect(line.out).toMatch(/^FAIL 1 blocking in changed files/m)
+    expect(line.out).toMatch(/^FAIL 1 new blocking finding in 1 file/m)
   }, 150000)
 })
 
