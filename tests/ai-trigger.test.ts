@@ -59,7 +59,7 @@ describe('meerkat ai hooks', () => {
 })
 
 describe('MCP background guidance', () => {
-  // Updated 2026-11-09: tool descriptions are capped at 280 characters (lib/mcpdesc.mjs, fc95e2b). meerkat_run keeps the background and poll guidance in short form;
+  // Updated 2026-11-09: tool descriptions are capped at 300 characters (lib/mcpdesc.mjs, fc95e2b). meerkat_run keeps the background and poll guidance in short form;
   // meerkat_gate is the fast changed-files check and now says only that it runs the project's commands (the long "do not wait with sleep" wording was dropped).
   test('meerkat_run tells the client to run in the background and poll meerkat_last', () => {
     const d = TOOLS.find((t: { name: string }) => t.name === 'meerkat_run').description as string
