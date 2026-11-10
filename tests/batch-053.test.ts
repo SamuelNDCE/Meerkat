@@ -114,9 +114,9 @@ describe('meerkat batch (fake gate, real git)', () => {
     expect(byBranch.bad).toMatch(/BLOCKED culprit: fake-sqli .* at src\/new\.js:1/)
     expect(byBranch.clean1).toMatch(/MERGEABLE/)
     expect(byBranch.clean2).toMatch(/MERGEABLE/)
-    // batch gate + 3 alone + 1 re-gate (the base check was the injected devBaseline, not a gate run)
+    // batch gate + 1 alone (the two clean branches are skipped, see batch-speed) + 1 re-gate (the base check was the injected devBaseline, not a gate run)
     expect(calls.filter((c) => c.only === null)).toHaveLength(2)
-    expect(calls.filter((c) => c.only !== null)).toHaveLength(3)
+    expect(calls.filter((c) => c.only !== null)).toHaveLength(1) // clean1 and clean2 changed nothing where the batch failed, so only bad is checked alone
     expect(calls[calls.length - 1].hasBad).toBe(false) // the final gate ran on a batch without the culprit
     const { doc } = resultOf(r.lines)
     const bad = doc.prs.find((p: any) => p.branch === 'bad')
@@ -164,7 +164,7 @@ describe('meerkat batch (fake gate, real git)', () => {
   })
 
   test('the gate run cap stops the search: INCOMPLETE, exit 75, never a pass', async () => {
-    const r = await run(['--base', 'main', '--app', dir, 'clean1', 'bad', 'clean2'], { env: { ...env, MEERKAT_BATCH_MAX_RUNS: '2' } })
+    const r = await run(['--base', 'main', '--app', dir, 'clean1', 'bad', 'clean2'], { env: { ...env, MEERKAT_BATCH_MAX_RUNS: '1' } }) // 1: the batch gate uses the only run (the skipped clean branches no longer use one up)
     expect(r.code).toBe(75)
     expect(r.lines.some((l) => /gate run limit reached/.test(l))).toBe(true)
   })
