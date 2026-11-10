@@ -553,7 +553,7 @@ describe('mcp', () => {
 describe('exit codes', () => {
   test('docs list the exit codes used above', () => {
     const doc = readFileSync(join(ROOT, 'docs', 'commands.md'), 'utf8')
-    const section = doc.slice(doc.indexOf('## Exit codes'), doc.indexOf('## Output and machine use'))
+    const section = doc.slice(doc.indexOf('## Exit codes'), doc.indexOf('### Verdict status')) // the status table after the exit codes uses HTTP-style numbers, which are not exit codes
     const codes = [...section.matchAll(/^\| (\d+) \|/gm)].map((m) => Number(m[1]))
     expect(codes.sort((a, b) => a - b)).toEqual(DOCUMENTED)
     expect(statSync(BIN).isFile()).toBe(true)
