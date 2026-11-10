@@ -1,0 +1,4 @@
+# Fine public mentions: <path prefix><TAB><pattern id>. Keep this list short.
+examples/neuralvault	private-internals
+docs/neuralvault-gate.md	private-internals
+docs/accuracy-results.md	chat-service

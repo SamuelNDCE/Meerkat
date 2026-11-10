@@ -4,17 +4,16 @@
 
 Start with the plain-language overview: [`validation-tool-overview.md`](validation-tool-overview.md) (what it is, why to use it, how to tune it for a slower PC). This page is the contract for people who change the tool.
 
-Tracking issue: #3114. Status: **under construction**. The orchestrator and the core checks (this branch) are built; the fast and thorough check parts add their files to `checks/`. This page is the contract the parts are built to.
+Status: **under construction**. The orchestrator and the core checks (this branch) are built; the fast and thorough check parts add their files to `checks/`. This page is the contract the parts are built to.
 
 ## The name, and using it in another project
 
-The tool is called **Meerkat**, after the one that stands up on its hind legs and watches while the rest eat (chosen by Samuel, 2026-10-29). Everything that already worked keeps working: the file and folder names (`scripts/verify/`, `docs/testing/validation-tool*.md`), the `verify` npm scripts and the `NV_VERIFY_*` settings are unchanged. `npm run meerkat`, `meerkat:thorough` and `meerkat:doctor` are the same commands under the new name. The summary line now starts with `MEERKAT fast:` or `MEERKAT thorough:`.
+The tool is called **Meerkat**, after the one that stands up on its hind legs and watches while the rest eat. Everything that already worked keeps working: the file and folder names (`scripts/verify/`, `docs/testing/validation-tool*.md`), the `verify` npm scripts and the `NV_VERIFY_*` settings are unchanged. `npm run meerkat`, `meerkat:thorough` and `meerkat:doctor` are the same commands under the new name. The summary line now starts with `MEERKAT fast:` or `MEERKAT thorough:`.
 
 What is generic and what is not, for a Rust plus Electron project that wants its own copy:
 
 - **Generic (copy as is):** `run.mjs`, everything in `lib/` (the scheduler and its lanes, the live bar, the status file and heartbeat, the measured times, the cargo and electron locks), `click-shards.mjs` and `doctor.mjs`.
 - **Specific to NeuralVault (rewrite):** the check files in `checks/` and `thorough/`, `rules/` (the failure-derived scan rules), the Electron driver files in `electron/verify-*.cts`, and the paths and commands inside each check.
-- **Not decided:** whether Meerkat is ever released as open source. Until Samuel decides, it stays in this private repo, and the files carry the proprietary header. Nothing here has been published.
 
 ## How to use it
 
@@ -144,7 +143,7 @@ Self-test limits, stated honestly: the type check, unit test, rustfmt, clippy, b
 
 ## Tools and licences
 
-Rule (Samuel, 2026-10-27): tune every tool for our own use. Order of preference: configuration, then our own rule files, then a thin wrapper around the tool's CLI. Fork or patch an open-source tool only when configuration cannot do the job, and say why here. Never copy a tool's source into the repo without checking its licence. A tool that is not open source is wrapped through its CLI and none of it is copied. Licences below were read from each tool's own repository or package metadata on 2026-10-27, not from memory.
+Rule: tune every tool for our own use. Order of preference: configuration, then our own rule files, then a thin wrapper around the tool's CLI. Fork or patch an open-source tool only when configuration cannot do the job, and say why here. Never copy a tool's source into the repo without checking its licence. A tool that is not open source is wrapped through its CLI and none of it is copied. Licences below were read from each tool's own repository or package metadata on 2026-10-27, not from memory.
 
 | Tool | Licence (source checked) | How it is tuned for us | Wrap or modify |
 |---|---|---|---|
@@ -183,15 +182,15 @@ Every setting is an `NV_` variable or a profile; a check's own value is only a d
 
 ## Test windows never open real dialogs or folders
 
-`electron/test-safety.cts` (loaded by `scripts/electron-run.mjs` for every driver) blocks `shell.openPath`, `showItemInFolder`, `openExternal`, every `dialog` call, focus stealing, notifications, and, added 2026-10-27, native file pickers and downloads. A press on an `<input type="file">` makes Chromium open a native "Open" window without going through `dialog`, which was the File Explorer window that kept appearing during click-through runs. The layer cancels the click on file inputs in the page and cancels every download. Proof, measured the same day with a window watcher (class `#32770` and `CabinetWClass`): with `NV_TEST_SAFETY_PICKER=off` one "Open" window appeared in a 113 second run; with the guard on, none. The `test-safety` check keeps a control for this: an iframe (which the guard does not patch) must open a picker and the guarded page must not. Only the main frame is guarded; a picker opened from a sub-frame is not covered.
+`electron/test-safety.cts` (loaded by `scripts/electron-run.mjs` for every driver) blocks `shell.openPath`, `showItemInFolder`, `openExternal`, every `dialog` call, focus stealing, notifications, and, added 2026-10-27, native file pickers and downloads. A press on an `<input type="file">` makes Chromium open a native "Open" window without going through `dialog`, which was the File Explorer window that kept appearing during click-through runs. The layer cancels the click on file inputs in the page and cancels every download. Proof, measured the same day with a window watcher (the Windows dialog and File Explorer window classes): with `NV_TEST_SAFETY_PICKER=off` one "Open" window appeared in a 113 second run; with the guard on, none. The `test-safety` check keeps a control for this: an iframe (which the guard does not patch) must open a picker and the guarded page must not. Only the main frame is guarded; a picker opened from a sub-frame is not covered.
 
 ## When promotion is due
 
-`npm --prefix apps/desktop-electron run verify:promotion` reports how far each branch lags its source in the order `dev` -> `test` -> `beta` -> `stable`, and exits 10 when a hop is due. Rule (Samuel, 2026-10-27): once any branch except `stable` is about 100 commits behind its source (`NV_PROMOTE_LAG`, default 100), run `verify -- --thorough` on the source branch and, if it is green, promote. `stable` is reported but never triggers, because it moves by hand. The report only reports; promoting is a separate step that waits for Samuel.
+`npm --prefix apps/desktop-electron run verify:promotion` reports how far each branch lags its source in the order `dev` -> `test` -> `beta` -> `stable`, and exits 10 when a hop is due. Rule: once any branch except `stable` is about 100 commits behind its source (`NV_PROMOTE_LAG`, default 100), run `verify -- --thorough` on the source branch and, if it is green, promote. `stable` is reported but never triggers, because it moves by hand. The report only reports; promoting is a separate step that waits for a person to approve it.
 
 ## Measured
 
-Snapshot taken 2026-10-27 on the dev machine, in a fresh worktree. These numbers rot: re-measure with the commands below instead of trusting them.
+Snapshot taken 2026-10-27 on a development machine, in a fresh worktree. These numbers rot: re-measure with the commands below instead of trusting them.
 
 Today's `verify:all` stages, run one by one (cargo stages through the cargo lock, shared target dir). INCOMPLETE: the cargo lane was busy with other agents, so the sidecar build waited in the queue and the window stages after it were not reached inside the time box.
 
@@ -210,7 +209,7 @@ Real finding from the first run: `cargo-audit` FAILS today with 4 vulnerabilitie
 
 To re-measure: `npm --prefix apps/desktop-electron run verify -- --all` for fast and `... -- --thorough` for thorough; `--json <file>` keeps per-check times.
 
-Click-through speed, measured 2026-10-27 on the dev machine (warm build, shared cargo target): the old single-window `verify:clicks` took 495 s alone (420 controls pressed) inside a 771 s cold fast tier. The sharded short version takes 111 s (373 controls, 6 windows) and the whole fast tier takes 221 s with only the known `cargo-audit` failure (#3115). `click-through-full` takes 557 s for 1654 controls across four looks (12 windows, 4 at a time). The slowest single target (Chat, hits its 60 s budget in a full walk) bounds how far more windows can help.
+Click-through speed, measured 2026-10-27 on a development machine (warm build, shared cargo target): the old single-window `verify:clicks` took 495 s alone (420 controls pressed) inside a 771 s cold fast tier. The sharded short version takes 111 s (373 controls, 6 windows) and the whole fast tier takes 221 s with only the known `cargo-audit` failure. `click-through-full` takes 557 s for 1654 controls across four looks (12 windows, 4 at a time). The slowest single target (Chat, hits its 60 s budget in a full walk) bounds how far more windows can help.
 
 Thorough tier, measured 2026-10-27 (dev plus the tool, 12 cores, 31 GB): 1077 s for everything except the mutation check, which died early that time (see below); the window checks are the long pole (UI integrity 313 s and the full click-through 561 s, one after another in the electron lane, while unit tests, fuzzing and builds run beside them). One mutation slice (about a dozen mutants) took 860 s on its own and runs on the cargo lane in parallel with the window checks. Two bugs found by those runs and fixed: `parser-fuzz` counted other test programs' "running 0 tests" as a failure, and `guard-mutants` reused test programs from a deleted temp folder (the baseline died with `corpus dir: NotFound` on the second run), so it now has its own target folder with `nv-agents` cleared before each run, and it retries once when the baseline fails.
 

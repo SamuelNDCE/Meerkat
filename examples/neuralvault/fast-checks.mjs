@@ -1,4 +1,4 @@
-// Fast-tier checks for Meerkat, the validation tool (#3114). Contract: docs/testing/validation-tool.md.
+// Fast-tier checks for Meerkat, the validation tool. Contract: docs/testing/validation-tool.md.
 // File name starts with "fast-" so it is owned by the fast-checks part.
 import { MEERKAT_DIR as MK } from '../../lib/paths.mjs';
 
