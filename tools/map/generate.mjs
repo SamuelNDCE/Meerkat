@@ -87,13 +87,15 @@ export function firstComment(text, ext) {
     return ''
   }
   for (; i < lines.length && lines[i].trim().startsWith(mark); i++) {
-    const t = lines[i].trim().replace(new RegExp('^' + mark + '+\\s?'), '').trim()
+    const t = lines[i].trim().replace(mark === '#' ? HASH_RE : SLASH_RE, '').trim()
     if (t) return clip(t, 120)
   }
   return ''
 }
 
-const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\(\s*)(['"])(\.{1,2}\/[^'"\n]+)\1/g
+const HASH_RE = /^#+\s?/
+const SLASH_RE = /^\/\/+\s?/
+const IMPORT_RE =/(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\(\s*)(['"])(\.{1,2}\/[^'"\n]+)\1/g
 
 export function localImports(file, text) {
   const out = new Set()
@@ -205,8 +207,6 @@ export function build(root) {
   const checkpoint = { commit: head.commit, commitDate: head.commitDate, trackedFiles: all.length, pathsSha256: sha256(all.join('\n')) }
   return { files, block: lines.join('\n'), checkpoint }
 }
-
-export const buildBlock = (root) => build(root).block
 
 export function spliceBlock(existing, block) {
   const a = existing.indexOf(START)

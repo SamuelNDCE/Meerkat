@@ -226,7 +226,7 @@ Some findings are real but accepted. List them in a JSON file and pass it with `
 | [Hook safety](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#hook-safety) | A git pre-push hook that runs the quick preset. Removable cleanly. |
 
 <!-- counts:start -->
-**403 checks · 1446 sub-checks · 50 suites.** A check is one scan or tool run. A sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships; any you add are extra.
+**403 checks · 1446 sub-checks · 50 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
 <!-- counts:end -->
 
 ## Accuracy
