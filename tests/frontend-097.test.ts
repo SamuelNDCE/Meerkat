@@ -111,7 +111,7 @@ describe('skips, trust and arguments', () => {
     const env = { ...fx.env, MEERKAT_TRUST_PROJECT: '0', MEERKAT_HOME: home, XDG_CONFIG_HOME: home, APPDATA: home }
     const r = await run(fx.dir, env, ['--app', fx.dir])
     expect(r.code).toBe(1)
-    expect(r.errs.join('\n')).toContain('need `meerkat trust`')
+    expect(r.errs.join('\n')).toMatch(/^not run: .* is not trusted yet\. Run: meerkat trust /)
     const dir = latestRunDirForFolder(env, fx.dir, { preset: 'frontend' })
     expect(JSON.parse(readFileSync(join(dir, 'frontend.json'), 'utf8')).steps.map((s: any) => s.status)).toEqual(['untrusted', 'untrusted', 'untrusted'])
   })
