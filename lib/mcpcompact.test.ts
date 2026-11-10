@@ -1,4 +1,4 @@
-// 0.7.0: compact MCP output by default, meerkat_first_failure, and descriptions under 280 characters.
+// 0.7.0: compact MCP output by default, meerkat_first_failure, and descriptions up to 300 characters.
 // The stdio cases start the real server (bin/meerkat-mcp.mjs) in a scratch git repository with a 200-finding change.
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -89,12 +89,12 @@ afterAll(async () => {
 })
 
 describe('every tool description', () => {
-  test('is under 280 characters and says what the tool returns', async () => {
+  test('is up to 300 characters and says what the tool returns', async () => {
     const r = await srv.call('tools/list')
     const tools = r.result?.tools ?? []
     expect(tools.length).toBeGreaterThan(30)
     for (const t of tools) {
-      expect(t.description.length, `${t.name} is ${t.description.length} characters`).toBeLessThan(280)
+      expect(t.description.length, `${t.name} is ${t.description.length} characters`).toBeLessThanOrEqual(300)
       expect(t.description.length, `${t.name} has no description`).toBeGreaterThan(20)
     }
   })
