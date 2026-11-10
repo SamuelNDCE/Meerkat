@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { existsSync } from 'node:fs'
 import { afterAll, describe, expect, test } from 'vitest'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
@@ -54,7 +55,7 @@ describe('map generate and check', () => {
     expect(first).toContain('hand written top')
     expect(first).toContain('hand written bottom')
     expect(first).toContain('`lib/`')
-    expect(first).toContain('The mini command.')
+    expect(readFileSync(join(d, 'docs/map/bin.md'), 'utf8')).toContain('The mini command.')
     expect(first).not.toMatch(/\b\d+ files\b/)
   })
 
@@ -68,6 +69,58 @@ describe('map generate and check', () => {
     const r = node(CHECK, ['--root', d], ROOT)
     expect(r.code).toBe(1)
     expect(r.err).toContain('newdir/')
+  })
+
+  test('the index is short and every top-level folder with code has a detail file', () => {
+    const r = node(GEN, ['--root', ROOT, '--stdout'], ROOT)
+    expect(r.code).toBe(0)
+    const d = miniRepo()
+    expect(node(GEN, ['--root', d], ROOT).code).toBe(0)
+    const idx = readFileSync(join(d, 'MAP.md'), 'utf8')
+    expect(idx.split(String.fromCharCode(10)).length).toBeLessThan(150)
+    for (const f of ['bin', 'lib', 'root']) expect(existsSync(join(d, 'docs/map', f + '.md'))).toBe(true)
+    expect(idx).toContain('docs/map/lib.md')
+    const lib = readFileSync(join(d, 'docs/map/lib.md'), 'utf8')
+    expect(lib).toContain('Helper a.')
+    expect(lib).toContain('## Imports')
+  })
+
+  test('detail files list local imports and group lib files by prefix', () => {
+    const d = miniRepo()
+    writeFileSync(join(d, 'lib/batch-x.mjs'), "// Batch x.\nimport { a } from './a.mjs'\nexport const x = a\n")
+    writeFileSync(join(d, 'lib/batch-y.mjs'), '// Batch y.\nexport const y = 1\n')
+    git(d, 'add', '.')
+    expect(node(GEN, ['--root', d], ROOT).code).toBe(0)
+    const lib = readFileSync(join(d, 'docs/map/lib.md'), 'utf8')
+    expect(lib).toContain('### batch*')
+    expect(lib).toContain('- `lib/batch-x.mjs`: `lib/a.mjs`')
+  })
+
+  test('the checkpoint changes when a tracked path changes', () => {
+    const d = miniRepo()
+    expect(node(GEN, ['--root', d], ROOT).code).toBe(0)
+    const read = () => JSON.parse(readFileSync(join(d, 'docs/map/CHECKPOINT.json'), 'utf8'))
+    const before = read()
+    expect(before.commit).toMatch(/^[0-9a-f]{40}$/)
+    expect(before.pathsSha256).toMatch(/^[0-9a-f]{64}$/)
+    writeFileSync(join(d, 'lib/b.mjs'), '// b\n')
+    git(d, 'add', 'lib/b.mjs')
+    expect(node(GEN, ['--root', d], ROOT).code).toBe(0)
+    const after = read()
+    expect(after.pathsSha256).not.toBe(before.pathsSha256)
+    expect(after.trackedFiles).toBe(before.trackedFiles + 1)
+  })
+
+  test('check exits 1 and names lib/ after a new file is added to lib/', () => {
+    const d = miniRepo()
+    expect(node(GEN, ['--root', d], ROOT).code).toBe(0)
+    expect(node(CHECK, ['--root', d], ROOT).code).toBe(0)
+    writeFileSync(join(d, 'lib/new.mjs'), '// new module\n')
+    git(d, 'add', 'lib/new.mjs')
+    const r = node(CHECK, ['--root', d], ROOT)
+    expect(r.code).toBe(1)
+    expect(r.err).toContain('lib/')
+    expect(r.out).toContain('lib')
   })
 
   test('check exits 2 on a usage error', () => {
