@@ -10,6 +10,7 @@ import { dirname, join } from 'node:path'
 import { trackedFiles } from './kit.mjs'
 import { findBinary } from '../lib/which.mjs'
 import { FALLBACKS } from '../lib/builtin.mjs'
+import { onlyChanged, skipVendored } from './changed-list.mjs'
 
 const argv = process.argv.slice(2)
 const dash = argv.indexOf('--')
@@ -19,6 +20,7 @@ const get = (name) => (opts.includes(name) ? opts[opts.indexOf(name) + 1] : null
 const bin = get('--bin')
 const name = get('--fallback')
 const match = get('--match')
+const docs = opts.includes('--docs')
 const root = get('--root') ?? process.cwd()
 const froot = get('--builtin-root') ?? root
 if (!bin || !FALLBACKS[name]) {
@@ -44,13 +46,13 @@ if (real && bin === 'markdownlint-cli2' && !toolArgs.includes('--config') && !MD
 if (real) {
   const here = dirname(fileURLToPath(import.meta.url))
   const r = match
-    ? spawnSync(process.execPath, [join(here, 'on-files.mjs'), '--match', match, '--root', root, '--', bin, ...toolArgs], { cwd: root, stdio: 'inherit' })
+    ? spawnSync(process.execPath, [join(here, 'on-files.mjs'), '--match', match, '--root', root, ...(docs ? ['--docs'] : []), '--', bin, ...toolArgs], { cwd: root, stdio: 'inherit' })
     : spawnSync(real, toolArgs, { cwd: root, stdio: 'inherit', shell: process.platform === 'win32' && /\.(cmd|bat)$/i.test(real) })
   if (cleanup) rmSync(cleanup, { recursive: true, force: true })
   process.exit(r.status ?? 1)
 }
 
-const files = trackedFiles(froot)
+const files = docs ? onlyChanged(skipVendored(trackedFiles(froot))) : trackedFiles(froot)
 const r = FALLBACKS[name]({ root: froot, files })
 const tag = `built-in fallback (${bin} is not installed; for the full check: meerkat tools)`
 if (r.unavailable) {
