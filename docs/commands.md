@@ -137,7 +137,19 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 
 ### Verdict status (HTTP-style, next to the exit code)
 
-`meerkat verdict --json` carries `status` (a number) and `statusText` next to `exitCode`; the first line of the text answer ends with `[status]`, for example `FAIL 3 blocking in changed files [422]`. The exit codes above do not change: the status is an extra field, never a replacement.
+`meerkat verdict --json` carries `status` (a number) and `statusText` next to `exitCode`. The first line of every answer is a plain headline with the status in it and the single next action: `FAIL 3 new blocking findings in 2 files (status 422). Next: fix src/a.js:3, then run meerkat verdict again`, `PASS (status 200): nothing new blocks; 4 pre-existing findings are not in this change. Next: nothing to fix`, `INCOMPLETE (status 408): the time limit stopped the run; 12 of 218 checks did not finish. Next: meerkat verdict --resume <file>`. The same headline is in `--json` (`headline`), and the markdown and github formats carry it too, so all four outputs agree on the verdict, the status and the exit code. The exit codes above do not change: the status is an extra field, never a replacement.
+
+**The failure report.** Under a FAIL headline each blocking finding is one block, sorted by file then line, at most 20 in the text (the JSON `blocks` has all of them): `file:line  rule  severity`, the message, `rerun: meerkat gate --only <check>`, and `new` or `pre-existing` (pre-existing blocks only with `--strict`). The report is built from the rows the run already has; nothing is run again.
+
+**Labelled states** (never counted as findings in your code):
+
+| Label | Meaning | Status |
+| --- | --- | --- |
+| `TOOL PROBLEM:` | a check crashed, or its tool is missing or failed to start. With no real finding the verdict is INCOMPLETE (exit 75), never FAIL | 503 |
+| `NOT FINISHED:` | checks the time limit or an interruption stopped; the count is `n of m`. The next action is `meerkat verdict --resume` | 408, 499, 423 |
+| `NOT RUN:` | a check that could not run here, with the reason | 206 |
+
+**Errors.** Malformed input, a missing base or a missing file is one line with the right status (404 for a ref, folder or file that is not there, 400 for a bad flag) and no stack trace. An unexpected exception inside Meerkat is status 500: one line, `INCOMPLETE (status 500): Meerkat itself failed (...). Details: <log file>`, exit 75; the exception detail is in the log file under the Meerkat log folder (`verdict-error-<time>.log`).
 
 | Status | Text | When |
 |---|---|---|
