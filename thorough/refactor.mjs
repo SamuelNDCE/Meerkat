@@ -113,7 +113,9 @@ const HEADERS = {
   js: [
     /^[ \t]*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\b\s*\*?\s*([A-Za-z_$][\w$]*)\s*(?:<[^>\n]*>)?\s*\(/gm,
     /^[ \t]*(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=\n]+)?=\s*(?:async\s+)?\(/gm,
-    /^[ \t]+(?:(?:public|private|protected|static|async|get|set|override|readonly)\s+)*\*?\s*([A-Za-z_$][\w$]*)\s*(?:<[^>\n]*>)?\s*\(/gm,
+    // Same matches as before; the indent must end where the next character is not a space or tab (giving a space back never helped), and the two \s* around an
+    // absent <...> are one, so a line that fails to match costs one pass instead of one pass per space.
+    /^[ \t]+(?![ \t])(?:(?:public|private|protected|static|async|get|set|override|readonly)\s+)*\*?\s*([A-Za-z_$][\w$]*)\s*(?:<[^>\n]*>\s*)?\(/gm,
   ],
   py: [/^([ \t]*)(?:async[ \t]+)?def[ \t]+([A-Za-z_]\w*)[ \t]*\(/gm],
   rs: [/^[ \t]*(?:pub(?:\([^)\n]*\))?[ \t]+)?(?:default[ \t]+)?(?:const[ \t]+)?(?:async[ \t]+)?(?:unsafe[ \t]+)?(?:extern[ \t]+"[^"\n]*"[ \t]+)?fn[ \t]+([A-Za-z_]\w*)[ \t]*(?:<[^>\n]*>)?[ \t]*\(/gm],

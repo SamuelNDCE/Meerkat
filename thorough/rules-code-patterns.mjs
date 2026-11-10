@@ -169,6 +169,17 @@ function execAliasRe(text) {
   return re
 }
 
+// One answer per file text, not one scan of the whole file for every line asked.
+let execTextSeen = null
+let execTextHas = false
+const mentionsExec = (text) => {
+  if (text !== execTextSeen) {
+    execTextSeen = text
+    execTextHas = /exec/.test(text)
+  }
+  return execTextHas
+}
+
 const PYF = family(['py'], PY_SKIP)
 const JSF = family(['js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx'], SLASH_SKIP)
 const GOF = family(['go'], SLASH_SKIP)
@@ -318,7 +329,7 @@ export const JS = [
   }),
   JSF('js-exec-variable', 'child_process exec runs a command string that is not a fixed literal', /(?<![\w$.])(?:(?:child_process|childProcess|cp)\.)?exec(?:Sync)?\(\s*(?!['"][^'"\n]{0,300}['"]\s*[,)])(?!\w+\??\s*:\s*[A-Za-z{\[])/, 'exec(cmd, done)', 'exec("ls -l", done)', { unless: jsConstExec }),
   JSF('js-exec-alias', 'a child_process exec under another name (renamed import, namespace import or promisify) runs a command string that is not a fixed literal', undefined, "import { exec as run } from 'child_process'\nrun(cmd)", "import { exec as run } from 'child_process'\nrun('ls -l')", { test: (line, ctx) => {
-    if (!/exec/.test(ctx.text)) return false
+    if (!mentionsExec(ctx.text)) return false
     const re = execAliasRe(ctx.text)
     return Boolean(re) && joined(re, (l) => re.test(l))(line, ctx)
   } }),

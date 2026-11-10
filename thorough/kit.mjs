@@ -153,44 +153,93 @@ export const isTestFile = (f) => isFixture(f) || /(^|\/)(tests?|__tests__|e2e|sp
 // literals blanked first); an attribute that is not followed by a module, or a block that never closes, covers nothing.
 // Rust source with raw strings, strings, char literals and comments blanked (same length, newlines kept). The char literal comes before the string
 // alternative so a '"' cannot open a string that swallows the code after it.
-export const rustBlank = (text) => text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|'(?:[^'\\\n]|\\.)'|"(?:[^"\\]|\\[\s\S])*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (s) => s.replace(/[^\n]/g, ' '))
-export const rustTestLines =(file, text) => {
-  if (!/\.rs$/i.test(file) || !text.includes('#[cfg(test)]')) return () => false
+// 1-based line of a character index, by binary search over the newline positions (made once), instead of splitting the text up to the index every time.
+export const lineCounter = (text) => {
+  const nl = []
+  for (let i = text.indexOf('\n'); i >= 0; i = text.indexOf('\n', i + 1)) nl.push(i)
+  return (index) => {
+    let lo = 0
+    let hi = nl.length
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (nl[mid] < index) lo = mid + 1
+      else hi = mid
+    }
+    return lo + 1
+  }
+}
+// Pure functions of the text, asked again and again for the same Rust file by several rules and checks: the answer is kept, keyed on the whole text (a changed
+// file can never get an old answer), oldest entry out first, and bounded by size so a huge repository cannot fill memory.
+export const memoByText = (fn, maxChars) => {
+  const memo = new Map()
+  let chars = 0
+  return (text) => {
+    const hit = memo.get(text)
+    if (hit !== undefined) return hit
+    const out = fn(text)
+    if (text.length * 2 <= maxChars) {
+      memo.set(text, out)
+      chars += text.length * 2
+      for (const k of memo.keys()) {
+        if (chars <= maxChars) break
+        memo.delete(k)
+        chars -= k.length * 2
+      }
+    }
+    return out
+  }
+}
+export const rustBlank = (text) => rustBlankMemo(text)
+const rustBlankRaw = (text) => text.replace(/(?<![A-Za-z0-9_])(?:b|c)?r(#*)"[\s\S]*?"\1|'(?:[^'\\\n]|\\.)'|"(?:[^"\\]|\\[\s\S])*"|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (s) => s.replace(/[^\n]/g, ' '))
+const rustTestRangesRaw = (text) => {
   // Raw strings (r#"..."#), strings, char literals and comments are blanked (same length, newlines kept) so a brace inside one is not counted.
   const blanked = rustBlank(text)
+  const lineAt = lineCounter(blanked)
   const ranges = []
   for (const m of blanked.matchAll(/^[ \t]*#\[cfg\(test\)\][ \t]*\r?\n(?:[ \t]*#\[[^\]\n]*\][ \t]*\r?\n)*[ \t]*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{/gm)) {
     let depth = 0
     for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
       if (blanked[i] === '{') depth++
       else if (blanked[i] === '}' && --depth === 0) {
-        ranges.push([blanked.slice(0, m.index).split('\n').length, blanked.slice(0, i).split('\n').length])
+        ranges.push([lineAt(m.index), lineAt(i)])
         break
       }
     }
   }
+  return ranges
+}
+const rustBlankMemo = memoByText(rustBlankRaw, 96 * 2 ** 20)
+const rustTestRanges = memoByText(rustTestRangesRaw, 32 * 2 ** 20)
+export const rustTestLines = (file, text) => {
+  if (!/\.rs$/i.test(file) || !text.includes('#[cfg(test)]')) return () => false
+  const ranges = rustTestRanges(text)
   return (line) => ranges.some(([a, b]) => line >= a && line <= b)
 }
 // Whether the line at ctx.index (a rule context: { file, lines, index, text, project }) is Rust test code: inside a #[cfg(test)] module, inside a #[test] / #[tokio::test]
 // function, or anywhere in a file that starts with #![cfg(test)] or that its parent module declares as `#[cfg(test)] mod name;`. None of that ships.
+const rustTestFnRanges = memoByText((text) => {
+  const blanked = /#\[(?:[\w:]+::)?test\b/.test(text) ? rustBlank(text) : ''
+  const lineAt = lineCounter(blanked)
+  const fns = []
+  for (const m of blanked.matchAll(/#\[(?:[\w:]+::)?test(?:\([^\]\n]*\))?\][ \t]*\r?\n(?:[ \t]*#\[[^\]\n]*\][ \t]*\r?\n)*[^{;\n]*\bfn\s+\w+[^{;]*\{/g)) {
+    let depth = 0
+    for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
+      if (blanked[i] === '{') depth++
+      else if (blanked[i] === '}' && --depth === 0) {
+        fns.push([lineAt(m.index), lineAt(i)])
+        break
+      }
+    }
+  }
+  return fns
+}, 32 * 2 ** 20)
 const rustTestCache = new WeakMap()
 export const rustInTest = (ctx) => {
   let fn = rustTestCache.get(ctx.lines)
   if (fn === undefined) {
     const text = ctx.text ?? ctx.lines.join('\n')
-    const mod = rustTestLines(ctx.file ?? 'a.rs', text)
-    const blanked = /#\[(?:[\w:]+::)?test\b/.test(text) ? rustBlank(text) : ''
-    const fns = []
-    for (const m of blanked.matchAll(/#\[(?:[\w:]+::)?test(?:\([^\]\n]*\))?\][ \t]*\r?\n(?:[ \t]*#\[[^\]\n]*\][ \t]*\r?\n)*[^{;\n]*\bfn\s+\w+[^{;]*\{/g)) {
-      let depth = 0
-      for (let i = m.index + m[0].length - 1; i < blanked.length; i++) {
-        if (blanked[i] === '{') depth++
-        else if (blanked[i] === '}' && --depth === 0) {
-          fns.push([blanked.slice(0, m.index).split('\n').length, blanked.slice(0, i).split('\n').length])
-          break
-        }
-      }
-    }
+    const modRanges = /\.rs$/i.test(ctx.file ?? 'a.rs') && text.includes('#[cfg(test)]') ? rustTestRanges(text) : []
+    const fns = rustTestFnRanges(text)
     let whole = /^\s*#!\[cfg\(test\)\]/m.test(text)
     const f = /^(.*?)\/?([^/]+)\.rs$/.exec(ctx.file ?? '')
     if (!whole && f && !/^(?:mod|lib|main)$/.test(f[2]) && ctx.project?.read) {
@@ -198,7 +247,11 @@ export const rustInTest = (ctx) => {
       const decl = new RegExp(`#\\[cfg\\(test\\)\\]\\s*(?:#\\[[^\\]\\n]*\\]\\s*)*(?:pub(?:\\([^)]*\\))?\\s+)?mod\\s+${f[2]}\\s*;`)
       whole = [`${pre}mod.rs`, `${pre}lib.rs`, `${pre}main.rs`, ...(f[1] ? [`${f[1]}.rs`] : [])].some((p) => ctx.project.files?.includes(p) && decl.test(ctx.project.read(p) ?? ''))
     }
-    fn = (line) => whole || mod(line) || fns.some(([a, b]) => line >= a && line <= b)
+    // One flag per line, made once for the file: a rule asks about nearly every line, and a big Rust file holds thousands of test functions.
+    const ranges = [...modRanges, ...fns]
+    const flagged = new Uint8Array(ranges.reduce((n, r) => Math.max(n, r[1]), 0) + 2)
+    for (const [a, b] of ranges) flagged.fill(1, Math.max(0, a), b + 1)
+    fn = (line) => whole || (line >= 0 && line < flagged.length && flagged[line] === 1)
     rustTestCache.set(ctx.lines, fn)
   }
   return fn(ctx.index + 1)
@@ -390,25 +443,39 @@ export const configPath = (root, f) => (CONFIG_NAME.test(f) && existsSync(join(r
 
 // In a worker (lib/inproc-worker.mjs) a file is read once per run and shared by every check that asks for it. An entry is only used while the file's
 // size and modified time are unchanged, and the worker is gone at the end of the run, so a later run never sees old text. A process keeps no cache.
-const textCache = new Map()
-let textCacheBytes = 0
-const TEXT_CACHE_MAX_BYTES = 256 * 2 ** 20
-const TEXT_CACHE_MAX_FILE = 2 * 2 ** 20
+// The reader behind readText, made by a factory so a test can hand it a fake reader and count the reads. An entry is used only while the file's size and
+// modified time are unchanged; when the total passes the limit the oldest entries are dropped first (a Map keeps insertion order); a file over maxFile is never kept.
+export function makeCachedReader({ read = (p) => readFileSync(p, 'utf8'), stat = statSync, maxBytes = 256 * 2 ** 20, maxFile = 2 * 2 ** 20 } = {}) {
+  const cache = new Map()
+  let bytes = 0
+  return (p) => {
+    const st = stat(p)
+    const hit = cache.get(p)
+    if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.text
+    const text = read(p)
+    if (hit) {
+      bytes -= hit.size
+      cache.delete(p)
+    }
+    if (st.size <= maxFile) {
+      cache.set(p, { mtimeMs: st.mtimeMs, size: st.size, text })
+      bytes += st.size
+      for (const k of cache.keys()) {
+        if (bytes <= maxBytes) break
+        bytes -= cache.get(k).size
+        cache.delete(k)
+      }
+    }
+    return text
+  }
+}
+const cachedRead = makeCachedReader()
 export const readText = (root, f) => {
   progress.file(f)
   const p = configPath(root, f)
   try {
     if (!globalThis.__meerkatReadCache) return readFileSync(p, 'utf8')
-    const st = statSync(p)
-    const hit = textCache.get(p)
-    if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.text
-    const text = readFileSync(p, 'utf8')
-    if (st.size <= TEXT_CACHE_MAX_FILE && textCacheBytes + st.size <= TEXT_CACHE_MAX_BYTES) {
-      if (hit) textCacheBytes -= hit.size
-      textCache.set(p, { mtimeMs: st.mtimeMs, size: st.size, text })
-      textCacheBytes += st.size
-    }
-    return text
+    return cachedRead(p)
   } catch {
     return ''
   }
@@ -530,3 +597,41 @@ export const isPublicPemOnly = (text) => {
   return heads.length > 0 && heads.every((h) => /^(?:(?:RSA|EC|DSA) )?PUBLIC KEY$|^(?:(?:TRUSTED|X509|NEW) )?CERTIFICATE(?: REQUEST)?$|^X509 CRL$/.test(h))
 }
 export const keyFileHasContent = (text) => !isPublicPemOnly(text) && String(text ?? '').split(/\r?\n/).some((l) => l.trim() && !/^\s*(#|;|\/\/)/.test(l))
+export const isIgnored = (root, rel) => {
+  try {
+    execFileSync('git', ['check-ignore', '-q', '--', rel], { cwd: root, stdio: 'ignore' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Which of these paths does git ignore? One `git check-ignore --stdin` call for each run of paths up to CHUNK_CHARS long, not one process per path (a process
+// start costs tens of milliseconds on Windows). Gives the same answer per path as isIgnored.
+export const CHECK_IGNORE_CHUNK_CHARS = 6000
+export function ignoredPaths(root, paths, { run = execFileSync } = {}) {
+  const ignored = new Set()
+  const chunks = []
+  let cur = []
+  let size = 0
+  for (const p of paths) {
+    if (cur.length && size + p.length + 1 > CHECK_IGNORE_CHUNK_CHARS) {
+      chunks.push(cur)
+      cur = []
+      size = 0
+    }
+    cur.push(p)
+    size += p.length + 1
+  }
+  if (cur.length) chunks.push(cur)
+  for (const chunk of chunks) {
+    let out = ''
+    try {
+      out = run('git', ['check-ignore', '--stdin', '-z'], { cwd: root, input: chunk.join('\0') + '\0', encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] })
+    } catch (e) {
+      out = typeof e?.stdout === 'string' ? e.stdout : '' // exit 1 means none of them is ignored
+    }
+    for (const p of String(out).split('\0')) if (p) ignored.add(p)
+  }
+  return ignored
+}

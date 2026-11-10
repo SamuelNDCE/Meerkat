@@ -76,7 +76,22 @@ export function enclosingFn(t, line) {
 }
 
 // Names assigned from request data in a file (a = req.query.x), one hop.
+// Asked for every file once per helper hit, and the answer depends only on the text and the pattern, so it is kept (keyed on the whole text, so a changed file can
+// never get an old answer; bounded; a pattern with the g or y flag keeps state between tests and is never cached).
+const taintMemo = new Map()
 export function taintNames(t, reqRe) {
+  if (reqRe.global || reqRe.sticky) return taintNamesUncached(t, reqRe)
+  const key = `${reqRe.flags}/${reqRe.source}`
+  let per = taintMemo.get(key)
+  if (!per) taintMemo.set(key, (per = new Map()))
+  const hit = per.get(t)
+  if (hit) return hit
+  const out = taintNamesUncached(t, reqRe)
+  if (per.size >= 3000) per.clear()
+  per.set(t, out)
+  return out
+}
+function taintNamesUncached(t, reqRe) {
   const taint = new Set()
   for (const l of t.split('\n')) {
     if (!reqRe.test(l)) continue

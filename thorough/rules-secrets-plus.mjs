@@ -67,6 +67,9 @@ const NOT_SECRET_NAME = /(?:sha\d*|md5|hash|checksum|digest|commit|etag|integrit
 const keywordRe = () => new RegExp(String.raw`(?:${KEYWORDS})[\w.-]{0,24}["']?\]?\s{0,5}(?::=|=>|[:=])\s{0,5}["']([^"'\s]{8,200})["']`, 'gi')
 const entropyRe = () => new RegExp(String.raw`(?:${KEYWORDS}|access[_-]?key|signing[_-]?key)[\w.-]{0,24}["']?\s{0,5}(?::=|=>|[:=])\s{0,5}["']([A-Za-z0-9+/=_-]{20,200})["']`, 'gi')
 
+// Built once (a regex compiled for every line was a large part of the scan); each use starts at lastIndex 0 and finishes its loop before the next use.
+const KEYWORD_RE = keywordRe()
+const ENTROPY_RE = entropyRe()
 const PLACEHOLDER =
   /^(?:change[_-]?me|example|sample|dummy|placeholder|redacted|secret|password|passwd|token|null|none|nil|undefined|true|false|test|todo|fixme|unset|empty|default|foobar|hunter2$)|example|your[_-]|my[_-]?(?:secret|password|token|key)|xxx|\*\*\*|\.\.\.|<[^>]*>|\$\{|\{\{|\{%|%\(|%s|^\$|^%|^@|^\{|process\.env|os\.getenv|getenv|environ|\benv\(|\bENV\[|secrets\.|config\.|settings\.|\(|\)/i
 
@@ -100,7 +103,8 @@ export const HEX_LIMIT = 3.0
 // A name that ends like this holds a reference to a secret (its name, path, id, label), not the secret itself.
 const REF_NAME = /(?:name|arn|label|path|file|url|uri|type|length|field|header|prompt|title|text|hint|message|policy|placeholder|endpoint|region|version|id|ids|count|ttl|expiry|expires|prefix|env|var|ref)$/i
 export function findKeyword(line) {
-  const re = keywordRe()
+  const re = KEYWORD_RE
+  re.lastIndex = 0
   for (let m = re.exec(line); m; m = re.exec(line)) {
     const nameOnly = m[0].slice(0, m[0].length - m[1].length).replace(/["']?\]?\s{0,5}(?::=|=>|[:=])\s{0,5}["']$/, '')
     if (!isPlaceholder(m[1]) && !REF_NAME.test(nameOnly) && !/tokeni[sz]|tokens?.*(?:min|max)/i.test(nameOnly)) return m[0]
@@ -108,7 +112,8 @@ export function findKeyword(line) {
   return null
 }
 function findEntropy(line, hex) {
-  const re = entropyRe()
+  const re = ENTROPY_RE
+  re.lastIndex = 0
   for (let m = re.exec(line); m; m = re.exec(line)) {
     const v = m[1]
     if (isPlaceholder(v) || NOT_SECRET_NAME.test(m[0].slice(0, m[0].length - v.length))) continue
