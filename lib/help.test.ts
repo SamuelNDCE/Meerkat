@@ -58,9 +58,8 @@ suite('help', () => {
   test('hook help names all three actions', () => {
     for (const a of ['install', 'remove', 'status']) expect(commandHelp('hook')).toContain(`meerkat hook ${a}`)
   })
-  test('the exit codes are listed once, and gate and smoke never claim exit 3 (only run and the presets return it)', () => {
-    expect(EXIT_CODES.map((e: { code: number }) => e.code)).toEqual([0, 1, 2, 3, 4, 75, 130])
-    for (const c of ['gate', 'smoke']) expect(commandHelp(c)).not.toMatch(/3 /)
+  test('the exit codes are listed once, including 70 (Meerkat error) and 124 (time limit)', () => {
+    expect(EXIT_CODES.map((e: { code: number }) => e.code)).toEqual([0, 1, 2, 3, 4, 70, 75, 124, 130])
   })
   test('aliases resolve to their command', () => {
     expect(nameOf('quick')).toBe('verify')

@@ -160,7 +160,7 @@ describe('top and gate resume the same way', () => {
     const { d, flag } = fixture('gate-fx')
     writeFileSync(flag, 'x')
     const g = cli(['gate', '--no-cache', '--base', 'main', '--max-seconds', '30', '--json'], d)
-    expect([1, 75]).toContain(g.code) // 75 not run, or 1 when the blocker already counts
+    expect([1, 75, 124]).toContain(g.code) // 124 the time limit stopped it, or 1 when the blocker already counts
     expect(g.err).toMatch(/stopped early: \d+ blocking so far, \d+ of \d+ checks finished/)
     expect(g.err).toMatch(/^resume: meerkat gate --resume /m)
     const file = resumeFileOf(g.err)

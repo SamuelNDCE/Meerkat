@@ -21,7 +21,7 @@ function gate(extra: Record<string, string> = {}, args: string[] = []) {
   const r = spawnSync('node', [BIN, 'gate', '--base', 'main', ...args], { cwd: demo, encoding: 'utf8', env, timeout: 240000 })
   return { out: r.stdout, code: r.status }
 }
-const summary = (t: string) => (t.split('\n').find((l) => l.startsWith('MEERKAT gate:')) ?? 'NO SUMMARY: ' + t.slice(0, 800)).replace(/, \d+(\.\d+)?m?s$/, '')
+const summary = (t: string) => (t.split('\n').find((l) => l.startsWith('MEERKAT gate:')) ?? 'NO SUMMARY: ' + t.slice(0, 800)).replace(/, \d+(\.\d+)?m?s( \(status \d+\))?$/, '')
 const failedSet = (t: string) => t.split('\n').filter((l) => l.startsWith('FAIL ')).sort()
 
 beforeAll(() => {

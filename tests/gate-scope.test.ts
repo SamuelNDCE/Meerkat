@@ -53,7 +53,7 @@ describe('scoped gate', () => {
   test('blocks on the planted bug, not on the missing SECURITY.md; the first line says so', async () => {
     const r = await gate(['--staged', '--no-cache'])
     expect(r.code).toBe(1)
-    expect(r.text.split(String.fromCharCode(10))[0]).toMatch(/^MEERKAT gate: 1 blocking, scanned src\/bug\.js, \d+(\.\d)?s$/)
+    expect(r.text.split(String.fromCharCode(10))[0]).toMatch(/^MEERKAT gate: 1 blocking, scanned src\/bug\.js, \d+(\.\d)?s \(status 422\)$/)
     expect(r.text).toMatch(/sql-concat\s+src\/bug\.js:1/)
     expect(r.text).toMatch(/project-wide, not blocking \(\d+\)/)
     expect(r.text).toMatch(/lockfiles: /)
