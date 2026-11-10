@@ -77,7 +77,7 @@ describe('meerkat trust', () => {
   test('(d) no terminal and no --yes refuses with status 400 and the fix line', async () => {
     const fx = fixture()
     const t = await trust([fx.dir], fx.env, root)
-    expect(t.code).toBe(400)
+    expect(t.code).toBe(2)
     expect(t.errs).toContain(`run: meerkat trust ${slash(fx.dir)} --yes`)
     expect((await trust(['--status', fx.dir], fx.env, root)).code).toBe(1)
   })
@@ -106,5 +106,16 @@ describe('meerkat trust', () => {
     expect(c2).toBe(1)
     expect(errs2).toEqual([want])
     expect(frontendGateLine(fx.env, fx.dir, fx.dir)).toBe(want)
+  })
+
+  test('the CLI process exits 2 for a bad flag and for the no-terminal refusal, with status 400 in the text', () => {
+    const fx = fixture()
+    const bin = join(__dirname, '..', 'bin', 'meerkat.mjs')
+    const bad = spawnSync(process.execPath, [bin, 'trust', '--nope', fx.dir], { env: fx.env, encoding: 'utf8', stdin: 'ignore' } as any)
+    expect(bad.status).toBe(2)
+    const noTty = spawnSync(process.execPath, [bin, 'trust', fx.dir], { env: { ...fx.env, CI: '1' }, encoding: 'utf8', input: '' })
+    expect(noTty.status).toBe(2)
+    expect(noTty.stderr).toContain('status 400')
+    expect(noTty.stderr).toContain('--yes')
   })
 })
