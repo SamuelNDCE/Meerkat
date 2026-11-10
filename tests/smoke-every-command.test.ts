@@ -68,6 +68,7 @@ const EXAMPLES: Record<string, Example> = {
   verdict: { args: ['verdict'], codes: [0, 1, 2], why: 'one line for a branch; the fixture may have no base branch, then it prints a NO-RESULT line (1 or 2)' },
   fix: { args: ['fix'], codes: [0, 2], why: 'the fixture has no fixable finding, so it says no automatic fix (2) or has nothing to fix (0)' },
   handoff: { args: ['handoff'], codes: [0, 1, 2], why: 'the verdict is needed; with no base branch it says so (1 or 2)' },
+  guide: { args: ['guide'], codes: [0], why: 'advisory: exit 0 always, even outside a git repository' },
   top: { args: ['top'], codes: [0, 1, 2], why: 'a table of changed-file findings; 1 or 2 with a NO-RESULT line when there is nothing to compare' },
   commands: { args: ['commands'] },
   trust: { args: ['trust'], codes: [0], why: 'the fixture defines no commands, so there is nothing to trust' },
