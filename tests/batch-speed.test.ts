@@ -79,7 +79,7 @@ describe('batch speed', () => {
     expect(out).toEqual([30, 5, 20, 1, 10])
     expect(peak).toBe(2)
     expect(batchJobs({ MEERKAT_JOBS: '1' }, 16)).toBe(1)
-    expect(batchJobs({}, 16)).toBe(4)
+    expect(batchJobs({}, 16)).toBe(8)
     expect(batchJobs({}, 2)).toBe(2)
     expect(batchJobs({}, 1)).toBe(2)
     expect(failingFiles({ checks: [{ status: 'fail', places: [{ file: 'x.js' }] }] }, 'app')?.has('app/x.js')).toBe(true)
