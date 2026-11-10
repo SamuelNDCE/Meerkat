@@ -521,7 +521,7 @@ Everything is a plain file. Mistakes in a file are printed as notes and never st
 
 | File | What it is for |
 |---|---|
-| `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `disableSubs`, `override`, `budget`, `presets`, `customChecks`, `suites`, `discover`, `workflow`, `memory`, `allowWrites`. A key that is not one of these is ignored and named in a note (with the closest known key), so a typo such as `"pakcs"` is not silent |
+| `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `disableSubs`, `override`, `budget`, `presets`, `customChecks`, `suites`, `discover`, `memory`, `allowWrites`, `ignorePaths`, `commands`, `guidelines` (`guidelines.disable`, see [the expert guide](guide-expert.md)). `workflow` is only a record that `meerkat init --profile` writes: Meerkat keeps it for people and tools to read and acts on none of it. A key that is not one of these is ignored and named in a note (with the closest known key), so a typo such as `"pakcs"` is not silent |
 | `.meerkat-budgets.json` | numbers some checks need: performance budgets, hygiene, static and refactor limits |
 | `.meerkat-secrets-allow` | secret-scan findings you have accepted (a path, or `rule: text`) |
 | `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`, optionally followed by a `#` and a reason). Read from the project's own folder; every risky-code finding prints the exact line to paste, for example `src/view.js:118 # reason: say why it is safe` |
@@ -636,6 +636,11 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 | `MEERKAT_AI_CMD`, `MEERKAT_AI_BASE` | the model command for the AI checks (a JSON array); the branch the diff review compares with |
 | `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `MEERKAT_AI_KEY` | a key for the AI checks (see [AI checks](#ai-checks)); `MEERKAT_AI_MODEL` and `MEERKAT_AI_BASE_URL` change the model and the service |
 | `MEERKAT_USER_CONFIG` | use another file than `~/.meerkat.json` for your personal presets and settings |
+| `MEERKAT_GATE_MAX_SECONDS` | the longest `meerkat gate` runs before it stops and keeps the results so far (same as `--max-seconds`) |
+| `MEERKAT_PRIORITY` | `normal` runs the checks at normal priority; the default is below normal so your PC stays responsive |
+| `MEERKAT_THEME` | the name of a built-in board theme (your theme file still applies on top) |
+| `MEERKAT_NO_UPDATE_NOTE` | set it to leave the "newer version" line off the results screen |
+| `MEERKAT_OLD_MENU` | `1` shows the old menu list instead of the results screen |
 
 The old `NV_VERIFY_*` names are still read.
 
