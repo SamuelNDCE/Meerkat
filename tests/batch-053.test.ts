@@ -164,7 +164,7 @@ describe('meerkat batch (fake gate, real git)', () => {
   })
 
   test('the gate run cap stops the search: INCOMPLETE, exit 75, never a pass', async () => {
-    const r = await run(['--base', 'main', '--app', dir, 'clean1', 'bad', 'clean2'], { env: { ...env, MEERKAT_BATCH_MAX_RUNS: '2' } })
+    const r = await run(['--base', 'main', '--app', dir, 'clean1', 'bad', 'clean2'], { env: { ...env, MEERKAT_BATCH_MAX_RUNS: '1' } }) // 1: the batch gate uses the only run (the skipped clean branches no longer use one up)
     expect(r.code).toBe(75)
     expect(r.lines.some((l) => /gate run limit reached/.test(l))).toBe(true)
   })
