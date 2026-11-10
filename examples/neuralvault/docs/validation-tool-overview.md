@@ -29,7 +29,7 @@ npm --prefix apps/desktop-electron run verify:promotion
 - **It never passes quietly when something is missing.** A tool that is not installed, or a check that cannot start, is reported as NOT RUN and fails the run. Nothing is skipped to look green.
 - **It never interrupts you.** Test windows are parked off-screen and cannot open File Explorer, file pickers, save dialogs, downloads or take focus. (The stray Explorer window people kept seeing was a native file picker; it is blocked now and the tool proves it.)
 - **It checks itself.** `node scripts/verify/run.mjs --self-test` feeds each check a deliberately broken case and expects a failure. A check that cannot fail is not a check.
-- **It finds things reviews miss.** On its first real runs (2026-10-27) it found: a File Explorer popup in our own test runs, four shell-guard rules that no test pins down (#3129), a race in the tool itself, and the 4 dependency advisories (#3115). It also showed the Chat page covering its own heading at the smallest window size (#3123).
+- **It finds things reviews miss.** On its first real runs (2026-10-27) it found: a File Explorer popup in our own test runs, four shell-guard rules that no test pins down, a race in the tool itself, and the 4 dependency advisories. It also showed the Chat page covering its own heading at the smallest window size.
 
 ## What it checks
 
@@ -49,7 +49,7 @@ npm --prefix apps/desktop-electron run verify:promotion
 
 ## How long it takes
 
-Measured 2026-10-27 on the dev machine (12 cores, 31 GB). These rot, so re-measure with `--json file`.
+Measured 2026-10-27 on a development machine (12 cores, 31 GB). These rot, so re-measure with `--json file`.
 
 | Run | Time |
 |---|---|

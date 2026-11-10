@@ -25,7 +25,7 @@ Checked by the doctor, read from `apps/desktop-electron/scripts/verify/doctor.mj
 3. `npm --prefix apps/desktop-electron run verify:doctor` and do each `fix:` line for an item marked `MISSING (required)`, then run it again until it says `READY for the fast tier`. The doctor changes nothing; it only prints commands.
 4. Run `npm --prefix apps/desktop-electron run verify`. The first run builds the sidecar and is slow (see "How long it takes" in `README.md`).
 
-One command per line; the shell on Samuel's PC is Windows PowerShell 5.1, which has no `&&`.
+One command per line; the shell on a typical Windows PC is Windows PowerShell 5.1, which has no `&&`.
 
 ## The lock config: `~/.nv-verify.json`
 

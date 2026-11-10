@@ -5,7 +5,7 @@
 //
 // OFF unless the orchestrator is run with --include snyk (optIn 'snyk'). Per the plan decision
 // "confirm data handling first": it prints what will be sent and where BEFORE anything runs, scans a
-// COPY of the target in a temp folder, and requires NV_AGENT_SCAN_APPROVED=yes (Samuel approves the first run).
+// COPY of the target in a temp folder, and requires NV_AGENT_SCAN_APPROVED=yes (a person approves the first run).
 // What Snyk's README says is sent: tool, prompt, resource and skill descriptions go to Snyk's analysis API
 // (api version 2026-07-10 for v0.6+), authenticated by SNYK_TOKEN. Read Snyk's data-handling docs before approving.
 // --fixtures  self-test: no approval given. The wrapper must refuse (exit 1).

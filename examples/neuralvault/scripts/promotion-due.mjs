@@ -2,9 +2,9 @@
 //   node promotion-due.mjs            report; exit 0 when nothing is due, 10 when a hop is due
 //
 // The branch order is dev -> test -> beta -> stable (docs/release/promotion-gate.md). A branch is "behind" by
-// the commits its source branch has and it lacks. Samuel's rule (2026-10-27): once any branch except stable is
+// the commits its source branch has and it lacks. Rule: once any branch except stable is
 // about 100 commits behind its source, that is the cue to run the thorough tier on the source and promote.
-// stable is only reported, never a trigger: it moves by Samuel's hand. The threshold is NV_PROMOTE_LAG (100).
+// stable is only reported, never a trigger: it moves by hand. The threshold is NV_PROMOTE_LAG (100).
 // This script only reports. Promoting is a separate, asked-for step.
 import { spawnSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
