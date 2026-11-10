@@ -6,7 +6,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, posix } from 'node:path'
-import { finish, isFixture, isTestFile, listTrackedFiles, main, readText, trackedFiles, withFixture } from './kit.mjs'
+import { finish, ignoredPaths, isFixture, isTestFile, listTrackedFiles, main, readText, trackedFiles, withFixture } from './kit.mjs'
 
 const fx = (files, run) => ({ fixture: () => withFixture(files, run) })
 const CODE_EXT = /\.(?:[cm]?[jt]sx?|py|rs|go|rb|php|java|cs|kt|swift|dart|sh|bash|ps1|cmd|bat|toml|ya?ml|json)$/i
@@ -154,14 +154,6 @@ function envDrift(root) {
 
 // ---- doc-drift-paths
 const PATH_EXT = /\.(?:m?js|cjs|tsx?|jsx|json|md|ya?ml|toml|sh|ps1|py|rs|go|txt|html|css|gif|png|svg|lock)$/i
-const isIgnored = (root, rel) => {
-  try {
-    execFileSync('git', ['check-ignore', '-q', '--', rel], { cwd: root, stdio: 'ignore' })
-    return true
-  } catch {
-    return false
-  }
-}
 function pathsDrift(root) {
   const files = trackedFiles(root)
   const docs = docFiles(files)
@@ -170,6 +162,7 @@ function pathsDrift(root) {
   const topDirs = new Set(listTrackedFiles(root).filter((x) => x.includes('/')).map((x) => x.split('/')[0]))
   const f = []
   const seen = new Set()
+  const pending = []
   for (const d of docs) {
     const { spans } = parseDoc(readText(root, d))
     for (const s of spans) {
@@ -185,12 +178,16 @@ function pathsDrift(root) {
       const candidates = [p, posix.normalize(posix.join(base === '.' ? '' : base, p)), `.meerkat/${p}`]
       if (candidates.some((c) => existsSync(join(root, c)))) continue
       // Something with a wildcard-like or per-user shape in a path part (`<name>`) is a template, and a file nobody tracks on purpose is not drift.
-      if (isIgnored(root, p)) continue
-      const key = `${d}:${s.line}:${p}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      f.push(`${d}:${s.line} points at ${s.text}, which does not exist (checked: ${p} from the repo root and from ${base === '.' ? 'the repo root' : base + '/'}; neither is a file or folder here)`)
+      pending.push({ d, line: s.line, text: s.text, p, base })
     }
+  }
+  const ignored = ignoredPaths(root, [...new Set(pending.map((x) => x.p))])
+  for (const { d, line, text, p, base } of pending) {
+    if (ignored.has(p)) continue
+    const key = `${d}:${line}:${p}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    f.push(`${d}:${line} points at ${text}, which does not exist (checked: ${p} from the repo root and from ${base === '.' ? 'the repo root' : base + '/'}; neither is a file or folder here)`)
   }
   return finish('doc-drift-paths', f, 'every file path the docs name exists')
 }

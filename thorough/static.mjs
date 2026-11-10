@@ -804,13 +804,32 @@ const ratio = (a, b) => {
   const [hi, lo] = [luminance(a), luminance(b)].sort((p, q) => q - p)
   return (hi + 0.05) / (lo + 0.05)
 }
+// The same matches as t.matchAll(/([^{}]+)\{([^{}]*)\}/g) ({ index, 1: text before the brace, 2: text inside }), found in one pass over the braces. The regex
+// tried every start inside a long brace-free run and read to the end of the run each time, which is quadratic on a big page with no braces.
+function* braceBlocks(t) {
+  const re = /[{}]/g
+  let prev = -1 // position of the last brace seen
+  let open = -1 // position of a { that has text before it, waiting for its }
+  let start = -1
+  for (let m = re.exec(t); m; m = re.exec(t)) {
+    const i = m.index
+    if (t[i] === '{') {
+      open = i > prev + 1 ? i : -1
+      start = prev + 1
+    } else {
+      if (open >= 0) yield { index: start, 1: t.slice(start, open), 2: t.slice(open + 1, i) }
+      open = -1
+    }
+    prev = i
+  }
+}
 const cssContrast = (root) => {
   const min = cfg(root).minContrast ?? 4.5
   const f = []
   for (const x of trackedFiles(root)) {
     if (!/\.(css|scss|html?|svelte|vue)$/i.test(x) || /(^|\/)(node_modules|dist|build)\//.test(x)) continue
     const t = readText(root, x).replace(/\/\*[\s\S]*?\*\//g, '')
-    for (const m of t.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    for (const m of braceBlocks(t)) {
       const fg = /(?:^|;|\s)color\s*:\s*(#[0-9a-f]{3}(?:[0-9a-f]{3})?)\b/i.exec(m[2])
       const bg = /background(?:-color)?\s*:\s*(#[0-9a-f]{3}(?:[0-9a-f]{3})?)\b/i.exec(m[2])
       if (!fg || !bg) continue
