@@ -68,7 +68,7 @@ The read-only ones: `meerkat_findings`, `meerkat_finding`, `meerkat_blast`, `mee
 
 ## Is there an MCP tool for `verdict`?
 
-Not in this build. `node bin/meerkat-mcp.mjs --list-tools` shows the 35 tools and none is `verdict` or `top`. Use `meerkat_summary` over MCP, or call the CLI.
+Not in this build. `node bin/meerkat-mcp.mjs --list-tools` shows the 36 tools and none is `verdict` or `top`. Use `meerkat_summary` over MCP, or call the CLI.
 
 ## Where are the logs, and how do I keep them?
 

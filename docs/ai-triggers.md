@@ -15,6 +15,7 @@ Read this table to decide. Each row: the name, the situations it must be used fo
 | skill meerkat-smoke-and-red | Meerkat itself seems broken; a result looks wrong or empty; testing against broken inputs | separates tool health (smoke) from deliberate breakage (red) | itself |
 | meerkat_run | full preset run; thorough check before a release; nightly style run; scanning the secrets suite or the doc-drift suites on a folder | runs the project's own commands, takes minutes | meerkat-before-pr, meerkat-secrets-before-post, meerkat-docs-check |
 | meerkat_gate | before a commit (staged); before a PR (base); only changed files matter | fast, covers only the changed files | meerkat-before-commit, meerkat-before-pr |
+| meerkat_batch | several branches or PRs must be gated together; find which one breaks the rest (CLI: `meerkat batch --base <ref> --app <repo> <branch>...`) | one temporary checkout, names the culprit, WRITES a result file and runs gates | meerkat-before-pr |
 | meerkat_summary | need a pass or fail verdict in a few lines | short answer for chat | meerkat-before-commit |
 | meerkat_first_failure | want just the first blocking problem; fixing one thing at a time | one line, cheapest answer | meerkat-before-commit |
 | meerkat_last | a run finished; need failures and log ends; polling a background run | the report of a run | meerkat-before-pr |

@@ -220,6 +220,7 @@ Four more tools: `meerkat_version` (the server version, the build commit when kn
 | `meerkat_finding` | `id` (required, first 4 or more characters are enough), `folder?`, `run?`, `preset?` | One finding in full: what, where, evidence, check, log and a fix hint. Reads files only. |
 | `meerkat_redtest` | `kind`: `mutation`, `faults`, `adversarial`, `regression` (default), `cleantwin`, or `all` | Run Meerkat's own red tests (deliberate attacks on its checks) to prove they still catch defects. |
 | `meerkat_dismiss` | `folder`, `id`, `reason` (all required) | WRITES: record one finding as "not a problem" with a reason. Saved in the home folder, not the project. Only with the person's agreement. |
+| `meerkat_batch` | `branches` (required), `base`, `app` or `folder`, `maxLines`, `maxPrs`, `dryRun` | WRITES: gate several branches or PRs together in one temporary checkout and name the one that breaks the rest. Writes a result file and runs gates. `dryRun` only prints the plan. |
 | `meerkat_baseline` | `folder` (required), `clear` | WRITES: accept every open finding of the newest run as the baseline for ratchet runs, or clear it. Only when the person asks. |
 | `meerkat_doctor` | `folder` | What would run here, which outside tools are missing and how to install them. Changes nothing. |
 | `meerkat_discover` | `folder` | The project's own tests and scripts that the full, thorough and release presets would run too. Nothing is run. |

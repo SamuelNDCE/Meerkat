@@ -47,6 +47,7 @@ const ARGS: Record<string, { args?: (ctx: { app: string; id: string }) => Record
   meerkat_hook_status: {},
   meerkat_hook: { args: ({ app }) => ({ folder: app, action: 'install' }) },
   meerkat_baseline: { args: ({ app }) => ({ folder: app }) },
+  meerkat_batch: { args: ({ app }) => ({ folder: app, branches: ['main'], dryRun: true }) },
   meerkat_dismiss: { args: ({ app, id }) => ({ folder: app, id, reason: 'smoke test: not a problem' }) },
   meerkat_dismissals: { args: () => ({ stats: true }) },
   meerkat_undismiss: { args: ({ app, id }) => ({ folder: app, id }) },
