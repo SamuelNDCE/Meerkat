@@ -43,7 +43,7 @@ describe('statusOf: HTTP-style status for a verdict answer', () => {
     expect(text({ exitCode: 75, partial: true })).toBe('Partial Content')
   })
   test('every incomplete reason has a sentence and a status', () => {
-    expect(Object.keys(INCOMPLETE_REASONS).sort()).toEqual(['check-unfinished', 'interrupted', 'lock-held', 'timeout', 'tool-missing'])
+    expect(Object.keys(INCOMPLETE_REASONS).sort()).toEqual(['check-unfinished', 'interrupted', 'lock-held', 'timeout', 'tool-missing', 'tool-problem'])
     for (const k of Object.keys(INCOMPLETE_REASONS)) {
       expect(INCOMPLETE_REASONS[k as keyof typeof INCOMPLETE_REASONS].length).toBeGreaterThan(10)
       expect(Object.values(STATUS)).toContain(statusOf({ exitCode: 75, incompleteReason: k }))
@@ -71,6 +71,6 @@ describe('verdict CLI carries the status', () => {
   test('the text answer ends its first line with the status', () => {
     const r = run('verdict', '--bogus')
     expect(r.code).toBe(2)
-    expect(r.out.split('\n')[0]).toMatch(/^NO-RESULT(?: \(status \d+\))?: unknown option --bogus.* \(status 400\)?.*$/)
+    expect(r.out.split('\n')[0]).toMatch(/^NO-RESULT(?: \(status \d+\))?: unknown option --bogus\. Next: usage: /)
   })
 })

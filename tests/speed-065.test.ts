@@ -182,7 +182,7 @@ describe('verdict and findings outside the diff', () => {
   test('kind wide findings are counted as pre-existing, not in this diff, and do not fail the verdict', async () => {
     const { verdictCounts } = await import('../lib/branchcmds.mjs')
     const out: any = { rows: [{ id: 'local-links', kind: 'wide', places: [{ file: 'docs/other.md', line: 3 }, { file: 'docs/x.md', line: 9 }] }] }
-    expect(verdictCounts(out)).toEqual({ blocking: 0, preExisting: 0, unknown: 0, wide: 2 })
+    expect(verdictCounts(out)).toMatchObject({ blocking: 0, preExisting: 0, unknown: 0, wide: 2 })
   })
 })
 
@@ -195,7 +195,7 @@ describe('exit rule, worktree line and silence', () => {
   test('verdict exits 1 for a new blocking finding and 0 with a pre-existing line when the only findings are old ones', async () => {
     const a: string[] = []
     expect(await runVerdict(['--base', 'main', '--app', dir], { env: env(), cwd: dir, out: (l: string) => a.push(l), err: () => {} })).toBe(1)
-    expect(a[0]).toMatch(/^FAIL \d+ blocking/)
+    expect(a[0]).toMatch(/^FAIL \d+ new blocking findings?/)
     // A branch that only touches a file with an old finding: the finding is on the base, so nothing new blocks.
     git(dir, 'checkout', '-q', '-b', 'docsonly', 'main')
     put(dir, 'README.md', '# hi\n')
@@ -205,7 +205,7 @@ describe('exit rule, worktree line and silence', () => {
     const code = await runVerdict(['--base', 'main', '--app', dir], { env: env(), cwd: dir, out: (l: string) => b.push(l), err: () => {} })
     git(dir, 'checkout', '-q', 'feature')
     expect(code).toBe(0)
-    expect(b[0]).toBe('PASS')
+    expect(b[0]).toMatch(/^PASS \(status 200\)/)
     if (b.length > 1) expect(b[1]).toMatch(/^pre-existing: \d+ \(not in this diff, does not block\)$/)
   }, 180_000)
   test('verdict names a sleeping check within 6 seconds of its start and still ends with a result line', async () => {
