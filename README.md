@@ -20,7 +20,7 @@ Meerkat checks, maps and tests a project: security, correctness, accessibility, 
 ## Contents
 
 - [Install](#install)
-- [What is new in 0.5.3](#what-is-new-in-053)
+- [What is new in the release candidate](#what-is-new-in-the-release-candidate)
 - [Why Meerkat](#why-meerkat)
 - [Quick start](#quick-start)
 - [Reading a run](#reading-a-run)
@@ -46,13 +46,22 @@ npm install -g @samuelndce/meerkat
 
 Then, in any git repository, run `meerkat gate` (see [Quick start](#quick-start)).
 
-## What is new in 0.5.3
+## What is new in 0.5.4
 
-- **`meerkat batch`** gates several branches in one run. If the combined change fails, it finds the branch that causes the failure and re-gates without it. See [Batch gating](#batch-gating).
-- **`meerkat frontend`** runs typecheck, test and build steps from a commands block you approve. A step with no test file is skipped and reported as NOT RUN, never as a pass.
-- **Verdict JSON** carries one row per check (status, seconds, file and line of each place), `behindBy` (how far the base has moved on), and a `verdict` word that matches the exit code.
-- **Cargo lock waits** are reported as `WAITING: cargo lock held by pid N (command)`, not as a failure. The verdict is INCOMPLETE, exit 75, and the JSON names the holder.
-- **Stale-base refusal:** a branch more than 20 commits behind its base returns NO-RESULT unless you pass `--allow-stale`.
+- **Electron fuses.** A fuse set in an afterPack hook that calls `@electron/fuses` counts as set. The new `ep-fuses-binary` check reads the fuse state of the built app. Without a build it says NOT RUN, never a pass. See [docs/checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/checks.md).
+- **Clearer NO-RESULT and NOT RECORDED.** `--staged` with nothing staged is NO-RESULT with the reason first. A run that could not be saved starts with `NOT RECORDED:`.
+- **Faster and steadier runs.** Large folders no longer block on a FIFO, socket or device, and the branch verdict asks git one batched question about the base instead of one per file.
+
+## What was new in the release candidate
+
+- **The answer is the first line.** `meerkat verdict` and `meerkat gate` print the verdict first (for example `FAIL 1 new blocking finding in 1 file (status 422). judged 1 changed file(s). Next: ...`), then the base note, then the details. The line says how many changed files were judged and how many matched no check. A change with no files to judge is `NO-RESULT`, never `PASS`.
+- **One exit code table for every command.** 0 passed, 1 a finding, 2 usage or configuration, 3 nothing could be judged, 4 stale base (`verdict` and `batch`), 70 Meerkat's own error, 75 incomplete, 124 time limit, 130 interrupted. `meerkat help` prints it. Scripts that tested exit 2 for a stale base or for no result must now test 4 and 3. See [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md).
+- **Trust carries over to worktrees.** After `meerkat trust` in a repository, a registered git worktree of that repository whose commands are identical is trusted too, with the same commands. Changing the commands asks again. `meerkat trust --list` shows approvals, and `--revoke` takes one back.
+- **`meerkat new check` and `meerkat new pack`** write a working check or pack with its self-test and a broken fixture. See [docs/add-a-check.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/add-a-check.md).
+- **Working side by side.** `meerkat claim` says which paths you are editing, `meerkat claims` lists them, `meerkat release` removes them, and `meerkat worktrees` lists every worktree of the repository (and `worktrees close` removes a clean, merged one).
+- **`meerkat guide`** checks the change against the AI working guidelines. It is advisory and always exits 0.
+- **`meerkat batch`** gates several branches in one run and names the one that breaks. It also writes `batch.log`, a timestamped line per event. See [Batch gating](#batch-gating).
+- **`meerkat frontend`** runs typecheck, test and build steps from a commands block you approve. A skipped step is never a pass.
 
 Full list: [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md). Read [docs/batch.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/batch.md) and [docs/neuralvault-gate.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/neuralvault-gate.md) first if you use them.
 
@@ -117,7 +126,8 @@ The verdict counts only findings in files the branch changed. Findings that were
 |---|---|---|
 | `PASS` | Nothing new blocks. Pre-existing findings are listed as `pre-existing: N (does not block)`. | 0 |
 | `FAIL n blocking in changed files` | The branch added a finding. | 1 |
-| `NO-RESULT: <reason>. next: <step>` | No answer: nothing changed, a bad ref, a stale base, or a timeout. Never a pass. | 2 |
+| `NO-RESULT (status N): <reason>. Next: <step>` | No answer: nothing changed, a bad ref, or no check ran on the changed files. Never a pass. | 3 |
+| `STALE` | The base is more than 20 commits ahead of the branch. Refused unless `--allow-stale`. | 4 |
 | `INCOMPLETE n of m checks finished` | The run stopped early (time limit, or a cargo lock wait). Never a pass. | 75 |
 
 Options:
@@ -179,7 +189,8 @@ meerkat batch --base origin/dev --app <repo> feature-a feature-b feature-c
 - Caps keep one run bounded: 3000 changed lines and 15 branches by default, and at most 12 gate runs (`MEERKAT_BATCH_MAX_RUNS`). A branch over a cap is excluded with its reason.
 - Each branch is pinned to the commit it had at the start. If a branch moves or disappears while the batch runs, it is marked STALE and the batch is not a pass.
 - The result is saved to `batches/<id>.json`, with a `latest.json` per repository.
-- Exit codes match the verdict: 0 pass, 1 fail, 75 incomplete. A run that hits the overall time limit is incomplete, not a pass.
+- Exit codes match the verdict: 0 pass, 1 a branch is blocked, 2 usage, 3 nothing could be judged, 4 a branch moved while the batch ran, 75 incomplete. A run that hits the overall time limit is incomplete, not a pass.
+- A `batch.log` beside the result lists every event with a time (merges, conflicts, lock waits, each gate run), so a slow batch can be read while it runs.
 
 Full guide: [docs/batch.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/batch.md).
 
@@ -226,7 +237,7 @@ Some findings are real but accepted. List them in a JSON file and pass it with `
 | [Hook safety](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/features.md#hook-safety) | A git pre-push hook that runs the quick preset. Removable cleanly. |
 
 <!-- counts:start -->
-**403 checks · 1446 sub-checks · 50 suites.** A check is one scan or tool run. A sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships; any you add are extra.
+**403 checks · 1446 sub-checks · 50 suites.** A check is one scan or tool run; a sub-check is one rule inside it, so a failure names the exact rule. These are the checks Meerkat ships: any you add yourself are extra.
 <!-- counts:end -->
 
 ## Accuracy
