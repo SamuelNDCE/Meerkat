@@ -138,3 +138,25 @@ Eight findings on tools/, scripts/, .github/ and docs/ that Neural Vault checked
 **Also reported, environment.** Logs were not saved because `C:\Users\Futur\.meerkat\logs` was not writable on their machine. Plan: a NOT RECORDED line already exists (0.5.4); check that it names the folder and the fix.
 
 **Decision for Samuel.** Default scope for docs/ and tools/ under web-security rules (11g, 11h), and whether 11f gets an explicit guard rule or an ignore.
+
+### 11 (second batch) and the no-change gate report
+
+Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each is a rule-precision fix; none is a suppression.
+
+- **wh-html and iframe-title** (PreviewPage.tsx:42): the rule read a header comment, not the tag. Plan: skip comments; read the whole tag before judging; wh-html only when srcdoc is built from variables.
+- **js-find-undefined** (gate-promote.mjs:675): the value comes from the same `find` that a guard already checked. Plan: accept a truthiness guard on a value derived from the same find.
+- **js-missing-await** (pr-template-check.mjs:326): a top-level `main()` at a script's entry. Plan: a rule for a script's own entry point, or an annotated accept. Decision for Samuel.
+- **js-prototype-pollution** (verify-code-mode.cts:389): the keys come from an allow-listed process.env, not attacker JSON. Plan: accept a copy from a fixed allow-list. Judgement.
+- **js-unhandled-promise** (main.cts:878): every awaited step inside handles its own errors. Plan: follow the handling inside the chain, not only the top call.
+- **cp-rust** (shell_isolation.rs:976): `mem::forget` is the intended hand-over after ownership moved to `child`. Plan: accept mem::forget with a comment that says ownership moved, or use an explicit owner type.
+- **rp-safety** (failure.rs:54): set_var at argument parsing, edition below 2024. Judgement; low risk.
+- **weak-crypto-modes** (sync-load.js:44): the same rule as 11a above.
+- **pii-patterns-in-source** (api.ts:3365): Google's public holiday calendar id. Plan: an allow entry for known public ids.
+- **electron-open-external** (files.cts:669): a mailto from a compile-time constant. Plan: the rule follows the value's origin.
+- **ep-window** (verify-*.cts, shoot-*.cts): dev-only scripts that run fixed scripts in their own test window. Plan: exclude verifier and shoot scripts by path, or annotate.
+
+**The no-change gate report (not a new bug on this branch).** On roadmap-orchestration, `gate --base main` on a branch with no diff prints `NO-RESULT (status 204)` on line 1 and exits 3. The released v0.5.4 has the same mapping (`lib/gate.mjs` line 943), and the gate code has not changed since the tag. The exit-0 result Neural Vault saw came from an older build. Plan: ask which binary and version they ran (`meerkat --version` and the path), then confirm.
+
+**Environment.** The default log folder `C:\Users\Futur\.meerkat\logs` is not writable on Neural Vault's machine. The gate says so on the NOT RECORDED line. Plan: none in Meerkat; they set `MEERKAT_LOG_DIR`.
+
+**Decision for Samuel.** Whether a script's top-level `main()` call needs a rule (11, js-missing-await), and whether verifier and shoot scripts are excluded by path by default.
