@@ -160,3 +160,25 @@ Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each 
 **Environment.** The default log folder `C:\Users\Futur\.meerkat\logs` is not writable on Neural Vault's machine. The gate says so on the NOT RECORDED line. Plan: none in Meerkat; they set `MEERKAT_LOG_DIR`.
 
 **Decision for Samuel.** Whether a script's top-level `main()` call needs a rule (11, js-missing-await), and whether verifier and shoot scripts are excluded by path by default.
+
+## 12. Third verify batch (Neural Vault, apps/desktop-electron/electron) and verify usability
+
+**False positives (rule-precision, 10 items).**
+- 12a. ep-ipc-preload and ep-ipc-handler-no-sender-check (ipc.cts:66, :75): the wrappers handleTrusted and onTrusted do the sender check, and a test enforces that every channel uses them. Plan: follow a wrapper call, not the raw ipcMain call.
+- 12b. ep-ipc-preload removeAllListeners (ipc.cts:478 to 521): each register call clears its own channel first. Plan: accept a removal that is followed by re-registration of the same channel.
+- 12c. ep-window permission handler (main.cts:139): line 139 is `resolve(true)` in devServerReachable, not a permission handler. Plan: the rule should only match a setPermissionRequestHandler call.
+- 12d. electron-open-external (main.cts:198): an allow check and a consent dialog sit more than 10 lines above. Plan: look for the guard in the enclosing function, not a fixed 10-line window. files.cts:669 opens a constant mailto.
+- 12e. ep-window shell open (files.cts:710): the function checks the string, non-empty and absolute first. Plan: the same enclosing-function rule as 12d.
+- 12f. ep-window executeJavaScript and loadURL in dev harness scripts (shoot-*, verify-*.cts) and main.cts:813 (the DEV_SERVER constant). Plan: exclude dev-only harness scripts by path; treat a named constant as fixed.
+- 12g. js-prototype-pollution (verify-code-mode.cts:389): copies process.env string values into a fresh object. Plan: accept a copy from process.env (string values only).
+- 12h. js-unhandled-promise (shoot-*.cts startSidecar): startSidecar catches inside and never rejects; sidecar.cts:1360 and :1850 are `child.once('exit')` registrations. Plan: follow a function that catches internally; do not flag event registrations.
+- 12i. js-await-in-loop (tour.cts, sidecar.cts:1399): deliberately sequential (UI steps, a poll loop). Plan: the existing `meerkat-ignore` covers it; no rule change.
+- 12j. Already fixed by Neural Vault in PR 3813: the real js-unhandled-promise in main.cts whenReady.
+
+**Usability, real problems.**
+- 12k. `verify` puts a note first. Its report's first line was "priority below normal (your PC stays responsive; ...)", not the answer. Plan: the answer is line 1 for verify too, as for verdict and gate; the priority note moves after it. Test: verify's first line is the answer.
+- 12l. `verify` is very slow and its progress stalls. On their worktree it ran past five minutes; rust-fmt alone went past 3:30; the progress line sat at 99% for minutes. Plan: profile the run per check; show which check is running and for how long; stop a check whose progress does not move (heartbeat exists for gate, not verify). Waiting for timings.
+- 12m. Progress goes to stderr interleaved with the answer. When stderr is not dropped, the first line is not the verdict. Plan: the answer on stdout as line 1, progress on stderr only (same rule as gate, 309050c).
+- 12n. With no base, verify says "git could not find a base branch ... running every check" and does not say what to set. Plan: name the exact fix (`--base <ref>` or `MEERKAT_BASE`).
+
+**Decision for Samuel.** Whether verify should be the release-gate default (it is slow), or verdict stays the pre-PR step and verify is for whole-tree audits only.
