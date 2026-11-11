@@ -3,7 +3,8 @@
 // fails the test "every command has an example", which is the reminder to add one.
 // A smoke test only asks: did it finish, with a documented exit code, with some output, and without a stack trace? It does not check deep correctness.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
@@ -67,6 +68,9 @@ const EXAMPLES: Record<string, Example> = {
   batch: { args: ['batch', '--dry-run', 'main'], codes: [0, 2], why: 'plans a batch and runs nothing; with no base branch in the fixture it says so (2)' },
   verdict: { args: ['verdict'], codes: [0, 1, 2, 3], why: 'one line for a branch; a fixture with nothing changed or no base branch prints NO-RESULT (exit 3, status 204 or 404), never a pass' },
   fix: { args: ['fix'], codes: [0, 2], why: 'the fixture has no fixable finding, so it says no automatic fix (2) or has nothing to fix (0)' },
+  new: { args: ['new', 'check', 'smoke-new-a', '--pack', '{away}/pack-a'], why: 'writes outside the sandbox project, so the later commands see the same checks' },
+  'new check': { args: ['new', 'check', 'smoke-new-b', '--pack', '{away}/pack-b'] },
+  'new pack': { args: ['new', 'pack', 'smoke-pack-b', '--dir', '{away}'] },
   handoff: { args: ['handoff'], codes: [0, 1, 2], why: 'the verdict is needed; with no base branch it says so (1 or 2)' },
   claim: { args: ['claim', 'src', '--by', 'smoke'], codes: [0, 1, 2], why: 'records a claim in the git directory of the fixture (1 when another name holds it, 2 when the fixture is not a git repository)' },
   claims: { args: ['claims'], codes: [0, 2], why: 'lists live claims (2 when the fixture is not a git repository)' },
@@ -170,12 +174,17 @@ const ordered = [...Object.keys(EXAMPLES).filter((k) => keys.includes(k)), ...ke
 
 let sb: ReturnType<typeof makeSandbox>
 let findingId = ''
+let away = '' // a folder outside the sandbox project, for the files meerkat new writes (they must not change what the checks see)
 beforeAll(() => {
   sb = makeSandbox({ label: 'every' })
+  away = mkdtempSync(join(tmpdir(), 'meerkat-smoke-away-'))
   mkdirSync(join(sb.root, 'mypacks'))
   writeFileSync(join(sb.root, 'rules.json'), JSON.stringify({ rules: [] }))
 }, 60000)
-afterAll(() => sb?.cleanup())
+afterAll(() => {
+  sb?.cleanup()
+  if (away) rmSync(away, { recursive: true, force: true })
+})
 
 describe('the command list is read from the real CLI', () => {
   test('--help and describe list commands', () => {
@@ -195,7 +204,7 @@ describe('every command runs on the fixture project', () => {
     test(`meerkat ${key}`, () => {
       const ex = EXAMPLES[key]
       if (!ex) return // reported by the test above
-      const fill = (a: string) => a.replace('{id}', findingId || 'none').replace('{root}', sb.root).replace('{rules}', join(sb.root, 'rules.json')).replace('{packs}', join(sb.root, 'mypacks'))
+      const fill = (a: string) => a.replace('{id}', findingId || 'none').replace('{root}', sb.root).replace('{rules}', join(sb.root, 'rules.json')).replace('{packs}', join(sb.root, 'mypacks')).replace('{away}', away)
       const r = runCli(sb, ex.args.map(fill), { timeout: 140000 })
       expect(r.timedOut, `meerkat ${ex.args.join(' ')} did not finish in time`).toBe(false)
       expect(DOCUMENTED_EXIT_CODES).toContain(r.code)
