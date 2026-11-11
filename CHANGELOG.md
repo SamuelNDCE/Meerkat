@@ -4,13 +4,40 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+### Breaking
+
+Scripts that read exit codes or the first line of `verdict`, `gate` or `batch` must be checked against this table.
+
+| Situation | Old | New |
+|---|---|---|
+| `verdict`: no result (bad ref, no base, no check ran on the changed files) | exit 2 (exit 1 on one path) | exit 3, word `NO-RESULT` |
+| `verdict`: base more than 20 commits ahead | exit 2 | exit 4, word `STALE` |
+| `verdict`: no diff against the base | `PASS`, exit 0 | `NO-RESULT`, exit 3 (judged 0 changed files) |
+| `gate`: unknown `--base`, or no checks loaded | exit 75 | exit 3 |
+| `gate`: nothing changed, or no check covers the changed files | exit 0 | exit 3 |
+| `gate`: a check's tool did not start | exit 75 | exit 1 (`TOOL PROBLEM`, status 503) |
+| `gate`: Meerkat itself failed | a crash | exit 70, one line, stack in the log |
+| `batch`: nothing could be judged, or a branch moved while it ran | exit 75 (as documented before) | exit 3, or exit 4 |
+
+- Exit codes are one table for every command: 0 passed, 1 a finding, 2 usage or configuration, 3 nothing could be judged, 4 stale base, 70 Meerkat's own error, 75 incomplete, 124 time limit, 130 interrupted. A test fails on any other code. `meerkat help` prints it, and the JSON carries `exitCode` and `exitName`.
+- The first line order changed. `verdict` and `gate` now print the answer first (the verdict word, the status, how many changed files were judged, one next step). The note about the base they compared against follows it; before, it came first.
+
 ### Added
 
-- `meerkat new check <id> [--pack <name or folder>]` and `meerkat new pack <name>` write a working check or pack from a template (self-test and broken fixture included, never overwrites). docs/add-a-check.md is a five-minute guide to a first check.
+- `meerkat new check <id> [--pack <name or folder>]` and `meerkat new pack <name>` write a working check or pack from a template (self-test and broken fixture included, never overwrites). `meerkat pack enable` accepts the name the template wrote. docs/add-a-check.md is a five-minute guide to a first check.
+- The verdict's first line says how many changed files were judged and how many matched no check.
+- `meerkat claim`, `meerkat claims` and `meerkat release`: say which paths you are editing so other sessions on the same repository stay off them. Claims are shared by every worktree and never committed.
+- `meerkat worktrees` lists every worktree of the repository with its branch, claims and clean and merged state; `worktrees close <path> --yes` removes a clean, merged one.
+- `meerkat guide` checks a change against the AI working guidelines. It is advisory and always exits 0; `--explain <id>` gives one rule in full.
+- `meerkat trust --list` lists approvals; `--revoke` removes one.
+- `meerkat batch` writes `batch.log` with one timestamped line per event.
 
 ### Changed
 
-- Verdict exit codes: no result is now 3 (was 2, or 1 on one path), a stale base is 4 (was 2), and incomplete stays 75. JSON carries exitName. A script that tested exit 2 for a stale base must now test 4.
+- Trust carries over to worktrees: a registered git worktree of an approved repository whose commands are byte-identical is trusted too, with no second question. Editing the commands asks again. Revoking in the approved checkout removes the shared approval; revoking in another worktree drops only that worktree's inheritance.
+- Verdict skips work that cannot change the answer. The findings are the same, and it is faster.
+- `meerkat batch` runs Meerkat's own checks only. Frontend steps run separately with `meerkat frontend`.
+- The documentation lists every command, its flags and exit codes from `meerkat help`, and the MCP tool count is read from the server, not written down.
 
 ## 0.5.3 (2026-11-08)
 

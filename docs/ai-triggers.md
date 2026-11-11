@@ -50,4 +50,6 @@ Read this table to decide. Each row: the name, the situations it must be used fo
 | meerkat_describe | before telling a person which command to run | exact commands, options, exit codes | meerkat |
 | meerkat_version | need server version or tool count | identity of the server | meerkat |
 
+Commands with no MCP tool, called from the CLI: `meerkat claim`, `claims`, `release` (before editing in a repository other sessions also use, so two sessions never edit the same paths), `meerkat worktrees` (before creating or closing a worktree), `meerkat guide` (after a change, to read the AI working guidelines; advisory), `meerkat new check` and `meerkat new pack` (to write a check or pack from a template). Exit codes: `meerkat help`.
+
 Not covered by any skill or tool: scanning text for secrets without a diff (use `meerkat` on the exact file or `meerkat_gate` with the file staged); writing release notes; changing a project's own check configuration.

@@ -4,7 +4,7 @@ Questions teams have actually asked. Each answer was checked by running the comm
 
 ## Why is `meerkat verdict` slow, or why does it look stuck?
 
-`verdict` and `top` run the full set of gate checks with the result cache off, so they do the whole work every time. They print progress lines on stderr while they work (`[12/218] risky-code ... 0.2s FAIL`, and `still running after 30s: <check>` for a slow one), and the answer, one line or one table, on stdout when they finish. They stop after 300 seconds by default and print `INCOMPLETE n of m checks finished, b blocking so far (not a pass)` with the first 5 blocking findings, and exit 75. Start them in the background, or raise the limit: `MEERKAT_VERDICT_TIMEOUT_S=1800 meerkat verdict --base origin/main` (in PowerShell: set `$env:MEERKAT_VERDICT_TIMEOUT_S = '1800'` first).
+`verdict` and `top` run the full set of gate checks with the result cache off, so they do the whole work every time. They print progress lines on stderr while they work (`[12/218] risky-code ... 0.2s FAIL`, and `still running after 30s: <check>` for a slow one), and the answer, one line or one table, on stdout when they finish. They stop after 1500 seconds by default and print `INCOMPLETE n of m checks finished, b blocking so far (not a pass)` with the first 5 blocking findings, and exit 75. Start them in the background, or raise the limit: `MEERKAT_VERDICT_TIMEOUT_S=1800 meerkat verdict --base origin/main` (in PowerShell: set `$env:MEERKAT_VERDICT_TIMEOUT_S = '1800'` first).
 
 ## Why is `meerkat gate` faster the second time?
 
@@ -24,7 +24,7 @@ Without a `meerkat.config.json` it reads the `package.json` scripts instead and 
 
 ## Why does `meerkat build` say the command was NOT run?
 
-The repo's commands run through a shell, so they need a one-time yes. Run `meerkat trust` in a terminal. Without a terminal it trusts nothing and exits 1. In CI, set `MEERKAT_TRUST_PROJECT=1`, only for a repo you own. With no `commands.build` in the config, `meerkat build` says so and nothing runs.
+The repo's commands run through a shell, so they need a one-time yes. Run `meerkat trust` in a terminal. Without a terminal and without `--yes` it approves nothing and exits 2. A new git worktree of a repository you already trusted inherits the approval when its commands are identical (`meerkat trust --status` says so); change the commands and it asks again. In CI, set `MEERKAT_TRUST_PROJECT=1`, only for a repo you own. With no `commands.build` in the config, `meerkat build` says so and nothing runs.
 
 ## Why are MCP results big, or why are they small?
 
@@ -44,11 +44,11 @@ Put it in the known-failures file and pass it: `meerkat verdict --base origin/ma
 
 ## What does NO-RESULT mean?
 
-`verdict` could not judge, so it will not say PASS. The line holds a reason and a next step: `NO-RESULT: <reason>. next: <step>`. Exit code 1 means no result (nothing changed, no check could run, it timed out); exit 2 means a usage or git problem such as an unknown base ref or a bad `--known` file. `top` prints the same NO-RESULT lines. They are never silent. Do the next step once. Never read it as a pass.
+`verdict` could not judge, so it will not say PASS. The line holds a reason and a next step: `NO-RESULT (status N): <reason>. Next: <step>`, and it is the first line. Exit code 3 means no result (nothing changed, no files to judge, an unknown base ref, no check could run); exit 4 means the base is too far ahead (STALE); exit 2 means a usage problem such as a bad flag or a bad `--known` file. `top` prints the same NO-RESULT lines. They are never silent. Do the next step once. Never read it as a pass.
 
 ## What does exit code 75 mean?
 
-For `gate` and `smoke`: the run could not start (no base found, not a git repo, no checks loaded). For `blast` and `brief`: the file is not in the code map, so run `meerkat map` first. It is never a pass.
+Incomplete, never a pass: a wait for the cargo lock ran out, or the run stopped before its record was saved. A missing base, no checks loaded or a bad ref is exit 3 and a non-git folder is exit 2. For `blast` and `brief`: the file is not in the code map, so run `meerkat map` first. It is never a pass.
 
 ## Why does it say my folder is not a project?
 
