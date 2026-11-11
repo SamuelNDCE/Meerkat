@@ -90,7 +90,8 @@ export function evaluate(root, rules, { files = trackedFiles(root), allow = new 
     const m = memo.get(f)
     return m && m.text === t ? (m.lines ??= t.split(/\r?\n/)) : undefined
   }
-  const project = { files: usable, read: readOnce }
+  // all: every tracked file before the shipped-code filter, so a rule can read a build hook under build/ that the filter leaves out.
+  const project = { files: usable, read: readOnce, all: files }
   const everything = showAll() || process.argv.includes('--fixtures') // a check proves itself on its own fixture with every rule on
   for (const rule of rules) {
     // Pedantic style rules (undocumented Rust items, string errors, ...) are only evaluated when asked for with MEERKAT_FINDINGS=all.

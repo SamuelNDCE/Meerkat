@@ -206,7 +206,7 @@ describe('the electron-plus pack', () => {
   test('loads one check per table with no bad-check-file entries', async () => {
     const checks = await loadChecks(join(ROOT, 'packs', 'electron-plus'))
     expect(checks.filter((c) => c.id.startsWith('bad-check-file'))).toEqual([])
-    expect(checks.map((c) => c.id).sort()).toEqual([...IDS].sort())
+    expect(checks.map((c) => c.id).sort()).toEqual([...IDS, 'ep-fuses-binary'].sort())
   })
 })
 
