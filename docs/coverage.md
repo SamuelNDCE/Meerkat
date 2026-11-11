@@ -9,11 +9,11 @@ In short: Meerkat reads files as text and applies rules. It is a fast first line
 ## 1. What Meerkat scans
 
 <!-- coverage:start -->
-Counted from all 51 packs under `packs/`: **403 checks** in **50 suites** with **1446 rules** (sub-checks).
+Counted from all 51 packs under `packs/`: **404 checks** in **50 suites** with **1447 rules** (sub-checks).
 
-Run by default: 357 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
+Run by default: 358 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
 
-Checks that need an outside tool (NOT RUN without it): 39 of 403. The other 364 need only Node.
+Checks that need an outside tool (NOT RUN without it): 39 of 404. The other 365 need only Node.
 
 Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results inside them. **Runs by default**: quick = in `meerkat verify`; full = only in `meerkat full`; both = a mix; opt-in = only when you ask. **Tool**: yes means at least one check in the suite is NOT RUN without that outside tool; the others still work.
 
@@ -46,7 +46,7 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `api-contracts` | OpenAPI and GraphQL files | 4 | 4 | quick | no |
 | `database` | SQL migrations, Prisma schema | 4 | 4 | quick | no |
 | `api-resilience` | Server code (timeouts, limits, errors, paging) | 4 | 4 | quick | no |
-| `desktop-apps` | Electron, Tauri, Capacitor, Cordova, Android manifest | 20 | 180 | quick | no |
+| `desktop-apps` | Electron, Tauri, Capacitor, Cordova, Android manifest | 21 | 181 | quick | no |
 | `git-history` | Git commit history (needs a git repository) | 8 | 8 | quick | no |
 | `git-workflow` | Branches, tags, submodules (needs a git repository) | 3 | 3 | quick | no |
 | `release-versioning` | Versions, tags, package publish files (npm, PyPI, crates) | 15 | 15 | quick | no |
