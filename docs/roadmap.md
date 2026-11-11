@@ -59,6 +59,7 @@ Meerkat already gates, verdicts and batches changes, and it already isolates wor
 - Today: the `conflict-preflight` script lives in NeuralVault's tooling, not in Meerkat.
 - Build: move the check into Meerkat so `plan check` and `orchestrate` refuse two agents on the same file.
 - Done when: the preflight test fails on an overlapping plan.
+- Worktree folders are owned too. A claim covers the worktree folder as well as its files. Seen in practice (reported by NeuralVault): one agent removed another session's worktree folder. Done when: a worktree with another session's claim cannot be removed by `worktrees close` or by any cleanup command.
 
 ### R9. MCP tools for orchestration
 - Today: `meerkat_gate`, `meerkat_verdict`-style tools exist; none start or track agents.
@@ -68,5 +69,5 @@ Meerkat already gates, verdicts and batches changes, and it already isolates wor
 ## Open questions
 
 1. Do agents run through the host's own agent API, or through `claude -p` processes that Meerkat starts? (Choice affects R3's limits and R5's watchdog.)
-2. Who owns a plan's file list if two plans overlap across sessions? (Claims in the shared git directory are the current answer.)
+2. Who owns a plan's file list if two plans overlap across sessions? (Claims in the shared git directory are the current answer, and they do not yet cover worktree folders; see R8.)
 3. Should a plan's cost estimate be a hard limit or a warning?
