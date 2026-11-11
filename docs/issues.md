@@ -117,3 +117,24 @@ Received after the 0.5.4 release. Status of each item, checked on release-0.5.4 
 - **10c, closed.** Neural Vault is on the newer batch build, so the mismatch they reported is resolved.
 - **10d, closed for Meerkat.** Neural Vault's agents will not run `meerkat trust`; approval stays with Samuel.
 - **10e, still open, no repro.** At 37c827f a 16,119-byte markdown file plus the config (about 16 KB) runs 6 s text and 7 s JSON, so no gap at that size. The 137 s gap was on release-rc2. A larger staged change is needed to test the text path; Neural Vault will build one and send lines and seconds.
+
+## 11. False positives from `meerkat verify` on a large tree (reported by Neural Vault)
+
+Eight findings on tools/, scripts/, .github/ and docs/ that Neural Vault checked and judged wrong. Grouped by the rule that needs narrowing. Each is a rule scope or precision fix, not a suppression, unless noted.
+
+| # | Rule | Location | Why it is wrong | Planned fix |
+|---|---|---|---|---|
+| 11a | weak-crypto-modes | tools/loadtest/sync-load.js:44 | Math.random picks a request type in a load test; it makes no token or secret | Flag only when the random value flows into a name that is a token, secret, key, nonce or password. Test: a load-test random choice is not flagged; a random token is. |
+| 11b | empty-catch | tools/gate/changelog-fix-v2.py:218 | Best-effort rmdir of a temp dir that may be non-empty; ignoring OSError is intended | Allow an empty handler that has a comment saying why, or a specific expected exception. Test: a commented best-effort handler passes; a bare one still fails. |
+| 11c | js-unhandled-promise | tools/claude-code-bridge.mjs:303 | Line 303 is inside listen(), a Promise wrapper. The only async main() (line 321) already has .catch | The rule must follow the call, not the line. Test: a call inside a function that returns a promise and is awaited or chained is not flagged. |
+| 11d | json-parse-in-loop | tools/generate-notices.mjs:175 | One package.json per directory is parsed each iteration, inside try/catch; nothing to hoist | Flag only when the parsed input is the same across iterations. Test: distinct inputs per iteration pass. |
+| 11e | skipped-tests | scripts/test_progress_report.py:246 | A conditional skip with a stated reason (missing tz database) | Do not flag a conditional skip that carries a reason argument. Test: skipUnless with a reason passes; a bare skip still fails. |
+| 11f | shell-hygiene | tools/gate/queue-prs.sh | The script continues past a failing PR on purpose and guards its cd with `|| exit 1`; set -e would break the queue | Judgement, not a clear bug. Plan: the rule accepts a script that guards critical steps explicitly, or Neural Vault adds an ignore with a reason. Samuel decides which. |
+| 11g | inline-event-handlers | docs/design/mockups/earlier/2026-09-16-settings-redesign-mockup-v3.html:288 | A static design mockup in docs, never served as a product page | Exclude docs/ from web-security rules by default, or let a path rule be set in meerkat.config.json. Decision: the default scope. |
+| 11h | robots-sitemap | docs/codemap/index.html | Generated internal docs, not a public site | Same as 11g: docs/ is not a public site. |
+
+**Also reported, a real bug.** `meerkat gate --base origin/dev` on a clean detached worktree prints "nothing changed" when the branch has changes against the base. Neural Vault used `verify` as a workaround. Plan: reproduce on a detached worktree, find where the changed-file list comes from (it likely reads the current branch, not the detached HEAD), and add a test with a detached HEAD. Priority: high, because it makes the gate silently pass.
+
+**Also reported, environment.** Logs were not saved because `C:\Users\Futur\.meerkat\logs` was not writable on their machine. Plan: a NOT RECORDED line already exists (0.5.4); check that it names the folder and the fix.
+
+**Decision for Samuel.** Default scope for docs/ and tools/ under web-security rules (11g, 11h), and whether 11f gets an explicit guard rule or an ignore.
