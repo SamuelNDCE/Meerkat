@@ -144,10 +144,15 @@ describe('red: a damaged run store, baseline or dismissals file', () => {
     writeFileSync(join(dir, 'findings.json'), keep.slice(0, Math.floor(keep.length / 2)))
     // Ideal: say "damaged" and tell the person to run meerkat again. Today it says the file is missing ("older Meerkat, or the run did not finish"), which is
     // misleading for a damaged file but safe; the exit code and the absence of a stack are what is asserted.
+    try {
     const id = basename(dir) // name the run: folder-scoped commands read the folder's newest run, which is not this one after the earlier tests
     for (const a of [['findings', id], ['finding', 'abcd1234', id], ['prompt', id, '--print', '--no-copy']]) clean(runCli(sb, a), [1, 2], { says: /truncated|findings\.json/, action: false }) // a damaged run is named, not judged: exit 1 or 2 depending on the command
-    clean(runCli(sb, ['suggest']), [0, 1], { action: false }) // suggest takes no run argument: checked only for a clean answer
-    writeFileSync(join(dir, 'findings.json'), keep)
+    // suggest reads the newest run: a damaged run is a damaged store, so exit 2 like findings (not 3, nothing to judge).
+    clean(runCli(sb, ['suggest']), [2], { action: false })
+    } finally {
+      // Restored even when an assertion above fails, so later tests never read a damaged run (the empty-baseline test failed on one before).
+      writeFileSync(join(dir, 'findings.json'), keep)
+    }
   })
   test('an empty baseline file: the ratchet run and the baseline command both cope', () => {
     dir = newestRunDir(sb) // an earlier test damaged the newest run; this test needs a clean one

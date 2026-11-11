@@ -101,7 +101,8 @@ describe('B15 gate and map folders', () => {
     for (const w of ['gate', 'smoke']) {
       const r = cli([w], plain)
       expect(r.code).toBe(2)
-      expect(r.all.split('not a git repository').length - 1).toBe(1)
+      // The same line goes to stdout and stderr on purpose (lib/gate.mjs stop()): one distinct line, said once.
+      expect(new Set(r.all.split('\n').filter((l) => l.includes('not a git repository'))).size).toBe(1)
     }
   })
   test('a missing folder says "folder does not exist", exit 2', () => {
