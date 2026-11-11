@@ -29,8 +29,8 @@
   "baseState": "done",
   "unknown": 0,
   "reason": "FAIL 5 blocking in changed files",
-  "checksTotal": 217,
-  "checksFinished": 217,
+  "checksTotal": 218,
+  "checksFinished": 218,
   "checks": [
     {
       "check": "cors-wildcard",
@@ -58,6 +58,13 @@
       "status": "skipped",
       "cached": false,
       "detail": "no eslint configuration in this project, so eslint has no rules of the project's to apply",
+      "places": []
+    },
+    {
+      "check": "ep-fuses-binary",
+      "status": "pass",
+      "cached": false,
+      "detail": "not an Electron project, so there is no binary to read",
       "places": []
     },
     {
@@ -1648,7 +1655,7 @@
   "toolProblems": [],
   "notFinished": {
     "count": 0,
-    "total": 217,
+    "total": 218,
     "ids": []
   },
   "notRun": [],
