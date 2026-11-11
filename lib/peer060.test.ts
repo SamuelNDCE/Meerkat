@@ -38,7 +38,8 @@ describe('verdict', () => {
     put('clean.js', 'export const c = 2\n')
     commit()
     const r = cli(['verdict'])
-    expect(r.stdout.trim()).toMatch(/^PASS \(status 200\): nothing new blocks\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: nothing to fix$/)
+    // The PASS line also names the pre-existing findings and the files judged (docs/commands.md, "The first line").
+    expect(r.stdout.trim().split('\n')[0]).toMatch(/^PASS \(status 200\): nothing new blocks.* Next: nothing to fix$/)
     expect(r.status).toBe(0)
   }, SLOW)
 
@@ -254,7 +255,8 @@ describe('verdict and top never go silent', () => {
     commit('main moves')
     git(app, ['checkout', '-q', 'feat'])
     const r = cli(['verdict'])
-    const behind = r.stderr.split('\n').filter((l) => /behind main/.test(l))
+    // The note is on stdout, after the headline (docs/commands.md, "The first line").
+    const behind = r.stdout.split('\n').filter((l) => /behind main/.test(l))
     expect(behind.length).toBeGreaterThan(0)
     for (const l of behind) expect(l.startsWith('note: ')).toBe(true)
     expect(r.status).toBe(1) // from the finding, not from the note

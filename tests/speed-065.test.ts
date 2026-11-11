@@ -112,7 +112,8 @@ describe('bad argument', () => {
     const lines: string[] = []
     const code = await gateMain(['--bogus', '--app', dir], { env: env(), cwd: dir, log: (l: string) => lines.push(l), err: (l: string) => lines.push(l) })
     expect(code).toBe(2)
-    expect(lines).toHaveLength(1)
+    // The same line goes to stdout and to stderr on purpose (lib/gate.mjs stop()), so count distinct lines.
+    expect([...new Set(lines)]).toHaveLength(1)
     expect(lines[0]).toMatch(/--bogus/)
   })
 })
@@ -206,7 +207,8 @@ describe('exit rule, worktree line and silence', () => {
     git(dir, 'checkout', '-q', 'feature')
     expect(code).toBe(0)
     expect(b[0]).toMatch(/^PASS \(status 200\)/)
-    if (b.length > 1) expect(b[1]).toMatch(/^pre-existing: \d+ \(not in this diff, does not block\)$/)
+    // Lines after the headline are the behind-base note and the pre-existing line, in either order (docs/commands.md, "The first line").
+    if (b.length > 1) expect(b.slice(1).every((l) => l.startsWith('note: ') || /^pre-existing: \d+ \(not in this diff, does not block\)$/.test(l))).toBe(true)
   }, 180_000)
   test('verdict names a sleeping check within 6 seconds of its start and still ends with a result line', async () => {
     const d = join(root, 'sleepy')
