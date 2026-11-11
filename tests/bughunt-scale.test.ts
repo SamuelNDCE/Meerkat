@@ -56,7 +56,8 @@ describe('bughunt scale', () => {
     const got = JSON.stringify(clean(JSON.parse(lines.join('\n'))), null, 2)
     const file = join(__dirname, 'fixtures', 'bughunt-scale.expected.json')
     if (process.env.BUGHUNT_WRITE === '1' || !existsSync(file)) writeFileSync(file, got + '\n')
-    expect(got + '\n').toBe(readFileSync(file, 'utf8'))
+    // Line endings are normalised: git may store the fixture with CRLF on Windows checkouts.
+    expect(got + '\n').toBe(readFileSync(file, 'utf8').replace(/\r\n/g, '\n'))
   }, 240000)
 
   test('a file over 1 MB is skipped with a reason and nothing crashes', async () => {
