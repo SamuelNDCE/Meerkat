@@ -68,7 +68,7 @@ describe('gate exit codes name their cause', () => {
     writeFileSync(join(d, 'src/a.js'), 'export const a = 1\neval(process.argv[2])\n')
     const r = await run([], d)
     expect(r.code).toBe(1)
-    expect(r.out.join('\n').split('\n')[0]).toMatch(/^MEERKAT gate: [1-9]\d* blocking.*\(status 422\)$/)
+    expect(r.out.join('\n').split('\n')[0]).toMatch(/^MEERKAT gate: [1-9]\d* blocking.*\(status 422, exit 1\)$/)
   }, 120000)
   test('(e) a cargo lock wait is exit 75, status 423', () => {
     const rows = [{ kind: 'notrun', id: 'rust-test', detail: 'waited 900 s for the lock; held by process 360 running cargo test --workspace; lock at x; another job' }]
