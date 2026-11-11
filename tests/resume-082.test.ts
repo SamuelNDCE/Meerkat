@@ -61,10 +61,10 @@ describe('verdict: a stop is resumable', () => {
   const { d, flag } = fixture('verdict-fx')
   let file = ''
 
-  test('a sleeping check and a 3 s limit stop with INCOMPLETE, exit 75, a resume file and the exact resume command', () => {
+  test('a sleeping check and a 3 s limit stop with INCOMPLETE, exit 124, a resume file and the exact resume command', () => {
     writeFileSync(flag, 'x')
     const v = stopRun(d, 'verdict')
-    expect(v.code).toBe(75)
+    expect(v.code).toBe(124)
     expect(v.out).toMatch(/^INCOMPLETE \(status 408\): .*Next: /m)
     expect(v.out).toMatch(/a\.js:1 blocker: bad thing here/)
     file = resumeFileOf(v.out)
@@ -145,7 +145,7 @@ describe('top and gate resume the same way', () => {
     const { d, flag } = fixture('top-fx')
     writeFileSync(flag, 'x')
     const t = stopRun(d, 'top')
-    expect(t.code).toBe(75)
+    expect(t.code).toBe(124)
     const file = resumeFileOf(t.out)
     expect(t.out).toContain('resume: meerkat top --resume')
     unlinkFlag(flag)

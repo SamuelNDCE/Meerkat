@@ -278,7 +278,7 @@ describe('verdict and top never go silent', () => {
     put('loose.js', LOOSE)
     commit()
     const r = cli([w], app, { MEERKAT_VERDICT_TIMEOUT_S: '0.05' })
-    expect(r.status).toBe(75)
+    expect(r.status).toBe(124)
     expect(line(r)).toMatch(/^INCOMPLETE (\(status 408\): |\d+ of \d+ checks finished)/)
   }, SLOW)
 })
