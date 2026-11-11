@@ -34,7 +34,7 @@ Code 75 is not returned by the run. A single check uses 75 to say "I could not r
 
 ## Every command an AI can run
 
-All of these print results on stdout and progress or errors on stderr. Add `--json` where the table says JSON. Exit codes (the same for every command, also in `meerkat describe`): **0** done and everything passed, **1** a check failed or could not run (NOT RUN), **2** a usage or configuration error (the message says what to change, including a wrong `meerkat.order.json`), **3** nothing to run (the preset selected no checks here), **130** interrupted. `[folder]` is a path or a project name; leave it off for the current folder.
+All of these print results on stdout and progress or errors on stderr. Add `--json` where the table says JSON. Exit codes (the same for every command, also in `meerkat describe` and `meerkat help`): **0** done and everything passed, **1** a finding or a check failed (a check that could not run is NOT RUN, never a pass), **2** a usage or configuration error (the message says what to change, including a wrong `meerkat.order.json`), **3** nothing could be judged (an unknown ref, nothing to judge, no checks, no saved run), **4** stale base refused (`verdict` and `batch`), **70** Meerkat's own error, **75** incomplete (not a pass), **124** time limit, **130** interrupted. `[folder]` is a path or a project name; leave it off for the current folder.
 
 | Command | What it returns | Exit codes |
 |---|---|---|
@@ -64,8 +64,12 @@ All of these print results on stdout and progress or errors on stderr. Add `--js
 | `meerkat run list\|show <id>\|log <check>` | Past runs (JSON with `--json`), one run, or one check's log from a run. | 0, 2 |
 | `meerkat logs` | The folder where logs are kept. | 0 |
 | `meerkat recommend [folder]` | Tests the project could run that no check covers yet. Writes nothing. | 0, 2 |
-| `meerkat verdict [folder] --base <ref> --json` | JSON: `verdict`, `exitCode`, `blocking`, `checks` (rows with `check`, `status`, `detail`, `places`), `checksTotal`, `checksFinished`, `skippedByPath`, `unmatchedKnown`, `behindBy`. See [ai.md](ai.md). | 0 PASS, 1 FAIL, 2 NO-RESULT, 75 INCOMPLETE (never a pass) |
-| `meerkat batch --base <ref> --app <repo> <branch>...` | One line per branch (PASS, MERGEABLE, BLOCKED, EXCLUDED, STALE, INCOMPLETE) and a result file; `--json` prints it. See [batch.md](batch.md). | 0, 1, 2, 75 |
+| `meerkat verdict [folder] --base <ref> --json` | JSON: `verdict`, `exitCode`, `blocking`, `checks` (rows with `check`, `status`, `detail`, `places`), `checksTotal`, `checksFinished`, `skippedByPath`, `unmatchedKnown`, `behindBy`. See [ai.md](ai.md). | 0 PASS, 1 FAIL, 2 USAGE, 3 NO-RESULT, 4 STALE, 75 INCOMPLETE (never a pass) |
+| `meerkat batch --base <ref> --app <repo> <branch>...` | One line per branch (PASS, MERGEABLE, BLOCKED, EXCLUDED, STALE, INCOMPLETE) and a result file; `--json` prints it. See [batch.md](batch.md). | 0, 1, 2, 3, 4, 75 |
+| `meerkat claim <path...> --by <name>` / `claims` / `release <path...>` | Say which paths you are editing, list live claims, remove them. Shared by every worktree of the repository, never committed. A path claimed by another name is refused with the owner and time left. | 0, 1 conflict, 2 |
+| `meerkat worktrees [--json]` / `worktrees close <path> --yes` | Every worktree with branch, claims, uncommitted count, clean and merged state; close removes a clean, merged one (never `--force`). | 0, 1 refused, 2 |
+| `meerkat guide [--base <ref>] [--json]` / `guide --explain <id>` | The AI working guidelines checked against this change: ADVISORY, PASS or NOT CHECKED, each with a NEXT line. Advisory only. | 0, 2 |
+| `meerkat new check <id>` / `new pack <name>` | Write a working check or pack from a template, with its self-test. Never overwrites. See [add-a-check.md](add-a-check.md). | 0, 2 |
 | `meerkat frontend [--files <list>]` | Runs the repo's own typecheck, test and build commands (trusted `commands` block) and writes `frontend.json`; a skipped or untrusted step is not a pass. | 0, 1, 2 |
 | `meerkat mcp serve` | Starts the MCP server (its tools are listed below; `node bin/meerkat-mcp.mjs --list-tools` prints the count). | 0 |
 
@@ -259,12 +263,12 @@ Checks are grouped into suites (`meerkat suite list --json`). Run one with `meer
 
 ## Decision guide: verdict, batch, INCOMPLETE
 
-- One branch, may it be promoted: `meerkat verdict --base <ref> --json`. Read `verdict`, `exitCode` and `blocking`. Exit 0 PASS, 1 FAIL, 2 NO-RESULT, 75 INCOMPLETE.
+- One branch, may it be promoted: `meerkat verdict --base <ref> --json`. Read `verdict`, `exitCode` and `blocking`. Exit 0 PASS, 1 FAIL, 2 USAGE, 3 NO-RESULT, 4 STALE, 75 INCOMPLETE. The answer is the first line.
 - Several branches that must land together: `meerkat batch --base <ref> --app <repo> <branch>...`. Fix each BLOCKED branch. EXCLUDED and STALE branches were not judged; INCOMPLETE is not a pass.
 - The repo's own typecheck, tests and build: `meerkat frontend`. A skipped or untrusted step did not run and is not a pass.
 - INCOMPLETE (75): fix any blocking finding it lists, then continue with `--resume <file>` or run again with a longer limit (`MEERKAT_VERDICT_TIMEOUT_S`). If it stays INCOMPLETE, stop and report. Never treat a 75 as a pass.
 - `checksFinished` below `checksTotal`, a non-empty `skippedByPath` or `unmatchedKnown` are things to report, not hide.
-- There is no MCP tool for `verdict`, `batch` or `frontend`: call the CLI. Full field tables: [ai.md](ai.md).
+- There is no MCP tool for `verdict` or `frontend`: call the CLI (`batch` has `meerkat_batch`; `claim`, `worktrees`, `guide` and `new` are CLI only). Full field tables: [ai.md](ai.md).
 
 ## Rules for agents
 

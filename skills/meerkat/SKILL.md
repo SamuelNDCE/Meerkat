@@ -45,8 +45,11 @@ Meerkat is one command that checks a project and saves a report. Replace `<folde
 | 0 | Every selected check passed. |
 | 1 | A check failed, or could not run (NOT RUN). |
 | 2 | A usage or configuration problem. The message says what to change. |
-| 3 | Nothing to run: the preset selected no checks here. |
-| 75 | `gate`, `smoke` and `blast` only: not run (no base ref, no checks loaded, or the file is not in the map). Not a pass. |
+| 3 | Nothing could be judged: an unknown ref, nothing to judge, no checks loaded. Not a pass. |
+| 4 | `verdict` and `batch`: the base is too far ahead (stale). |
+| 70 | Meerkat's own internal error. |
+| 75 | Incomplete: a cargo lock wait, or `blast` and `brief` when the file is not in the map. Not a pass. |
+| 124 | The time limit was reached. |
 | 130 | Interrupted. |
 
 A NOT RUN is never a pass. Report what is missing.
@@ -56,8 +59,12 @@ A NOT RUN is never a pass. Report what is missing.
 | Command | What it does |
 |---|---|
 | `meerkat gate` | Runs only the checks whose paths match files changed since the base ref (`--staged`, `--base <ref>`, `--against <ref>`, `--json`, `--thorough`). |
-| `meerkat verdict --base <ref>` | One line for a branch: PASS (0), FAIL (1), NO-RESULT (2) or INCOMPLETE (75, never a pass). `--json` for the fields. |
+| `meerkat verdict --base <ref>` | One line for a branch, answer first: PASS (0), FAIL (1), NO-RESULT (3), STALE (4) or INCOMPLETE (75, never a pass); 2 is a usage error. `--json` for the fields. |
 | `meerkat batch --base <ref> --app <repo> <branch>...` | One gate for several branches; names the culprit. Statuses: PASS, MERGEABLE, BLOCKED, EXCLUDED, STALE, INCOMPLETE. |
+| `meerkat claim <paths> --by <name>`, `meerkat claims`, `meerkat release <paths>` | Say which paths you are editing so another session on the same repository stays off them; list and remove claims. |
+| `meerkat worktrees` | Every worktree with its branch, claims and clean or merged state. `worktrees close <path> --yes` removes a finished one. |
+| `meerkat guide` | The AI working guidelines checked against this change. Advisory, always exit 0. |
+| `meerkat new check <id>` / `new pack <name>` | Write a working check or pack with its self-test and a broken fixture. |
 | `meerkat frontend` | Runs the repo's own typecheck, test and build commands (trusted block only). A skipped step is not a pass. |
 | `meerkat smoke` | Runs each selected check on the changed files with a tiny time limit. It fails when the tool misbehaves, not when your project has problems. |
 | `meerkat blast <file>[#symbol]` | Importers, modules, tests that reach the target, and unresolved imports (never counted as safe). `--json` for the full result. |

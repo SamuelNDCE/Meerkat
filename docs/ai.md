@@ -31,7 +31,7 @@ Everything an AI needs to use Meerkat. This page agrees with [skills/meerkat/SKI
 | `meerkat_last` | A run's `report.md`, plus counts and the 20 most severe findings. | `folder`, `run`, `preset` |
 | `meerkat_why` | One check's log header and the end of its output. | `check` (required), `lines` (1 to 1000, default 80), `folder`, `run`, `preset` |
 | `meerkat_self_test` | Run each check on a broken sample to prove it can fail. Can take minutes. | `folder`, `only` |
-| `meerkat_gate` | Run only the checks that cover the changed files (`staged`, `base` or `against`). Exit code 0 means safe to go on; 75 means it could not start. Runs the project's own commands. | `folder`, `staged`, `base`, `against` |
+| `meerkat_gate` | Run only the checks that cover the changed files (`staged`, `base` or `against`). Exit code 0 means safe to go on; 3 means nothing could be judged (an unknown base, no checks loaded); 75 means it waited too long for the cargo lock. Runs the project's own commands. | `folder`, `staged`, `base`, `against` |
 | `meerkat_smoke` | Prove each selected check starts, runs and stops in time. Same file selection as the gate, plus a timeout. | gate inputs, `timeout` (1 to 600 s, default 5) |
 | `meerkat_blast` | Blast radius of a file or symbol: what imports it, what it imports, what could break. `found: false` means the file is not in the code map. | `target` (required, `src/a.js` or `src/a.js#name`), `folder` |
 | `meerkat_brief` | Pre-edit brief for a file or symbol: declaration (line, signature, exported), callers (count and the first 10 with the calling function), tests that reference it, findings from the last saved run, git churn, a risk tier with its reasons, and a before-you-edit checklist. Starts no scan. The text is markdown; the structured result has a `version` field. | `target` (required, `src/a.js` or `src/a.js#name`), `folder` |
@@ -88,7 +88,9 @@ The gate, smoke, blast, map and catalog are all MCP tools (`meerkat_gate`, `meer
 
 ## Verdict, batch and frontend (CLI only)
 
-There is no MCP tool for `verdict`, `batch` or `frontend`. Call the CLI. Confirm with `node bin/meerkat-mcp.mjs --list-tools`.
+There is no MCP tool for `verdict` or `frontend`. Call the CLI. `batch` has one (`meerkat_batch`). These commands are also CLI only: `meerkat claim`, `claims`, `release`, `worktrees`, `guide`, `trust` and `new check` / `new pack`. Confirm the tool list with `node bin/meerkat-mcp.mjs --list-tools`.
+
+Coordination commands an agent uses when several sessions share a repository: `meerkat claim <paths> --by <name>` before editing, `meerkat claims` to see who holds what, `meerkat release <paths> --by <name>` when done, `meerkat worktrees` to list worktrees and `meerkat worktrees close <path> --yes` to remove a clean, merged one. `meerkat guide` checks the change against the AI working guidelines (advisory, always exit 0; `--explain <id>` gives one rule in full). To start a check or a pack: `meerkat new check <id>` and `meerkat new pack <name>` (see [add-a-check.md](add-a-check.md)).
 
 ### `meerkat verdict --json`
 
@@ -115,8 +117,12 @@ Other fields: `schema`, `preExisting`, `known`, `knownFindings`, `reason` and `b
 |---|---|---|
 | 0 | PASS | Go on. |
 | 1 | FAIL | Fix each finding in `checks[].places`, or dismiss it with a reason, then run again. |
-| 2 | NO-RESULT | Read `reason`. It names the cause and a next step. Fix that once. |
+| 2 | USAGE | A bad flag or value. Nothing was run. Fix the command. |
+| 3 | NO-RESULT | Read `reason`. It names the cause and a next step (nothing changed, a bad ref, no check ran on the changed files). Fix that once. Never a pass. |
+| 4 | STALE | The base is more than 20 commits ahead. Rebase, or pass `--allow-stale`. |
 | 75 | INCOMPLETE | Not a pass. See the decision guide. |
+
+The answer is the first line of the text output (the verdict word, the status, how many changed files were judged, and one next step); the base note follows it.
 
 ### `meerkat batch`
 
@@ -135,7 +141,7 @@ Merges the branches onto the base in a temporary checkout (your own checkouts ar
 | STALE | The branch moved while the batch ran. Run it again. |
 | INCOMPLETE | Unfinished or unknown. Not a pass. |
 
-Exit codes: 0 every included branch is PASS or MERGEABLE, 1 at least one BLOCKED, 2 usage problem, 75 anything unknown, stale or unfinished. The result is written to `<Meerkat data folder>/batches/<batch id>.json`; `--json` prints the same document. If every failing check also fails on the base, the batch reports DEV-RED and blames nobody. Details: [batch.md](batch.md).
+Exit codes: 0 every included branch is PASS or MERGEABLE, 1 at least one BLOCKED, 2 usage problem, 3 nothing could be judged, 4 a branch moved while the batch ran (stale), 75 unfinished or refused. It runs Meerkat's checks only: frontend steps run separately with `meerkat frontend`. A `batch.log` beside the result lists every event with a time. The result is written to `<Meerkat data folder>/batches/<batch id>.json`; `--json` prints the same document. If every failing check also fails on the base, the batch reports DEV-RED and blames nobody. Details: [batch.md](batch.md).
 
 ### `meerkat frontend`
 
@@ -192,12 +198,17 @@ To choose tests, run `meerkat tests --json`. It lists every kind and family with
 
 | Code | Meaning |
 |---|---|
-| 0 | Every selected check passed. |
-| 1 | A check failed, or could not run (NOT RUN). |
-| 2 | A usage or configuration problem. The message says what to change. |
-| 3 | Nothing to run: the preset selected no checks here. |
-| 75 | `gate`, `smoke`, `blast` and `brief` only: not run (no base ref, no checks loaded, or the file exists but is not in the map). Not a pass. |
+| 0 | Everything passed. |
+| 1 | A finding, or a check failed: a real result that failed. |
+| 2 | A usage or configuration problem: a bad flag or value, an unreadable config, not a git repository. The message says what to change. |
+| 3 | Nothing could be judged: an unknown ref, nothing to judge, no checks loaded, no saved run. Not a pass. |
+| 4 | Stale base refused (`verdict` and `batch` only). |
+| 70 | Meerkat's own internal error. One line on stdout; the stack is only in the log. |
+| 75 | Incomplete: a cargo lock wait, or a run that stopped before its record was saved. Not a pass. |
+| 124 | The time limit was reached. |
 | 130 | Interrupted. |
+
+A NOT RUN check is a check that could not run: it is reported and never counts as a pass. `blast` and `brief` exit 75 when the file is not in the code map.
 
 A NOT RUN is never a pass. Report what is missing instead of treating it as success.
 
