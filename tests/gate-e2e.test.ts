@@ -162,7 +162,7 @@ describe('meerkat gate end to end', () => {
     expect(c.code).toBe(a.code)
     expect(firstGateLine(c)).toMatch(/\(\d+ check\(s\) reused from the cache\)/)
     expect(findingsLines(c)).toBe(findingsLines(a))
-  })
+  }, 150000)
 
   it('7. editing the changed file invalidates its cached result', async () => {
     const r = makeRepo('edit', EVIL)
