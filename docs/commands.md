@@ -99,6 +99,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat pack list [folder]` | packs, whether each is on for this project, and whether its tools are installed |
 | `meerkat pack enable <name> [folder]` / `disable` | switch a pack on or off for a project (edits `meerkat.config.json`) |
 | `meerkat pack add <folder>` / `remove` | add or remove a folder of your own packs |
+| `meerkat new check <id> [--pack <name or folder>]` / `new pack <name>` | write a working check (with its self-test and a broken fixture), or a pack with one example check, from a template. Never overwrites: exit 2. See [add-a-check.md](add-a-check.md) |
 | `meerkat root list` / `add <folder>` / `remove <folder>` | where project names are looked up |
 | `meerkat rules test <file.json>` | test a file of data rules: every bad sample is caught and every good one passes. Exit 1 when a rule is wrong; exit 2 when the action or the file is missing |
 

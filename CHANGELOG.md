@@ -4,6 +4,10 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+### Added
+
+- `meerkat new check <id> [--pack <name or folder>]` and `meerkat new pack <name>` write a working check or pack from a template (self-test and broken fixture included, never overwrites). docs/add-a-check.md is a five-minute guide to a first check.
+
 ### Changed
 
 - Verdict exit codes: no result is now 3 (was 2, or 1 on one path), a stale base is 4 (was 2), and incomplete stays 75. JSON carries exitName. A script that tested exit 2 for a stale base must now test 4.
