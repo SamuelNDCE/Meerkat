@@ -55,7 +55,7 @@ describe('map leaves a summary.json in its run folder', () => {
 })
 
 describe('verdict time limit', () => {
-  test('a check that sleeps past MEERKAT_VERDICT_TIMEOUT_S ends the output with INCOMPLETE and exits 75', () => {
+  test('a check that sleeps past MEERKAT_VERDICT_TIMEOUT_S ends the output with INCOMPLETE and exits 124 (time limit, status 408)', () => {
     const sb = box({ copy: false })
     mkdirSync(sb.app, { recursive: true })
     writeFileSync(join(sb.app, 'a.js'), 'let a = 1\n')
@@ -67,7 +67,7 @@ describe('verdict time limit', () => {
     writeFileSync(join(sb.app, 'a.js'), 'let a = 2\n')
     const r = runCli(sb, ['verdict', '--base', 'main'], { env: { MEERKAT_VERDICT_TIMEOUT_S: '2' }, timeout: 90_000 })
     const lines = r.stdout.split(/\r?\n/).filter(Boolean)
-    expect(r.code).toBe(75)
+    expect(r.code).toBe(124)
     expect(lines.some((l) => l.startsWith('INCOMPLETE'))).toBe(true)
     expect(lines[0]).toMatch(/^INCOMPLETE /)
     // The resume feature does not exist on this branch, so INCOMPLETE and the exit code are all there is to assert.

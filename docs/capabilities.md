@@ -23,7 +23,7 @@ Use these to find problems in the whole project.
 
 ## Check a branch before merge
 
-- `meerkat verdict --base origin/main`: one line. `PASS` or `FAIL n blocking in changed files`. Findings the branch did not add print `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. Exit 1 only for a new blocking finding in a changed file. When it cannot judge it prints `NO-RESULT: <reason>. next: <step>` (exit 1 or 2). `--known <file>` accepts listed pre-existing failures (lines `KNOWN:` and `STALE:`), and `--json` prints one object.
+- `meerkat verdict --base origin/main`: one line. `PASS` or `FAIL n new blocking findings in m files`, as the first line, with the count of changed files judged. Findings the branch did not add print `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. Exit 1 only for a new blocking finding in a changed file. When it cannot judge it prints `NO-RESULT (status N): <reason>. Next: <step>` (exit 3, also for a change with no files to judge); a base too far behind is `STALE` (exit 4); a usage error is exit 2. `--known <file>` accepts listed pre-existing failures (lines `KNOWN:` and `STALE:`), and `--json` prints one object.
 - `meerkat top --base origin/main --limit 5`: a table of the worst findings in the files the branch changed (file, check, line, message).
 - `meerkat gate --base origin/main --json`: the full answer for a pull request. `--all-findings` also shows findings that were already on the base.
 - `meerkat pr-comment`: markdown for a pull request comment from the newest run. Not run in this build.
@@ -39,7 +39,10 @@ Use these to find problems in the whole project.
 ## Run the repo's own tests and build
 
 - `meerkat commands`: lists the repo's test, build and typecheck commands. With no config it lists the `package.json` scripts and runs nothing.
-- `meerkat trust`: trusts the `commands` block of `meerkat.config.json`. It asks once in a terminal.
+- `meerkat trust`: trusts the `commands` block of `meerkat.config.json`. It asks once in a terminal. A registered git worktree of that repository with identical commands inherits it; `--status`, `--revoke` and `--list` show and undo approvals.
+- `meerkat claim`, `claims`, `release` and `worktrees`: say which paths a session is editing and list the worktrees of a repository.
+- `meerkat guide`: the AI working guidelines checked against the change (advisory).
+- `meerkat new check`, `meerkat new pack`: write a working check or pack from a template.
 - `meerkat build`, `meerkat test`: run `commands.build` and `commands.test` after trust. Without trust they print that the command was NOT run and exit 1.
 - `meerkat discover`: the project's own tests that `full` would also run. Runs nothing.
 - `meerkat recommend`: tests the project could run that no check covers. Writes nothing unless you add one.
@@ -66,7 +69,7 @@ Use these to find problems in the whole project.
 
 ## The MCP tools
 
-The server reports 35 tools (`node bin/meerkat-mcp.mjs --list-tools` prints the count and the names). "Changes state" means the tool writes something: a run folder, a map, a file, a dismissal or a hook. The first six carry no read-only hint in the code, so their line below comes from reading what they do.
+The server reports 36 tools (`node bin/meerkat-mcp.mjs --list-tools` prints the count and the names). "Changes state" means the tool writes something: a run folder, a map, a file, a dismissal or a hook. The first six carry no read-only hint in the code, so their line below comes from reading what they do.
 
 | Tool | Reads only or changes state |
 |---|---|
@@ -87,6 +90,7 @@ The server reports 35 tools (`node bin/meerkat-mcp.mjs --list-tools` prints the 
 | `meerkat_redtest` | changes state: runs Meerkat's own attacks |
 | `meerkat_dismiss` | changes state: destructive hint set |
 | `meerkat_baseline` | changes state: destructive hint set |
+| `meerkat_batch` | changes state: writes a batch result file and runs gates |
 | `meerkat_doctor` | reads only |
 | `meerkat_discover` | reads only |
 | `meerkat_recommend` | reads only |

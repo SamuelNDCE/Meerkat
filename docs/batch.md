@@ -38,11 +38,22 @@ Each branch gets one status: `PASS`, `BLOCKED`, `MERGEABLE`, `EXCLUDED` (conflic
 |---|---|
 | 0 | every included branch is `PASS` or `MERGEABLE` |
 | 1 | at least one branch is `BLOCKED` |
-| 75 | incomplete, refused, or nothing could be judged. Never a pass. |
+| 2 | usage: a bad flag or value |
+| 3 | nothing could be judged (an unknown base, no branch found) |
+| 4 | STALE: a branch moved while the batch ran |
+| 75 | incomplete or refused. Never a pass. |
 
-A dry run that refuses any branch also exits 75.
+A dry run that refuses any branch exits 75. The one-line-per-branch answer is the output; the first line of it is the first branch's status.
 
 Every real run writes `batches/<batch-id>.json` and a `batches/<repo>/latest.json` copy. The file includes a `timing` object (`gateSeconds`, `totalSeconds`) so batch sizes can be compared.
+
+## batch.log
+
+A batch also writes `batches/<batch-id>/batch.log` in the Meerkat data folder. It has one timestamped line per event as it happens (the base and branches, each merge, each conflict, each lock wait with the name of the work that waited, each gate run), so a stuck or slow batch can be read while it runs. Its summary says the real maximum parallelism and how many slot-seconds sat idle.
+
+## What a batch does not run
+
+`meerkat batch` runs Meerkat's own checks only (the gate). It does not run the repository's typecheck, test or build steps. Run those separately with `meerkat frontend --app <folder>` (the commands block must be trusted: `meerkat trust`). A green batch is therefore not a green frontend.
 
 ## Progress and waits
 
@@ -50,7 +61,7 @@ The gate's progress lines are shown with a `[batch gate]` prefix, including any 
 
 ## Fail-safes
 
-- Unknown, skipped, timed-out or unfinished results are `INCOMPLETE` (75), never `PASS`.
+- Unknown, skipped, timed-out or unfinished results are `INCOMPLETE` (75), never `PASS`. Nothing to judge is exit 3.
 - A branch whose head moves during the run is `STALE` and excluded from the result.
 - The culprit rebuild is always re-gated; a batch is never merged without a fresh gate result.
 - At most one culprit search per batch, and the total runs are capped.

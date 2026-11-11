@@ -19,6 +19,6 @@ describe('the npm package contents', () => {
     expect(bad).toEqual([])
   })
   test('stays small', () => {
-    expect(list().length).toBeLessThan(500)
+    expect(list().length).toBeLessThan(600) // 0.5.4 adds new modules (verdict, guide, claims, worktrees, trust, electron binary check); cap raised on purpose, see CHANGELOG
   })
 })

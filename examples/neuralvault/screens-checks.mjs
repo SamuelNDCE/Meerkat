@@ -1,4 +1,4 @@
-// Part D of Meerkat, the validation tool (#3114): a real-window screenshot and UX check of the primary pages.
+// Part D of Meerkat, the validation tool: a real-window screenshot and UX check of the primary pages.
 // The harness is electron/verify-screens.cts. Screenshots go to NV_SCREENS_DIR (default a temp folder, printed).
 import { runCommand, lastLine } from '../../lib/exec.mjs'
 import { wrapForLane } from '../../lib/lanes.mjs'

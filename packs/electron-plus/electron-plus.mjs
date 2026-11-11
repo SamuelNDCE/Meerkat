@@ -31,4 +31,18 @@ const check = (id) => ({
   selfTest: { cmd: 'node', args: [EP, id, '--fixtures'], cwd: 'repo', expectFail: true, expectMatch: 'found' },
 })
 
-export default Object.keys(CHECK_TABLES).map(check)
+// Reads the fuse state of the built binary with the project's own @electron/fuses (NOT RUN when there is no build or the tool is missing).
+const binaryCheck = {
+  id: 'ep-fuses-binary',
+  group: 'security',
+  tier: 'fast',
+  lane: 'free',
+  weight: 'tiny',
+  title: 'Electron fuse state read from the built binary (win-unpacked exe or the .app), with the own @electron/fuses of the project',
+  estSeconds: 5,
+  suite: 'desktop-apps',
+  needs: ['node'],
+  run: { cmd: 'node', args: [`${MK}/thorough/electron-fuse-binary.mjs`], cwd: 'repo' },
+}
+
+export default [...Object.keys(CHECK_TABLES).map(check), binaryCheck]

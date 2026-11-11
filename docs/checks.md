@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**403 checks** in 50 suites with 1446 sub-checks (a check that declares no rules counts as one), across 51 packs: 358 quick, 45 thorough, 38 opt-in. [Security 124](#security-checks) · [Functionality 223](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
+**404 checks** in 50 suites with 1447 sub-checks (a check that declares no rules counts as one), across 51 packs: 359 quick, 45 thorough, 38 opt-in. [Security 125](#security-checks) · [Functionality 223](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -38,7 +38,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `api-contracts` | API contracts | 4 | 4 | OpenAPI and GraphQL schemas are valid and complete. |
 | `database` | Database | 4 | 4 | SQL migrations order and safety, missing indexes, Prisma schema basics. |
 | `api-resilience` | API resilience | 4 | 4 | Timeouts, rate limits, error leaks and bounded pagination. |
-| `desktop-apps` | Desktop and mobile apps | 20 | 180 | Electron, Tauri, Capacitor, Cordova and Android manifest security settings. |
+| `desktop-apps` | Desktop and mobile apps | 21 | 181 | Electron, Tauri, Capacitor, Cordova and Android manifest security settings. |
 | `git-history` | Git history | 8 | 8 | Commit messages, large commits, binaries and secrets in history, author identity. |
 | `git-workflow` | Git workflow | 3 | 3 | Branch names, long-lived branches and pinned submodules. |
 | `release-versioning` | Release versioning | 15 | 15 | Semantic versions, tags that match the package, changelog kept up to date. |
@@ -64,7 +64,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 
 ## Security checks
 
-Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 124 checks.
+Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review. 125 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -114,6 +114,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 | `electron-web-security` | fast | tiny | 1 s | Electron: no window switches off webSecurity or allows insecure content | desktop |
 | `env-files-in-history` | fast | tiny | 2 s | Git history: key and environment files that were ever committed | security-plus |
 | `ep-content-renderer` | fast | tiny | 1 s | Electron page content: Content-Security-Policy, remote scripts, webview, eval and raw HTML | electron-plus |
+| `ep-fuses-binary` | fast | tiny | 5 s | Electron fuse state read from the built binary (win-unpacked exe or the .app), with the own @electron/fuses of the project | electron-plus |
 | `ep-fuses-build` | fast | tiny | 1 s | Electron fuses and build config: package-time fuses, asar, signing, notarisation, entitlements and publish settings | electron-plus |
 | `ep-ipc-preload` | fast | tiny | 1 s | Electron IPC and preload: sender checks, exposed Node objects, channel names and listeners | electron-plus |
 | `ep-tauri-cross` | fast | tiny | 1 s | Tauri, NW.js, Neutralino, Cordova, Capacitor and Android WebView: scopes, capabilities and command settings | electron-plus |

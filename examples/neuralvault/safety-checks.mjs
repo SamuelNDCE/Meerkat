@@ -1,4 +1,4 @@
-// The check that proves test windows cannot open folders, dialogs or steal focus (issue #3114).
+// The check that proves test windows cannot open folders, dialogs or steal focus.
 // The layer itself (electron/test-safety.cts) is injected by the electron lane in lib/lanes.mjs.
 export default [
   {

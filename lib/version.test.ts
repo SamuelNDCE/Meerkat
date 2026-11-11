@@ -125,6 +125,8 @@ const RECORDED_VERSIONS: Record<string, string> = {
   'docs/readme-accuracy-section.md': 'the final corpus run before the release (a dated record)',
   'docs/reference.md': 'a timing snapshot, measured on a named date',
   'docs/compatibility.md': 'a dated compatibility table, not re-run for each release',
+  'docs/map/docs.md': 'generated: lists file names and first comments of files that name a release (release-0.5.3-checklist.md)',
+  'docs/map/tests.md': 'generated: lists first comments of test files that name a release',
   'tools/accuracy-corpus.mjs': 'a fixture: a sample Cargo.toml inside the corpus',
 }
 

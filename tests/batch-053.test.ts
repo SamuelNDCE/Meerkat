@@ -83,8 +83,8 @@ describe('pure helpers', () => {
     expect(exitCodeFor([{ status: 'PASS' }, { status: 'MERGEABLE' }])).toBe(0)
     expect(exitCodeFor([{ status: 'PASS' }, { status: 'BLOCKED' }])).toBe(1)
     expect(exitCodeFor([{ status: 'PASS' }, { status: 'INCOMPLETE' }])).toBe(75)
-    expect(exitCodeFor([{ status: 'PASS' }, { status: 'STALE' }])).toBe(75)
-    expect(exitCodeFor([])).toBe(75)
+    expect(exitCodeFor([{ status: 'PASS' }, { status: 'STALE' }])).toBe(4)
+    expect(exitCodeFor([])).toBe(3)
   })
 })
 
@@ -114,9 +114,9 @@ describe('meerkat batch (fake gate, real git)', () => {
     expect(byBranch.bad).toMatch(/BLOCKED culprit: fake-sqli .* at src\/new\.js:1/)
     expect(byBranch.clean1).toMatch(/MERGEABLE/)
     expect(byBranch.clean2).toMatch(/MERGEABLE/)
-    // batch gate + 3 alone + 1 re-gate (the base check was the injected devBaseline, not a gate run)
+    // batch gate + 1 alone (the two clean branches are skipped, see batch-speed) + 1 re-gate (the base check was the injected devBaseline, not a gate run)
     expect(calls.filter((c) => c.only === null)).toHaveLength(2)
-    expect(calls.filter((c) => c.only !== null)).toHaveLength(3)
+    expect(calls.filter((c) => c.only !== null)).toHaveLength(1) // clean1 and clean2 changed nothing where the batch failed, so only bad is checked alone
     expect(calls[calls.length - 1].hasBad).toBe(false) // the final gate ran on a batch without the culprit
     const { doc } = resultOf(r.lines)
     const bad = doc.prs.find((p: any) => p.branch === 'bad')
@@ -148,12 +148,12 @@ describe('meerkat batch (fake gate, real git)', () => {
     expect(r.code).toBe(0)
   })
 
-  test('--dry-run prints the plan, runs no gate, writes no result file, exits 75 when any branch is refused', async () => {
+  test('--dry-run prints the plan, runs no gate, writes no result file, exits 3 when any branch is refused', async () => {
     calls.length = 0
     const before = existsSync(join(logs, 'batches')) ? readdirSync(join(logs, 'batches')).length : 0
     const r = await run(['--base', 'main', '--app', dir, 'clean1', 'conflict', 'nope', '--dry-run'])
-    // A refused branch is never a clean plan: exit 75 even in a dry run, so a script cannot read it as success.
-    expect(r.code).toBe(75)
+    // A refused branch is never a clean plan: exit 3 even in a dry run, so a script cannot read it as success.
+    expect(r.code).toBe(3)
     expect(calls).toHaveLength(0)
     expect(r.lines[0]).toMatch(/^PLAN /)
     expect(r.lines.join('\n')).toMatch(/clean1: would be merged/)
@@ -164,7 +164,7 @@ describe('meerkat batch (fake gate, real git)', () => {
   })
 
   test('the gate run cap stops the search: INCOMPLETE, exit 75, never a pass', async () => {
-    const r = await run(['--base', 'main', '--app', dir, 'clean1', 'bad', 'clean2'], { env: { ...env, MEERKAT_BATCH_MAX_RUNS: '2' } })
+    const r = await run(['--base', 'main', '--app', dir, 'clean1', 'bad', 'clean2'], { env: { ...env, MEERKAT_BATCH_MAX_RUNS: '1' } }) // 1: the batch gate uses the only run (the skipped clean branches no longer use one up)
     expect(r.code).toBe(75)
     expect(r.lines.some((l) => /gate run limit reached/.test(l))).toBe(true)
   })
@@ -175,7 +175,7 @@ describe('meerkat batch (fake gate, real git)', () => {
     expect(r.lines[0]).toMatch(/^clean1: INCOMPLETE/)
   })
 
-  test('a branch whose head moves while the batch runs is STALE (75)', async () => {
+  test('a branch whose head moves while the batch runs is STALE (4)', async () => {
     git(dir, 'checkout', '-q', '-b', 'mover', 'main')
     put(dir, 'src/mover.js', 'export const m = 1\n')
     git(dir, 'add', '-A')
@@ -189,7 +189,7 @@ describe('meerkat batch (fake gate, real git)', () => {
       return (fakeGate as any)(...a)
     }
     const r = await run(['--base', 'main', '--app', dir, 'mover'], { gate: movingGate })
-    expect(r.code).toBe(75)
+    expect(r.code).toBe(4)
     expect(r.lines[0]).toMatch(/^mover: STALE/)
   })
 

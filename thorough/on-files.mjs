@@ -4,6 +4,7 @@
 import { spawnSync } from 'node:child_process'
 import { trackedFiles } from './kit.mjs'
 import { findBinary } from '../lib/which.mjs'
+import { onlyChanged, skipVendored } from './changed-list.mjs'
 
 const argv = process.argv
 const dash = argv.indexOf('--')
@@ -16,7 +17,10 @@ const pattern = new RegExp(argv[mi + 1])
 const ri = argv.indexOf('--root')
 const root = ri >= 0 ? argv[ri + 1] : process.cwd()
 const [cmd, ...opts] = argv.slice(dash + 1)
-const files = trackedFiles(root).filter((f) => pattern.test(f))
+// --docs: Markdown-style scanning. Never node_modules, dist, build or vendor, and in a gate only the files the change touched.
+const docs = argv.includes('--docs')
+let files = trackedFiles(root).filter((f) => pattern.test(f))
+if (docs) files = onlyChanged(skipVendored(files))
 if (!files.length) {
   console.log(`${cmd}: no files match ${pattern}`)
   process.exit(0)

@@ -38,7 +38,8 @@ describe('verdict', () => {
     put('clean.js', 'export const c = 2\n')
     commit()
     const r = cli(['verdict'])
-    expect(r.stdout.trim()).toBe('PASS')
+    // The PASS line also names the pre-existing findings and the files judged (docs/commands.md, "The first line").
+    expect(r.stdout.trim().split('\n')[0]).toMatch(/^PASS \(status 200\): nothing new blocks.* Next: nothing to fix$/)
     expect(r.status).toBe(0)
   }, SLOW)
 
@@ -49,7 +50,7 @@ describe('verdict', () => {
     put('index.js', "import './clean.js'\nimport './loose.js'\n")
     commit()
     const r = cli(['verdict', '--base', 'main'])
-    expect(r.stdout.trim()).toBe('FAIL 1 blocking in changed files')
+    expect(r.stdout.split('\n')[0]).toMatch(/^FAIL 1 new blocking finding in 1 file \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
     expect(r.status).toBe(1)
   }, SLOW)
 
@@ -62,7 +63,8 @@ describe('verdict', () => {
     commit()
     const r = cli(['verdict'])
     // Corrected 2026-11-09: findings outside the diff (kind wide) no longer fail the verdict; they are listed as pre-existing. Was: FAIL-PRE-EXISTING, exit 1.
-    expect(r.stdout.trim()).toBe('PASS' + String.fromCharCode(10) + 'pre-existing: 1 (not in this diff, does not block)')
+    expect(r.stdout.split('\n')[0]).toMatch(/^PASS \(status 200\): nothing new blocks; 1 pre-existing finding is not in this change\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: nothing to fix$/)
+    expect(r.stdout).toContain('pre-existing: 1 (not in this diff, does not block)')
     expect(r.status).toBe(0)
   }, SLOW)
 })
@@ -161,12 +163,12 @@ describe('repo test and build commands', () => {
     expect(b.stderr).toContain('meerkat trust')
     expect(marks()).toEqual([])
     const u = cli(['test'])
-    expect(u.stderr).toContain('commands.test was NOT run')
-    expect(u.stderr).toContain('quick check')
+    expect(u.stderr).toContain('is not trusted yet')
+    expect(u.stderr).toContain('meerkat trust') // trust-ux: the one not-trusted line; the quick-check wording is gone
     expect(marks()).toEqual([])
   }, SLOW)
   test('meerkat trust without a terminal trusts nothing; a trusted config runs', () => {
-    expect(cli(['trust']).status).toBe(1)
+    expect(cli(['trust']).status).toBe(2) // trust-ux (d): no terminal and no --yes is status 400, exit 2
     expect(cli(['build']).status).toBe(1)
     expect(marks()).toEqual([])
     expect(cli(['build'], app, { MEERKAT_TRUST_PROJECT: '1' }).status).toBe(3)
@@ -217,31 +219,31 @@ describe('repo test and build commands', () => {
 
 describe('verdict and top never go silent', () => {
   const line = (r: { stdout: string }) => r.stdout.trim()
-  test.each([['verdict'], ['top']])('%s: a base ref that does not exist is exit 2 with one NO-RESULT line', (w) => {
+  test.each([['verdict'], ['top']])('%s: a base ref that does not exist is exit 3 (NO_RESULT, status 404) with one NO-RESULT line', (w) => {
     initMain()
     const r = cli([w, '--base', 'no-such-ref'])
-    expect(r.status).toBe(2)
-    expect(line(r)).toMatch(/^NO-RESULT: .*no-such-ref.*next: /)
+    expect(r.status).toBe(3)
+    expect(line(r)).toMatch(/^NO-RESULT(?: \(status \d+\))?: .*no-such-ref.*[nN]ext: /)
   }, SLOW)
   test.each([['verdict'], ['top']])('%s: not a git repository is exit 2 with one NO-RESULT line', (w) => {
     const r = cli([w])
     expect(r.status).toBe(2)
-    expect(line(r)).toMatch(/^NO-RESULT: .*git.*next: /)
+    expect(line(r)).toMatch(/^NO-RESULT(?: \(status \d+\))?: .*git.*[nN]ext: /)
   })
-  test('verdict: nothing changed against the base is one PASS line, exit 0', () => {
+  test('verdict: nothing changed against the base is NO-RESULT (not a pass), exit 3, status 204', () => {
     initMain()
     git(app, ['checkout', '-q', '-b', 'feat'])
     const r = cli(['verdict'])
-    expect(r.status).toBe(0)
-    expect(line(r)).toBe('PASS: no diff against main (nothing to judge)')
-    expect(JSON.parse(cli(['verdict', '--json']).stdout)).toMatchObject({ verdict: 'PASS', exitCode: 0 })
+    expect(r.status).toBe(3)
+    expect(line(r)).toMatch(/^NO-RESULT \(status 204\): judged 0 changed files: nothing to judge \(not a pass\)\. Next: /)
+    expect(JSON.parse(cli(['verdict', '--json']).stdout)).toMatchObject({ verdict: 'NO-RESULT', exitCode: 3, status: 204 })
   }, SLOW)
   test('top: nothing changed is exit 2 with one NO-RESULT line', () => {
     initMain()
     git(app, ['checkout', '-q', '-b', 'feat'])
     const r = cli(['top'])
     expect(r.status).toBe(2)
-    expect(line(r)).toMatch(/^NO-RESULT: nothing changed .*next: /)
+    expect(line(r)).toMatch(/^NO-RESULT(?: \(status \d+\))?: nothing changed .*[nN]ext: /)
   }, SLOW)
   test('the behind-base line is an advisory note: and does not change the exit code', () => {
     initMain()
@@ -253,11 +255,12 @@ describe('verdict and top never go silent', () => {
     commit('main moves')
     git(app, ['checkout', '-q', 'feat'])
     const r = cli(['verdict'])
-    const behind = r.stderr.split('\n').filter((l) => /behind main/.test(l))
+    // The note is on stdout, after the headline (docs/commands.md, "The first line").
+    const behind = r.stdout.split('\n').filter((l) => /behind main/.test(l))
     expect(behind.length).toBeGreaterThan(0)
     for (const l of behind) expect(l.startsWith('note: ')).toBe(true)
     expect(r.status).toBe(1) // from the finding, not from the note
-    expect(line(r)).toMatch(/^FAIL \d+ blocking in changed files$/)
+    expect(line(r)).toMatch(/^FAIL \d+ new blocking findings? in \d+ files? \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
   }, SLOW)
   test('an empty (zero-byte) --known file is an empty list; a malformed non-empty one still exits 2', () => {
     initMain()
@@ -267,7 +270,7 @@ describe('verdict and top never go silent', () => {
     put('empty.json', '')
     const e = cli(['verdict', '--known', 'empty.json'])
     expect(e.status).toBe(1)
-    expect(line(e)).toMatch(/^FAIL \d+ blocking in changed files \(0 known\)$/)
+    expect(line(e)).toMatch(/^FAIL \d+ new blocking findings? in \d+ files? \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
     put('bad.json', '{oops')
     expect(cli(['verdict', '--known', 'bad.json']).status).toBe(2)
   }, SLOW)
@@ -277,8 +280,8 @@ describe('verdict and top never go silent', () => {
     put('loose.js', LOOSE)
     commit()
     const r = cli([w], app, { MEERKAT_VERDICT_TIMEOUT_S: '0.05' })
-    expect(r.status).toBe(75)
-    expect(line(r)).toMatch(/^INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
+    expect(r.status).toBe(124)
+    expect(line(r)).toMatch(/^INCOMPLETE (\(status 408\): |\d+ of \d+ checks finished)/)
   }, SLOW)
 })
 
@@ -306,7 +309,7 @@ describe('legacy folders', () => {
     put('apps/old/loose.js', LOOSE)
     commit()
     const v = cli(['verdict'])
-    expect(v.stdout.trim()).toMatch(/^PASS: no diff against main/)
+    expect(v.stdout.trim()).toMatch(/^NO-RESULT \(status 204\): judged 0 changed files: nothing to judge/)
     expect(v.stderr).toContain('1 folder(s) hidden as legacy')
     put('apps/web/loose.js', LOOSE)
     commit()
@@ -329,17 +332,17 @@ describe('verdict --known', () => {
   test('a known entry on a changed file passes and is printed as KNOWN; the same finding without the entry blocks', () => {
     known([{ check: 'js-eqeqeq', file: 'loose.js' }])
     const k = cli(['verdict', '--known', 'known.json'])
-    expect(k.stdout.split('\n')[0]).toBe('PASS (1 known)')
+    expect(k.stdout.split('\n')[0]).toMatch(/^PASS \(status 200\): nothing new blocks/)
     expect(k.stdout).toContain('KNOWN: js-eqeqeq loose.js:2')
     expect(k.status).toBe(0)
     const plain = cli(['verdict'])
-    expect(plain.stdout.trim()).toBe('FAIL 1 blocking in changed files')
+    expect(plain.stdout.split('\n')[0]).toMatch(/^FAIL 1 new blocking finding in 1 file \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
     expect(plain.status).toBe(1)
   }, SLOW)
   test('a known entry for another file does not hide the finding, and a stale entry is reported; --json is one object', () => {
     known([{ check: 'js-eqeqeq', file: 'other.js' }])
     const r = cli(['verdict', '--known', 'known.json'])
-    expect(r.stdout.split('\n')[0]).toBe('FAIL 1 blocking in changed files (0 known)')
+    expect(r.stdout.split('\n')[0]).toMatch(/^FAIL 1 new blocking finding in 1 file \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
     expect(r.stdout).toContain('STALE: js-eqeqeq other.js')
     expect(r.status).toBe(1)
     const j = JSON.parse(cli(['verdict', '--known', 'known.json', '--json']).stdout)
@@ -349,7 +352,7 @@ describe('verdict --known', () => {
   test('a missing or malformed --known file is NO-RESULT, exit 2, never ignored', () => {
     const miss = cli(['verdict', '--known', 'nope.json'])
     expect(miss.status).toBe(2)
-    expect(miss.stdout).toMatch(/^NO-RESULT: the --known file nope.json does not exist/)
+    expect(miss.stdout).toMatch(/^NO-RESULT(?: \(status \d+\))?: the --known file nope.json does not exist/)
     put('bad.json', '{not json')
     expect(cli(['verdict', '--known', 'bad.json']).status).toBe(2)
     known([{ check: 'js-eqeqeq' }])

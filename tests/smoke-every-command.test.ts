@@ -3,13 +3,14 @@
 // fails the test "every command has an example", which is the reminder to add one.
 // A smoke test only asks: did it finish, with a documented exit code, with some output, and without a stack trace? It does not check deep correctness.
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
 import { CLI, hasStack, makeSandbox, newestRunDir, runCli } from './smoke-helpers.mjs'
 
-const DOCUMENTED_EXIT_CODES = [0, 1, 2, 3, 75, 130] // docs/commands.md "Exit codes"
+const DOCUMENTED_EXIT_CODES = [0, 1, 2, 3, 4, 70, 75, 124, 130] // docs/commands.md "Exit codes"
 
 // ---- the command list, from the CLI itself ----------------------------------------------------------------------------------------------
 const cli = (args: string[]) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1', CI: '1' } }).stdout
@@ -44,8 +45,8 @@ const EXAMPLES: Record<string, Example> = {
   'recent': { args: ['recent'] },
   'recent clear': { args: ['recent', 'clear'] },
   redtest: { args: ['redtest', '--help'], why: 'redtest runs Meerkat\'s own test files with vitest (about a minute): running it inside a test run is a loop' },
-  gate: { args: ['gate', '--staged'], codes: [0, 1, 75] },
-  smoke: { args: ['smoke', '--timeout', '20'], codes: [0, 1, 75] },
+  gate: { args: ['gate', '--staged'], codes: [0, 1, 3, 75, 124] }, // 3: nothing staged is NO-RESULT, status 204
+  smoke: { args: ['smoke', '--timeout', '20'], codes: [0, 1, 3, 75] },
   // Look at results
   run: { args: ['run', 'list'] },
   'run list': { args: ['run', 'list'] },
@@ -61,17 +62,26 @@ const EXAMPLES: Record<string, Example> = {
   'lock status': { args: ['lock', 'status'] },
   'test-run': { args: ['test-run', 'src/math.js'], codes: [2], why: 'the fixture defines no commands.test, so it must say so and exit 2' },
   'who-calls': { args: ['who-calls', 'add'], codes: [0, 75], why: '75 when the fixture has no call of the name' },
-  deps: { args: ['deps', 'src/math.js'], codes: [0, 75], why: '75 when the file imports no project file' },
+  deps: { args: ['deps', 'src/math.js'], codes: [0, 3], why: '3 when the file imports no project file' },
   impact: { args: ['impact', '--base', 'HEAD'], codes: [0, 2], why: '2 when the fixture is not a git repository with that ref' },
   'tests-for': { args: ['tests-for', 'src/math.js'], codes: [0, 75], why: '75 when no test names the file' },
   batch: { args: ['batch', '--dry-run', 'main'], codes: [0, 2], why: 'plans a batch and runs nothing; with no base branch in the fixture it says so (2)' },
-  verdict: { args: ['verdict'], codes: [0, 1, 2], why: 'one line for a branch; the fixture may have no base branch, then it prints a NO-RESULT line (1 or 2)' },
+  verdict: { args: ['verdict'], codes: [0, 1, 2, 3], why: 'one line for a branch; a fixture with nothing changed or no base branch prints NO-RESULT (exit 3, status 204 or 404), never a pass' },
   fix: { args: ['fix'], codes: [0, 2], why: 'the fixture has no fixable finding, so it says no automatic fix (2) or has nothing to fix (0)' },
+  new: { args: ['new', 'check', 'smoke-new-a', '--pack', '{away}/pack-a'], why: 'writes outside the sandbox project, so the later commands see the same checks' },
+  'new check': { args: ['new', 'check', 'smoke-new-b', '--pack', '{away}/pack-b'] },
+  'new pack': { args: ['new', 'pack', 'smoke-pack-b', '--dir', '{away}'] },
   handoff: { args: ['handoff'], codes: [0, 1, 2], why: 'the verdict is needed; with no base branch it says so (1 or 2)' },
+  claim: { args: ['claim', 'src', '--by', 'smoke'], codes: [0, 1, 2], why: 'records a claim in the git directory of the fixture (1 when another name holds it, 2 when the fixture is not a git repository)' },
+  claims: { args: ['claims'], codes: [0, 2], why: 'lists live claims (2 when the fixture is not a git repository)' },
+  release: { args: ['release', 'src', '--by', 'smoke'], codes: [0, 1, 2], why: 'releases the claim above (1 when there is none, 2 when not a git repository)' },
+  worktrees: { args: ['worktrees'], codes: [0, 1, 2], why: 'lists worktrees (2 or 1 when the fixture is not a git repository)' },
+  'worktrees close': { args: ['worktrees', 'close', 'no-such-worktree'], codes: [1, 2], why: 'refuses a folder that is not a worktree (1), or 2 when the fixture is not a git repository' },
+  guide: { args: ['guide'], codes: [0], why: 'advisory: exit 0 always, even outside a git repository' },
   top: { args: ['top'], codes: [0, 1, 2], why: 'a table of changed-file findings; 1 or 2 with a NO-RESULT line when there is nothing to compare' },
   commands: { args: ['commands'] },
   trust: { args: ['trust'], codes: [0], why: 'the fixture defines no commands, so there is nothing to trust' },
-  frontend: { args: ['frontend'], codes: [75], why: 'the fixture defines no commands, so every step is skipped: not a pass (exit 75)' },
+  frontend: { args: ['frontend'], codes: [3], why: 'the fixture defines no commands, so every step is skipped: not a pass (exit 3)' },
   build: { args: ['build'], codes: [2], why: 'the fixture defines no commands.build, so it must say so and exit 2' },
   finding: { args: ['finding', '{id}'] },
   last: { args: ['last'] },
@@ -164,12 +174,17 @@ const ordered = [...Object.keys(EXAMPLES).filter((k) => keys.includes(k)), ...ke
 
 let sb: ReturnType<typeof makeSandbox>
 let findingId = ''
+let away = '' // a folder outside the sandbox project, for the files meerkat new writes (they must not change what the checks see)
 beforeAll(() => {
   sb = makeSandbox({ label: 'every' })
+  away = mkdtempSync(join(tmpdir(), 'meerkat-smoke-away-'))
   mkdirSync(join(sb.root, 'mypacks'))
   writeFileSync(join(sb.root, 'rules.json'), JSON.stringify({ rules: [] }))
 }, 60000)
-afterAll(() => sb?.cleanup())
+afterAll(() => {
+  sb?.cleanup()
+  if (away) rmSync(away, { recursive: true, force: true })
+})
 
 describe('the command list is read from the real CLI', () => {
   test('--help and describe list commands', () => {
@@ -189,7 +204,7 @@ describe('every command runs on the fixture project', () => {
     test(`meerkat ${key}`, () => {
       const ex = EXAMPLES[key]
       if (!ex) return // reported by the test above
-      const fill = (a: string) => a.replace('{id}', findingId || 'none').replace('{root}', sb.root).replace('{rules}', join(sb.root, 'rules.json')).replace('{packs}', join(sb.root, 'mypacks'))
+      const fill = (a: string) => a.replace('{id}', findingId || 'none').replace('{root}', sb.root).replace('{rules}', join(sb.root, 'rules.json')).replace('{packs}', join(sb.root, 'mypacks')).replace('{away}', away)
       const r = runCli(sb, ex.args.map(fill), { timeout: 140000 })
       expect(r.timedOut, `meerkat ${ex.args.join(' ')} did not finish in time`).toBe(false)
       expect(DOCUMENTED_EXIT_CODES).toContain(r.code)

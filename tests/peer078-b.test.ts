@@ -47,23 +47,23 @@ beforeAll(() => {
 })
 
 describe('behind-base count', () => {
-  test('verdict and top print it as their first line; more than 20 adds the rebase warning', async () => {
-    for (const run of [runVerdict, runTop]) {
-      const errs: string[] = []
-      await run(['--base', 'main'], { env, cwd: wt, out: () => {}, err: (t: string) => errs.push(t) })
-      expect(errs[0]).toBe('note: behind main by 25 commits (more than 20: rebase before trusting this verdict)')
-    }
-  }, 180_000)
-  test('gate prints it first on stderr and says nothing alarming under 20', async () => {
+  test('top prints it as its first line on stderr; verdict prints it AFTER the headline (more than 20 adds the rebase warning)', async () => {
+    const warn = 'note: behind main by 25 commits (more than 20: rebase before trusting this verdict)'
     const errs: string[] = []
-    const w = process.stderr.write.bind(process.stderr)
-    ;(process.stderr as any).write = (s: string) => (errs.push(String(s).trim()), true)
-    try {
-      await gateMain(['--base', 'main', '--app', wt], { env, cwd: wt, log: () => {}, err: () => {}, banner: true })
-    } finally {
-      ;(process.stderr as any).write = w
-    }
-    expect(errs[0]).toMatch(/^note: behind main by 25 commits \(more than 20/)
+    await runTop(['--base', 'main'], { env, cwd: wt, out: () => {}, err: (t: string) => errs.push(t) })
+    expect(errs[0]).toBe(warn)
+    const outs: string[] = []
+    const verr: string[] = []
+    await runVerdict(['--base', 'main'], { env, cwd: wt, out: (t: string) => outs.push(t), err: (t: string) => verr.push(t) })
+    expect(outs[0]).not.toMatch(/^note:/)
+    expect(outs).toContain(warn)
+    expect(verr).not.toContain(warn)
+  }, 180_000)
+  test('gate prints it after the answer, on stdout, and says nothing alarming under 20', async () => {
+    const logs: string[] = []
+    await gateMain(['--base', 'main', '--app', wt], { env, cwd: wt, log: (t: string) => logs.push(t), err: () => {}, banner: true })
+    expect(logs[0]).not.toMatch(/^note:/)
+    expect(logs.some((l) => /^note: behind main by 25 commits \(more than 20/.test(l))).toBe(true)
   }, 180_000)
 })
 
@@ -92,10 +92,11 @@ describe('verdict heartbeat from the start', () => {
 })
 
 describe('folder line first', () => {
-  test('gate on a worktree path prints folder | branch | worktree as its first stdout line', async () => {
+  test('gate on a worktree path prints folder | branch | worktree after the answer line', async () => {
     const lines: string[] = []
     await gateMain(['--base', 'main', '--app', wt], { env, cwd: wt, log: (l: string) => lines.push(l), err: () => {}, banner: true })
-    expect(lines[0]).toBe(`folder: ${wt} | branch old | git worktree`)
+    expect(lines[0]).toMatch(/\(status \d+[^)]*\)/) // "(status 422, exit 1)" since 0.5.4 // the answer is first; the folder line follows the outcome (changed before 0.5.6)
+    expect(lines).toContain(`folder: ${wt} | branch old | git worktree`)
   }, 180_000)
   test('brief on a worktree path prints it first, also with --ref; --json carries a folder field', () => {
     const out: string[] = []

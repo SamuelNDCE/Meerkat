@@ -46,9 +46,9 @@ beforeAll(() => {
 describe('B1 B2 B3: verdict --branches and the JSON schema', () => {
   test('--branches gives the plain verdict, prints the base line, and --json is one valid JSON document with schema 1', () => {
     const plain = meerkat(dir, 'logs-b1', 'verdict')
-    expect(plain.out.split('\n')[0]).toBe('FAIL 1 blocking in changed files')
+    expect(plain.out.split('\n')[0]).toMatch(/^FAIL 1 new blocking finding in 1 file \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
     const batch = meerkat(dir, 'logs-b1', 'verdict', '--branches', 'feat')
-    expect(batch.out.split('\n')[0]).toBe('feat: FAIL 1 blocking in changed files')
+    expect(batch.out.split('\n')[0]).toMatch(/^feat: FAIL 1 new blocking finding in 1 file \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
     expect(batch.code).toBe(1)
     expect(batch.err).toMatch(/^feat: base [0-9a-f]{12} \(main\)$/m)
     const j = meerkat(dir, 'logs-b1', 'verdict', '--branches', 'feat', '--json')
@@ -64,7 +64,7 @@ describe('B1 B2 B3: verdict --branches and the JSON schema', () => {
     git(dir, 'checkout', '-q', 'main')
     const same = meerkat(dir, 'logs-b1', 'verdict', '--json')
     git(dir, 'checkout', '-q', 'feat')
-    expect(JSON.parse(same.out)).toMatchObject({ schema: 1, verdict: 'PASS' })
+    expect(JSON.parse(same.out)).toMatchObject({ schema: 1, verdict: 'NO-RESULT', exitCode: 3 })
   }, 180_000)
 })
 

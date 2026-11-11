@@ -2,7 +2,7 @@
 
 You can add your own checks, packs, presets and tool wrappers without changing a single file of Meerkat. Everything below lives in your project or your home folder, so `meerkat update` cannot overwrite it. Every example on this page was run before it was written down, and `lib/extend061.test.ts` proves the update part.
 
-This page is the how-to. The full field list is in [writing-checks.md](writing-checks.md), the config keys are in [customizing.md](customizing.md), and the safety rules of the update are in [developers.md](developers.md#update-safety-why-an-update-cannot-break-your-setup).
+This page is the how-to. To write a first check fast, start with [add-a-check.md](add-a-check.md) (`meerkat new check`). The full field list is in [writing-checks.md](writing-checks.md), the config keys are in [customizing.md](customizing.md), and the safety rules of the update are in [developers.md](developers.md#update-safety-why-an-update-cannot-break-your-setup).
 
 The examples use one project folder, `my-app/`. Run each command from Meerkat's folder with `--app my-app`, or from inside `my-app/` with `meerkat`.
 

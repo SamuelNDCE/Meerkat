@@ -1,6 +1,6 @@
 {
   "name": "@samuelndce/meerkat",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "A scanner for people, and a tool and scaffolding for AIs, to check, map and test a project: security, correctness, accessibility, performance and code health. Works standalone without AI and does more with AI (MCP). Zero dependencies, no telemetry.",
   "keywords": [
     "verdict",

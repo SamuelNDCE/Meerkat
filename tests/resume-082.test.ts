@@ -61,11 +61,11 @@ describe('verdict: a stop is resumable', () => {
   const { d, flag } = fixture('verdict-fx')
   let file = ''
 
-  test('a sleeping check and a 3 s limit stop with INCOMPLETE, exit 75, a resume file and the exact resume command', () => {
+  test('a sleeping check and a 3 s limit stop with INCOMPLETE, exit 124, a resume file and the exact resume command', () => {
     writeFileSync(flag, 'x')
     const v = stopRun(d, 'verdict')
-    expect(v.code).toBe(75)
-    expect(v.out).toMatch(/^INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)$/m)
+    expect(v.code).toBe(124)
+    expect(v.out).toMatch(/^INCOMPLETE \(status 408\): .*Next: /m)
     expect(v.out).toMatch(/a\.js:1 blocker: bad thing here/)
     file = resumeFileOf(v.out)
     expect(file).toMatch(/resume\.json$/)
@@ -83,7 +83,7 @@ describe('verdict: a stop is resumable', () => {
   test('a missing, broken or foreign resume file is refused with the reason, exit 2, never ignored', () => {
     const missing = cli(['verdict', '--resume', join(root, 'nope.json')], d)
     expect(missing.code).toBe(2)
-    expect(missing.out).toMatch(/^NO-RESULT: the resume file .* does not exist\. next:/m)
+    expect(missing.out).toMatch(/^NO-RESULT(?: \(status \d+\))?: the resume file .* does not exist\. [nN]ext:/m)
     writeFileSync(join(root, 'bad.json'), '{not json')
     expect(cli(['verdict', '--resume', join(root, 'bad.json')], d).out).toMatch(/is not valid JSON/)
     writeFileSync(join(root, 'other.json'), '{"version":99}')
@@ -97,7 +97,7 @@ describe('verdict: a stop is resumable', () => {
     unlinkFlag(flag)
     const base = cli(['verdict', '--resume', file, '--base', 'HEAD'], d)
     expect(base.code).toBe(2)
-    expect(base.out).toMatch(/^NO-RESULT: --resume refused: .*a different base/m)
+    expect(base.out).toMatch(/^NO-RESULT(?: \(status \d+\))?: --resume refused: .*a different base/m)
     put(d, 'a.js', 'export const a = 3\n')
     const dirty = cli(['verdict', '--resume', file], d)
     expect(dirty.code).toBe(2)
@@ -128,7 +128,7 @@ describe('verdict: a stop is resumable', () => {
     // the plain line too
     const line = cli(['verdict', '--resume', file], d)
     expect(line.out.split('\n')[0]).toBe(cli(['verdict', '--base', 'main'], d).out.split('\n')[0])
-    expect(line.out).toMatch(/^FAIL 1 blocking in changed files/m)
+    expect(line.out).toMatch(/^FAIL 1 new blocking finding in 1 file/m)
   }, 150000)
 })
 
@@ -145,7 +145,7 @@ describe('top and gate resume the same way', () => {
     const { d, flag } = fixture('top-fx')
     writeFileSync(flag, 'x')
     const t = stopRun(d, 'top')
-    expect(t.code).toBe(75)
+    expect(t.code).toBe(124)
     const file = resumeFileOf(t.out)
     expect(t.out).toContain('resume: meerkat top --resume')
     unlinkFlag(flag)
@@ -160,7 +160,7 @@ describe('top and gate resume the same way', () => {
     const { d, flag } = fixture('gate-fx')
     writeFileSync(flag, 'x')
     const g = cli(['gate', '--no-cache', '--base', 'main', '--max-seconds', '30', '--json'], d)
-    expect([1, 75]).toContain(g.code) // 75 not run, or 1 when the blocker already counts
+    expect([1, 75, 124]).toContain(g.code) // 124 the time limit stopped it, or 1 when the blocker already counts
     expect(g.err).toMatch(/stopped early: \d+ blocking so far, \d+ of \d+ checks finished/)
     expect(g.err).toMatch(/^resume: meerkat gate --resume /m)
     const file = resumeFileOf(g.err)

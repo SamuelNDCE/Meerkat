@@ -1,5 +1,19 @@
 {
-  "packs": ["security", "hygiene", "ui", "refactor"],
+  "packs": [
+    "security",
+    "hygiene",
+    "ui",
+    "refactor",
+    "devfix-pack2"
+  ],
   "discover": false,
-  "disable": ["typos", "yamllint", "shellcheck", "hadolint", "actionlint", "eslint", "prettier"]
+  "disable": [
+    "typos",
+    "yamllint",
+    "shellcheck",
+    "hadolint",
+    "actionlint",
+    "eslint",
+    "prettier"
+  ]
 }

@@ -1,6 +1,6 @@
 # Writing checks
 
-A check is a small object that says what to run and how to tell it failed. This page is the full reference; the [README](../README.md#add-your-own-check) has the short version.
+A check is a small object that says what to run and how to tell it failed. New here? [add-a-check.md](add-a-check.md) walks through a first check in five minutes. This page is the full reference; the [README](../README.md#add-your-own-check) has the short version.
 
 ## Three ways in
 

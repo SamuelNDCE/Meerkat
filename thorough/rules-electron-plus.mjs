@@ -382,14 +382,29 @@ const fuseFile = (id, title, camel, pascal, value, bad, good) => ({
   bad,
   good,
 })
+const FUSE_KEYS = ['runAsNode', 'enableNodeOptionsEnvironmentVariable', 'enableNodeCliInspectArguments', 'grantFileProtocolExtraPrivileges', 'embeddedAsarIntegrityValidation', 'onlyLoadAppFromAsar', 'enableCookieEncryption']
+// Where a missing fuse key is set, so the finding names the key and the fix instead of a generic "fuses not set".
+const fuseFix = (camel) => `; missing key: ${FUSE_ALIAS[camel] ?? camel}. Set it in build.electronFuses (package.json or the electron-builder config), or call flipFuses from @electron/fuses in an afterPack hook`
+// A build hook (an afterPack file such as build/fuses-afterpack.cjs) that calls @electron/fuses and names this fuse sets it, so the package.json not naming it is not a missing fuse.
+const HOOK_FILE = /(^|\/)[^/]*(afterpack|after-pack|fuses?)[^/]*\.[cm]?[jt]s$/i
+const hookSetsFuse = (project, camel, pascal) => {
+  if (!project || !project.read || !project.files) return false
+  const named = fuseNamed(camel, pascal)
+  return (project.all ?? project.files).some((f) => {
+    if (!HOOK_FILE.test(f) || TEST_OUT.test(f)) return false
+    const t = project.read(f)
+    return typeof t === 'string' && /@electron\/fuses/.test(t) && named.test(t)
+  })
+}
+const anyHookSetsFuses = (project) => Boolean(project?.read && (project.all ?? project.files)?.some((f) => HOOK_FILE.test(f) && !TEST_OUT.test(f) && /@electron\/fuses/.test(String(project.read(f) ?? ''))))
 const absentFuse = (id, title, camel, pascal, severity) => ({
   id,
-  title,
+  title: `${title}${fuseFix(camel)}`,
   files: FUSE_FILE,
   sample: 'forge.config.js',
   notIn: TEST_OUT,
   severity,
-  test: fileIf((t, f, p) => isBuildConfig(f, t, p) && FUSES_SET.test(t) && !fuseNamed(camel, pascal).test(t)),
+  test: fileIf((t, f, p) => isBuildConfig(f, t, p) && FUSES_SET.test(t) && !fuseNamed(camel, pascal).test(t) && !hookSetsFuse(p, camel, pascal)),
   // The bad sample configures a different fuse and leaves this one unset; the good sample sets it to the secure value.
   bad: `const { FuseV1Options } = require('@electron/fuses')\nflipFuses(app, { [FuseV1Options.${camel === 'runAsNode' ? 'EnableCookieEncryption' : 'RunAsNode'}]: true })`,
   good: `const { FuseV1Options } = require('@electron/fuses')\nflipFuses(app, { [FuseV1Options.${camel === 'runAsNode' ? 'EnableCookieEncryption' : 'RunAsNode'}]: true, [FuseV1Options.${pascal}]: ${['embeddedAsarIntegrityValidation', 'onlyLoadAppFromAsar', 'enableCookieEncryption'].includes(camel) ? 'true' : 'false'} })`,
@@ -416,12 +431,12 @@ export const EP_FUSES_BUILD = [
   absentFuse('ep-fuse-cookie-encryption-unset', 'the fuse config leaves cookieEncryption unset; the fuses doc says most apps can safely enable it', 'enableCookieEncryption', 'EnableCookieEncryption', 'info'),
   {
     id: 'ep-fuses-not-configured',
-    title: 'this build config sets no Electron fuses at all (fuses switch off unused, powerful features at package time)',
+    title: `this build config sets no Electron fuses at all (fuses switch off unused, powerful features at package time); no keys are set. Add build.electronFuses (package.json or the electron-builder config) with at least ${FUSE_KEYS.join(', ')}, or call flipFuses from @electron/fuses in an afterPack hook`,
     files: FUSE_FILE,
     sample: 'electron-builder.json',
     notIn: TEST_OUT,
     severity: 'info',
-    test: fileIf((t, f, p) => isBuildConfig(f, t, p) && !FUSES_SET.test(t) && !/electronFuses/.test(t)),
+    test: fileIf((t, f, p) => isBuildConfig(f, t, p) && !FUSES_SET.test(t) && !/electronFuses/.test(t) && !anyHookSetsFuses(p)),
     bad: '{ "appId": "com.acme.notes", "productName": "Notes", "asar": true }',
     good: '{ "appId": "com.acme.notes", "productName": "Notes", "electronFuses": { "runAsNode": false } }',
   },

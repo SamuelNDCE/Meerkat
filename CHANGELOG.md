@@ -4,6 +4,61 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.5.4 (2026-11-11)
+
+### Breaking
+
+Scripts that read exit codes or the first line of `verdict`, `gate` or `batch` must be checked against this table.
+
+| Situation | Old | New |
+|---|---|---|
+| `verdict`: no result (bad ref, no base, no check ran on the changed files) | exit 2 (exit 1 on one path) | exit 3, word `NO-RESULT` |
+| `verdict`: base more than 20 commits ahead | exit 2 | exit 4, word `STALE` |
+| `verdict`: no diff against the base | `PASS`, exit 0 | `NO-RESULT`, exit 3 (judged 0 changed files) |
+| `gate`: unknown `--base`, or no checks loaded | exit 75 | exit 3 |
+| `gate`: nothing changed, or no check covers the changed files | exit 0 | exit 3 |
+| `gate`: a check's tool did not start | exit 75 | exit 1 (`TOOL PROBLEM`, status 503) |
+| `gate`: Meerkat itself failed | a crash | exit 70, one line, stack in the log |
+| `batch`: nothing could be judged, or a branch moved while it ran | exit 75 (as documented before) | exit 3, or exit 4 |
+
+- Exit codes are one table for every command: 0 passed, 1 a finding, 2 usage or configuration, 3 nothing could be judged, 4 stale base, 70 Meerkat's own error, 75 incomplete, 124 time limit, 130 interrupted. A test fails on any other code. `meerkat help` prints it, and the JSON carries `exitCode` and `exitName`.
+- The first line order changed. `verdict` and `gate` now print the answer first (the verdict word, the status, how many changed files were judged, one next step). The note about the base they compared against follows it; before, it came first.
+
+### Added
+
+- `meerkat new check <id> [--pack <name or folder>]` and `meerkat new pack <name>` write a working check or pack from a template (self-test and broken fixture included, never overwrites). `meerkat pack enable` accepts the name the template wrote. docs/add-a-check.md is a five-minute guide to a first check.
+- The verdict's first line says how many changed files were judged and how many matched no check.
+- `meerkat claim`, `meerkat claims` and `meerkat release`: say which paths you are editing so other sessions on the same repository stay off them. Claims are shared by every worktree and never committed.
+- `meerkat worktrees` lists every worktree of the repository with its branch, claims and clean and merged state; `worktrees close <path> --yes` removes a clean, merged one.
+- `meerkat guide` checks a change against the AI working guidelines. It is advisory and always exits 0; `--explain <id>` gives one rule in full.
+- `meerkat trust --list` lists approvals; `--revoke` removes one.
+- `meerkat batch` writes `batch.log` with one timestamped line per event.
+
+### Changed
+
+- Trust carries over to worktrees: a registered git worktree of an approved repository whose commands are byte-identical is trusted too, with no second question. Editing the commands asks again. Revoking in the approved checkout removes the shared approval; revoking in another worktree drops only that worktree's inheritance.
+- Verdict skips work that cannot change the answer. The findings are the same, and it is faster.
+- `meerkat batch` runs Meerkat's own checks only. Frontend steps run separately with `meerkat frontend`.
+- The documentation lists every command, its flags and exit codes from `meerkat help`, and the MCP tool count is read from the server, not written down.
+
+### Fixed
+
+- Electron fuses: a fuse set by an afterPack hook that calls `@electron/fuses` is no longer reported as missing from the build config. A missing key's finding names the key and where to set it. A new check, `ep-fuses-binary`, reads the fuse state of the built app with the project's own `@electron/fuses`. Without a build, without the tool, or in a folder that is not trusted it reports NOT RUN, never a pass. The reader runs the project's own `@electron/fuses`, so it needs `meerkat trust` for the folder (or `MEERKAT_TRUST_PROJECT=1`) and never runs under `MEERKAT_NO_PROJECT_CODE`.
+- `--staged` with nothing staged is NO-RESULT (exit 3, word `NO-RESULT`), with the reason on the first line, not a pass.
+- A run that could not be saved (log folder not writable) says `NOT RECORDED` first, so `meerkat last` and `findings` are not expected to show it. The exit code still follows the judgement alone.
+- `meerkat findings --check <name>` lists the findings a quarantined or pedantic rule hid by default, marked hidden. The gate blocks on them, so the list now shows them too.
+- The gate summary line names checks that were not configured (a pack the gate added on its own whose tool is missing), so they are no longer hidden in the exit 0 summary. Whether those should fail the gate is still open.
+- `meerkat blast` and `meerkat brief` exit 3 (nothing judged) for a file that is not in the code map or not on disk; the docs said 75 or 2 and now match the code.
+- `meerkat frontend` with every step skipped exits 3 (nothing judged), not 75.
+- `meerkat finding <id>` with no run in that folder exits 3 (nothing judged).
+- `meerkat doctor` puts `Folder: <path>` at the end of its first line.
+- The gate's counts line shows one status: `(status 422, exit 1)`, not two numbers that disagree.
+- `meerkat doctor` starts with the answer: which check is NOT RUN, what it needs, and the folder.
+- Scale: a file that is a FIFO, socket or device is never opened for the project snapshot (opening one blocked until something wrote to it). The branch verdict asks git one batched question for which candidate files exist on the base, instead of one process per file.
+- Text verdict: commits-behind is asked of git once per run, not once per output format. Text and JSON give the same exit code and verdict word (a test checks this).
+
 ## 0.5.3 (2026-11-08)
 
 Safer by default, quieter output, fewer false alarms.

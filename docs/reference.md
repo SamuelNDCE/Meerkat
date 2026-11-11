@@ -143,13 +143,13 @@ Everything the menu does is also a command, so scripts, CI and AI agents never n
 - `meerkat verdict --explain <finding-id>` runs no check: it prints one short block for one finding of the newest run of the project (check, file:line, why it fires, the fix hint when the rule has one, the `meerkat dismiss` command). An id or its first 4 characters works, as for `meerkat finding`.
 - `meerkat verdict --strict` counts pre-existing findings as blocking too (exit 1). It is off by default and the output line says `STRICT`.
 
-**`meerkat verdict --json` schema.** Every object has `"schema": 1` as its first key, so a consumer can check it before reading the rest. Version 1 fields: `schema`, `verdict` (`PASS`, `FAIL` or `NO-RESULT`), `exitCode`, `blocking`, `preExisting`, `known`, `knownFindings`, `stale`, `reason`; `strict` (true) and `range` (`{ ref, range, commits }`) appear only when `--strict` or `--since` is used. A change that removes or renames a field raises the number; adding a field does not.
+**`meerkat verdict --json` schema.** Every object has `"schema": 1` as its first key, so a consumer can check it before reading the rest. Version 1 fields: `schema`, `verdict` (`PASS`, `FAIL`, `NO-RESULT`, `STALE` or `INCOMPLETE`), `exitCode`, `blocking`, `preExisting`, `known`, `knownFindings`, `stale`, `reason`; `strict` (true) and `range` (`{ ref, range, commits }`) appear only when `--strict` or `--since` is used. A change that removes or renames a field raises the number; adding a field does not.
 
 **The verdict result cache is off by default.** `verdict` and `top` run every check from scratch each time (the code passes `useCache: false`); only `meerkat gate` reuses a check's result when its inputs are unchanged, and `gate --no-cache` turns that off.
 
-The exit code is 0 when everything passed, 1 when something failed and 75 when something could not run, so `meerkat verify && git push` in a shell that has `&&` does what it says. The full list of flags: [docs/commands.md](commands.md).
+The exit code is 0 when everything passed, 1 when something failed, 3 when nothing could be judged and 75 when the run was incomplete, so `meerkat verify && git push` in a shell that has `&&` does what it says. The full list of flags: [docs/commands.md](commands.md).
 
-**Exit codes by situation (one rule for every command).** A bad argument, an unknown or missing id, a folder or file that is not there and a folder that is not a git repository are usage errors: exit 2. A command that judges (`verdict`, `top`) and has nothing to judge reports NO-RESULT with the same exit 2 (open point: `top` still exits 1 for NO-RESULT until it follows `verdict`). "Nothing to do" is not an error: `fix` with no safe fix prints `no automatic fix available` and exits 0. Exit 1 is only a failed check or a blocking finding, and 75 means the run could not start here.
+**Exit codes by situation (one rule for every command).** A bad argument, an unknown or missing id, a folder or file that is not there and a folder that is not a git repository are usage errors: exit 2. A command that judges (`verdict`, `top`) and has nothing to judge reports NO-RESULT with exit 3 (open point: `top` still exits 1 for NO-RESULT until it follows `verdict`). A base that is too far behind is STALE, exit 4 (`verdict` and `batch`). "Nothing to do" is not an error: `fix` with no safe fix prints `no automatic fix available` and exits 0. Exit 1 is only a failed check or a blocking finding, and 75 means the run was incomplete (a cargo lock wait, or it stopped before its record was saved).
 
 | Situation | Exit |
 |---|---|
@@ -521,7 +521,7 @@ Everything is a plain file. Mistakes in a file are printed as notes and never st
 
 | File | What it is for |
 |---|---|
-| `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `disableSubs`, `override`, `budget`, `presets`, `customChecks`, `suites`, `discover`, `workflow`, `memory`, `allowWrites`. A key that is not one of these is ignored and named in a note (with the closest known key), so a typo such as `"pakcs"` is not silent |
+| `meerkat.config.json` | which checks run: `packs`, `extraChecks`, `disable`, `disableSubs`, `override`, `budget`, `presets`, `customChecks`, `suites`, `discover`, `memory`, `allowWrites`, `ignorePaths`, `commands`, `guidelines` (`guidelines.disable`, see [the expert guide](guide-expert.md)). `workflow` is only a record that `meerkat init --profile` writes: Meerkat keeps it for people and tools to read and acts on none of it. A key that is not one of these is ignored and named in a note (with the closest known key), so a typo such as `"pakcs"` is not silent |
 | `.meerkat-budgets.json` | numbers some checks need: performance budgets, hygiene, static and refactor limits |
 | `.meerkat-secrets-allow` | secret-scan findings you have accepted (a path, or `rule: text`) |
 | `.meerkat-risky-allow` | risky-code findings you have accepted (a path, or `path:line`, optionally followed by a `#` and a reason). Read from the project's own folder; every risky-code finding prints the exact line to paste, for example `src/view.js:118 # reason: say why it is safe` |
@@ -636,6 +636,11 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 | `MEERKAT_AI_CMD`, `MEERKAT_AI_BASE` | the model command for the AI checks (a JSON array); the branch the diff review compares with |
 | `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `MEERKAT_AI_KEY` | a key for the AI checks (see [AI checks](#ai-checks)); `MEERKAT_AI_MODEL` and `MEERKAT_AI_BASE_URL` change the model and the service |
 | `MEERKAT_USER_CONFIG` | use another file than `~/.meerkat.json` for your personal presets and settings |
+| `MEERKAT_GATE_MAX_SECONDS` | the longest `meerkat gate` runs before it stops and keeps the results so far (same as `--max-seconds`) |
+| `MEERKAT_PRIORITY` | `normal` runs the checks at normal priority; the default is below normal so your PC stays responsive |
+| `MEERKAT_THEME` | the name of a built-in board theme (your theme file still applies on top) |
+| `MEERKAT_NO_UPDATE_NOTE` | set it to leave the "newer version" line off the results screen |
+| `MEERKAT_OLD_MENU` | `1` shows the old menu list instead of the results screen |
 
 The old `NV_VERIFY_*` names are still read.
 

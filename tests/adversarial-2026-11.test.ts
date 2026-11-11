@@ -12,7 +12,7 @@ import { afterAll, describe, expect, test } from 'vitest'
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const BIN = join(ROOT, 'bin', 'meerkat.mjs')
 // docs/commands.md "Exit codes": 0 passed, 1 failed, 2 usage/config, 3 nothing to run, 75 could not start, 130 interrupted.
-const DOCUMENTED = [0, 1, 2, 3, 75, 130]
+const DOCUMENTED = [0, 1, 2, 3, 4, 70, 75, 124, 130]
 const WIN = process.platform === 'win32'
 
 const made: string[] = []
@@ -553,7 +553,7 @@ describe('mcp', () => {
 describe('exit codes', () => {
   test('docs list the exit codes used above', () => {
     const doc = readFileSync(join(ROOT, 'docs', 'commands.md'), 'utf8')
-    const section = doc.slice(doc.indexOf('## Exit codes'), doc.indexOf('## Output and machine use'))
+    const section = doc.slice(doc.indexOf('## Exit codes'), doc.indexOf('### Verdict status')) // the status table after the exit codes uses HTTP-style numbers, which are not exit codes
     const codes = [...section.matchAll(/^\| (\d+) \|/gm)].map((m) => Number(m[1]))
     expect(codes.sort((a, b) => a - b)).toEqual(DOCUMENTED)
     expect(statSync(BIN).isFile()).toBe(true)

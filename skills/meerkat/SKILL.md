@@ -1,11 +1,27 @@
 ---
 name: meerkat
 description: |-
-  Use when you start on a project and want to know which Meerkat check fits, or when any of these is about to happen: you are about to commit, you are about to open a pull request, you are about to edit a function that has callers, you are about to post a log or a secret, you are reading code you do not know, you changed docs, or you just added a feature.
-  This is the overview: every command, exit code and preset. Each trigger has its own skill (meerkat-before-commit, meerkat-before-pr, meerkat-blast-before-edit, meerkat-secrets-before-post, meerkat-map-unfamiliar-code, meerkat-docs-check).
+  Use when starting on a project, unsure which Meerkat check or tool fits, or needing commands, exit codes, presets or the MCP tool list; it is the overview that points to the narrower skills.
+  Not a replacement for them: commit, PR, edit, post, docs, unfamiliar code and tool health each have their own skill.
 ---
 
 # Meerkat
+
+## Which skill and which tools (read this first)
+
+| Situation | Skill | MCP tools |
+|---|---|---|
+| About to commit or `git add` | `meerkat-before-commit` | `meerkat_gate`, `meerkat_summary`, `meerkat_first_failure`, `meerkat_findings`, `meerkat_finding`, `meerkat_why`, `meerkat_suggest`, `meerkat_dismiss`, `meerkat_undismiss`, `meerkat_dismissals`, `meerkat_hook`, `meerkat_hook_status` |
+| About to open or update a PR, or push | `meerkat-before-pr` | `meerkat_gate`, `meerkat_run` (full), `meerkat_last`, `meerkat_pr_comment`, `meerkat_prompt`, `meerkat_baseline`, `meerkat_trend`, `meerkat_run_list` |
+| Changing, moving or deleting code with callers | `meerkat-blast-before-edit` | `meerkat_brief`, `meerkat_blast` |
+| New codebase, explain code, plan a refactor | `meerkat-map-unfamiliar-code` | `meerkat_map`, `meerkat_brief`, `meerkat_blast`, `meerkat_tests`, `meerkat_discover`, `meerkat_recommend` |
+| Posting or sharing text, files, logs, repos | `meerkat-secrets-before-post` | `meerkat_run` (secrets suite), `meerkat_findings`, `meerkat_finding`, `meerkat_doctor` |
+| README, docs or changelog changed | `meerkat-docs-check` | `meerkat_run` (doc-drift suites), `meerkat_findings`, `meerkat_check_list`, `meerkat_list` |
+| Meerkat seems broken, a check hangs or is skipped | `meerkat-smoke-and-red` | `meerkat_smoke`, `meerkat_self_test`, `meerkat_redtest`, `meerkat_doctor`, `meerkat_tools`, `meerkat_presets` |
+| Built or changed a screen (planned) | `meerkat-click-through` | `meerkat_tests`, `meerkat_check_list`, `meerkat_doctor` |
+| Need exact commands, options, exit codes, version, presets | this skill | `meerkat_describe`, `meerkat_version`, `meerkat_presets`, `meerkat_list` |
+
+Every MCP tool is named in at least one row above. Full per-situation mapping: `docs/ai-triggers.md`.
 
 Meerkat is one command that checks a project and saves a report. Replace `<folder>` with the project to check. Leave it off to use the current folder. Set `MEERKAT_PLAIN=1` and `NO_COLOR=1` for plain output.
 
@@ -29,8 +45,11 @@ Meerkat is one command that checks a project and saves a report. Replace `<folde
 | 0 | Every selected check passed. |
 | 1 | A check failed, or could not run (NOT RUN). |
 | 2 | A usage or configuration problem. The message says what to change. |
-| 3 | Nothing to run: the preset selected no checks here. |
-| 75 | `gate`, `smoke` and `blast` only: not run (no base ref, no checks loaded, or the file is not in the map). Not a pass. |
+| 3 | Nothing could be judged: an unknown ref, nothing to judge, no checks loaded. Not a pass. |
+| 4 | `verdict` and `batch`: the base is too far ahead (stale). |
+| 70 | Meerkat's own internal error. |
+| 75 | Incomplete: a cargo lock wait, or `blast` and `brief` when the file is not in the map. Not a pass. |
+| 124 | The time limit was reached. |
 | 130 | Interrupted. |
 
 A NOT RUN is never a pass. Report what is missing.
@@ -40,8 +59,12 @@ A NOT RUN is never a pass. Report what is missing.
 | Command | What it does |
 |---|---|
 | `meerkat gate` | Runs only the checks whose paths match files changed since the base ref (`--staged`, `--base <ref>`, `--against <ref>`, `--json`, `--thorough`). |
-| `meerkat verdict --base <ref>` | One line for a branch: PASS (0), FAIL (1), NO-RESULT (2) or INCOMPLETE (75, never a pass). `--json` for the fields. |
+| `meerkat verdict --base <ref>` | One line for a branch, answer first: PASS (0), FAIL (1), NO-RESULT (3), STALE (4) or INCOMPLETE (75, never a pass); 2 is a usage error. `--json` for the fields. |
 | `meerkat batch --base <ref> --app <repo> <branch>...` | One gate for several branches; names the culprit. Statuses: PASS, MERGEABLE, BLOCKED, EXCLUDED, STALE, INCOMPLETE. |
+| `meerkat claim <paths> --by <name>`, `meerkat claims`, `meerkat release <paths>` | Say which paths you are editing so another session on the same repository stays off them; list and remove claims. |
+| `meerkat worktrees` | Every worktree with its branch, claims and clean or merged state. `worktrees close <path> --yes` removes a finished one. |
+| `meerkat guide` | The AI working guidelines checked against this change. Advisory, always exit 0. |
+| `meerkat new check <id>` / `new pack <name>` | Write a working check or pack with its self-test and a broken fixture. |
 | `meerkat frontend` | Runs the repo's own typecheck, test and build commands (trusted block only). A skipped step is not a pass. |
 | `meerkat smoke` | Runs each selected check on the changed files with a tiny time limit. It fails when the tool misbehaves, not when your project has problems. |
 | `meerkat blast <file>[#symbol]` | Importers, modules, tests that reach the target, and unresolved imports (never counted as safe). `--json` for the full result. |
@@ -90,6 +113,18 @@ Gate, smoke, blast and map all have MCP tools (`meerkat_gate`, `meerkat_smoke`, 
 3. `meerkat gate` before committing. Fix the cause of any failure. If a check says NOT RUN, report what is missing.
 4. Read details with `meerkat why <check>` or `meerkat findings --json`. After a fix, rerun only that check: `meerkat check <id>`.
 5. `meerkat full` before merging, and `meerkat run release` before shipping.
+
+## What the output means
+
+- Every run result starts with a one-line headline (status, counts, top file:line places). Counts of PASS, FAIL and NOT RUN are separate: a NOT RUN is a check that could not run and is never a pass.
+- Findings have a severity (critical, high, medium, low, info) and a status (`new` since the previous comparable run, or `known`). `failOn` / `--fail-on` turns a severity into a gate.
+- Reading tools (`meerkat_last`, `meerkat_findings`, `meerkat_finding`, `meerkat_why`, `meerkat_run_list`, `meerkat_trend`, `meerkat_pr_comment`) read saved run files and change nothing. Running tools (`meerkat_run`, `meerkat_gate`, `meerkat_summary`, `meerkat_first_failure`, `meerkat_smoke`, `meerkat_self_test`) run the project's own commands and write a run folder, but never edit your source. Tools that write state are marked WRITES: `meerkat_dismiss`, `meerkat_undismiss`, `meerkat_baseline`, `meerkat_hook`, `meerkat_prompt`.
+
+## Not for
+
+- Judging code quality by feel: Meerkat reports what its checks prove, nothing more. If no check covers it, say so.
+- Pointing it at a project you do not trust: running a check runs that project's own commands.
+- Turning checks off or editing the project's Meerkat config to get a pass.
 
 ## Rules
 

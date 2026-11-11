@@ -22,13 +22,20 @@ meerkat <command> --help                help for any command (also: meerkat help
 | `meerkat full [folder]` | every check | alias of `meerkat thorough`. Any run command (`verify`, `full`, `run <preset>`) takes `--ratchet` (fail only on findings not in the baseline) and the flags `--config`, `--no-config`, `--group`, `--fail-fast`, `--keep-going`, `--max-run-minutes` and `--timeout-scale`; `meerkat run --help` lists them |
 | `meerkat <preset> [folder]` | any preset: `bugs`, `security`, `ui`, `functionality`, `performance`, `refactor`, `ci`, `release`, and your own | `meerkat preset list` shows them |
 | `meerkat check <id>... [folder]` | only these checks | same as `--only` |
-| `meerkat gate [--staged or --base <ref> or --against <ref>] [--all] [--no-cache] [--verbose]` | only the checks that cover the files you changed, and only failures in those files block (for a pre-commit hook or a pull request). It adds every pack that applies to the folder, not only the packs in `meerkat.config.json`. The output is the failures plus one summary line; `--verbose` lists every check. A project's own code (`extraChecks`, `.meerkat/checks`) runs only after a one-time yes in a terminal; without a terminal (or with `--no-input`, or in CI) it is left out and Meerkat says so. `--all` also blocks on project-wide failures; `--no-cache` runs every check again | exit 75 when it could not start |
+| `meerkat gate [--staged or --base <ref> or --against <ref>] [--all] [--no-cache] [--verbose]` | only the checks that cover the files you changed, and only failures in those files block (for a pre-commit hook or a pull request). It adds every pack that applies to the folder, not only the packs in `meerkat.config.json`. The output is the failures plus one summary line; `--verbose` lists every check. A project's own code (`extraChecks`, `.meerkat/checks`) runs only after a one-time yes in a terminal; without a terminal (or with `--no-input`, or in CI) it is left out and Meerkat says so. `--all` also blocks on project-wide failures; `--no-cache` runs every check again | exit 0 PASS, 1 a finding (422) or a TOOL PROBLEM (503), 2 usage (400), 3 NO-RESULT (404 unknown ref, 204 nothing changed or no checks), 70 Meerkat error (500), 75 cargo lock wait (423), 124 time limit (408), 130 interrupted (499). The first stdout line names the status and the reason |
 | `meerkat smoke [--timeout <seconds>]` | prove that the checks selected for your changes start, finish and are not broken (it tests Meerkat, not your project) | the preset that asks whether a change breaks your project is `project-smoke` |
-| `meerkat verdict [folder] [--base <ref>] [--known <file>] [--json] [--first] [--ready] [--branches <a> <b>...]` | one line for a branch: `PASS` or `FAIL n blocking in changed files`. Findings the branch did not add print `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. `--first` prints only the first blocking `file:line: message` (or `PASS`); `--ready` prints one `READY` or `NOT READY` line and makes no claim about tests; `--branches` prints one verdict line per branch, each checked out in its own temporary worktree. `--known` takes a JSON list of accepted failures (`[{ "check", "file", "line"? }]`); a match prints as `KNOWN` and does not block, an entry that matches nothing prints as `STALE`. Progress goes to stderr; the limit is `MEERKAT_VERDICT_TIMEOUT_S` | exit 0 PASS (also with pre-existing findings only), 1 a new blocking finding or `NO-RESULT`, 2 a bad ref, option or `--known` file, 75 for `INCOMPLETE n of m checks finished, not a pass` |
+| `meerkat verdict [folder] [--base <ref>] [--known <file>] [--json] [--first] [--ready] [--branches <a> <b>...]` | one line for a branch, and that line comes first (see [The first line](#the-first-line)): `PASS` or `FAIL n new blocking findings in m files`, with the count of changed files judged. Findings the branch did not add print `PASS` and a second line `pre-existing: N (not in this diff, does not block)`. `--first` prints only the first blocking `file:line: message` (or `PASS`); `--ready` prints one `READY` or `NOT READY` line and makes no claim about tests; `--branches` prints one verdict line per branch, each checked out in its own temporary worktree. `--known` takes a JSON list of accepted failures (`[{ "check", "file", "line"? }]`); a match prints as `KNOWN` and does not block, an entry that matches nothing prints as `STALE`. Progress goes to stderr; the limit is `MEERKAT_VERDICT_TIMEOUT_S` | exit 0 PASS (also with pre-existing findings only), 1 a new blocking finding, 2 `USAGE`: a bad flag, option or `--known` file, 3 `NO_RESULT`: no base, a bad ref, nothing changed, or no check ran on the changed files, 4 `STALE`: the branch is more than 20 commits behind its base (refused unless `--allow-stale`), 75 for `INCOMPLETE n of m checks finished, not a pass` |
 | `meerkat fix [<finding-id>] [--dry-run] [--apply]` | a patch for a finding of the newest run when its check has a safe fix (today: `sql-concat` with a known driver). `--dry-run` (the default) prints the unified diff only; `--apply` writes it only if the line still matches the finding's saved source line (sha256). Otherwise `no automatic fix: <reason>`; nothing is guessed | exit 0 a patch shown or applied, or `no automatic fix available` when no finding had a safe fix; 2 a usage error, an unknown id or a changed file refused |
-| `meerkat handoff [folder] [--base <ref>] [--out <file>]` / `--read <file>` | writes `meerkat-handoff.md` (under 60 lines) into the project's newest run folder: verdict, open findings in changed files (first five), branch, commit and the exact next command. `--read` prints its header and the next command. Uses the same gate as `meerkat verdict` | exit 0 written or read, 1 the gate stopped early, 2 a bad ref, option or file |
+| `meerkat handoff [folder] [--base <ref>] [--out <file>]` / `--read <file>` | writes `meerkat-handoff.md` (under 60 lines) into the project's newest run folder: verdict, open findings in changed files (first five), branch, commit and the exact next command. `--read` prints its header and the next command. Uses the same gate as `meerkat verdict` | exit 0 written or read, 1 the gate stopped early, 2 a bad ref, option or file, 75 a check crashed or its tool failed (INCOMPLETE, status 503: the file is written but the verdict is never PASS) |
 | `meerkat commands [folder] [--json]` | the repo's own test, build and typecheck commands: the `commands` block of `meerkat.config.json`, or the `package.json` scripts when there is no block. Runs nothing | |
-| `meerkat trust [folder]` | trust the `commands` block of this repo's `meerkat.config.json` so `meerkat test` and `meerkat build` may run it | |
+| `meerkat trust [folder] [--yes]` / `--status` / `--revoke` / `--list` | approve, check, revoke or list trust for the `commands` block of this repo's `meerkat.config.json`; `meerkat test`, `frontend` and `gate` run only trusted commands. A registered git worktree of the approved repository whose commands are byte-identical is trusted too (`--status` says `inherited`); editing the commands asks again. Revoking in the approved checkout removes the shared approval, in another worktree only that worktree's inheritance. Without a terminal and without `--yes` nothing is approved (status 400) | `--status`: exit 0 TRUSTED, 1 NOT TRUSTED, 2 usage |
+| `meerkat batch --base <ref> --app <repo> <branch>... [--dry-run] [--max-lines <n>] [--max-prs <n>] [--json]` | gate several branches together in one temporary checkout and name the culprit when the batch fails. See [batch.md](batch.md). Runs Meerkat's checks only; frontend steps run separately with `meerkat frontend` | exit 0 every included branch PASS or MERGEABLE, 1 a branch BLOCKED, 2 usage, 3 nothing could be judged, 4 a branch moved while the batch ran, 75 unfinished |
+| `meerkat frontend [--app <folder>] [--files <list>]` | the repo's typecheck, test and build steps, saved as `frontend.json` for the gate. A skipped step is never a pass | exit 75 when a step was skipped |
+| `meerkat claim <path...> --by <name> [--ttl 4h]` | say which paths you are working on. Claims live in the git common directory (`meerkat-claims.json`), shared by every worktree and never committed. A path that overlaps another name's live claim is refused with the owner and the time left. `--ttl` takes `30m`, `4h`, `1d` | exit 0 recorded, 1 conflict, 2 usage |
+| `meerkat claims [--json]` | every live claim: owner, paths, branch, worktree, time left. Expired claims are removed when read | exit 0, 2 usage |
+| `meerkat release <path...> [--by <name>] [--force]` | remove claims on paths. A claim of another name is refused unless `--force` | exit 0, 1 a claim missing or owned by another name, 2 usage |
+| `meerkat worktrees [--json]` / `worktrees close <path> [--yes]` | every worktree of this repository with branch, claims, uncommitted count, and clean and merged state (merged into the local `origin/main` ref: run `git fetch` first). `close` removes a clean, merged worktree with `git worktree remove` (never `--force`) and its claims; without `--yes` it prints the plan | exit 0, 1 refused (dirty or unmerged), 2 usage |
+| `meerkat guide [folder] [--base <ref>] [--json]` / `guide --explain <id>` | the AI working guidelines checked against this change: one line each, `ADVISORY`, `PASS` or `NOT CHECKED`, with a `NEXT` line under each advisory. Turn one off with `{ "guidelines": { "disable": ["g-..."] } }` in `meerkat.config.json` | always exit 0; 2 for an unknown option or id |
 | `meerkat build [folder]` | run the repo's own build command (`commands.build`), after `meerkat trust` | exit 1 and NOT RUN without trust |
 | `meerkat test-run <name-or-file> [--timeout <seconds>] [--folder <path>]` | run ONE test file or test name with a time limit, through the repo's own test runner | |
 | `meerkat lock status [--json]` | who holds the machine-wide cargo lock and who waits for it | |
@@ -57,6 +64,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat run log <check> [id]` | one check's log | `meerkat why <check>`, `meerkat log <check>` |
 | `meerkat run open [id]` | print the run's folder | `meerkat logs` |
 | `meerkat findings [folder\|run-id] [--severity high] [--suite s] [--check id] [--new] [--fixed] [--limit n]` | what the run detected: severity, rule, file:line, message, new or known (`--json` for scripts) | |
+| `meerkat findings --check <name>` | also lists the findings a quarantined or pedantic rule hides by default, marked `hidden`; the gate blocks on those too. Use it to see why a check named as failed has no visible rows |
 | `meerkat findings --fail-on <severity> [--new]` | exit 1 when any finding at or above that severity exists (for CI); with `--new` only findings not in the previous comparable run count | |
 | `meerkat findings --export sarif\|markdown\|json [file]` | copy the run's `findings.sarif`, `findings.md` or `findings.json` to a file, or print it; with `--json` print the path of the file in the run folder | |
 | `meerkat prompt [folder\|run-id] [--last] [--no-copy] [--print]` | write `meerkat-prompt-<date>-<time>-<preset>.md` into the run folder (every finding in full, plus what to do) and copy a short line to the clipboard that tells an AI to read it. The results screen does the same with `p` | `meerkat prompt --help` |
@@ -99,6 +107,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat pack list [folder]` | packs, whether each is on for this project, and whether its tools are installed |
 | `meerkat pack enable <name> [folder]` / `disable` | switch a pack on or off for a project (edits `meerkat.config.json`) |
 | `meerkat pack add <folder>` / `remove` | add or remove a folder of your own packs |
+| `meerkat new check <id> [--pack <name or folder>]` / `new pack <name>` | write a working check (with its self-test and a broken fixture), or a pack with one example check, from a template. Never overwrites: exit 2. See [add-a-check.md](add-a-check.md) |
 | `meerkat root list` / `add <folder>` / `remove <folder>` | where project names are looked up |
 | `meerkat rules test <file.json>` | test a file of data rules: every bad sample is caught and every good one passes. Exit 1 when a rule is wrong; exit 2 when the action or the file is missing |
 
@@ -108,7 +117,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 |---|---|
 | `meerkat init [folder]` | write a starting `meerkat.config.json` |
 | `meerkat init --profile <name> [folder] [--write] [--force]` | print the config for a workflow profile (`solo`, `team`, `ai-agent`, `legacy`, `monorepo`, `ci-only`) and the commands of that workflow; writes `meerkat.config.json` only with `--write`, never over an existing one without `--force` |
-| `meerkat doctor [folder]` | for this project: which checks would run, which would be NOT RUN and what to install; `--json` |
+| `meerkat doctor [folder]` | for this project: which checks would run, which would be NOT RUN and what to install; `--json`. The first line is the answer: the first NOT RUN check, what it needs, and the folder |
 | `meerkat tools [folder]` | every optional outside tool, whether it is found, and one install command per ecosystem (npm, pip, cargo, system); `--json` |
 | `meerkat tools install [folder]` | put the missing npm-based tools in `~/.meerkat/tools` (never in the project, never global, `--ignore-scripts`); shows the list first and asks, or use `--yes`; `--dry-run` only shows the list |
 | `meerkat self-test [folder]` | prove every check fails on its broken case |
@@ -121,16 +130,78 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat bug` | a bug report to paste into an issue (secrets removed, nothing sent) |
 | `meerkat version`, `meerkat help [command]` | |
 
+## The first line
+
+`verdict` and `gate` print the answer first. The note about the base it compared against follows, then the details. A script can read line one only.
+
+```
+FAIL 1 new blocking finding in 1 file (status 422). judged 1 changed file(s). Next: fix b.js, then run meerkat verdict again
+note: behind main by 0 commits
+b.js  unused-files  error
+  is not imported by any file and is not an entry point (delete it, or list it in .meerkat-unused-allow)
+  rerun: meerkat gate --only unused-files --base main
+  new
+pre-existing: 1 (not in this diff, does not block)
+```
+
+`--staged` with nothing staged is `NO-RESULT` (exit 3, status 204) with the reason on the first line, never a pass. Add the files with `git add`, or run `meerkat gate` without `--staged`.
+
+A run that could not be saved (the log folder is not writable) starts with `NOT RECORDED:`. The exit code still follows the judgement, but `meerkat last` and `meerkat findings` will not show that run, so do not expect them to.
+
+The gate's first line is its summary, for example `MEERKAT gate: 1 blocking, 1 pre-existing (not in the change), 217 passed, 0 not run, exit 1, scanned b.js, ... (status 422)`. A verdict on a change with no files to judge prints `NO-RESULT (status 204): judged 0 changed files: nothing to judge (not a pass).` and exits 3. `batch` prints one line per branch (`PASS`, `MERGEABLE`, `BLOCKED`, `EXCLUDED`, `STALE` or `INCOMPLETE`).
+
 ## Exit codes
+
+The same table for every command (`meerkat help` prints it):
 
 | Code | Meaning |
 |---|---|
-| 0 | everything passed |
-| 1 | a check failed or could not run |
-| 2 | a usage or configuration error (the message says what to change). Also: a folder that does not exist or is not a git repository (`gate`, `smoke`), a file that is not there (`brief`), an unknown or missing finding id (`finding`, `dismiss`, `undismiss`, `fix`) and a judging command with nothing to judge (`verdict` NO-RESULT) |
-| 3 | meerkat run and the presets: nothing to run (the preset selected no checks here). Not a pass |
-| 75 | meerkat gate and meerkat smoke: the run could not start (no base found, no checks loaded); meerkat blast and meerkat brief: the file exists but is not in the code map; meerkat verdict: `INCOMPLETE`, the run stopped early. Not a pass |
-| 130 | interrupted |
+| 0 | everything passed (`gate`: `PASS`, status 200) |
+| 1 | a finding in a changed file (`gate` and `verdict` `FAIL`, status 422). Also `gate`: `TOOL PROBLEM` (status 503), a check crashed, hung or its tool did not start; never counted as a finding. Other commands: a check failed or could not run |
+| 2 | a usage or configuration error (the message says what to change; status 400). Also: a folder that does not exist or is not a git repository (`gate`, `smoke`), a broken config or pack (`gate`), an unknown or missing finding id (`finding`, `dismiss`, `undismiss`, `fix`) and a verdict usage error, a bad flag or value (`verdict` USAGE; nothing was run) |
+| 3 | `NO-RESULT`: nothing could be judged. Status 404: an unknown ref or no base (`gate`, `verdict`). Status 204: nothing changed, no check ran on the changed files, or no checks loaded (`gate` says: run `meerkat init` or add a pack). Also `meerkat run` and the presets: the preset selected no checks here. Not a pass |
+| 4 | `verdict` STALE: the branch is more than 20 commits behind its base; refused unless `--allow-stale` |
+| 70 | `gate`: Meerkat itself threw an unexpected error (status 500). One line on stdout and stderr; the stack is in `gate-error-<time>.log` in the Meerkat log folder, never on the terminal |
+| 75 | `INCOMPLETE`, not a pass: the gate waited too long for the cargo lock (status 423) or stopped before it could save its record (status 500); `verdict`: the run stopped early;
+| 124 | `gate`: the time limit was reached (status 408); `--resume <file>` carries on |
+| 130 | interrupted (status 499) |
+
+> \*Corrected 2026-11-10: `meerkat gate` used to exit 75 for an unknown `--base`, for no checks loaded, and for a check whose tool did not start, with the reason only on stderr. Each outcome now has its own code (3, 3, 1) and the first stdout line says the status and the reason. Nothing changed and no check covering the changed files also exit 3 now (they were 0). A script that tested exit 75 for "could not start" must test 3.
+
+> \*Corrected 2026-11-10: a verdict that found no result (NO-RESULT) and a verdict on a base more than 20 commits ahead (STALE) both used to exit 2. They now exit 3 (NO_RESULT) and 4 (STALE). A script that tested exit 2 for a stale base must now test 4.
+
+### Verdict status (HTTP-style, next to the exit code)
+
+`meerkat verdict --json` carries `status` (a number) and `statusText` next to `exitCode`. The first line of every answer is a plain headline with the status in it and the single next action: `FAIL 3 new blocking findings in 2 files (status 422). Next: fix src/a.js:3, then run meerkat verdict again`, `PASS (status 200): nothing new blocks; 4 pre-existing findings are not in this change. Next: nothing to fix`, `INCOMPLETE (status 408): the time limit stopped the run; n of m checks did not finish. Next: meerkat verdict --resume <file>`. The same headline is in `--json` (`headline`), and the markdown and github formats carry it too, so all four outputs agree on the verdict, the status and the exit code. The exit codes above do not change: the status is an extra field, never a replacement.
+
+**The failure report.** Under a FAIL headline each blocking finding is one block, sorted by file then line, at most 20 in the text (the JSON `blocks` has all of them): `file:line  rule  severity`, the message, `rerun: meerkat gate --only <check>`, and `new` or `pre-existing` (pre-existing blocks only with `--strict`). The report is built from the rows the run already has; nothing is run again.
+
+**Labelled states** (never counted as findings in your code):
+
+| Label | Meaning | Status |
+| --- | --- | --- |
+| `TOOL PROBLEM:` | a check crashed, or its tool is missing or failed to start. With no real finding the verdict is INCOMPLETE (exit 75), never FAIL | 503 |
+| `NOT FINISHED:` | checks the time limit or an interruption stopped; the count is `n of m`. The next action is `meerkat verdict --resume` | 408, 499, 423 |
+| `NOT RUN:` | a check that could not run here, with the reason | 206 |
+
+**Errors.** Malformed input, a missing base or a missing file is one line with the right status (404 for a ref, folder or file that is not there, 400 for a bad flag) and no stack trace. An unexpected exception inside Meerkat is status 500: one line, `INCOMPLETE (status 500): Meerkat itself failed (...). Details: <log file>`, exit 75; the exception detail is in the log file under the Meerkat log folder (`verdict-error-<time>.log`).
+
+| Status | Text | When |
+|---|---|---|
+| 200 | OK | `PASS` |
+| 422 | Unprocessable | `FAIL`: a new blocking finding in a changed file |
+| 400 | Bad Request | a bad flag or value (exit 2) |
+| 404 | Not Found | the ref, folder or config was not found |
+| 204 | No Content | `NO_RESULT` for any other reason: nothing changed, no check ran on the changed files |
+| 409 | Conflict | `STALE`: the branch is too far behind its base |
+| 423 | Locked | `INCOMPLETE`, `incompleteReason` `lock-held`: the cargo lock was held |
+| 408 | Request Timeout | `INCOMPLETE`, `timeout`: the overall time limit was reached |
+| 499 | Client Closed | `INCOMPLETE`, `interrupted`: the run was interrupted |
+| 503 | Service Unavailable | `INCOMPLETE`, `tool-missing`: a required tool was missing or failed to start |
+| 206 | Partial Content | `INCOMPLETE`, `check-unfinished`: every check that ran passed, some did not run or did not finish. A result with a reason, never a pass (exit 75) |
+| 500 | Internal Error | Meerkat itself failed (an exception in Meerkat code, not in a check) |
+
+An `INCOMPLETE` answer also carries `incompleteReason` and `notRun` (the number of checks that did not run, or `"unknown"` when the run could not say).
 
 ## Output and machine use
 
