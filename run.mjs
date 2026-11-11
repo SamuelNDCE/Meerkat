@@ -19,6 +19,7 @@ import { appDirOf, appProblem, repoRootOf } from './lib/paths.mjs'
 import { loadOrder } from './lib/testorder.mjs'
 import { applyProfile } from './lib/profiles.mjs'
 import { defaultParallel, lowerPriority, priorityProblem } from './lib/priority.mjs'
+import { statusOf, verdictWord } from './lib/exitcodes.mjs'
 import { createProgress } from './lib/progress.mjs'
 import { loadChecks } from './lib/load-checks.mjs'
 import { createStatus, fanOut, statusPath } from './lib/status.mjs'
@@ -259,6 +260,14 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   const streams = outputStreams(opts, givenLog, env)
   const { baseLog, hush } = streams
   let { log, fail } = streams
+  // `meerkat check try <id>` and `meerkat self-test --only <id>`: the answer is the first line on stdout. Notes and progress go to stderr until it is printed.
+  const resultFirst = opts.only.length > 0 && !opts.jsonStdout && !opts.quiet && !opts.list && !opts.estimate && !hush
+  let resultOut = false
+  if (resultFirst) {
+    const real = log
+    const side = givenLog ?? ((l) => console.error(l))
+    log = (l) => (resultOut ? real(l) : side(l))
+  }
   // The live bar is for a person at a terminal: drawn only on a real TTY with the default output (a test or a
   // pipe passes its own log, CI sets CI), or when asked for with --progress. --no-progress or MEERKAT_PLAIN=1 turns it off.
   const liveBar = opts.plain || hush ? false : opts.progress ?? (interactive ?? (givenLog === undefined && Boolean(process.stdout.isTTY) && !env.CI && env.MEERKAT_PLAIN !== '1'))
@@ -274,7 +283,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     return 2
   }
   const priorityNote = lowerPriority(env)
-  if (priorityNote) log(priorityNote)
+  if (priorityNote) process.stderr.write(priorityNote + String.fromCharCode(10)) // stderr: a result is always the first stdout line
   try {
     const set = applyProfile(opts.profile ?? env.MEERKAT_PROFILE, env)
     if (set.length) log(`profile ${opts.profile ?? env.MEERKAT_PROFILE}: ${set.join(' ')}`)
@@ -495,6 +504,10 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   }
   if (opts.selfTest) {
     const withTest = selfTestChecks(checks, opts)
+    if (!withTest.length && opts.only.length) {
+      fail(`NO-RESULT (status 404): ${opts.only.join(', ')} is not a check with a self-test that Meerkat has loaded. next: meerkat pack list (a pack that is off hides its checks), then meerkat pack enable <pack>; meerkat check list shows the ids`)
+      return 3
+    }
     log(`self-test: ${withTest.length} checks`)
     const bar = createProgress({ title: `MEERKAT · ${label} self-test`, checks: withTest, enabled: liveBar })
     status = createStatus({ title: `MEERKAT · ${label} self-test`, tier, checks: withTest, file: statusPath(env), say: liveBar ? null : log })
@@ -526,7 +539,18 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     estimatedMs = sel.run.length ? estimateRunMs(sel.run, timings, tier, { slots: defaultParallel(cpus().length, env) }) : null
     // Nothing to run is not a pass: say why, and what to change.
     if (!sel.run.length) {
-      fail(`no checks to run: ${checks.length} loaded from the packs ${JSON.stringify(read.config.packs ?? [])}, but ${opts.preset ? `the preset ${opts.preset}` : `the ${tier} tier`}${groups.length ? ` (kinds: ${groups.join(', ')})` : ''} selects none of them. Add a pack that has such checks to "packs" in ${configFile ?? 'meerkat.config.json'}.`)
+      const missing = opts.only.filter((id) => !checks.some((c) => c.id === id))
+      const skippedAsked = sel.skipped.filter((c) => opts.only.includes(c.id))
+      if (missing.length) {
+        fail(`NO-RESULT (status 404): ${missing.join(', ')} is not a check Meerkat has loaded (the id is mistyped, or its pack is off). next: meerkat check list shows the ids; meerkat pack list shows the packs; meerkat pack enable <pack> turns one on`)
+        return 3
+      }
+      if (skippedAsked.length) {
+        const c = skippedAsked[0]
+        fail(`NO-RESULT (status 204): ${c.id} judged 0 changed files (it covers ${(c.paths ?? []).join(', ') || 'other files'}). next: change a file it covers, or run it on every file with: meerkat check try ${c.id} --all`)
+        return 3
+      }
+      fail(`NO-RESULT (status 204): no checks to run: ${checks.length} loaded from the packs ${JSON.stringify(read.config.packs ?? [])}, but ${opts.preset ? `the preset ${opts.preset}` : `the ${tier} tier`}${groups.length ? ` (kinds: ${groups.join(', ')})` : ''} selects none of them. Add a pack that has such checks to "packs" in ${configFile ?? 'meerkat.config.json'}.`)
       return 3
     }
     skippedCount = sel.skipped.length + (sel.windowSkipped?.length ?? 0) + applied.disabled.length
@@ -638,6 +662,14 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   status?.stop(line)
   // A finished real run adds one entry to the run log the terminal UI's history view reads (home folder, never the repo).
   if (!opts.selfTest) appendRun(historyPath(env), runEntry({ tier, summary: line, exitCode, ms: Date.now() - started, results }))
+  if (resultFirst && !boardShown) {
+    const bad = results.filter((r) => r.status === 'FAIL' || r.status === 'NOT RUN')
+    const one = (r) => `${r.id}: ${String(r.detail ?? r.status).replace(/\s*\[full output: [^\]]+\]\s*$/, '').replace(/\s+/g, ' ').trim()}`
+    const code = interrupted ? 130 : summaryCode
+    const what = bad.length ? bad.slice(0, 3).map(one).join('; ') + (bad.length > 3 ? `; and ${bad.length - 3} more` : '') : results.length === 1 ? one(results[0]) : `${results.length} checks, all ok`
+    resultOut = true
+    log(`${verdictWord(code)} (status ${statusOf({ exitCode: code })}): ${what}`)
+  }
   if (!boardShown) log('')
   // The per-check list is hundreds of lines on a real project: only with --verbose (and always for self-test). Failures and checks that did not run are listed below either way.
   if (!boardShown && (opts.verbose || opts.selfTest)) log(table(results, { checks: ranChecks, grouped: opts.selfTest ? false : opts.grouped, spans: spansFromRecorder(recorder) }))
