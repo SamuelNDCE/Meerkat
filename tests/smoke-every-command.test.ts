@@ -9,7 +9,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
 import { CLI, hasStack, makeSandbox, newestRunDir, runCli } from './smoke-helpers.mjs'
 
-const DOCUMENTED_EXIT_CODES = [0, 1, 2, 3, 75, 130] // docs/commands.md "Exit codes"
+const DOCUMENTED_EXIT_CODES = [0, 1, 2, 3, 4, 70, 75, 124, 130] // docs/commands.md "Exit codes"
 
 // ---- the command list, from the CLI itself ----------------------------------------------------------------------------------------------
 const cli = (args: string[]) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', env: { ...process.env, NO_COLOR: '1', CI: '1' } }).stdout
@@ -65,7 +65,7 @@ const EXAMPLES: Record<string, Example> = {
   impact: { args: ['impact', '--base', 'HEAD'], codes: [0, 2], why: '2 when the fixture is not a git repository with that ref' },
   'tests-for': { args: ['tests-for', 'src/math.js'], codes: [0, 75], why: '75 when no test names the file' },
   batch: { args: ['batch', '--dry-run', 'main'], codes: [0, 2], why: 'plans a batch and runs nothing; with no base branch in the fixture it says so (2)' },
-  verdict: { args: ['verdict'], codes: [0, 1, 2], why: 'one line for a branch; the fixture may have no base branch, then it prints a NO-RESULT line (1 or 2)' },
+  verdict: { args: ['verdict'], codes: [0, 1, 2, 3], why: 'one line for a branch; a fixture with nothing changed or no base branch prints NO-RESULT (exit 3, status 204 or 404), never a pass' },
   fix: { args: ['fix'], codes: [0, 2], why: 'the fixture has no fixable finding, so it says no automatic fix (2) or has nothing to fix (0)' },
   handoff: { args: ['handoff'], codes: [0, 1, 2], why: 'the verdict is needed; with no base branch it says so (1 or 2)' },
   claim: { args: ['claim', 'src', '--by', 'smoke'], codes: [0, 1, 2], why: 'records a claim in the git directory of the fixture (1 when another name holds it, 2 when the fixture is not a git repository)' },
