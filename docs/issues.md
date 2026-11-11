@@ -110,3 +110,10 @@ Received after the 0.5.4 release. Status of each item, checked on release-0.5.4 
 - **10c. Batch line limit and exclusion text should match the help.** Status: already matches on 8502f4a (help and code both 3000; the exclusion text names the limit). Needs their build to be checked; they may be on an older build.
 - **10d. Trust for a non-interactive shell.** Status: the flag already exists: `meerkat trust <folder> --yes` approves that folder's commands block and prints it. Decision for Samuel: automating this removes the human check the trust gate exists for. Whether a sub-agent may run it is his call, not a code change.
 - **10e. Verdict text slower than JSON on large staged changes.** Status: OPEN, not reproduced on large input. Plan: measure on their staged change, sizes and seconds, then profile the text path against the JSON path. Waiting for their numbers.
+
+### Neural Vault answers (received after the 10a to 10e entries above)
+
+- **10a, closed.** Neural Vault sent a sample first line from 37c827f: the answer comes first ("PASS (status 200): nothing new blocks; ... judged 2 changed file(s); 1 matched no check. Next: nothing to fix"). The order is as they want.
+- **10c, closed.** Neural Vault is on the newer batch build, so the mismatch they reported is resolved.
+- **10d, closed for Meerkat.** Neural Vault's agents will not run `meerkat trust`; approval stays with Samuel.
+- **10e, still open, no repro.** At 37c827f a 16,119-byte markdown file plus the config (about 16 KB) runs 6 s text and 7 s JSON, so no gap at that size. The 137 s gap was on release-rc2. A larger staged change is needed to test the text path; Neural Vault will build one and send lines and seconds.
