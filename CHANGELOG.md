@@ -4,6 +4,10 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.5.4 (2026-11-11)
+
 ### Breaking
 
 Scripts that read exit codes or the first line of `verdict`, `gate` or `batch` must be checked against this table.
@@ -38,6 +42,17 @@ Scripts that read exit codes or the first line of `verdict`, `gate` or `batch` m
 - Verdict skips work that cannot change the answer. The findings are the same, and it is faster.
 - `meerkat batch` runs Meerkat's own checks only. Frontend steps run separately with `meerkat frontend`.
 - The documentation lists every command, its flags and exit codes from `meerkat help`, and the MCP tool count is read from the server, not written down.
+
+### Fixed
+
+- Electron fuses: a fuse set by an afterPack hook that calls `@electron/fuses` is no longer reported as missing from the build config. A missing key's finding names the key and where to set it. A new check, `ep-fuses-binary`, reads the fuse state of the built app with the project's own `@electron/fuses`. Without a build or without the tool it reports NOT RUN, never a pass.
+- `--staged` with nothing staged is NO-RESULT (exit 3, word `NO-RESULT`), with the reason on the first line, not a pass.
+- A run that could not be saved (log folder not writable) says `NOT RECORDED` first, so `meerkat last` and `findings` are not expected to show it. The exit code still follows the judgement alone.
+- `meerkat findings --check <name>` lists the findings a quarantined or pedantic rule hid by default, marked hidden. The gate blocks on them, so the list now shows them too.
+- The gate's counts line shows one status: `(status 422, exit 1)`, not two numbers that disagree.
+- `meerkat doctor` starts with the answer: which check is NOT RUN, what it needs, and the folder.
+- Scale: a file that is a FIFO, socket or device is never opened for the project snapshot (opening one blocked until something wrote to it). The branch verdict asks git one batched question for which candidate files exist on the base, instead of one process per file.
+- Text verdict: commits-behind is asked of git once per run, not once per output format. Text and JSON give the same exit code and verdict word (a test checks this).
 
 ## 0.5.3 (2026-11-08)
 

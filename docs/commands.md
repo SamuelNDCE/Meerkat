@@ -64,6 +64,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat run log <check> [id]` | one check's log | `meerkat why <check>`, `meerkat log <check>` |
 | `meerkat run open [id]` | print the run's folder | `meerkat logs` |
 | `meerkat findings [folder\|run-id] [--severity high] [--suite s] [--check id] [--new] [--fixed] [--limit n]` | what the run detected: severity, rule, file:line, message, new or known (`--json` for scripts) | |
+| `meerkat findings --check <name>` | also lists the findings a quarantined or pedantic rule hides by default, marked `hidden`; the gate blocks on those too. Use it to see why a check named as failed has no visible rows |
 | `meerkat findings --fail-on <severity> [--new]` | exit 1 when any finding at or above that severity exists (for CI); with `--new` only findings not in the previous comparable run count | |
 | `meerkat findings --export sarif\|markdown\|json [file]` | copy the run's `findings.sarif`, `findings.md` or `findings.json` to a file, or print it; with `--json` print the path of the file in the run folder | |
 | `meerkat prompt [folder\|run-id] [--last] [--no-copy] [--print]` | write `meerkat-prompt-<date>-<time>-<preset>.md` into the run folder (every finding in full, plus what to do) and copy a short line to the clipboard that tells an AI to read it. The results screen does the same with `p` | `meerkat prompt --help` |
@@ -116,7 +117,7 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 |---|---|
 | `meerkat init [folder]` | write a starting `meerkat.config.json` |
 | `meerkat init --profile <name> [folder] [--write] [--force]` | print the config for a workflow profile (`solo`, `team`, `ai-agent`, `legacy`, `monorepo`, `ci-only`) and the commands of that workflow; writes `meerkat.config.json` only with `--write`, never over an existing one without `--force` |
-| `meerkat doctor [folder]` | for this project: which checks would run, which would be NOT RUN and what to install; `--json` |
+| `meerkat doctor [folder]` | for this project: which checks would run, which would be NOT RUN and what to install; `--json`. The first line is the answer: the first NOT RUN check, what it needs, and the folder |
 | `meerkat tools [folder]` | every optional outside tool, whether it is found, and one install command per ecosystem (npm, pip, cargo, system); `--json` |
 | `meerkat tools install [folder]` | put the missing npm-based tools in `~/.meerkat/tools` (never in the project, never global, `--ignore-scripts`); shows the list first and asks, or use `--yes`; `--dry-run` only shows the list |
 | `meerkat self-test [folder]` | prove every check fails on its broken case |
@@ -142,6 +143,10 @@ b.js  unused-files  error
   new
 pre-existing: 1 (not in this diff, does not block)
 ```
+
+`--staged` with nothing staged is `NO-RESULT` (exit 3, status 204) with the reason on the first line, never a pass. Add the files with `git add`, or run `meerkat gate` without `--staged`.
+
+A run that could not be saved (the log folder is not writable) starts with `NOT RECORDED:`. The exit code still follows the judgement, but `meerkat last` and `meerkat findings` will not show that run, so do not expect them to.
 
 The gate's first line is its summary, for example `MEERKAT gate: 1 blocking, 1 pre-existing (not in the change), 217 passed, 0 not run, exit 1, scanned b.js, ... (status 422)`. A verdict on a change with no files to judge prints `NO-RESULT (status 204): judged 0 changed files: nothing to judge (not a pass).` and exits 3. `batch` prints one line per branch (`PASS`, `MERGEABLE`, `BLOCKED`, `EXCLUDED`, `STALE` or `INCOMPLETE`).
 

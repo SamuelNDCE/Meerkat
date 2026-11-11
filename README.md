@@ -46,7 +46,13 @@ npm install -g @samuelndce/meerkat
 
 Then, in any git repository, run `meerkat gate` (see [Quick start](#quick-start)).
 
-## What is new in the release candidate
+## What is new in 0.5.4
+
+- **Electron fuses.** A fuse set in an afterPack hook that calls `@electron/fuses` counts as set. The new `ep-fuses-binary` check reads the fuse state of the built app. Without a build it says NOT RUN, never a pass. See [docs/checks.md](https://github.com/SamuelNDCE/Meerkat/blob/main/docs/checks.md).
+- **Clearer NO-RESULT and NOT RECORDED.** `--staged` with nothing staged is NO-RESULT with the reason first. A run that could not be saved starts with `NOT RECORDED:`.
+- **Faster and steadier runs.** Large folders no longer block on a FIFO, socket or device, and the branch verdict asks git one batched question about the base instead of one per file.
+
+## What was new in the release candidate
 
 - **The answer is the first line.** `meerkat verdict` and `meerkat gate` print the verdict first (for example `FAIL 1 new blocking finding in 1 file (status 422). judged 1 changed file(s). Next: ...`), then the base note, then the details. The line says how many changed files were judged and how many matched no check. A change with no files to judge is `NO-RESULT`, never `PASS`.
 - **One exit code table for every command.** 0 passed, 1 a finding, 2 usage or configuration, 3 nothing could be judged, 4 stale base (`verdict` and `batch`), 70 Meerkat's own error, 75 incomplete, 124 time limit, 130 interrupted. `meerkat help` prints it. Scripts that tested exit 2 for a stale base or for no result must now test 4 and 3. See [CHANGELOG.md](https://github.com/SamuelNDCE/Meerkat/blob/main/CHANGELOG.md).

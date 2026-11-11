@@ -158,4 +158,5 @@ Local modules each file imports (relative imports only).
 - `tools/results-gif.mjs`: `lib/tui/results.mjs`, `lib/tui/resultssample.mjs`
 - `tools/results-shot.mjs`: `lib/tui/results.mjs`, `lib/tui/resultssample.mjs`
 - `tools/watch.mjs`: `lib/status.mjs`, `lib/timings.mjs`, `lib/tui/history.mjs`, `lib/tui/index.mjs`, `lib/tui/model.mjs`, `lib/tui/watch.mjs`
+- `tools/worktrees.mjs`: `lib/worktrees.mjs`
 - `tools/yourapp-shot.mjs`: `lib/menu.mjs`, `lib/version.mjs`, `lib/yourappscreen.mjs`
