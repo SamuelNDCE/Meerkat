@@ -50,7 +50,7 @@ beforeAll(() => {
 describe('default output is unchanged', () => {
   test('FAIL line, pre-existing line, exit 1; PASS on a clean branch, exit 0', () => {
     const bad = meerkat(dir, 'verdict', '--base', 'main')
-    expect(bad.out.split('\n')[0]).toMatch(/^FAIL 2 new blocking findings in 2 files \(status 422\)\. Next: fix /)
+    expect(bad.out.split('\n')[0]).toMatch(/^FAIL 2 new blocking findings in 2 files \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: fix /)
     expect(bad.out).toContain('pre-existing: 1 (not in this diff, does not block)')
     expect(bad.code).toBe(1)
     git(dir, 'checkout', '-q', 'clean')
@@ -66,7 +66,7 @@ describe('--format markdown', () => {
     const r = meerkat(dir, 'verdict', '--base', 'main', '--format', 'markdown')
     expect(r.code).toBe(1)
     const lines = r.out.split('\n')
-    expect(lines[0]).toMatch(/^\*\*Meerkat verdict: FAIL 2 new blocking findings in 2 files \(status 422\)\. Next: /)
+    expect(lines[0]).toMatch(/^\*\*Meerkat verdict: FAIL 2 new blocking findings in 2 files \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
     expect(lines.filter((l) => l.startsWith('| File'))).toHaveLength(1)
     expect(r.out).toMatch(/\| src\/new\.js \| 1 \| sql-concat \| /)
     expect(r.out).toMatch(/\| src\/second\.js \| 1 \| sql-concat \| /)
@@ -121,7 +121,7 @@ describe('--since', () => {
   test('is --base plus the range it compared', () => {
     const r = meerkat(dir, 'verdict', '--since', 'main')
     expect(r.code).toBe(1)
-    expect(r.out.split('\n')[0]).toMatch(/^FAIL 2 new blocking findings in 2 files \(status 422\)\. Next: fix /)
+    expect(r.out.split('\n')[0]).toMatch(/^FAIL 2 new blocking findings in 2 files \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: fix /)
     expect(r.out).toContain('compared main..HEAD: 1 commit')
     expect(r.out).toContain('pre-existing: 1 (not in this diff, does not block)')
   }, 180_000)
@@ -140,7 +140,7 @@ describe('--strict', () => {
     git(dir, 'checkout', '-q', 'feature')
     expect(normal.code).toBe(0)
     expect(strict.code).toBe(1)
-    expect(strict.out.split('\n')[0]).toMatch(/^FAIL STRICT 1 new blocking finding in 1 file \(strict: pre-existing findings count\) \(status 422\)\. Next: /)
+    expect(strict.out.split('\n')[0]).toMatch(/^FAIL STRICT 1 new blocking finding in 1 file \(strict: pre-existing findings count\) \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
   }, 180_000)
 })
 
@@ -189,7 +189,7 @@ describe('base line, --timings, --rerun-failed, results line', () => {
     const sha = git(dir, 'merge-base', 'main', 'HEAD').trim().slice(0, 12)
     const r = meerkat(dir, 'verdict', '--base', 'main')
     expect(r.err).toContain(`base ${sha} (main)`)
-    expect(r.out.split('\n')[0]).toMatch(/^FAIL 2 new blocking findings in 2 files \(status 422\)\. Next: fix /)
+    expect(r.out.split('\n')[0]).toMatch(/^FAIL 2 new blocking findings in 2 files \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: fix /)
     expect(r.out).toContain('pre-existing: 1 (not in this diff, does not block)')
     const doc = JSON.parse(meerkat(dir, 'verdict', '--base', 'main', '--json').out)
     expect(doc.base).toEqual({ sha, ref: 'main' })

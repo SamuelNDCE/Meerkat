@@ -53,7 +53,7 @@ describe('(a) the exact failure report', () => {
   test('a 3-finding failure prints 3 blocks sorted by file then line, each with its rerun command', async () => {
     const r = await run(['--base', 'main'])
     expect(r.code).toBe(1)
-    expect(r.lines[0]).toMatch(/^FAIL 3 new blocking findings in 3 files \(status 422\)\. Next: fix src\/a\.js:1/)
+    expect(r.lines[0]).toMatch(/^FAIL 3 new blocking findings in 3 files \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: fix src\/a\.js:1/)
     const heads = r.lines.filter((l) => /^src\/\w\.js:\d+  \S+  \S+$/.test(l))
     expect(heads.map((l) => l.split('  ')[0])).toEqual(['src/a.js:1', 'src/b.js:1', 'src/c.js:1'])
     expect(r.lines.filter((l) => /^ {2}rerun: meerkat gate --only \S+/.test(l))).toHaveLength(3)

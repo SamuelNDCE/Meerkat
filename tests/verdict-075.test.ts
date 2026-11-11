@@ -52,7 +52,7 @@ describe('verdict --branches', () => {
     const r = await run(['--base', 'main', '--branches', 'clean,bad,nope'])
     expect(r.lines).toHaveLength(3)
     expect(r.lines[0]).toEqual(expect.stringMatching(/^clean: PASS \(status 200\): nothing new blocks/))
-    expect(r.lines[1]).toMatch(/^bad: FAIL \d+ new blocking findings? in \d+ files? \(status 422\)\. Next: /)
+    expect(r.lines[1]).toMatch(/^bad: FAIL \d+ new blocking findings? in \d+ files? \(status 422\)\.( judged \d+ changed file\(s\)(; \d+ matched no check)?\.)? Next: /)
     expect(r.lines[2]).toMatch(/^nope: NO-RESULT(?: \(status \d+\))?: git does not know the branch nope/)
     expect(r.errs.filter((l) => /^\[\d\/3\] /.test(l))).toEqual(['[1/3] clean ...', '[2/3] bad ...', '[3/3] nope ...'])
     expect(r.code).toBe(1)
