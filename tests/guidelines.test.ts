@@ -180,7 +180,9 @@ describe('advisory guidance never changes an exit code', () => {
     expect(g.advisory).toBeGreaterThan(0)
     const after = gateCode(repo)
     expect(after.code).toBe(before.code)
-    expect(after.summary.replace(/[\d.]+s$/, '')).toBe(before.summary.replace(/[\d.]+s$/, ''))
+    // Compare the summary without its elapsed time (the summary ends ", 0.3s (status 422, exit 1)").
+    const untimed = (s: string) => s.replace(/, \d+(\.\d+)?m?s( \(status \d+[^)]*\))?$/, '')
+    expect(untimed(after.summary)).toBe(untimed(before.summary))
   }, 120000)
   test('turning every guideline off does not change the gate exit code either', async () => {
     const repo = fixture({ 'lib/a.mjs': 'export const a = 1\n' }, 'wip')
