@@ -239,11 +239,11 @@ describe('red: hostile files in the project', () => {
 })
 
 describe('red: the environment', () => {
-  test('git missing from PATH: gate exits 75 and says git was not found (regression: it used to say "not a git work tree")', () => {
+  test('git missing from PATH: gate exits 1 (TOOL PROBLEM, status 503) and says git was not found (regression: it used to say "not a git work tree")', () => {
     const sb = box()
     const empty = join(sb.root, 'emptypath')
     mkdirSync(empty)
-    clean(runCli(sb, ['gate', '--staged'], { env: { PATH: empty, Path: empty } }), [75], { says: /git was not found on PATH/ })
+    clean(runCli(sb, ['gate', '--staged'], { env: { PATH: empty, Path: empty } }), [1], { says: /git was not found on PATH/ })
   })
   test('an empty PATH: verify reports the check as NOT RUN with a way to fix it, and does not claim a pass', () => {
     const sb = box()

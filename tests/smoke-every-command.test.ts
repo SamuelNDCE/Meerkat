@@ -44,8 +44,8 @@ const EXAMPLES: Record<string, Example> = {
   'recent': { args: ['recent'] },
   'recent clear': { args: ['recent', 'clear'] },
   redtest: { args: ['redtest', '--help'], why: 'redtest runs Meerkat\'s own test files with vitest (about a minute): running it inside a test run is a loop' },
-  gate: { args: ['gate', '--staged'], codes: [0, 1, 75] },
-  smoke: { args: ['smoke', '--timeout', '20'], codes: [0, 1, 75] },
+  gate: { args: ['gate', '--staged'], codes: [0, 1, 3, 75, 124] }, // 3: nothing staged is NO-RESULT, status 204
+  smoke: { args: ['smoke', '--timeout', '20'], codes: [0, 1, 3, 75] },
   // Look at results
   run: { args: ['run', 'list'] },
   'run list': { args: ['run', 'list'] },

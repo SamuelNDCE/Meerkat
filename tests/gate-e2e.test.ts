@@ -191,7 +191,7 @@ describe('meerkat gate end to end', () => {
     writeFileSync(join(dir, 'a.js'), 'export const a = 1\n')
     const r = await runGate(dir, join(ROOT, 'nogit-state'), '8 not a repo')
     expect(r.code).toBe(2)
-    const msg = (r.stdout + r.stderr).trim().split(/\r?\n/).filter((l) => !l.startsWith('folder:'))
+    const msg = [...new Set((r.stdout + r.stderr).trim().split(/\r?\n/).filter((l) => !l.startsWith('folder:')))] // the same reason is on stdout and stderr
     expect(msg.length).toBe(1)
     expect(msg[0]).toMatch(/not a git repository/)
     noStack(r)
@@ -199,11 +199,12 @@ describe('meerkat gate end to end', () => {
 
   it('9. unknown --base ref: non-zero, one-line message naming the ref, no stack trace', async () => {
     const r = await runGate(clean.dir, clean.state, '9 bad --base', ['--base', 'no-such-ref'])
-    expect(r.code).not.toBe(0)
-    expect(r.code).not.toBe(null)
-    const msg = (r.stdout + r.stderr).trim().split(/\r?\n/).filter((l) => !l.startsWith('folder:'))
+    expect(r.code).toBe(3)
+    // The same reason is on stdout (first line) and on stderr, so it is one distinct line.
+    const msg = [...new Set((r.stdout + r.stderr).trim().split(/\r?\n/).filter((l) => !l.startsWith('folder:')))]
     expect(msg.length).toBe(1)
     expect(msg[0]).toContain('no-such-ref')
+    expect(r.stdout.split(/\r?\n/)[0]).toBe(msg[0])
     noStack(r)
   })
 
