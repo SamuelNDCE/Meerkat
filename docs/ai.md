@@ -126,7 +126,7 @@ Two 0.5.4 cases an agent will meet:
 
 - `--staged` with nothing staged is NO-RESULT (exit 3) with the reason on the first line. Run `git add` first, then verify again.
 - A first line starting `NOT RECORDED:` means the run was judged but not saved, so `meerkat last` and `findings` will not show it. Use the exit code and the printed findings, and fix the log folder's permissions if you need the record.
-- An Electron check that prints `NOT RUN` (`ep-fuses-binary`) means no build exists or `@electron/fuses` is missing. Build first, or install the tool in the project. It is never a pass.
+- An Electron check that prints `NOT RUN` (`ep-fuses-binary`) means no build exists, `@electron/fuses` is missing, or the folder is not trusted. Build first, install the tool, or run `meerkat trust` for the folder. It is never a pass.
 
 The answer is the first line of the text output (the verdict word, the status, how many changed files were judged, and one next step); the base note follows it.
 

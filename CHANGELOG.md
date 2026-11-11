@@ -45,7 +45,7 @@ Scripts that read exit codes or the first line of `verdict`, `gate` or `batch` m
 
 ### Fixed
 
-- Electron fuses: a fuse set by an afterPack hook that calls `@electron/fuses` is no longer reported as missing from the build config. A missing key's finding names the key and where to set it. A new check, `ep-fuses-binary`, reads the fuse state of the built app with the project's own `@electron/fuses`. Without a build or without the tool it reports NOT RUN, never a pass.
+- Electron fuses: a fuse set by an afterPack hook that calls `@electron/fuses` is no longer reported as missing from the build config. A missing key's finding names the key and where to set it. A new check, `ep-fuses-binary`, reads the fuse state of the built app with the project's own `@electron/fuses`. Without a build, without the tool, or in a folder that is not trusted it reports NOT RUN, never a pass. The reader runs the project's own `@electron/fuses`, so it needs `meerkat trust` for the folder (or `MEERKAT_TRUST_PROJECT=1`) and never runs under `MEERKAT_NO_PROJECT_CODE`.
 - `--staged` with nothing staged is NO-RESULT (exit 3, word `NO-RESULT`), with the reason on the first line, not a pass.
 - A run that could not be saved (log folder not writable) says `NOT RECORDED` first, so `meerkat last` and `findings` are not expected to show it. The exit code still follows the judgement alone.
 - `meerkat findings --check <name>` lists the findings a quarantined or pedantic rule hid by default, marked hidden. The gate blocks on them, so the list now shows them too.

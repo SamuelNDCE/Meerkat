@@ -88,7 +88,7 @@ Local modules each file imports (relative imports only).
 - `thorough/desktop.mjs`: `thorough/kit.mjs`
 - `thorough/detectors.mjs`: `lib/findings.mjs`, `lib/which.mjs`, `thorough/kit.mjs`
 - `thorough/doc-drift.mjs`: `thorough/kit.mjs`
-- `thorough/electron-fuse-binary.mjs`: `lib/findings.mjs`
+- `thorough/electron-fuse-binary.mjs`: `lib/findings.mjs`, `lib/trust.mjs`
 - `thorough/electron-plus.mjs`: `thorough/kit.mjs`, `thorough/rules-electron-plus.mjs`, `thorough/rules.mjs`
 - `thorough/engines.mjs`: `thorough/kit.mjs`
 - `thorough/functionality-run.mjs`: `thorough/helper.js`, `thorough/kit.mjs`, `thorough/sandbox.mjs`
