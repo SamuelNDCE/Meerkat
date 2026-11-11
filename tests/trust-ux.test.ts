@@ -103,8 +103,8 @@ describe('meerkat trust', () => {
     expect(errs1).toEqual([want])
     const errs2: string[] = []
     const c2 = await runFrontend(['--app', fx.dir], { env: fx.env, cwd: root, out: () => {}, err: (t: string) => errs2.push(t) })
-    expect(c2).toBe(1)
-    expect(errs2).toEqual([want])
+    expect(c2).toBe(2)
+    expect(errs2).toEqual([`NOT RUN (status 400): ${slash(fx.dir)} is not trusted yet, so its commands did not run. next: meerkat trust --app '${slash(fx.dir)}'`])
     expect(frontendGateLine(fx.env, fx.dir, fx.dir)).toBe(want)
   })
 
