@@ -50,6 +50,10 @@ Scripts that read exit codes or the first line of `verdict`, `gate` or `batch` m
 - A run that could not be saved (log folder not writable) says `NOT RECORDED` first, so `meerkat last` and `findings` are not expected to show it. The exit code still follows the judgement alone.
 - `meerkat findings --check <name>` lists the findings a quarantined or pedantic rule hid by default, marked hidden. The gate blocks on them, so the list now shows them too.
 - The gate summary line names checks that were not configured (a pack the gate added on its own whose tool is missing), so they are no longer hidden in the exit 0 summary. Whether those should fail the gate is still open.
+- `meerkat blast` and `meerkat brief` exit 3 (nothing judged) for a file that is not in the code map or not on disk; the docs said 75 or 2 and now match the code.
+- `meerkat frontend` with every step skipped exits 3 (nothing judged), not 75.
+- `meerkat finding <id>` with no run in that folder exits 3 (nothing judged).
+- `meerkat doctor` puts `Folder: <path>` at the end of its first line.
 - The gate's counts line shows one status: `(status 422, exit 1)`, not two numbers that disagree.
 - `meerkat doctor` starts with the answer: which check is NOT RUN, what it needs, and the folder.
 - Scale: a file that is a FIFO, socket or device is never opened for the project snapshot (opening one blocked until something wrote to it). The branch verdict asks git one batched question for which candidate files exist on the base, instead of one process per file.

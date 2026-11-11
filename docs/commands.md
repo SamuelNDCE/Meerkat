@@ -158,11 +158,11 @@ The same table for every command (`meerkat help` prints it):
 |---|---|
 | 0 | everything passed (`gate`: `PASS`, status 200) |
 | 1 | a finding in a changed file (`gate` and `verdict` `FAIL`, status 422). Also `gate`: `TOOL PROBLEM` (status 503), a check crashed, hung or its tool did not start; never counted as a finding. Other commands: a check failed or could not run |
-| 2 | a usage or configuration error (the message says what to change; status 400). Also: a folder that does not exist or is not a git repository (`gate`, `smoke`), a broken config or pack (`gate`), a file that is not there (`brief`), an unknown or missing finding id (`finding`, `dismiss`, `undismiss`, `fix`) and a verdict usage error, a bad flag or value (`verdict` USAGE; nothing was run) |
+| 2 | a usage or configuration error (the message says what to change; status 400). Also: a folder that does not exist or is not a git repository (`gate`, `smoke`), a broken config or pack (`gate`), an unknown or missing finding id (`finding`, `dismiss`, `undismiss`, `fix`) and a verdict usage error, a bad flag or value (`verdict` USAGE; nothing was run) |
 | 3 | `NO-RESULT`: nothing could be judged. Status 404: an unknown ref or no base (`gate`, `verdict`). Status 204: nothing changed, no check ran on the changed files, or no checks loaded (`gate` says: run `meerkat init` or add a pack). Also `meerkat run` and the presets: the preset selected no checks here. Not a pass |
 | 4 | `verdict` STALE: the branch is more than 20 commits behind its base; refused unless `--allow-stale` |
 | 70 | `gate`: Meerkat itself threw an unexpected error (status 500). One line on stdout and stderr; the stack is in `gate-error-<time>.log` in the Meerkat log folder, never on the terminal |
-| 75 | `INCOMPLETE`, not a pass: the gate waited too long for the cargo lock (status 423) or stopped before it could save its record (status 500); `verdict`: the run stopped early; `meerkat blast` and `meerkat brief`: the file exists but is not in the code map |
+| 75 | `INCOMPLETE`, not a pass: the gate waited too long for the cargo lock (status 423) or stopped before it could save its record (status 500); `verdict`: the run stopped early;
 | 124 | `gate`: the time limit was reached (status 408); `--resume <file>` carries on |
 | 130 | interrupted (status 499) |
 

@@ -1,4 +1,4 @@
-// A frontend run where every step is skipped checked nothing: exit 75 and an explicit not-a-pass line, never 0 (NeuralVault's false pass).
+// A frontend run where every step is skipped checked nothing: exit 3 (nothing judged) and an explicit not-a-pass line, never 0 (NeuralVault's false pass).
 import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -10,7 +10,7 @@ afterAll(() => { for (const d of made) rmSync(d, { recursive: true, force: true 
 const MK = resolve(__dirname, '..', 'bin', 'meerkat.mjs')
 
 describe('frontend with no commands defined', () => {
-  test('every step skipped: exit 75 and says it is not a pass', () => {
+  test('every step skipped: exit 3 (nothing judged) and says it is not a pass', () => {
     const root = mkdtempSync(join(tmpdir(), 'meerkat-fe-')); made.push(root)
     writeFileSync(join(root, 'package.json'), '{"name":"x","version":"1.0.0","private":true}')
     mkdirSync(join(root, 'src'))
@@ -20,7 +20,7 @@ describe('frontend with no commands defined', () => {
     execFileSync('git', ['-C', root, 'add', '-A'])
     execFileSync('git', ['-C', root, '-c', 'user.email=a@b', '-c', 'user.name=t', 'commit', '-qm', 'base'])
     const r = spawnSync(process.execPath, [MK, 'frontend', '--app', root, '--files', 'src/a.tsx'], { encoding: 'utf8', env: { ...process.env, MEERKAT_LOG_DIR: join(root, 'logs') } })
-    expect(r.status).toBe(75)
+    expect(r.status).toBe(3) // nothing judged: every step skipped (exit 3 in the 0.5.4 table)
     expect(r.stdout + r.stderr).toMatch(/NOT a pass: every step was skipped/)
     expect(r.stdout).toMatch(/NOT RUN|skipped/)
   }, 60000)

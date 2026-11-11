@@ -95,7 +95,7 @@ describe('folder line first', () => {
   test('gate on a worktree path prints folder | branch | worktree after the answer line', async () => {
     const lines: string[] = []
     await gateMain(['--base', 'main', '--app', wt], { env, cwd: wt, log: (l: string) => lines.push(l), err: () => {}, banner: true })
-    expect(lines[0]).toMatch(/\(status \d+\)/) // the answer is first; the folder line follows the outcome (changed before 0.5.6)
+    expect(lines[0]).toMatch(/\(status \d+[^)]*\)/) // "(status 422, exit 1)" since 0.5.4 // the answer is first; the folder line follows the outcome (changed before 0.5.6)
     expect(lines).toContain(`folder: ${wt} | branch old | git worktree`)
   }, 180_000)
   test('brief on a worktree path prints it first, also with --ref; --json carries a folder field', () => {

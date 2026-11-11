@@ -27,7 +27,7 @@ describe('doctor, recommend and tools return text', () => {
 
   test('the CLI text for the same report names the folder and what is NOT RUN', () => {
     const t = doctorText(REPORT)
-    expect(t).toContain(`Meerkat doctor: ${HERE}`)
+    expect(t).toContain(`Folder: ${HERE}`)
     expect(t).toContain('NOT RUN: 1')
   })
 

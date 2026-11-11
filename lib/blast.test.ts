@@ -61,8 +61,8 @@ describe('blast counts', () => {
     expect(text).toContain('mentions add')
     expect(run(['src/core/calc.js#nope', '--app', 'app']).lines.join('\n')).toContain('warning')
   })
-  test('exit codes: 75 for an unknown file, 2 for usage errors', () => {
-    expect(run(['src/nothing.js', '--app', 'app']).code).toBe(75)
+  test('exit codes: 3 for a file not in the map (nothing judged), 2 for usage errors', () => {
+    expect(run(['src/nothing.js', '--app', 'app']).code).toBe(3)
     expect(run([]).code).toBe(2)
     expect(run(['a.js', 'b.js']).code).toBe(2)
     expect(run(['a.js', '--wat']).code).toBe(2)

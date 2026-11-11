@@ -122,7 +122,7 @@ Other fields: `schema`, `preExisting`, `known`, `knownFindings`, `reason` and `b
 | 4 | STALE | The base is more than 20 commits ahead. Rebase, or pass `--allow-stale`. |
 | 75 | INCOMPLETE | Not a pass. See the decision guide. |
 
-Two 0.5.4 cases an agent will meet:
+Two cases an agent will meet with this release:
 
 - `--staged` with nothing staged is NO-RESULT (exit 3) with the reason on the first line. Run `git add` first, then verify again.
 - A first line starting `NOT RECORDED:` means the run was judged but not saved, so `meerkat last` and `findings` will not show it. Use the exit code and the printed findings, and fix the log folder's permissions if you need the record.

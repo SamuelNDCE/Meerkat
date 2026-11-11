@@ -190,7 +190,7 @@ describe('P1.5 a self-test is never the last run', () => {
     expect(usedRunLine(first)).toMatch(/^using run .+ \(preset security\)$/)
     const errs: string[] = []
     const code = findingsCommand({ noun: 'finding', id: 'abcd', flags: {} }, { out: () => {}, err: (t: string) => errs.push(t), env })
-    expect(code).toBe(2)
+    expect(code).toBe(3) // nothing judged: no run in that folder (3, the 0.5.4 table), not a usage error
     expect(errs.join('\n')).toMatch(/No run has been saved for|20261101/) // read from another folder: it names that folder, never another project's run
     expect(errs.join('\n')).not.toContain(basename(second))
   })
@@ -215,7 +215,8 @@ describe('P3.11 gate output is failures plus one summary line by default', () =>
     expect(t).toContain('failing-check')
     expect(t).not.toMatch(/PASS\s+passing-check/)
     expect(t).not.toContain('unconfigured-check')
-    expect(t).toMatch(/MEERKAT gate: 1 blocking, 0 pre-existing \(not in the change\), 1 passed, 0 not run, exit 1/)
+    // Since 0.5.4 the summary also names a count of checks not configured (added packs whose tool is missing), when there are any.
+    expect(t).toMatch(/MEERKAT gate: 1 blocking, 0 pre-existing \(not in the change\), 1 passed, 0 not run(, \d+ not configured)?, exit 1/)
     expect(gateText('gate', out, 'staged files', { verbose: true })).toMatch(/gate: 1 passed, 1 failed, 0 tool failure\(s\), 0 not run, 1 not configured, exit 1/)
   })
   test('--verbose (verbose: true) lists every check again', () => {
