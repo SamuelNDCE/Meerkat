@@ -48,7 +48,7 @@ describe('worktree trust carry', () => {
     expect((await trust(['--yes', main])).code).toBe(0)
     const s = await trust(['--status', wt])
     expect(s.code).toBe(0)
-    expect(s.lines[0].startsWith(`TRUSTED (inherited from ${slash(main)}): `)).toBe(true)
+    expect(s.lines[0].startsWith(`TRUSTED (inherited from ${slash(main)}, registered worktree `)).toBe(true)
   })
 
   test('(b) a changed commands block in the worktree is NOT TRUSTED, with before/after, exit 1', async () => {

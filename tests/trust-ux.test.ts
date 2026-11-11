@@ -48,7 +48,8 @@ describe('meerkat trust', () => {
     expect(s.code).toBe(0)
     expect(s.lines[0]).toMatch(/^TRUSTED: /)
     const l = await trust(['--list'], fx.env, root)
-    expect(l.lines.length).toBe(1)
+    expect(l.lines.length).toBe(2) // the folder's own record plus the shared record (any worktree of ...)
+    expect(l.lines[1]).toMatch(/^any worktree of /)
   })
 
   test('(b) editing the commands turns status into NOT TRUSTED with before and after, exit 1', async () => {
