@@ -49,7 +49,7 @@ describe('verdict and top record into the branch memory; notes survive', () => {
   const d = repo('flow')
 
   test('a verdict run writes the record, --show prints it in one short block', () => {
-    expect(cli(['memory-branch', '--show'], d).code).toBe(1)
+    expect(cli(['memory-branch', '--show'], d).code).toBe(3)
     expect(cli(['memory-branch', '--show'], d).out).toMatch(/^NO-RECORD: nothing is remembered about branch feat\/x yet\. next:/)
     const v = cli(['verdict', '--base', 'main'], d)
     expect([0, 1]).toContain(v.code)

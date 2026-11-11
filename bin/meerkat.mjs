@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // `meerkat`: the command line front door. Plans the command with lib/cli.mjs, then does it.
-// Exit codes: 0 passed, 1 a check failed or could not run, 2 a usage or configuration error, 3 nothing to run (run and presets), 75 could not start or target not found (gate, smoke, blast), 130 interrupted.
+// Exit codes: the one table in lib/exitcodes.mjs (0 passed, 1 a finding or a failed check, 2 usage or configuration error, 3 nothing could be judged, 4 stale base, 70 Meerkat's own error, 75 incomplete, 124 time limit, 130 interrupted).
 // Results go to stdout; notes, progress and errors go to stderr.
 import { helpText, loadPresets, packAdd, packRemove, planCommand, presetsText, rootCommand } from '../lib/cli.mjs'
 import { unknownOption } from '../lib/flagcheck.mjs'
@@ -11,6 +11,9 @@ import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { addRecent } from '../lib/userconfig.mjs'
 import { VERSION } from '../lib/version.mjs'
 import { startCostMeter } from '../lib/cost.mjs'
+import { dataDir } from '../lib/datadir.mjs'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 // Everything below is loaded only by the command that needs it: `meerkat --help` and the look-up commands must not pay for the menu, the screens, the runner or the update code.
 const lazy = (path) => {
@@ -120,14 +123,14 @@ async function main() {
     case 'root': {
       const r = rootCommand(plan.action, plan.folder, env)
       out(r.text)
-      return r.ok ? 0 : 1
+      return r.ok ? 0 : 2 // a root command fails only on a bad folder or a missing action
     }
     case 'ai': {
       if (plan.action === 'hooks') { const h = await import('../lib/aihooks.mjs'); out(h.hooksText()); process.stderr.write(h.hooksNotes() + '\n'); return 0 }
       const { aiStatus, aiTest, aiUse } = await aiMod()
       const r = plan.action === 'status' ? { ok: true, text: aiStatus(env) } : plan.action === 'use' ? aiUse(plan.args, env) : plan.action === 'test' ? await aiTest(env) : { ok: false, text: 'usage: meerkat ai status | use <claude|openai|openrouter> [model] | test' }
       out(plan.json ? JSON.stringify({ ok: r.ok, text: r.text }, null, 2) : r.text)
-      return r.ok ? 0 : 1
+      return r.ok ? 0 : plan.action === 'test' ? 1 : 2 // a failed test is a failed check; anything else is a bad action or value
     }
     case 'menu':
       return (await menuMod()).runMenu({ cwd, env, folder: plan.folder ?? null, updateCheck })
@@ -137,14 +140,14 @@ async function main() {
       if (plan.action === 'list') return (await commandsMod()).execute({ kind: 'noun', noun: 'pack', verb: 'list', folder: plan.folder ?? cwd, flags: {} }, ctx)
       const r = plan.action === 'add' ? packAdd(plan.folder, env) : packRemove(plan.folder, env)
       out(r.text)
-      return r.ok ? 0 : 1
+      return r.ok ? 0 : 2 // a folder that is not a project
     }
     case 'last':
     case 'why': {
       const { runLog, showRun } = await runsMod()
       const r = plan.kind === 'last' ? showRun(env, undefined) : runLog(env, plan.args[1], plan.args[2])
       ;(r.ok ? out : err)(r.text)
-      return r.ok ? 0 : 1
+      return r.ok ? 0 : 3 // no saved run to show: nothing to judge
     }
     case 'logs': {
       const { latestRunDir, logRoot } = await runlogMod()

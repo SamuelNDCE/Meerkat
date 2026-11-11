@@ -189,7 +189,7 @@ describe('code-map queries', () => {
   })
   test('who-calls not found says what was searched', () => {
     const r = cli(['who-calls', 'nothingHere'], d)
-    expect(r.code).toBe(75)
+    expect(r.code).toBe(3)
     expect(r.out).toMatch(/no call of nothingHere\( found\. Searched the text of \d+ mapped files/)
   })
   test('deps lists the resolved imports, and the alias used', () => {
@@ -207,7 +207,7 @@ describe('code-map queries', () => {
     const a = cli(['tests-for', 'src/app.js'], d)
     expect(a.out).toMatch(/tests\/app\.test\.js\s+1\s+names it/)
     const none = cli(['tests-for', 'src/second.js'], d)
-    expect(none.code).toBe(75)
+    expect(none.code).toBe(3)
     expect(none.out).toMatch(/no test imports or names src\/second\.js\. Searched \d+ test files/)
   })
 })
@@ -219,7 +219,7 @@ describe('an early stop is never a pass', () => {
     const v = cli(['verdict', '--max-seconds', '30', '--base', 'main'], d)
     expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
     expect(v.out).not.toMatch(/^PASS/m)
-    expect(v.code).toBe(75)
+    expect(v.code).toBe(124)
     const t = cli(['top', '--max-seconds', '30', '--base', 'main'], d)
     expect(t.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
     expect(t.code).not.toBe(0)
@@ -227,15 +227,15 @@ describe('an early stop is never a pass', () => {
 })
 
 describe('the verdict time limit keeps partial results', () => {
-  test('a sleeping check and a 3 s limit print INCOMPLETE with counts and exit 75, not NO-RESULT alone', () => {
+  test('a sleeping check and a 3 s limit print INCOMPLETE with counts and exit 124, not NO-RESULT alone', () => {
     const d = join(root, 'gate-fx')
     const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '30' })
     expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished, \d+ blocking so far \(not a pass\)/)
     expect(v.out).not.toMatch(/NO-RESULT/)
-    expect(v.code).toBe(75)
+    expect(v.code).toBe(124)
     const t = cli(['top', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '30' })
     expect(t.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
-    expect(t.code).toBe(75)
+    expect(t.code).toBe(124)
   }, 90000)
 })
 
@@ -285,7 +285,7 @@ describe('a stop lists every blocking place', () => {
     expect(v.out).toMatch(/a\.js:1 blocker: bad thing here/)
     expect(v.out).not.toMatch(/NO-RESULT/)
     expect(v.err).toMatch(/running: nap \(\d+s\)/)
-    expect(v.code).toBe(75)
+    expect(v.code).toBe(124)
   }, 90000)
 })
 
@@ -361,7 +361,7 @@ describe('INCOMPLETE names what did not run and labels unclassified findings', (
   test('a run stopped before the base comparison lists the unfinished checks and the findings are unclassified', () => {
     const d = join(root, 'stop-fx')
     const v = cli(['verdict', '--base', 'main'], d, { MEERKAT_VERDICT_TIMEOUT_S: '30' })
-    expect(v.code).toBe(75)
+    expect(v.code).toBe(124)
     expect(v.out).toMatch(/INCOMPLETE \d+ of \d+ checks finished/)
     expect(v.out).toMatch(/not run \(\d+\): .*nap/)
     expect(v.out).toMatch(/unclassified \(base comparison did not finish\)/)
