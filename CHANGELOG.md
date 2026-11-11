@@ -50,6 +50,7 @@ Scripts that read exit codes or the first line of `verdict`, `gate` or `batch` m
 - A run that could not be saved (log folder not writable) says `NOT RECORDED` first, so `meerkat last` and `findings` are not expected to show it. The exit code still follows the judgement alone.
 - `meerkat findings --check <name>` lists the findings a quarantined or pedantic rule hid by default, marked hidden. The gate blocks on them, so the list now shows them too.
 - The gate summary line names checks that were not configured (a pack the gate added on its own whose tool is missing), so they are no longer hidden in the exit 0 summary. Whether those should fail the gate is still open.
+- `meerkat batch --dry-run` no longer plans a branch with no changes against the base to merge ("nothing to merge"). The plan prints the base and the range for each branch; an unreadable branch says "unreadable branch: git diff failed".
 - `meerkat blast` and `meerkat brief` exit 3 (nothing judged) for a file that is not in the code map or not on disk; the docs said 75 or 2 and now match the code.
 - `meerkat frontend` with every step skipped exits 3 (nothing judged), not 75.
 - `meerkat finding <id>` with no run in that folder exits 3 (nothing judged).
