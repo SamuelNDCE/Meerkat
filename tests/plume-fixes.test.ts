@@ -145,6 +145,8 @@ describe('c. gate --staged with nothing staged: the reason leads', () => {
 })
 
 describe('d. fuses set in a build hook, and read from the built binary', () => {
+  // The reader runs the project's own @electron/fuses, so these tests run as a trusted project (MEERKAT_TRUST_PROJECT=1); the trust tests below cover the untrusted case.
+  const TRUST = { MEERKAT_TRUST_PROJECT: '1' }
   const pkg = electronPkg({ electronFuses: { runAsNode: false } })
   test('a hook that sets grantFileProtocolExtraPrivileges with @electron/fuses is accepted', () => {
     const hook = "const { flipFuses, FuseV1Options } = require('@electron/fuses')\nexports.default = (c) => flipFuses(c.appOutDir, { [FuseV1Options.GrantFileProtocolExtraPrivileges]: false })\n"
@@ -167,7 +169,7 @@ describe('d. fuses set in a build hook, and read from the built binary', () => {
     return d
   }
   test('no built binary is NOT RUN (75), never a pass', () => {
-    const r = fuseBinaryCheck(withBinary(null), {})
+    const r = fuseBinaryCheck(withBinary(null), TRUST)
     expect(r.code).toBe(75)
     expect(r.lines[0]).toMatch(/^NOT RUN: no built Electron app was found.*Run the build first/)
   })
@@ -175,12 +177,12 @@ describe('d. fuses set in a build hook, and read from the built binary', () => {
     expect(fuseBinaryCheck(withBinary(null), { MEERKAT_ELECTRON_BINARY: 'release/nope.exe' }).code).toBe(75)
   })
   test('@electron/fuses missing from the project is NOT RUN (tool missing)', () => {
-    const r = fuseBinaryCheck(withBinary({ 0: 0 }, false), {})
+    const r = fuseBinaryCheck(withBinary({ 0: 0 }, false), TRUST)
     expect(r.code).toBe(75)
     expect(r.lines[0]).toMatch(/tool missing/)
   })
   test('a key that is on in the binary is a finding that reports each fuse state', () => {
-    const r = fuseBinaryCheck(withBinary({ 0: 0, 1: 1, 2: 0, 3: 0, 4: 1, 5: 1, 7: 1 }), {})
+    const r = fuseBinaryCheck(withBinary({ 0: 0, 1: 1, 2: 0, 3: 0, 4: 1, 5: 1, 7: 1 }), TRUST)
     expect(r.code).toBe(1)
     const text = r.lines.join('\n')
     expect(text).toMatch(/GrantFileProtocolExtraPrivileges: on \(secure value: off\)/)
@@ -188,6 +190,15 @@ describe('d. fuses set in a build hook, and read from the built binary', () => {
     expect(text).toMatch(/MEERKAT-FINDING medium ep-fuse-binary-grant-file-protocol-extra-privileges .*:0 GrantFileProtocolExtraPrivileges is on/)
   })
   test('every fuse secure is a pass', () => {
-    expect(fuseBinaryCheck(withBinary({ 0: 0, 1: 1, 2: 0, 3: 0, 4: 1, 5: 1, 7: 0 }), {}).code).toBe(0)
+    expect(fuseBinaryCheck(withBinary({ 0: 0, 1: 1, 2: 0, 3: 0, 4: 1, 5: 1, 7: 0 }), TRUST).code).toBe(0)
+  })
+  test('an untrusted folder is NOT RUN and never runs the project tool', () => {
+    const r = fuseBinaryCheck(withBinary({ 0: 0, 1: 1, 2: 0, 3: 0, 4: 1, 5: 1, 7: 0 }), {})
+    expect(r.code).toBe(75)
+    expect(r.lines[0]).toMatch(/^NOT RUN: reading the binary runs @electron\/fuses .* not trusted/)
+  })
+  test('MEERKAT_NO_PROJECT_CODE keeps the reader from running even when trusted', () => {
+    const r = fuseBinaryCheck(withBinary({ 0: 0, 1: 1, 2: 0, 3: 0, 4: 1, 5: 1, 7: 0 }), { MEERKAT_TRUST_PROJECT: '1', MEERKAT_NO_PROJECT_CODE: '1' })
+    expect(r.code).toBe(75)
   })
 })

@@ -8,6 +8,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { formatFindingLine } from '../lib/findings.mjs'
+import { hashFiles, isTrusted, trustedFiles } from '../lib/trust.mjs'
 
 export const NOT_RUN = 75
 // The secure value of each fuse, by the name @electron/fuses uses.
@@ -44,6 +45,18 @@ export function findBinary(root, env = process.env) {
 const READER = "const f=require('@electron/fuses');const names={};for(const [k,v] of Object.entries(f.FuseV1Options)){if(typeof v==='number')names[v]=k}const st={0:'off',1:'on',2:'removed',3:'inherit'};f.getCurrentFuseWire(process.argv[1]).then((w)=>{const o={};for(const [k,v] of Object.entries(w)){if(names[k]!==undefined)o[names[k]]=st[v]??String(v)}console.log(JSON.stringify(o))},(e)=>{console.error(String(e&&e.message||e));process.exit(3)})"
 
 // Returns { code, lines }.
+// Reading the binary runs @electron/fuses from the PROJECT's node_modules, which is the project's own code. So it runs only where the project's
+// own check code would run: not under MEERKAT_NO_PROJECT_CODE, and only when the folder is trusted (`meerkat trust`), or when whoever runs
+// Meerkat set MEERKAT_TRUST_PROJECT=1. A project with no check code of its own has nothing to trust yet, so it needs that env var.
+export function fusesReaderTrusted(root, env = process.env) {
+  if (env.MEERKAT_NO_PROJECT_CODE === '1') return false
+  if (env.MEERKAT_TRUST_PROJECT === '1') return true
+  const path = resolve(root).replace(/\\/g, '/')
+  const tf = trustedFiles({ projectDir: root, where: root, extraChecks: [] })
+  if (tf.refuse || !tf.files.length) return false
+  return isTrusted(env, path, hashFiles(tf.files, path))
+}
+
 export function fuseBinaryCheck(root, env = process.env) {
   try {
     if (!/electron/i.test(readFileSync(join(root, 'package.json'), 'utf8'))) return { code: 0, lines: ['not an Electron project, so there is no binary to read'] }
@@ -52,6 +65,7 @@ export function fuseBinaryCheck(root, env = process.env) {
   }
   const bin = findBinary(root, env)
   if (!bin || !existsSync(bin)) return { code: NOT_RUN, lines: [`NOT RUN: ${bin ? `the binary ${bin} does not exist` : 'no built Electron app was found (looked in release, dist and out for win-unpacked or a .app)'}. Run the build first, then run this check again.`] }
+  if (!fusesReaderTrusted(root, env)) return { code: NOT_RUN, lines: ['NOT RUN: reading the binary runs @electron/fuses from this project, which is the project\'s own code, and this folder is not trusted (or MEERKAT_NO_PROJECT_CODE is set). Run meerkat trust in this folder, or set MEERKAT_TRUST_PROJECT=1 if whoever runs Meerkat owns the repository'] }
   if (!existsSync(join(root, 'node_modules', '@electron', 'fuses'))) return { code: NOT_RUN, lines: ['NOT RUN: @electron/fuses is not installed in this project (tool missing), so the fuse state of the built binary cannot be read. Install it with: npm install --save-dev @electron/fuses'] }
   const rel = relative(root, bin).split('\\').join('/') || 'binary'
   const r = spawnSync(process.execPath, ['-e', READER, bin], { cwd: root, encoding: 'utf8', timeout: 60_000 })
