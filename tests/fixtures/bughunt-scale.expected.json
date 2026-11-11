@@ -35,7 +35,6 @@
     {
       "check": "cors-wildcard",
       "status": "pass",
-      "seconds": 0.49,
       "cached": false,
       "detail": "cors-wildcard: no CORS setting lets any site read responses that carry credentials",
       "places": []
@@ -43,7 +42,6 @@
     {
       "check": "cookie-flags",
       "status": "pass",
-      "seconds": 0.21,
       "cached": false,
       "detail": "cookie-flags: every cookie that is set has HttpOnly, Secure and SameSite",
       "places": []
@@ -51,7 +49,6 @@
     {
       "check": "jwt-weak",
       "status": "pass",
-      "seconds": 0.16,
       "cached": false,
       "detail": "jwt-weak: tokens are checked with a real signature and a secret kept out of the code",
       "places": []
@@ -59,7 +56,6 @@
     {
       "check": "eslint",
       "status": "skipped",
-      "seconds": 0.03,
       "cached": false,
       "detail": "no eslint configuration in this project, so eslint has no rules of the project's to apply",
       "places": []
@@ -67,7 +63,6 @@
     {
       "check": "duplicate-code",
       "status": "pass",
-      "seconds": 0.16,
       "cached": false,
       "detail": "duplicate-code: duplication is inside the limit",
       "places": []
@@ -75,7 +70,6 @@
     {
       "check": "git-history-secrets",
       "status": "pass",
-      "seconds": 0.47,
       "cached": false,
       "detail": "git-history-secrets: no secret-looking values in the added lines of the last 200 commits",
       "places": []
@@ -83,7 +77,6 @@
     {
       "check": "env-files-in-history",
       "status": "pass",
-      "seconds": 0.59,
       "cached": false,
       "detail": "env-files-in-history: no key or environment files were ever committed",
       "places": []
@@ -91,7 +84,6 @@
     {
       "check": "dead-code",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "advisory, not enforced (no .meerkat-budgets.json yet): src/d3/m7.js: \"m7\" is exported but nothing else mentions it",
       "places": []
@@ -99,7 +91,6 @@
     {
       "check": "long-functions",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "long-functions: no function is over 80 lines",
       "places": []
@@ -107,7 +98,6 @@
     {
       "check": "hardcoded-ip",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "hardcoded-ip: no public IP address is written into the code",
       "places": []
@@ -115,7 +105,6 @@
     {
       "check": "debug-enabled",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "debug-enabled: no debug mode is switched on where it should be off",
       "places": []
@@ -123,7 +112,6 @@
     {
       "check": "sql-concat",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "sql-concat: no SQL statement is built by joining text and values together",
       "places": []
@@ -131,7 +119,6 @@
     {
       "check": "path-traversal-pattern",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "path-traversal-pattern: no file is read or sent with a path straight from the request",
       "places": []
@@ -139,7 +126,6 @@
     {
       "check": "open-redirect-pattern",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "open-redirect-pattern: no redirect goes to an address taken from the request unchecked",
       "places": []
@@ -147,7 +133,6 @@
     {
       "check": "regex-dos",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "regex-dos: no regular expression has a repeat inside a repeat",
       "places": []
@@ -155,7 +140,6 @@
     {
       "check": "weak-crypto-modes",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "weak-crypto-modes: no weak cipher, ECB mode, fixed key or guessable token is used",
       "places": []
@@ -163,7 +147,6 @@
     {
       "check": "credentials-in-urls",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "credentials-in-urls: no web address carries a user name and password",
       "places": []
@@ -171,7 +154,6 @@
     {
       "check": "xxe-and-deserialize",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "xxe-and-deserialize: XML parsers are locked down and no untrusted data is deserialized",
       "places": []
@@ -179,7 +161,6 @@
     {
       "check": "install-scripts",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "install-scripts: no install scripts run on install (or each one is accepted)",
       "places": []
@@ -187,7 +168,6 @@
     {
       "check": "typosquat-names",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "typosquat-names: no dependency name looks like a misspelt popular package",
       "places": []
@@ -195,7 +175,6 @@
     {
       "check": "docker-base-pinning",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "docker-base-pinning: base images are pinned, nothing is piped into a shell, and the final stage has a USER",
       "places": []
@@ -203,7 +182,6 @@
     {
       "check": "actions-secrets-echo",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "actions-secrets-echo: no workflow echoes or leaks secrets, or keeps git credentials it does not need",
       "places": []
@@ -211,7 +189,6 @@
     {
       "check": "requirements-hashes",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "requirements-hashes: installs are pinned to a version or hash, and no source is plain http or unpinned git",
       "places": []
@@ -219,7 +196,6 @@
     {
       "check": "lockfile-registry-hosts",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "lockfile-registry-hosts: every locked package comes from the registry the project chose",
       "places": []
@@ -227,7 +203,6 @@
     {
       "check": "codeowners-valid",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "codeowners-valid: skipped: there is no CODEOWNERS file",
       "places": []
@@ -235,7 +210,6 @@
     {
       "check": "license-matches",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "license-matches: skipped: there is no LICENSE file",
       "places": []
@@ -243,7 +217,6 @@
     {
       "check": "dependency-updates-configured",
       "status": "wide",
-      "seconds": 0.03,
       "cached": false,
       "detail": "no dependency update bot is configured (.github/dependabot.yml or a Renovate config), so dependency fixes arrive only when someone remembers  [full output: <run>",
       "places": []
@@ -251,7 +224,6 @@
     {
       "check": "generated-files-tracked",
       "status": "pass",
-      "seconds": 0.17,
       "cached": false,
       "detail": "generated-files-tracked: no build or dependency output is tracked",
       "places": []
@@ -259,7 +231,6 @@
     {
       "check": "case-conflicts",
       "status": "pass",
-      "seconds": 0.16,
       "cached": false,
       "detail": "case-conflicts: no two tracked paths differ only by case",
       "places": []
@@ -267,7 +238,6 @@
     {
       "check": "long-paths",
       "status": "pass",
-      "seconds": 0.13,
       "cached": false,
       "detail": "long-paths: every tracked path is under 200 characters",
       "places": []
@@ -275,7 +245,6 @@
     {
       "check": "reserved-names",
       "status": "pass",
-      "seconds": 0.14,
       "cached": false,
       "detail": "reserved-names: no name is one Windows cannot use",
       "places": []
@@ -283,7 +252,6 @@
     {
       "check": "symlinks-tracked",
       "status": "pass",
-      "seconds": 0.14,
       "cached": false,
       "detail": "symlinks-tracked: no symbolic links are tracked",
       "places": []
@@ -291,7 +259,6 @@
     {
       "check": "exec-bits",
       "status": "pass",
-      "seconds": 0.1,
       "cached": false,
       "detail": "exec-bits: executable bits match the files that need them",
       "places": []
@@ -299,7 +266,6 @@
     {
       "check": "package-fields",
       "status": "wide",
-      "seconds": 0.02,
       "cached": false,
       "detail": "package.json has no \"license\"  [full output: <run>",
       "places": [
@@ -312,7 +278,6 @@
     {
       "check": "lockfile-sync",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "lockfile-sync: each lockfile lists every dependency its manifest declares (or there was nothing to compare)",
       "places": []
@@ -320,7 +285,6 @@
     {
       "check": "deprecated-deps",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "deprecated-deps: skipped, there is no package-lock.json",
       "places": []
@@ -328,7 +292,6 @@
     {
       "check": "risky-code",
       "status": "fail",
-      "seconds": 0.12,
       "cached": false,
       "detail": "src/d3/m3.js:2 eval() runs text as code  [if it is safe, accept it by adding this line to .meerkat-risky-allow: src/d3/m3.js:2 # reason: say why it is safe]  [full output: <run>",
       "places": [
@@ -362,7 +325,6 @@
     {
       "check": "workflow-security",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "workflow-security: workflows pin their actions, limit permissions and keep event text out of commands",
       "places": []
@@ -370,7 +332,6 @@
     {
       "check": "dependency-pinning",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "dependency-pinning: every dependency names a version",
       "places": []
@@ -378,7 +339,6 @@
     {
       "check": "lockfile-integrity",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "lockfile-integrity: every locked package is fetched securely and checksummed",
       "places": []
@@ -386,7 +346,6 @@
     {
       "check": "secret-scan",
       "status": "pass",
-      "seconds": 0.53,
       "cached": false,
       "detail": "PASS: no secrets found in 22 files scanned (0 NOT SCANNED: 0 binary skipped by design, 0 too large or unreadable)",
       "places": []
@@ -394,7 +353,6 @@
     {
       "check": "skipped-tests",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "skipped-tests: no test is skipped",
       "places": []
@@ -402,7 +360,6 @@
     {
       "check": "focused-tests",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "focused-tests: no test is left focused",
       "places": []
@@ -410,7 +367,6 @@
     {
       "check": "empty-catch",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "empty-catch: no error handler is empty",
       "places": []
@@ -418,7 +374,6 @@
     {
       "check": "duplicate-test-names",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "duplicate-test-names: every test in a file has its own name",
       "places": []
@@ -426,7 +381,6 @@
     {
       "check": "semver-valid",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "semver-valid: every version number is valid",
       "places": []
@@ -434,7 +388,6 @@
     {
       "check": "shell-hygiene",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "shell-hygiene: every shell script stops on errors and uses LF line endings",
       "places": []
@@ -442,7 +395,6 @@
     {
       "check": "makefile-tabs",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "makefile-tabs: recipes use tabs and the common targets are .PHONY",
       "places": []
@@ -450,7 +402,6 @@
     {
       "check": "markdown-anchors",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "markdown-anchors: every same-page #anchor link matches a heading",
       "places": []
@@ -458,7 +409,6 @@
     {
       "check": "changelog-vs-version",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "changelog-vs-version: skipped: needs both package.json and CHANGELOG.md",
       "places": []
@@ -466,7 +416,6 @@
     {
       "check": "i18n-keys-match",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "i18n-keys-match: every locale file has the same keys as the largest one",
       "places": []
@@ -474,7 +423,6 @@
     {
       "check": "i18n-placeholders",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "i18n-placeholders: every translation uses the same placeholders as the reference",
       "places": []
@@ -482,7 +430,6 @@
     {
       "check": "json-duplicate-keys",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "json-duplicate-keys: no JSON object repeats a key",
       "places": []
@@ -490,7 +437,6 @@
     {
       "check": "csv-consistent",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "csv-consistent: every CSV row has as many columns as its header",
       "places": []
@@ -498,7 +444,6 @@
     {
       "check": "dead-assets",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "dead-assets: no image or font files under public, assets or static",
       "places": []
@@ -506,7 +451,6 @@
     {
       "check": "large-json-or-data",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "large-json-or-data: no data file is over 512 KB",
       "places": []
@@ -514,7 +458,6 @@
     {
       "check": "unicode-control-chars",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "unicode-control-chars: no bidirectional or invisible characters in tracked text",
       "places": []
@@ -522,7 +465,6 @@
     {
       "check": "yaml-valid",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "yaml-valid: every tracked YAML file reads as valid YAML structure",
       "places": []
@@ -530,7 +472,6 @@
     {
       "check": "toml-valid",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "toml-valid: every tracked TOML file reads as valid TOML structure",
       "places": []
@@ -538,7 +479,6 @@
     {
       "check": "gitignored-but-tracked",
       "status": "pass",
-      "seconds": 0.28,
       "cached": false,
       "detail": "gitignored-but-tracked: no ignored file is still tracked",
       "places": []
@@ -546,7 +486,6 @@
     {
       "check": "compose-hygiene",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "compose-hygiene: every Compose file pins its images and avoids the risky settings",
       "places": []
@@ -554,7 +493,6 @@
     {
       "check": "ci-timeouts",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "ci-timeouts: every workflow job sets a timeout",
       "places": []
@@ -562,7 +500,6 @@
     {
       "check": "ci-node-version-pinned",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "ci-node-version-pinned: every setup action pins its runtime version",
       "places": []
@@ -570,7 +507,6 @@
     {
       "check": "node-engines",
       "status": "wide",
-      "seconds": 0.02,
       "cached": false,
       "detail": "package.json does not declare engines.node, so the Node version the code needs is not written down  [full output: <run>",
       "places": [
@@ -583,7 +519,6 @@
     {
       "check": "tsconfig-strict",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "tsconfig-strict: skipped: the repo has no TypeScript source files",
       "places": []
@@ -591,7 +526,6 @@
     {
       "check": "sensitive-files",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "sensitive-files: no environment files, keys or tokens are tracked",
       "places": []
@@ -599,7 +533,6 @@
     {
       "check": "unsafe-rust",
       "status": "pass",
-      "seconds": 0.06,
       "cached": false,
       "detail": "unsafe-rust: every unsafe block says why it is safe (or there are none)",
       "places": []
@@ -607,7 +540,6 @@
     {
       "check": "large-files",
       "status": "pass",
-      "seconds": 0.1,
       "cached": false,
       "detail": "large-files: nothing found",
       "places": []
@@ -615,7 +547,6 @@
     {
       "check": "lockfiles",
       "status": "wide",
-      "seconds": 0.07,
       "cached": false,
       "detail": "package.json without a tracked lockfile: installs are not reproducible  [full output: <run>",
       "places": [
@@ -628,7 +559,6 @@
     {
       "check": "json-valid",
       "status": "pass",
-      "seconds": 0.07,
       "cached": false,
       "detail": "json-valid: every tracked JSON file parses",
       "places": []
@@ -636,7 +566,6 @@
     {
       "check": "conflict-markers",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "conflict-markers: no merge-conflict markers left in files",
       "places": []
@@ -644,7 +573,6 @@
     {
       "check": "scripts-resolve",
       "status": "pass",
-      "seconds": 0.06,
       "cached": false,
       "detail": "scripts-resolve: every file an npm script runs exists",
       "places": []
@@ -652,7 +580,6 @@
     {
       "check": "links",
       "status": "pass",
-      "seconds": 0.08,
       "cached": false,
       "detail": "links: every relative link in the documents resolves",
       "places": []
@@ -660,7 +587,6 @@
     {
       "check": "broken-imports",
       "status": "pass",
-      "seconds": 0.21,
       "cached": false,
       "detail": "broken-imports: every relative import resolves to a file",
       "places": []
@@ -668,7 +594,6 @@
     {
       "check": "key-in-config",
       "status": "pass",
-      "seconds": 0.44,
       "cached": false,
       "detail": "key-in-config: no key-shaped string is assigned to a key-like name",
       "places": []
@@ -676,7 +601,6 @@
     {
       "check": "test-no-assert",
       "status": "pass",
-      "seconds": 0.42,
       "cached": false,
       "detail": "test-no-assert: every test asserts something",
       "places": []
@@ -684,7 +608,6 @@
     {
       "check": "img-alt-missing",
       "status": "pass",
-      "seconds": 0.44,
       "cached": false,
       "detail": "img-alt-missing: every image has an alt attribute",
       "places": []
@@ -692,7 +615,6 @@
     {
       "check": "scripts-binaries",
       "status": "pass",
-      "seconds": 0.37,
       "cached": false,
       "detail": "scripts-binaries: every program an npm script starts with is installed",
       "places": []
@@ -700,7 +622,6 @@
     {
       "check": "payment-status-unchecked",
       "status": "pass",
-      "seconds": 0.52,
       "cached": false,
       "detail": "payment-status-unchecked: every awaited payment call has its result or error checked",
       "places": []
@@ -708,7 +629,6 @@
     {
       "check": "ui-static",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "ui-static: images have alt text, pages have a language, title and viewport",
       "places": []
@@ -716,7 +636,6 @@
     {
       "check": "file-length",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "file-length: no file is over 2000 lines",
       "places": []
@@ -724,7 +643,6 @@
     {
       "check": "deep-nesting",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "deep-nesting: no code is nested deeper than 6 levels",
       "places": []
@@ -732,7 +650,6 @@
     {
       "check": "commented-out-code",
       "status": "pass",
-      "seconds": 0.06,
       "cached": false,
       "detail": "commented-out-code: no run of three or more commented-out code lines",
       "places": []
@@ -740,7 +657,6 @@
     {
       "check": "many-parameters",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "many-parameters: no function takes more than 6 parameters",
       "places": []
@@ -748,7 +664,6 @@
     {
       "check": "cyclomatic-complexity",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "cyclomatic-complexity: no function is above complexity 15",
       "places": []
@@ -756,7 +671,6 @@
     {
       "check": "js-eqeqeq",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "js-eqeqeq: comparisons use === and !== (except against null)",
       "places": []
@@ -764,7 +678,6 @@
     {
       "check": "js-missing-await",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "js-missing-await: every call to a same-file async function is awaited, returned or chained",
       "places": []
@@ -772,7 +685,6 @@
     {
       "check": "js-loop-bound",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "js-loop-bound: no loop runs one past the end of the array it indexes",
       "places": []
@@ -780,7 +692,6 @@
     {
       "check": "js-find-undefined",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "js-find-undefined: every find() or map get() result is checked before a property is read",
       "places": []
@@ -788,7 +699,6 @@
     {
       "check": "js-await-in-loop",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "js-await-in-loop: no loop awaits each step in turn",
       "places": []
@@ -796,7 +706,6 @@
     {
       "check": "js-unhandled-promise",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "js-unhandled-promise: promise chains handle their rejections",
       "places": []
@@ -804,7 +713,6 @@
     {
       "check": "js-prototype-pollution",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "js-prototype-pollution: no assignment reaches Object.prototype",
       "places": []
@@ -812,7 +720,6 @@
     {
       "check": "electron-node-integration",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "electron-node-integration: not an Electron app, so there is nothing to check",
       "places": []
@@ -820,7 +727,6 @@
     {
       "check": "electron-context-isolation",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "electron-context-isolation: not an Electron app, so there is nothing to check",
       "places": []
@@ -828,7 +734,6 @@
     {
       "check": "electron-web-security",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "electron-web-security: not an Electron app, so there is nothing to check",
       "places": []
@@ -836,7 +741,6 @@
     {
       "check": "electron-remote-module",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "electron-remote-module: not an Electron app, so there is nothing to check",
       "places": []
@@ -844,7 +748,6 @@
     {
       "check": "electron-open-external",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "electron-open-external: not an Electron app, so there is nothing to check",
       "places": []
@@ -852,7 +755,6 @@
     {
       "check": "electron-csp-header",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "electron-csp-header: not an Electron app, so there is nothing to check",
       "places": []
@@ -860,7 +762,6 @@
     {
       "check": "electron-ipc-validation",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "electron-ipc-validation: not an Electron app, so there is nothing to check",
       "places": []
@@ -868,7 +769,6 @@
     {
       "check": "electron-preload-exposure",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "electron-preload-exposure: not an Electron app, so there is nothing to check",
       "places": []
@@ -876,7 +776,6 @@
     {
       "check": "electron-navigation-guards",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "electron-navigation-guards: not an Electron app, so there is nothing to check",
       "places": []
@@ -884,7 +783,6 @@
     {
       "check": "electron-updater-https",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "electron-updater-https: not an Electron app, so there is nothing to check",
       "places": []
@@ -892,7 +790,6 @@
     {
       "check": "electron-devtools-prod",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "electron-devtools-prod: not an Electron app, so there is nothing to check",
       "places": []
@@ -900,7 +797,6 @@
     {
       "check": "tauri-allowlist",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "tauri-allowlist: not a Tauri app, so there is nothing to check",
       "places": []
@@ -908,7 +804,6 @@
     {
       "check": "capacitor-cordova-cleartext",
       "status": "pass",
-      "seconds": 0.09,
       "cached": false,
       "detail": "capacitor-cordova-cleartext: not a Capacitor, Cordova or Android app, so there is nothing to check",
       "places": []
@@ -916,7 +811,6 @@
     {
       "check": "android-manifest-flags",
       "status": "pass",
-      "seconds": 0.1,
       "cached": false,
       "detail": "android-manifest-flags: not a Capacitor, Cordova or Android app, so there is nothing to check",
       "places": []
@@ -924,7 +818,6 @@
     {
       "check": "ep-window",
       "status": "pass",
-      "seconds": 0.33,
       "cached": false,
       "detail": "ep-window: not an Electron project, so there is nothing to check",
       "places": []
@@ -932,7 +825,6 @@
     {
       "check": "ep-ipc-preload",
       "status": "pass",
-      "seconds": 0.45,
       "cached": false,
       "detail": "ep-ipc-preload: not an Electron project, so there is nothing to check",
       "places": []
@@ -940,7 +832,6 @@
     {
       "check": "ep-fuses-build",
       "status": "pass",
-      "seconds": 0.55,
       "cached": false,
       "detail": "ep-fuses-build: not an Electron project, so only the rules that apply to any project ran, and nothing was found",
       "places": []
@@ -948,7 +839,6 @@
     {
       "check": "ep-content-renderer",
       "status": "pass",
-      "seconds": 0.43,
       "cached": false,
       "detail": "ep-content-renderer: not an Electron project, so there is nothing to check",
       "places": []
@@ -956,7 +846,6 @@
     {
       "check": "ep-tauri-cross",
       "status": "pass",
-      "seconds": 0.61,
       "cached": false,
       "detail": "ep-tauri-cross: no risky Electron or desktop setting found",
       "places": []
@@ -964,7 +853,6 @@
     {
       "check": "model-files-in-git",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "model-files-in-git: not applicable: no model files",
       "places": []
@@ -972,7 +860,6 @@
     {
       "check": "data-files-in-git",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "data-files-in-git: not applicable: no data files",
       "places": []
@@ -980,7 +867,6 @@
     {
       "check": "pickle-load",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "pickle-load: not applicable: no Python files or notebooks",
       "places": []
@@ -988,7 +874,6 @@
     {
       "check": "random-seed-missing",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "random-seed-missing: not applicable: no Python files or notebooks",
       "places": []
@@ -996,7 +881,6 @@
     {
       "check": "requirements-pinned-ml",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "requirements-pinned-ml: not applicable: no requirements or pyproject files",
       "places": []
@@ -1004,7 +888,6 @@
     {
       "check": "dataset-license-note",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "dataset-license-note: not applicable: no data folders",
       "places": []
@@ -1012,7 +895,6 @@
     {
       "check": "secrets-plus",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "secrets-plus: no secrets found",
       "places": []
@@ -1020,7 +902,6 @@
     {
       "check": "cp-js",
       "status": "pass",
-      "seconds": 0.45,
       "cached": false,
       "detail": "cp-js: no code pattern found",
       "places": []
@@ -1028,7 +909,6 @@
     {
       "check": "wh-publish-root",
       "status": "pass",
-      "seconds": 0.59,
       "cached": false,
       "detail": "wh-publish-root: nothing found",
       "places": []
@@ -1036,7 +916,6 @@
     {
       "check": "wh-supply",
       "status": "pass",
-      "seconds": 0.43,
       "cached": false,
       "detail": "wh-supply: nothing found",
       "places": []
@@ -1044,7 +923,6 @@
     {
       "check": "cf-mobile",
       "status": "pass",
-      "seconds": 0.61,
       "cached": false,
       "detail": "cf-mobile: no risky client-framework code found",
       "places": []
@@ -1052,7 +930,6 @@
     {
       "check": "cf-next",
       "status": "pass",
-      "seconds": 0.52,
       "cached": false,
       "detail": "cf-next: no risky client-framework code found",
       "places": []
@@ -1060,7 +937,6 @@
     {
       "check": "gitlab-ci-secrets",
       "status": "pass",
-      "seconds": 0.08,
       "cached": false,
       "detail": "gitlab-ci-secrets: not applicable: no GitLab CI file (.gitlab-ci.yml)",
       "places": []
@@ -1068,7 +944,6 @@
     {
       "check": "gitlab-ci-images",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "gitlab-ci-images: not applicable: no GitLab CI file (.gitlab-ci.yml)",
       "places": []
@@ -1076,7 +951,6 @@
     {
       "check": "gitlab-ci-privileged",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "gitlab-ci-privileged: not applicable: no GitLab CI file (.gitlab-ci.yml)",
       "places": []
@@ -1084,7 +958,6 @@
     {
       "check": "gitlab-ci-stages",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "gitlab-ci-stages: not applicable: no GitLab CI file (.gitlab-ci.yml)",
       "places": []
@@ -1092,7 +965,6 @@
     {
       "check": "circleci-config",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "circleci-config: not applicable: no CircleCI config (.circleci/config.yml)",
       "places": []
@@ -1100,7 +972,6 @@
     {
       "check": "azure-pipelines",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "azure-pipelines: not applicable: no Azure Pipelines file (azure-pipelines.yml)",
       "places": []
@@ -1108,7 +979,6 @@
     {
       "check": "jenkinsfile-safety",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "jenkinsfile-safety: not applicable: no Jenkinsfile",
       "places": []
@@ -1116,7 +986,6 @@
     {
       "check": "github-actions-reusable",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "github-actions-reusable: not applicable: no GitHub Actions workflow (.github/workflows)",
       "places": []
@@ -1124,7 +993,6 @@
     {
       "check": "github-actions-concurrency",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "github-actions-concurrency: not applicable: no deploy or release workflow",
       "places": []
@@ -1132,7 +1000,6 @@
     {
       "check": "github-actions-artifacts",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "github-actions-artifacts: not applicable: no GitHub Actions workflow (.github/workflows)",
       "places": []
@@ -1140,7 +1007,6 @@
     {
       "check": "helm-chart-basics",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "helm-chart-basics: not applicable: no Helm chart (Chart.yaml)",
       "places": []
@@ -1148,7 +1014,6 @@
     {
       "check": "helm-values-secrets",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "helm-values-secrets: not applicable: no Helm chart values file (values.yaml next to a Chart.yaml)",
       "places": []
@@ -1156,7 +1021,6 @@
     {
       "check": "ansible-hygiene",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "ansible-hygiene: not applicable: no Ansible playbook (a file with hosts: or a roles/*/tasks folder)",
       "places": []
@@ -1164,7 +1028,6 @@
     {
       "check": "pre-commit-config",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "pre-commit-config: not applicable: no .pre-commit-config.yaml file",
       "places": []
@@ -1172,7 +1035,6 @@
     {
       "check": "ip-docker",
       "status": "pass",
-      "seconds": 1.16,
       "cached": false,
       "detail": "Dockerfiles: nothing found",
       "places": []
@@ -1180,7 +1042,6 @@
     {
       "check": "ip-k<s>",
       "status": "pass",
-      "seconds": 1.15,
       "cached": false,
       "detail": "Kubernetes manifests: nothing found",
       "places": []
@@ -1188,7 +1049,6 @@
     {
       "check": "ip-terraform-compose",
       "status": "pass",
-      "seconds": 1.07,
       "cached": false,
       "detail": "Terraform and Compose files: nothing found",
       "places": []
@@ -1196,7 +1056,6 @@
     {
       "check": "ip-gha",
       "status": "pass",
-      "seconds": 1.03,
       "cached": false,
       "detail": "GitHub Actions workflows: nothing found",
       "places": []
@@ -1204,7 +1063,6 @@
     {
       "check": "openapi-valid",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "openapi-valid: every OpenAPI or Swagger file has its required parts (or there are none)",
       "places": []
@@ -1212,7 +1070,6 @@
     {
       "check": "openapi-operation-ids",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "openapi-operation-ids: every operationId is unique (or there are none)",
       "places": []
@@ -1220,7 +1077,6 @@
     {
       "check": "openapi-security-defined",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "openapi-security-defined: every referenced security scheme is defined and public APIs declare security",
       "places": []
@@ -1228,7 +1084,6 @@
     {
       "check": "graphql-schema-basics",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "graphql-schema-basics: every GraphQL schema has balanced braces and unique type names (or there are none)",
       "places": []
@@ -1236,7 +1091,6 @@
     {
       "check": "sql-migrations-order",
       "status": "pass",
-      "seconds": 0,
       "cached": false,
       "detail": "sql-migrations-order: migration numbers are unique and have no gaps (or there are no numbered migrations)",
       "places": []
@@ -1244,7 +1098,6 @@
     {
       "check": "sql-destructive-migrations",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "sql-destructive-migrations: no migration drops, truncates or mass-deletes without a reason (or there are no migrations)",
       "places": []
@@ -1252,7 +1105,6 @@
     {
       "check": "sql-missing-index-note",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "sql-missing-index-note: every *_id column has an index or a foreign key (or there are none)",
       "places": []
@@ -1260,7 +1112,6 @@
     {
       "check": "prisma-schema-basics",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "prisma-schema-basics: every Prisma model has an id and no datasource url holds a password (or there is no schema)",
       "places": []
@@ -1268,7 +1119,6 @@
     {
       "check": "http-timeouts",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "http-timeouts: 0 untimed HTTP call(s), within the budget of 10",
       "places": []
@@ -1276,7 +1126,6 @@
     {
       "check": "rate-limit-present",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "rate-limit-present: no HTTP server with routes, so nothing to rate limit",
       "places": []
@@ -1284,7 +1133,6 @@
     {
       "check": "error-leak",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "error-leak: no handler sends error details to the client",
       "places": []
@@ -1292,7 +1140,6 @@
     {
       "check": "pagination-bounds",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "pagination-bounds: every request-supplied page size has an upper bound (or there are none)",
       "places": []
@@ -1300,7 +1147,6 @@
     {
       "check": "third-party-trackers",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "third-party-trackers: no known tracking or analytics host is loaded by the front end",
       "places": []
@@ -1308,7 +1154,6 @@
     {
       "check": "analytics-consent",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "analytics-consent: no tracker is loaded, so no consent is needed",
       "places": []
@@ -1316,7 +1161,6 @@
     {
       "check": "pii-in-logs",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "pii-in-logs: no personal or secret value is written to a log in the clear",
       "places": []
@@ -1324,7 +1168,6 @@
     {
       "check": "pii-patterns-in-source",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "pii-patterns-in-source: no real-looking personal data is written into the source",
       "places": []
@@ -1332,7 +1175,6 @@
     {
       "check": "telemetry-calls",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "telemetry-calls: no telemetry or error-reporting call found (nothing to disclose)",
       "places": []
@@ -1340,7 +1182,6 @@
     {
       "check": "telemetry-disclosure",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "telemetry-disclosure: no telemetry to disclose",
       "places": []
@@ -1348,7 +1189,6 @@
     {
       "check": "privacy-policy-file",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "privacy-policy-file: no sign-in, form or published package, so no privacy policy is needed",
       "places": []
@@ -1356,7 +1196,6 @@
     {
       "check": "external-fonts-cdn",
       "status": "pass",
-      "seconds": 0.1,
       "cached": false,
       "detail": "external-fonts-cdn: no font or style is loaded from a third-party CDN",
       "places": []
@@ -1364,7 +1203,6 @@
     {
       "check": "geolocation-and-media-requests",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "geolocation-and-media-requests: every permission prompt is behind a user action",
       "places": []
@@ -1372,7 +1210,6 @@
     {
       "check": "local-storage-pii",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "local-storage-pii: no personal or secret value is kept in browser storage",
       "places": []
@@ -1380,7 +1217,6 @@
     {
       "check": "notice-file",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "notice-file: no third-party code is committed, so no notice file is needed",
       "places": []
@@ -1388,7 +1224,6 @@
     {
       "check": "lockfile-licenses",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "lockfile-licenses: no package-lock.json, Cargo.lock or poetry.lock is tracked, so nothing was checked",
       "places": []
@@ -1396,7 +1231,6 @@
     {
       "check": "license-header-consistency",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "license-header-consistency: no LICENSE file, so there is nothing to compare (the license check reports that)",
       "places": []
@@ -1404,7 +1238,6 @@
     {
       "check": "workspaces-resolve",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "workspaces-resolve: not applicable: the root package.json declares no workspaces",
       "places": []
@@ -1412,7 +1245,6 @@
     {
       "check": "workspace-name-unique",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "workspace-name-unique: not applicable: the root package.json declares no workspaces",
       "places": []
@@ -1420,7 +1252,6 @@
     {
       "check": "workspace-version-alignment",
       "status": "pass",
-      "seconds": 0.13,
       "cached": false,
       "detail": "workspace-version-alignment: not applicable: the root package.json declares no workspaces",
       "places": []
@@ -1428,7 +1259,6 @@
     {
       "check": "workspace-internal-ranges",
       "status": "pass",
-      "seconds": 0.19,
       "cached": false,
       "detail": "workspace-internal-ranges: not applicable: the root package.json declares no workspaces",
       "places": []
@@ -1436,7 +1266,6 @@
     {
       "check": "workspace-cycles",
       "status": "pass",
-      "seconds": 0.08,
       "cached": false,
       "detail": "workspace-cycles: not applicable: the root package.json declares no workspaces",
       "places": []
@@ -1444,7 +1273,6 @@
     {
       "check": "root-private",
       "status": "pass",
-      "seconds": 0.08,
       "cached": false,
       "detail": "root-private: not applicable: the root package.json declares no workspaces",
       "places": []
@@ -1452,7 +1280,6 @@
     {
       "check": "npm-publish-files",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "npm-publish-files: not applicable: no package looks publishable (none is non-private with main, module, exports or bin)",
       "places": []
@@ -1460,7 +1287,6 @@
     {
       "check": "npm-entry-exist",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "npm-entry-exist: not applicable: no package looks publishable (none is non-private with main, module, exports or bin)",
       "places": []
@@ -1468,7 +1294,6 @@
     {
       "check": "npm-pack-junk",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "npm-pack-junk: not applicable: no package looks publishable (none is non-private with main, module, exports or bin)",
       "places": []
@@ -1476,7 +1301,6 @@
     {
       "check": "pypi-metadata",
       "status": "pass",
-      "seconds": 0,
       "cached": false,
       "detail": "pypi-metadata: not applicable: no pyproject.toml has a [project] table",
       "places": []
@@ -1484,7 +1308,6 @@
     {
       "check": "pypi-entry-points",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "pypi-entry-points: not applicable: no pyproject.toml has a [project] table",
       "places": []
@@ -1492,7 +1315,6 @@
     {
       "check": "crate-publish-ready",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "crate-publish-ready: not applicable: no Cargo.toml has a [package] table",
       "places": []
@@ -1500,7 +1322,6 @@
     {
       "check": "version-sync",
       "status": "pass",
-      "seconds": 0.17,
       "cached": false,
       "detail": "version-sync: not applicable: no folder has two manifests that both carry a version",
       "places": []
@@ -1508,7 +1329,6 @@
     {
       "check": "provenance-hints",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "provenance-hints: not applicable: no package looks publishable (none is non-private with main, module, exports or bin)",
       "places": []
@@ -1516,7 +1336,6 @@
     {
       "check": "unity-meta-files",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "unity-meta-files: not applicable: not a Unity project",
       "places": []
@@ -1524,7 +1343,6 @@
     {
       "check": "unity-gitignore",
       "status": "pass",
-      "seconds": 0,
       "cached": false,
       "detail": "unity-gitignore: not applicable: not a Unity project",
       "places": []
@@ -1532,7 +1350,6 @@
     {
       "check": "unity-serialization",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "unity-serialization: not applicable: not a Unity project",
       "places": []
@@ -1540,7 +1357,6 @@
     {
       "check": "unity-large-assets",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "unity-large-assets: not applicable: not a Unity project",
       "places": []
@@ -1548,7 +1364,6 @@
     {
       "check": "unity-script-hazards",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "unity-script-hazards: not applicable: not a Unity project",
       "places": []
@@ -1556,7 +1371,6 @@
     {
       "check": "godot-project",
       "status": "pass",
-      "seconds": 0.09,
       "cached": false,
       "detail": "godot-project: not applicable: not a Godot project",
       "places": []
@@ -1564,7 +1378,6 @@
     {
       "check": "godot-script-hazards",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "godot-script-hazards: not applicable: not a Godot project",
       "places": []
@@ -1572,7 +1385,6 @@
     {
       "check": "unreal-hygiene",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "unreal-hygiene: not applicable: not a Unreal project",
       "places": []
@@ -1580,7 +1392,6 @@
     {
       "check": "shopify-theme-basics",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "shopify-theme-basics: not applicable: not a Shopify theme project",
       "places": []
@@ -1588,7 +1399,6 @@
     {
       "check": "liquid-hygiene",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "liquid-hygiene: not applicable: not a Liquid project",
       "places": []
@@ -1596,7 +1406,6 @@
     {
       "check": "shopify-secrets",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "shopify-secrets: not applicable: not a Shopify project",
       "places": []
@@ -1604,7 +1413,6 @@
     {
       "check": "wordpress-hygiene",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "wordpress-hygiene: not applicable: not a WordPress project",
       "places": []
@@ -1612,7 +1420,6 @@
     {
       "check": "wordpress-config",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "wordpress-config: not applicable: not a WordPress project",
       "places": []
@@ -1620,7 +1427,6 @@
     {
       "check": "static-site-generator",
       "status": "pass",
-      "seconds": 0.01,
       "cached": false,
       "detail": "static-site-generator: not applicable: not a static site project",
       "places": []
@@ -1628,7 +1434,6 @@
     {
       "check": "large-commits",
       "status": "pass",
-      "seconds": 1.2,
       "cached": false,
       "detail": "large-commits: no commit checked (range main..HEAD) touches more than 200 files",
       "places": []
@@ -1636,7 +1441,6 @@
     {
       "check": "binary-in-history",
       "status": "pass",
-      "seconds": 0.82,
       "cached": false,
       "detail": "binary-in-history: no file over 1024 KB was added in the last 200 commits",
       "places": []
@@ -1644,7 +1448,6 @@
     {
       "check": "long-lived-branches",
       "status": "pass",
-      "seconds": 0.35,
       "cached": false,
       "detail": "long-lived-branches: no remote branch is older than 180 days",
       "places": []
@@ -1652,7 +1455,6 @@
     {
       "check": "tags-semver",
       "status": "pass",
-      "seconds": 0.5,
       "cached": false,
       "detail": "tags-semver: every version-like tag is vX.Y.Z (0 tag(s) listed)",
       "places": []
@@ -1660,7 +1462,6 @@
     {
       "check": "changelog-updated",
       "status": "pass",
-      "seconds": 0.46,
       "cached": false,
       "detail": "changelog-updated: not applicable: no tag is reachable from HEAD, so there is no release to compare the changelog with",
       "places": []
@@ -1668,7 +1469,6 @@
     {
       "check": "version-tag-match",
       "status": "pass",
-      "seconds": 0.54,
       "cached": false,
       "detail": "version-tag-match: not applicable: no tag is reachable from HEAD, so there is no release to compare the version with",
       "places": []
@@ -1676,15 +1476,13 @@
     {
       "check": "author-identity",
       "status": "wide",
-      "seconds": 0.69,
       "cached": false,
-      "detail": "2 commit(s) in the last 200 (first adec26c56d) authored as \"t\" <t@example.com>: a placeholder identity  [full output: <run>",
+      "detail": "2 commit(s) in the last 200 (first <sha>) authored as \"t\" <t@example.com>: a placeholder identity  [full output: <run>",
       "places": []
     },
     {
       "check": "signed-commits-info",
       "status": "pass",
-      "seconds": 0.54,
       "cached": false,
       "detail": "signed-commits-info: 0 of 2 commits in the last 200 are signed (0%). Informational: passes unless git.requireSigned is true.",
       "places": []
@@ -1692,7 +1490,6 @@
     {
       "check": "gitmodules-pinned",
       "status": "pass",
-      "seconds": 0.5,
       "cached": false,
       "detail": "gitmodules-pinned: the repository has no submodules",
       "places": []
@@ -1700,7 +1497,6 @@
     {
       "check": "sync-fs-in-handlers",
       "status": "pass",
-      "seconds": 0.15,
       "cached": false,
       "detail": "sync-fs-in-handlers: no server handler makes a blocking file or process call",
       "places": []
@@ -1708,7 +1504,6 @@
     {
       "check": "json-parse-in-loop",
       "status": "pass",
-      "seconds": 0.3,
       "cached": false,
       "detail": "json-parse-in-loop: JSON calls inside loops: 0, within the budget of 10",
       "places": []
@@ -1716,7 +1511,6 @@
     {
       "check": "regex-in-loop",
       "status": "pass",
-      "seconds": 0.29,
       "cached": false,
       "detail": "regex-in-loop: no RegExp is built inside a loop",
       "places": []
@@ -1724,7 +1518,6 @@
     {
       "check": "dom-query-in-loop",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "dom-query-in-loop: no DOM lookup is repeated inside a loop",
       "places": []
@@ -1732,7 +1525,6 @@
     {
       "check": "large-inline-assets",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "large-inline-assets: no inline data URI is over 20 KB",
       "places": []
@@ -1740,7 +1532,6 @@
     {
       "check": "unoptimised-images",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "unoptimised-images: no image is over 500 KB",
       "places": []
@@ -1748,7 +1539,6 @@
     {
       "check": "duplicate-dependencies",
       "status": "pass",
-      "seconds": 0.03,
       "cached": false,
       "detail": "duplicate-dependencies: no dependency is listed twice",
       "places": []
@@ -1756,7 +1546,6 @@
     {
       "check": "wildcard-versions",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "wildcard-versions: every dependency names a version",
       "places": []
@@ -1764,7 +1553,6 @@
     {
       "check": "dependency-count",
       "status": "pass",
-      "seconds": 0.05,
       "cached": false,
       "detail": "dependency-count: direct dependencies are within the budget of 150",
       "places": []
@@ -1772,7 +1560,6 @@
     {
       "check": "dev-deps-in-prod",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "dev-deps-in-prod: no build or test tool is listed under dependencies",
       "places": []
@@ -1780,7 +1567,6 @@
     {
       "check": "deprecated-apis",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "deprecated-apis: no deprecated API is called",
       "places": []
@@ -1788,7 +1574,6 @@
     {
       "check": "node-version-mismatch",
       "status": "pass",
-      "seconds": 0.04,
       "cached": false,
       "detail": "node-version-mismatch: no Node version is pinned in any source",
       "places": []
@@ -1796,7 +1581,6 @@
     {
       "check": "lockfile-in-sync",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "lockfile-in-sync: every lockfile matches its package.json",
       "places": []
@@ -1804,7 +1588,6 @@
     {
       "check": "unused-dependencies-quick",
       "status": "pass",
-      "seconds": 0.02,
       "cached": false,
       "detail": "unused-dependencies-quick: every listed dependency is mentioned by some tracked source or script",
       "places": []

@@ -38,11 +38,11 @@ const run = async (dir: string, argv: string[]) => {
   const code = await runVerdict(argv, { env, cwd: dir, out: (t: string) => lines.push(t), err: () => {} })
   return { code, lines }
 }
-const SKIP = /^(ms|timings|startedAt|endedAt|log|runDir|totalSeconds|gateSeconds|behindBy|base)$|Seconds$|Ms$/
+const SKIP = /^(ms|seconds|timings|startedAt|endedAt|log|runDir|totalSeconds|gateSeconds|behindBy|base)$|Seconds$|Ms$/
 const clean = (v: unknown): unknown => {
   if (Array.isArray(v)) return v.map(clean)
   if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v as object).filter(([k]) => !SKIP.test(k)).map(([k, x]) => [k, clean(x)]))
-  if (typeof v === 'string') return v.split(root).join('<root>').replace(/[0-9a-f]{12,40}/g, '<sha>').replace(/[A-Za-z]:[\/][^\s"']*[\/]runs[\/][^\s"']+/g, '<run>').replace(/\d+(\.\d+)? ?s\b/g, '<s>')
+  if (typeof v === 'string') return v.split(root).join('<root>').replace(/\b[0-9a-f]{7,40}\b/g, '<sha>').replace(/[A-Za-z]:[\/][^\s"']*[\/]runs[\/][^\s"']+/g, '<run>').replace(/\d+(\.\d+)? ?s\b/g, '<s>')
   return v
 }
 
