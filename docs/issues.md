@@ -182,3 +182,28 @@ Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each 
 - 12n. With no base, verify says "git could not find a base branch ... running every check" and does not say what to set. Plan: name the exact fix (`--base <ref>` or `MEERKAT_BASE`).
 
 **Decision for Samuel.** Whether verify should be the release-gate default (it is slow), or verdict stays the pre-PR step and verify is for whole-tree audits only.
+
+## 13. Fourth verify batch (Neural Vault, packages/) and the verify scope question
+
+**Real findings, fixed by Neural Vault:** unsafe-rust at vault_identity.rs:261 and :294 (no SAFETY note); test-no-assert in WarmupOverlay.test.tsx (PR 3812).
+
+**False positives, grouped by rule (rule-precision fixes).**
+- 13a. unsafe-rust window: the SAFETY comment sits 5 lines above the `unsafe` (export.rs:670). Plan: look for the SAFETY comment in the lines directly above the block, not a short fixed window; a multi-line comment counts.
+- 13b. mem::forget as an ownership hand-over (shell_isolation.rs:976): the comment says ownership moved. Plan: accept mem::forget with such a comment (same rule as 11, cp-rust).
+- 13c. from_raw_parts length (shell_isolation.rs:269): length comes from a kernel-filled buffer with a SAFETY note. Plan: a SAFETY note that names the length source satisfies the rule.
+- 13d. unreachable! with a documented invariant (compiler.rs:590) and assert! as a deliberate guard (shell_tool.rs:1946). Plan: accept unreachable! and assert! when a comment above states the invariant or the guard's purpose.
+- 13e. `as u32` truncation on in-memory counts (about 17 hits). Plan: the rule flags a cast only when the source is not a bounded in-memory count; it cannot tell that today. Judgement, needs a decision: keep the rule as a warning, or exempt `.len()` and `.count()`.
+- 13f. debug-leftovers: todo!() inside a doc comment (vault/src/lib.rs:11). Plan: skip text inside `//!` and `///` doc comments.
+- 13g. empty-catch in a test fixture string (insecure_code_classes.rs:2450). Plan: skip string literals and test fixtures.
+- 13h. pii-patterns-in-source: a package-registry identity (supply_chain.rs:2345). Plan: an allow list for public service identities (npm registry, Google holiday calendar; see 12i and 11 notes).
+- 13i. html-structure on a saved third-party fixture (wikipedia_gc.html). Plan: exclude packages/*/tests/fixtures/ from html-structure.
+- 13j. test-presence: tests are inline (`#[cfg(test)]`, `#[test]`) in the same file (core/edition.rs has 112 tests). **A real rule bug.** Plan: count inline test modules as test coverage. Test: a Rust file with `#[cfg(test)]` passes.
+- 13k. dataset-license-note: the data file carries its own source inside the JSON. Plan: accept provenance fields inside the file.
+- 13l. rasync-blocking-fs on a once-per-tick background job (jobs/). Plan: accept a path that a comment marks as background and once-per-tick. Low priority.
+- 13m. git-history-secrets flagged a test token (CreditMeter.test.tsx); skipped-tests flags every #[ignore] without checking for a reason. Plan: skipped-tests accepts `#[ignore = "reason"]`; git-history-secrets: an allow entry for a known test token, with a reason.
+
+**Whole-tree versus branch (answer to Neural Vault).** `verify` scans the whole tree with every check on every file; there is no base, so it has no notion of "new". `verdict` and `gate` compare with the base and only judge changed lines. So 1150 findings and 66 failed checks from `verify --json` on a clean tree is the whole-tree view, not a regression. What is missing is a label: the JSON should say `scope: "whole tree"` and the text should say it on line 2. Plan: add that label; the verdict stays the pre-PR gate.
+
+**Slowness, from Neural Vault.** `verify --app` took 132 s (preset quick). `verdict --base origin/dev` sits on "222/224 checks done, running: rust-test" for seven minutes because rust-test builds the whole workspace, with no per-crate progress. Plan: rust-test should show per-crate progress (cargo's own progress), and rust-test's time budget should follow the diff: test only the crates the change touches, plus their dependents.
+
+**Logs not writable.** `~/.meerkat/logs` is not writable on Neural Vault's machine, so gate and last cannot see runs. The NOT RECORDED line says so, but it is not enough. Plan: when the default log folder is not writable, fall back to a temp folder and say which one.
