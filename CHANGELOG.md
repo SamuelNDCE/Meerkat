@@ -4,7 +4,9 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
-Nothing yet.
+### Fixed
+
+- `meerkat gate` no longer prints the folder banner or the "comparing against merge base" line before its answer. The answer (for example `NO-RESULT (status 204): nothing changed ...`) is the first line; the folder line follows it.
 
 ## 0.5.4 (2026-11-11)
 
