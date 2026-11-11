@@ -42,7 +42,7 @@ export function findBinary(root, env = process.env) {
   return null
 }
 
-const READER = "const f=require('@electron/fuses');const names={};for(const [k,v] of Object.entries(f.FuseV1Options)){if(typeof v==='number')names[v]=k}const st={0:'off',1:'on',2:'removed',3:'inherit'};f.getCurrentFuseWire(process.argv[1]).then((w)=>{const o={};for(const [k,v] of Object.entries(w)){if(names[k]!==undefined)o[names[k]]=st[v]??String(v)}console.log(JSON.stringify(o))},(e)=>{console.error(String(e&&e.message||e));process.exit(3)})"
+const READER = "const f=require('@electron/fuses');const names={};for(const [k,v] of Object.entries(f.FuseV1Options)){if(typeof v==='number')names[v]=k}const st={48:'off',49:'on'};f.getCurrentFuseWire(process.argv[1]).then((w)=>{const o={};for(const [k,v] of Object.entries(w)){if(names[k]!==undefined)o[names[k]]=st[v]??String(v)}console.log(JSON.stringify(o))},(e)=>{console.error(String(e&&e.message||e));process.exit(3)})"
 
 // Returns { code, lines }.
 // Reading the binary runs @electron/fuses from the PROJECT's node_modules, which is the project's own code. So it runs only where the project's

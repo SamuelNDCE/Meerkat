@@ -158,7 +158,7 @@ describe('d. fuses set in a build hook, and read from the built binary', () => {
   const stub = "const N = { RunAsNode: 0, EnableCookieEncryption: 1, EnableNodeOptionsEnvironmentVariable: 2, EnableNodeCliInspectArguments: 3, EnableEmbeddedAsarIntegrityValidation: 4, OnlyLoadAppFromAsar: 5, GrantFileProtocolExtraPrivileges: 7 }\nexports.FuseV1Options = N\nexports.getCurrentFuseWire = async (bin) => JSON.parse(require('fs').readFileSync(bin, 'utf8'))\n"
   const withBinary = (wire: object | null, withTool = true) => {
     const files: Record<string, string> = { 'package.json': pkg }
-    if (wire) files['release/win-unpacked/Plume.exe'] = JSON.stringify(wire)
+    if (wire) files['release/win-unpacked/Plume.exe'] = JSON.stringify(Object.fromEntries(Object.entries(wire).map(([k, v]) => [k, 48 + v])))
     if (withTool) files['node_modules/@electron/fuses/index.js'] = stub
     if (withTool) files['node_modules/@electron/fuses/package.json'] = '{"name":"@electron/fuses","main":"index.js"}'
     const d = mkdtempSync(join(root, 'bin-'))
