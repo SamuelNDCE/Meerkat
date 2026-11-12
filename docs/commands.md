@@ -83,6 +83,8 @@ and exits with code 2. `--force` runs anyway. With `--json` (stdout) a script or
 | `meerkat who-calls <symbol>` / `meerkat deps <file>` / `meerkat tests-for <file>` [--app <folder>] [--json] | every call site (file:line) of a function, the project files a file imports, and the test files that import a file or name it | |
 | `meerkat memory [folder] [--dry-run] [--json]` | hand the newest run to the memory adapter named by `"memory": { "adapter": ... }` in `meerkat.config.json`; nothing happens without that key | exit 2 when no adapter is set |
 | `meerkat brief <file>[#symbol]` | a pre-edit brief: callers, tests, last-run findings, churn, risk tier and checklist | exit 2 on an unknown symbol, 75 when the file is not in the map |
+| `meerkat brief --task <plan.json> <task-id> [--max-chars N] [--json]` | a context pack for one task of a plan file: the task, the files it owns, the symbols they define (names only, approximate), the callers outside the task (from `blast`), the open risks in the owned files, and the done command again. Default cap 4000 characters; lists are cut with a visible `[truncated]` marker | exit 1 when the plan fails `plan check`, 2 on a usage error or unknown task id, 3 for a missing plan file |
+| `meerkat risks [folder] [--json]` | the newest run's open findings (this folder's newest run only, the current branch) grouped by file, ranked by severity then by git changes in the last 200 commits (severity only without git), each with the next command; dismissed findings listed apart with their reasons | exit 2 on a usage error, 3 when no run has been saved |
 
 ## Checks, presets, packs
 

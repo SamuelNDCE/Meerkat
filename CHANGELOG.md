@@ -6,6 +6,8 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ### Added
 
+- New: `meerkat risks [folder] [--json]` (roadmap C3) lists the newest run's open findings grouped by file, ranked by worst severity and then by how often the file changed in git (last 200 commits; without git, by severity only, and it says so). Each entry has file, line, check id, a one-line message and the next command (the check's fix hint, else `meerkat why <check>`). Dismissed findings are listed in their own section with their reasons, never as open. Default scope: the newest run of this folder only (the current branch's run), not other branches. New module `lib/risks.mjs`.
+- New: `meerkat brief --task <plan.json> <task-id> [--max-chars N] [--json]` (roadmap C4) prints a task context pack: the task, the files it owns, the symbols they define (names only, approximate), the callers outside the task (from `blast`, files only), the open risks in the owned files, and the done command again. Default cap 4000 characters; the lists are cut first, with a visible `[truncated]` marker. A plan that fails `plan check` is refused (exit 1), an unknown task id is exit 2. `meerkat brief <file>` is unchanged. New module `lib/taskpack.mjs`.
 - New: `meerkat plan check <file.json> [--json]` validates a plan file for orchestrated work (roadmap R1) and lists every error in one pass; `meerkat plan brief <file.json> <task-id> [--max-chars N]` prints one paste-ready brief per task (R2). Defaults taken for this phase, not settled: JSON only; a missing done-check or limit is FAIL (1); two tasks may own overlapping paths only when one depends on the other; the brief cap is 4000 characters. New modules `lib/plan.mjs` and `lib/planbrief.mjs`.
 
 ### Changed
