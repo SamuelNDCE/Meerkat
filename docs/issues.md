@@ -207,3 +207,18 @@ Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each 
 **Slowness, from Neural Vault.** `verify --app` took 132 s (preset quick). `verdict --base origin/dev` sits on "222/224 checks done, running: rust-test" for seven minutes because rust-test builds the whole workspace, with no per-crate progress. Plan: rust-test should show per-crate progress (cargo's own progress), and rust-test's time budget should follow the diff: test only the crates the change touches, plus their dependents.
 
 **Logs not writable.** `~/.meerkat/logs` is not writable on Neural Vault's machine, so gate and last cannot see runs. The NOT RECORDED line says so, but it is not enough. Plan: when the default log folder is not writable, fall back to a temp folder and say which one.
+
+## 14. Verdict and gate on three open dev PRs (Neural Vault, 3807, 3806, 3805)
+
+Six problems, most serious first. None fixed yet.
+
+- **14a. Crash, top priority.** `meerkat gate --base origin/dev` on PR 3806 exited 1 after 48 s, with stderr "meerkat: Cannot read properties of undefined (reading 'message')" and no verdict line. Plan: reproduce on the same commit (Neural Vault to send the sha), find the throw (likely a catch that reads `.message` from something undefined), make the failure exit 70 with one line naming the check and the cause, and add a test that feeds the same error shape.
+- **14b. Slow.** verdict on 3807 took 127 s; on 3806, 514 s (rust-clippy 231 s); on 3805, over 604 s (rust-test 599 s). Gate on 3805 was also over 601 s. Plan: the rust-test budget follows the diff (only crates the change touches, plus dependents), and per-crate progress is shown (see 13, rust-test). Measure before and after on these three PRs.
+- **14c. First line is not the answer.** Every verdict and gate run on their side printed "note: behind origin/dev by N commits" first, then 500 progress lines before the PASS line. The 0.5.4 and 309050c order puts the answer first, so their build predates it. Plan: confirm on the current build; if the note still prints first on any path, move it after the answer.
+- **14d. Exit 75 without a reason on line 1.** On 3806 the verdict exited 75; the reason (INCOMPLETE 503, rust-clippy "could not compile nv-runtime") was only on a late line. Plan: INCOMPLETE puts its reason on line 1, the same way FAIL puts its finding there.
+- **14e. Behind count disagrees.** On 3806 the same worktree gave "behind by 5 commits" in verdict and "behind by 9" in gate. Plan: both commands compute the base and the count from one place; test with a fixture that is behind by a known number and check both print the same count.
+- **14f. Verdict does not state a changed-file count** (gate does). Plan: the verdict's line 1 carries the judged count (it does on 0.5.4 when files are judged; check the path where it does not).
+
+**Gate on 3807** passed in 39 s with exit 0, and its first answer line stated the blocking count. That path is working.
+
+**Not trusted message.** Not seen, so nothing to plan.
