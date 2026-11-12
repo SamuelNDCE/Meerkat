@@ -4,6 +4,10 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+### Added
+
+- New: `meerkat plan check <file.json> [--json]` validates a plan file for orchestrated work (roadmap R1) and lists every error in one pass; `meerkat plan brief <file.json> <task-id> [--max-chars N]` prints one paste-ready brief per task (R2). Defaults taken for this phase, not settled: JSON only; a missing done-check or limit is FAIL (1); two tasks may own overlapping paths only when one depends on the other; the brief cap is 4000 characters. New modules `lib/plan.mjs` and `lib/planbrief.mjs`.
+
 ### Changed
 
 - `meerkat batch` names the checks whose tool crashed, hung or did not start: the result file has a `crashedChecks` list of `{ id, reason }`, and line 1 of the answer names up to 5 of them, then "and N more".
