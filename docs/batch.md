@@ -45,6 +45,8 @@ Each branch gets one status: `PASS`, `BLOCKED`, `MERGEABLE`, `EXCLUDED` (conflic
 
 Line 1 is the answer when there is one: `pre-existing: ...` (the failing check also fails on the base), `interaction: ... a + b` (it fails only when those two branches are combined; the pair search uses at most 10 extra gate runs and does not count against the run limit), `INCOMPLETE: gate run limit reached ... not checked: ...` (the branches left unchecked), and `INCOMPLETE: N check(s) crashed or their tool failed: ...` (each with its reason). The result file carries `headlines`, `crashedChecks`, `uncheckedBranches` and `interaction`. Exit codes do not change.
 
+After the answer lines the batch prints one `FAIL <check> [both|branch-only|base-only]: <reason>` line per failing check of the batch gate (once, never in the progress stream before the answer). `both` means the check also fails on the base (pre-existing), `branch-only` means only the branch fails it, `base-only` means only the base fails it (the batch asks the base only about checks that failed on the branch, so it reports the first two); an unknown base side prints `[base unknown]`. The result file has the same facts as `failingChecks: [{ id, reason, side }]` at the top level and on each branch entry.
+
 A dry run that refuses any branch exits 3 (nothing could be judged). The one-line-per-branch answer is the output; the first line of it is the first branch's status.
 
 Every real run writes `batches/<batch-id>.json` and a `batches/<repo>/latest.json` copy. The file includes a `timing` object (`gateSeconds`, `totalSeconds`) so batch sizes can be compared.
