@@ -241,3 +241,7 @@ Nothing changes until he decides.
 ### 14b, new evidence (Neural Vault, fix-3289)
 
 `verdict --base origin/dev` on one changed file in apps/sync-server ran 21+ minutes: 223 of 224 checks done, then stuck on rust-clippy for 850 seconds, which looks like a wait behind the shared cargo lock. Their first line was "note: behind origin/dev by 0 commits", from the meerkat-wt-integ build that predates 309050c. Plan unchanged: a lock wait shows its reason on line 1 and the rest is progress; the rust budget follows the changed crates. Neural Vault is re-running on the current build.
+
+### 14a, my reproduction on b4a6c4e (PR 3806 head ac4a5e076)
+
+The gate crash did NOT reproduce on the current build. The run went through 225 checks, then `rust-clippy` failed after 595 s (`[done 226/226] rust-clippy ... 595.3s FAIL`). The stdout was empty, and there was no summary line on either stream. The shell's cwd reset during the run, so it may have been killed before it finished. Two follow-ups: (a) re-run with stdout and stderr in separate files and no shell interruption, to confirm whether the crash happens; (b) a gate killed mid-run must still print one INCOMPLETE line on stdout with its reason (this is the exit-75 rule in 14d). Logged as a separate problem until (a) confirms it.
