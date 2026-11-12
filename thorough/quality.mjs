@@ -223,13 +223,23 @@ const emptyCatch = (root) => {
 }
 
 // ---- test-presence: a project with source and no tests, and folders of source with no matching test file
+// A source file that holds its own tests: Rust #[cfg(test)] / #[test], or JavaScript and TypeScript describe( / it( / test( calls (not a method call such as re.test( ).
+const RUST_INLINE = /#\[(?:cfg\(test\)|test)\]/
+const JS_INLINE = /(?<![\w$.])(?:describe|it|test)\s*\(/
+const hasInlineTests = (root, x) => {
+  const rust = /\.rs$/i.test(x)
+  if (!rust && !/\.(m?[jt]sx?|cjs)$/i.test(x)) return false
+  const t = readText(root, x)
+  return rust ? RUST_INLINE.test(t) : JS_INLINE.test(blankComments(t))
+}
 const testPresence = (root) => {
   const minRatio = cfg(root).minTestRatio ?? 0
   const all = files(root, SOURCE)
   const tests = all.filter((x) => TEST_FILE.test(x))
   const src = all.filter((x) => !TEST_FILE.test(x))
+  const inline = new Set(src.filter((x) => hasInlineTests(root, x)))
   const f = []
-  if (src.length > 5 && tests.length === 0) f.push(`there are ${src.length} source files and no test files`)
+  if (src.length > 5 && tests.length === 0 && inline.size === 0) f.push(`there are ${src.length} source files and no test files`)
   const testNames = new Set(tests.map(testStem))
   const dirs = new Map()
   for (const x of src) {
@@ -238,9 +248,9 @@ const testPresence = (root) => {
     dirs.get(d).push(x)
   }
   for (const [d, list] of dirs) {
-    if (list.length > 10 && !list.some((x) => testNames.has(stemOf(x)))) f.push(`${d}/ has ${list.length} source files and no test file for any of them`)
+    if (list.length > 10 && !list.some((x) => testNames.has(stemOf(x)) || inline.has(x))) f.push(`${d}/ has ${list.length} source files and no test file for any of them`)
   }
-  const matched = src.filter((x) => testNames.has(stemOf(x))).length
+  const matched = src.filter((x) => testNames.has(stemOf(x)) || inline.has(x)).length
   if (minRatio > 0 && src.length && matched / src.length < minRatio) f.push(`only ${matched} of ${src.length} source files have a matching test (budget quality.minTestRatio is ${minRatio})`)
   return finish('test-presence', f, 'the source has tests')
 }

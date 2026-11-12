@@ -228,15 +228,16 @@ function outputStreams(opts, givenLog, env) {
   return { baseLog, hush, log: opts.jsonStdout || editor ? toErr : opts.quiet ? () => {} : baseLog, fail: hush ? toErr : baseLog }
 }
 
+const WHOLE_TREE_TEXT = 'scope: whole tree (every check on every file; no base to compare with)'
 // The run's summary.json plus where it is saved, as the only thing on stdout.
-function emitSummary(dir, fallback, givenLog) {
+function emitSummary(dir, fallback, givenLog, extra = {}) {
   let summary = fallback
   try {
     summary = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8'))
   } catch {
     /* no saved summary: the short form is printed */
   }
-  ;(givenLog ?? ((l) => process.stdout.write(`${l}\n`)))(JSON.stringify({ ...summary, runDir: dir ?? null }, null, 2))
+  ;(givenLog ?? ((l) => process.stdout.write(`${l}\n`)))(JSON.stringify({ ...summary, ...extra, runDir: dir ?? null }, null, 2))
 }
 
 // Runs the checks with Ctrl-C handling (lib/runner.mjs stopOnSignals); the handlers are removed when the run ends.
@@ -400,6 +401,7 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // --preset (security, ui-fast, app, ...) picks the tier, the kinds of check and any packs it brings; --group adds to it. A project's
   // preset wins over the person's, which win over the built-in ones. Resolved before the packs load, so a preset's packs load too.
   const chosen = resolvePreset(opts.preset, mergePresets(read.config.presets ?? {}, user.presets ?? {}))
+  const wholeTree = chosen.preset?.name === 'quick' && !opts.changed && !opts.selfTest // `meerkat verify`: no base, every file
   if (chosen.error) {
     fail(chosen.error)
     return 2
@@ -412,6 +414,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     // so every pack that applies to the folder loads, as it does for quick and full. A project's config still decides for itself.
     read.config.packs = [...new Set([...(read.config.packs ?? []), ...presetPacks(chosen.preset, appDir), ...(configFile ? [] : applicablePacks(appDir))])]
     if (!opts.list) log(`preset ${chosen.preset.name}: ${presetAboutLine(chosen.preset.about, env, appDir, opts.preset)}`)
+    // verify (the quick preset) scans the whole tree: it has no base, so findings are not limited to changed lines. Said on line 2, after line 1.
+    if (!opts.list && wholeTree) log(WHOLE_TREE_TEXT)
   }
   // ignorePaths (top level, and the chosen preset's own): left out of Meerkat's own file-walking checks; one line says how many files and by which key.
   const ignoring = ignoreSummary(appDir, ignoreSources(read.config, chosen.preset?.name ?? null))
@@ -723,8 +727,8 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
   // At a terminal with the board: a short summary stays in the scrollback; the results screen (meerkat) shows everything else.
   if (boardShown && !opts.selfTest && failLines.length) for (const l of failLines.length > sumLines.length ? [...sumLines, 'Failures per check:', ...failLines.slice(sumLines.length)] : failLines) log(l)
   if (boardShown && !opts.selfTest) for (const l of compactSummary({ label, results: full, ms: Date.now() - started, estimatedMs, findings: findingsInfo?.doc?.counts ?? null, dir: report ? ctx.logDir : null })) log(l)
-  if (opts.json) writeFileSync(opts.json, JSON.stringify({ tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
-  if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog)
+  if (opts.json) writeFileSync(opts.json, JSON.stringify({ ...(wholeTree ? { scope: 'whole tree' } : {}), tier, summary: line, exitCode, subTotals: rollup(full), results: full }, null, 2))
+  if (opts.jsonStdout) emitSummary(ctx.logDir, { tier, summary: line, exitCode, subTotals: rollup(full), results: full }, givenLog, wholeTree ? { scope: 'whole tree' } : {})
   if (interrupted) log(`Stopped by you: results so far saved to ${ctx.logDir}`)
   if (opts.quiet) baseLog(line)
   // Nothing this run started may outlive it: sweep whatever is still alive (a grandchild, a check the deadline missed).
