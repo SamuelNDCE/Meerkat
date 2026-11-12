@@ -4,6 +4,12 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+### Changed
+
+- `meerkat batch` names the checks whose tool crashed, hung or did not start: the result file has a `crashedChecks` list of `{ id, reason }`, and line 1 of the answer names up to 5 of them, then "and N more".
+- `meerkat batch` no longer ends with only "no culprit found" when no branch fails alone. Line 1 says `pre-existing: <check> also fails on <base>, so the batch did not cause it`, or `interaction: <check> fails only when these branches are combined: a + b` (the smallest pair, found with at most 10 extra gate runs; the result file has `interaction`). Exit stays 75.
+- `meerkat batch` names the branches the run limit (`MEERKAT_BATCH_MAX_RUNS`, default 12) left unchecked on line 1 (up to 5, then "and N more") and lists all of them as `uncheckedBranches` in the result file. The result stays INCOMPLETE, never a pass.
+
 ### Fixed
 
 - Rust rule false positives (docs/issues.md 13a-13d, 13f, 11e): `unsafe-rust` accepts a SAFETY note anywhere in the comment block directly above the `unsafe`, not only within three lines; `rs-forget-uninitialized` accepts `mem::forget` when the comment above says ownership moved; `rsafe-from-raw-parts-no-len-check` accepts a SAFETY note that names the length source; `rerr-unreachable-in-library` and `rerr-assert-in-library` accept a comment above that states the invariant; `debug-leftovers` skips `todo!()` inside `//!` and `///` doc comments; `skipped-tests` accepts a Python `skipIf`/`skipUnless` that carries a reason argument. Bare cases still fire. `#[ignore = "reason"]` was already accepted and is now covered by a test.
