@@ -281,3 +281,11 @@ The gate's line 1 for this run did not name the crashed check (see 14a). This is
 - **18d. rust-test at 223/225 for 365 s or more.** The same rust budget issue as 14b. Plan: as 14b (per-crate budget, stop on a compile failure).
 - **18e. Skip re-gating unchanged checks (unverified benefit).** A branch that touches only Rust or only docs need not re-run checks whose inputs are identical to the base (exec-bits, unicode-control-chars). Plan: measure first, on Neural Vault's 135-line batch, how many checks have identical inputs on base and branch; build only if the saving is real. The gate already caches by file content; check whether this is a gap.
 - **18f. First line names the failing check.** Neural Vault asks that verdict line 1 keep naming the failing check. Plan: keep it (the answer-first order already does; regression test added with 18c).
+
+## 19. Batch result: contradictory blocking counts, and no failing checks or base results recorded (Neural Vault, batch-20261112T133233-d13de3)
+
+Final result: exit 75, INCOMPLETE; all 225 checks finished; rust-test FAIL at 645.6 s; 1568 s total, gate 1542 s.
+
+- **19a. Two counts for one stop.** The log says "stopped early: 3 blocking so far", and the summary says "0 blocking so far (not a pass)". The two lines use different sources for the same count. Bug. Plan: one count, from the same rows, used by both lines; test with a run stopped at a known blocking count.
+- **19b. The result file names no failing checks.** Every entry in `prs` has `failingChecks: []`, and `devBaseline` is empty for this run, so it cannot say which checks failed on the base or the branch. This is item 18a. Plan: write each failing check (id, reason, base-only / branch-only / both) into the result file and the summary.
+- **19c. Earlier batch PASS verdicts.** Per-branch verdicts reported PASS for the same branches with `--allow-stale`. They do not match this batch's result. Plan: the verdict and batch result must state the base commit each one judged; a stale-base PASS is not the same as this batch's result. Needs the base commit from both runs to compare.
