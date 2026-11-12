@@ -332,3 +332,10 @@ Dev d145a5d57 does not compile its nv-sidecar tests (E0053 at apps/nv-sidecar/sr
 - **23b. Does #3814 change the result?** A batch that includes #3814 should show rust-test passing; that is the one check it would change. Neural Vault will check this with their own run; Meerkat does not run it for them.
 
 Not claimed in this entry: that the base failure is the only cause of the batch's FAIL; the base-side result has to be recorded before it is said.
+
+## 24. Judgement calls in the batch and gate reporting build (to decide)
+
+Merged in 78938eb (reportfix); the agent's report lists these as its own choices, not settled policy.
+
+- **24a. `ISSUES` instead of `FAIL` on a failing check's done line.** Chosen so that every done line has a status (18c) and no FAIL appears in the progress stream (18b). Consumers that read `FAIL` will see a new word. Decide: keep `ISSUES`, or use `FAIL` on the done line and move the stream change elsewhere.
+- **24b. A failing check counts as not blocking while the base comparison is unfinished.** This is the consequential one: a PR could pass while its base result is still missing. Decide: block until the base side is known (safer), or allow with a visible "base unknown" label.
