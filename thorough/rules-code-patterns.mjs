@@ -401,11 +401,27 @@ const safetyNoteAbove = (ctx) => {
   return false
 }
 
+// The comment block directly above the line (no blank line between; attributes are walked over), as one string. Empty when there is none.
+const commentAbove = (ctx) => {
+  const out = []
+  for (let i = ctx.index - 1; i >= 0 && i >= ctx.index - 40; i--) {
+    const l = ctx.lines[i].trim()
+    if (/^(?:\/\/|\/\*|\*)/.test(l)) out.push(l)
+    else if (/^#\[/.test(l) && out.length === 0) continue
+    else break
+  }
+  return out.join(' ')
+}
+const FORGET_WHY = /ownership|handed over|moved|leak is intended/i
+
 // ---------------------------------------------------------------- Rust (cp-rust)
 export const RS = [
   RSF('rs-unsafe-no-safety', 'an unsafe block has no SAFETY note in the three lines above it', undefined, 'let x = unsafe { *p };', '// SAFETY: p is valid for reads\nlet x = unsafe { *p };', { test: (line, ctx) => /\bunsafe\s*\{/.test(line) && !/SAFETY/i.test(ctx.lines.slice(Math.max(0, ctx.index - 3), ctx.index + 1).join('\n')) && !safetyNoteAbove(ctx) }),
   RSF('rs-transmute', 'mem::transmute reinterprets bytes as another type (easy to get wrong)', /\bmem::transmute\b/, 'let f: f32 = mem::transmute(x);', 'let f = f32::from_bits(x);'),
-  RSF('rs-forget-uninitialized', 'mem::forget or mem::uninitialized can leak or read undefined memory', /\bmem::(?:forget|uninitialized)\b/, 'mem::forget(buf);', 'drop(buf);'),
+  RSF('rs-forget-uninitialized', 'mem::forget or mem::uninitialized can leak or read undefined memory', /\bmem::(?:forget|uninitialized)\b/, 'mem::forget(buf);', 'drop(buf);', {
+    // mem::forget is accepted when the comment directly above says ownership moved; mem::uninitialized never is.
+    test: (line, ctx) => /\bmem::uninitialized\b/.test(line) || (/\bmem::forget\b/.test(line) && !FORGET_WHY.test(commentAbove(ctx) + (line.split('//')[1] ?? ''))),
+  }),
   RSF('rs-command-variable', 'Command::new gets a program name built with format! or taken from user, input, request or cmd data', /\bCommand::new\(\s*(?:&?format!\(|&?(?:user|input|req|param|untrusted|arg|cmd|command|query|body|payload)\w*\b)/, 'Command::new(cmd).arg(x).output()', 'Command::new("ls").arg("-l").output()'),
   RSF('rs-unwrap-in-library', 'a library file (src/lib.rs) panics with unwrap() outside test code', /\.unwrap\(\)/, 'let v = x.unwrap();', 'let v = x?;', {
     files: /(^|\/)src\/lib\.rs$/,

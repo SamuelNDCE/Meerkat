@@ -212,13 +212,26 @@ const scriptsResolve = (root) => {
   return finish('scripts-resolve', f, 'every file an npm script runs exists')
 }
 
+// A SAFETY note in the comment block directly above (attributes and blank lines are walked over; the first real code line ends the walk).
+const safetyAbove = (lines, i) => {
+  for (let k = i - 1; k >= 0 && k >= i - 60; k--) {
+    const t = lines[k].trim()
+    if (/^(?:\/\/|\/\*|\*)/.test(t)) {
+      if (/SAFETY:?/i.test(t)) return true
+      continue
+    }
+    if (t === '' || /^#\[/.test(t)) continue
+    return false
+  }
+  return false
+}
 const unsafeRust = (root) => {
   const f = []
   for (const x of everyFile(root)) {
     if (extname(x) !== '.rs') continue
     const lines = readText(root, x).split('\n')
     lines.forEach((l, i) => {
-      if (/\bunsafe\s*(\{|fn|impl|trait)/.test(l) && !/^\s*(\/\/|\*)/.test(l) && !lines.slice(Math.max(0, i - 3), i + 1).some((p) => /SAFETY:/i.test(p))) f.push(`${x}:${i + 1} unsafe with no "// SAFETY:" note explaining why it is sound`)
+      if (/\bunsafe\s*(\{|fn|impl|trait)/.test(l) && !/^\s*(\/\/|\*)/.test(l) && !lines.slice(Math.max(0, i - 3), i + 1).some((p) => /SAFETY:/i.test(p)) && !safetyAbove(lines, i)) f.push(`${x}:${i + 1} unsafe with no "// SAFETY:" note explaining why it is sound`)
     })
   }
   return finish('unsafe-rust', f, 'every unsafe block says why it is safe (or there are none)')

@@ -6,6 +6,8 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ### Fixed
 
+- Rust rule false positives (docs/issues.md 13a-13d, 13f, 11e): `unsafe-rust` accepts a SAFETY note anywhere in the comment block directly above the `unsafe`, not only within three lines; `rs-forget-uninitialized` accepts `mem::forget` when the comment above says ownership moved; `rsafe-from-raw-parts-no-len-check` accepts a SAFETY note that names the length source; `rerr-unreachable-in-library` and `rerr-assert-in-library` accept a comment above that states the invariant; `debug-leftovers` skips `todo!()` inside `//!` and `///` doc comments; `skipped-tests` accepts a Python `skipIf`/`skipUnless` that carries a reason argument. Bare cases still fire. `#[ignore = "reason"]` was already accepted and is now covered by a test.
+
 - `meerkat gate` no longer prints the folder banner or the "comparing against merge base" line before its answer. The answer (for example `NO-RESULT (status 204): nothing changed ...`) is the first line; the folder line follows it.
 
 ## 0.5.4 (2026-11-11)
