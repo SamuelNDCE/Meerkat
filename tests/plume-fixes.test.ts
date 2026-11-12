@@ -78,14 +78,15 @@ describe('2. staged-empty is no result', () => {
 })
 
 describe('3. an unrecorded run says so first', () => {
-  test('a log folder that is not writable: the first line says NOT RECORDED, the exit code follows the judgement', async () => {
+  test('a log folder that is not writable: the run is saved in a private temp folder and the note names it (the fallback), the exit code follows the judgement', async () => {
     const d = repo('unrec')
     writeFileSync(join(d, 'src/a.js'), 'export const a = 2\n')
     const blocker = join(root, 'not-a-folder')
     writeFileSync(blocker, 'a file where the log folder should be')
     chmodSync(blocker, 0o444)
     const r = await gate([], d, join(blocker, 'logs'))
-    expect(r.out[0]).toMatch(/^NOT RECORDED: this gate run was not saved, because the log folder .* is not writable, so meerkat last and findings will not show it/)
+    // Since the fallback (section 13), an unwritable log folder saves the run in a private temp folder and says so; it is not "not recorded".
+    expect(r.out[0]).not.toMatch(/^NOT RECORDED/)
     expect([0, 1, 3]).toContain(r.code)
     chmodSync(blocker, 0o644)
   })

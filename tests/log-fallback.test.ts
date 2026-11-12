@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { gateMain } from '../lib/gate.mjs'
-import { logRoot } from '../lib/runlog.mjs'
+import { fallbackLogRoot, logRoot } from '../lib/runlog.mjs'
 
 const root = mkdtempSync(join(tmpdir(), 'meerkat-logfb-'))
 const fakeTemp = join(root, 'temp')
@@ -33,7 +33,9 @@ const missing = () => {
 
 describe('log folder fallback', () => {
   test('an unwritable folder falls back to <temp>/meerkat-logs; a writable one is kept', () => {
-    expect(logRoot({ MEERKAT_LOG_DIR: missing() } as NodeJS.ProcessEnv)).toBe(resolve(join(fakeTemp, 'meerkat-logs')))
+    // The fallback is per user (a hash of the home folder), so compare with fallbackLogRoot() and check its shape.
+    expect(logRoot({ MEERKAT_LOG_DIR: missing() } as NodeJS.ProcessEnv)).toBe(fallbackLogRoot())
+    expect(fallbackLogRoot()).toMatch(/meerkat-logs-/)
     const ok = join(root, 'fine', 'logs')
     expect(logRoot({ MEERKAT_LOG_DIR: ok } as NodeJS.ProcessEnv)).toBe(resolve(ok))
   })
@@ -49,12 +51,12 @@ describe('log folder fallback', () => {
     const out: string[] = []
     const errs: string[] = []
     await gateMain([], { cwd: d, log: (l: string) => out.push(l), err: (l: string) => errs.push(l), env: { ...process.env, MEERKAT_NO_PROJECT_CODE: '1', MEERKAT_LOG_DIR: bad } })
-    const fallback = fwd(resolve(join(fakeTemp, 'meerkat-logs')))
+    const fallback = fwd(fallbackLogRoot())
     const all = fwd([...out, ...errs].join('\n'))
     expect(all).toContain(fallback)
     expect(all).toMatch(/not writable/)
     expect(all).toContain(fwd(bad))
-    expect(existsSync(join(fakeTemp, 'meerkat-logs', 'runs'))).toBe(true)
+    expect(existsSync(join(fallbackLogRoot(), 'runs'))).toBe(true)
     expect(out.join('\n')).not.toMatch(/^NOT RECORDED/m)
   }, 120000)
 })
