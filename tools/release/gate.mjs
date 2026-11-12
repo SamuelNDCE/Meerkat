@@ -3,6 +3,8 @@
 //   steps, in order:
 //     changelog   CHANGELOG.md has Unreleased, dated versions, newest version = package.json   (tools/release/changelog-check.mjs)
 //     pack-list   the files `npm pack` would ship are inside the allow rule                    (tools/release/pack-list.mjs)
+//     counts      README, docs/checks.md, docs/coverage.md and the badges equal the checks: the three generators in --check mode (they
+//                 write nothing), then tests/count-audit.test.ts -t "generated documents". Exit 1 a document drifted, 75 a generator cannot run
 //     audit       npm audit --audit-level=high --omit=dev: fails on a HIGH or CRITICAL advisory in a shipped dependency; low and
 //                 moderate are reported by npm but do not fail. Needs the registry: an unreachable registry is NOT RUN, never a pass
 //     secrets     Meerkat's own secret scan over the tracked files                              (thorough/secret-scan.mjs)
@@ -24,6 +26,30 @@ export function judgeAudit({ code, stdout, stderr }) {
 
 export const AUDIT_ARGS = ['audit', '--audit-level=high', '--omit=dev']
 
+// The three generators run in --check mode (they write nothing), then the fast document-only count tests.
+export const COUNT_GENERATORS = ['gen-checks', 'gen-coverage', 'make-badges']
+export const COUNT_TEST_ARGS = ['vitest', 'run', 'tests/count-audit.test.ts', '-t', 'generated documents']
+
+// Decides what the `counts` step's results mean. Each result is { name, code, stdout, stderr }; name is a generator or 'count-audit'.
+//   0 / pass    every document is current
+//   1 / fail    a document drifted (a generator exited 1 in --check mode, or a count test failed); the note names the file and the fix
+//   75 / notrun a generator could not run (any other exit code, 127 included) and nothing drifted
+// A drift wins over a generator that could not run, like every other step: "1 a step failed, 75 could not run and none failed".
+export function judgeCounts(results) {
+  const drift = results.filter((r) => r.code === 1)
+  const broken = results.filter((r) => r.code !== 0 && r.code !== 1)
+  const fixFor = (r) => `run node tools/${COUNT_GENERATORS.includes(r.name) ? r.name : 'gen-checks'}.mjs to fix`
+  if (drift.length) {
+    const lines = drift.map((r) => {
+      const named = `${r.stdout}\n${r.stderr}`.split('\n').map((l) => l.trim()).filter((l) => / is out of date/.test(l))
+      return `${named.length ? named.map((l) => l.replace(/;.*$/, '')).join('\n') : `${r.name} reported a difference:\n${first(`${r.stdout}\n${r.stderr}`, 400)}`}\n${fixFor(r)}`
+    })
+    return { status: 'fail', exit: 1, note: `\n${lines.join('\n')}` }
+  }
+  if (broken.length) return { status: 'notrun', exit: 75, note: broken.map((r) => `${r.name} could not run (exit ${r.code}): ${first(r.stderr || r.stdout, 200)}`).join('; ') }
+  return { status: 'pass', exit: 0, note: 'README, docs/checks.md, docs/coverage.md and the badges equal the checks' }
+}
+
 function main(argv) {
   const strict = argv.includes('--strict')
   const ri = argv.indexOf('--range')
@@ -40,6 +66,12 @@ function main(argv) {
   }
   fromExit('changelog', node([T('changelog-check.mjs')]))
   fromExit('pack-list', node([T('pack-list.mjs')]))
+  {
+    const results = COUNT_GENERATORS.map((name) => ({ name, ...node([`${ROOT}/tools/${name}.mjs`, '--check']) }))
+    results.push({ name: 'count-audit', ...run('npx', COUNT_TEST_ARGS, { cwd: ROOT, timeout: 300000 }) })
+    const c = judgeCounts(results)
+    add('counts', c.status, c.note)
+  }
   if (argv.includes('--skip-audit')) add('audit', 'notrun', 'skipped by --skip-audit (the release is not fully gated)')
   else {
     const a = judgeAudit(run('npm', AUDIT_ARGS, { cwd: ROOT, timeout: 180000 }))
