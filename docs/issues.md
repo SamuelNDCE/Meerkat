@@ -259,3 +259,8 @@ Plan. (a) When no single branch fails alone, say so on line 1 as a pre-existing-
 ### 14g, compile error inside the gate (Neural Vault, PR 3805)
 
 The gate on PR 3805 reported "could not compile nv-agents (test board_hostile_markdown)". Neural Vault has not diagnosed it. Plan: a test that fails to compile is a TOOL PROBLEM with its reason on line 1, not a finding and not a pass, and the compile output's first error line is quoted in the reason. Neural Vault should send the first error line of that compile; the test name is in the message.
+
+### 14d and 14b, new evidence (Neural Vault, fix-3635-rust)
+
+- 14d: the verdict's line 1 is now the answer with its reason ("INCOMPLETE (status 503): a check crashed or its tool failed, so the run cannot be judged; 2 checks did not work. Next: meerkat gate --only rust-test --base origin/dev"). Confirmed working on the current build; close 14d once the reason is verified on a second case.
+- 14b: the run took 1012 s because the nv-sidecar test target does not compile on `dev` (phone_cmds.rs), and rust-test and rust-clippy each ran to failure. Plan: a compile failure of a crate's test target stops the other rust checks on the same crate at once and reports the compile error as a tool problem, rather than running each to its own failure. Same rule as 14g.
