@@ -1,10 +1,12 @@
 // Worktree doctor: lists the repo's git worktrees with merge state, dirtiness, age and size, and closes finished ones safely.
 //   node tools/worktrees.mjs list
 //   node tools/worktrees.mjs close-candidates      clean worktrees whose branch is merged into origin/main (or was deleted on origin)
-//   node tools/worktrees.mjs close --yes <path>... remove the named worktrees (never --force; refuses dirty ones and the main checkout)
+//   node tools/worktrees.mjs close --yes <path>... remove the named worktrees (never --force; refuses dirty ones, the main checkout and any worktree with a live claim)
+//   node tools/worktrees.mjs close --yes --force-claimed --by <owner> <path>...   remove a worktree whose live claim is held by <owner>
 //   node tools/worktrees.mjs remind                exit 0 when nothing is clean and merged, else one line per candidate
 // Every git call has a 30 second timeout. Progress lines go to stderr. "Merged" uses the local origin/main ref (run git fetch first).
 import { git, norm, human, gather, candidates, mergedClean, progress } from '../lib/worktrees.mjs'
+import { claimProblem, expiredNote, readClaims } from '../lib/claims.mjs'
 
 function line(w) {
   const age = w.ageDays === null ? 'age ?' : `${w.ageDays}d`
@@ -38,9 +40,13 @@ function main() {
 
   // close
   const yes = rest.includes('--yes')
-  const paths = rest.filter((a) => a !== '--yes')
+  const byAt = rest.indexOf('--by')
+  const by = byAt >= 0 ? (rest[byAt + 1] ?? '').trim() || null : null
+  const forced = rest.includes('--force-claimed')
+  const paths = rest.filter((a, i) => a !== '--yes' && a !== '--force-claimed' && a !== '--by' && !(byAt >= 0 && i === byAt + 1))
   if (!paths.length) usage()
   if (!yes) { console.log('nothing done: add --yes to remove the named worktrees'); return }
+  const claims = readClaims(process.cwd())
   const removed = []
   const kept = []
   for (const p of paths) {
@@ -48,6 +54,10 @@ function main() {
     if (!w) { kept.push([p, 'not a worktree of this repo']); continue }
     if (w.main) { kept.push([p, 'main checkout']); continue }
     if (w.dirty !== 0) { kept.push([p, w.dirty < 0 ? 'could not read its status' : `${w.dirty} uncommitted change(s)`]); continue }
+    const blocked = claimProblem(w.path, claims.all ?? [], forced ? by : null)
+    if (blocked) { kept.push([p, blocked]); continue }
+    const advisory = expiredNote(w.path, claims.all ?? [])
+    if (advisory) console.log(advisory)
     progress(`removing ${w.path}`)
     const r = git(data.top, ['worktree', 'remove', w.path])
     if (r.ok) removed.push(w.path)
