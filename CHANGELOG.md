@@ -18,6 +18,11 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 - The release gate has a `counts` step (after `pack-list`): `tools/gen-checks.mjs`, `tools/gen-coverage.mjs` and `tools/make-badges.mjs` take a new `--check` flag that compares the generated text with the files on disk and exits 1 on a difference without writing anything, and the step also runs the document tests in `tests/count-audit.test.ts`. A drifted document is named with `run node tools/gen-checks.mjs to fix`; a generator that cannot run gives exit 75.
 - `meerkat verify` (and `test`, `quick`) now prints per-check progress on stderr: `[n/N] <check> running` when a check starts and `[done n/N] <check> <seconds>s <status>` when it ends, so a long run no longer looks stuck. The answer is still stdout line 1.
 - Test only: the `speed-065` heartbeat test sets `MEERKAT_GATE_HEARTBEAT_MS` itself, derives its deadline from it (interval plus 2000 ms), checks the beat comes before the check's done line, and has a 500 ms case, so it no longer flakes under load.
+- The gate summary line now says how many findings an inline `// meerkat-ignore <check> <reason>` comment dropped: `, N suppressed by meerkat-ignore` (only when N is above 0).
+- A TOOL PROBLEM (status 503) answer now names the crashed or failed-tool checks on line 1, each with its reason (up to 5, then "and N more"), not only the count.
+- `meerkat verdict` and `meerkat gate` now take the "behind <ref> by N commits" number from one function, so they print the same count for the same worktree.
+- An INCOMPLETE verdict that stopped early (time limit, interruption) now keeps "judged N changed file(s)" on line 1.
+- When the log folder (~/.meerkat/logs or MEERKAT_LOG_DIR) is not writable, logs now go to <OS temp>/meerkat-logs and a note names both folders; the run is recorded there instead of printing NOT RECORDED.
 - `meerkat gate` no longer prints the folder banner or the "comparing against merge base" line before its answer. The answer (for example `NO-RESULT (status 204): nothing changed ...`) is the first line; the folder line follows it.
 
 ## 0.5.4 (2026-11-11)
