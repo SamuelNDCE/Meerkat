@@ -7,7 +7,7 @@ This is how Meerkat writes a run folder that survives a crash, so another scanne
 A run folder is `<log root>/runs/<stamp>-<tier>` and holds:
 
 - `summary.json`: the machine-readable result (sealed when the run ends).
-- `timeline.jsonl`: one line per start and end, in order, with time from the start of the run. Written as the run goes, so a crash leaves it.
+- `timeline.jsonl`: one line per start and end, in order, with time from the start of the run. NOTE: it is written when the report is written (at the end of a run), not as events happen. A crash before that loses the timeline. Making it crash-safe is open (see docs/issues.md).
 - `report.md`: the person-readable report (written when the run ends).
 - `<check>.log`: one per check, with the command, exit code, time and full output.
 
@@ -17,7 +17,7 @@ The log root is `MEERKAT_LOG_DIR`, else `~/.meerkat/logs`. When that folder cann
 
 1. `logRoot(env, home)` returns the folder to write into (with the fallback applied).
 2. `makeRunDir(env, tier, now, home, appDir, label)` creates the run folder and returns its path. Call it once per scan, before the first check.
-3. `createRecorder(now)` returns a recorder. Call `record.start(name)` and `record.end(name, result)` around each unit of work; each call appends to `timeline.jsonl` right away, so a crash keeps the events so far.
+3. `createRecorder(now)` returns a recorder with `start(c)` (when a check begins) and `settle(c, r, ms)` (when it ends with result `r`). Events are kept in memory in `recorder.events`; they reach disk only through `writeRunReport`.
 4. `saveCheckLog(dir, id, text)` writes one unit's full output, and `checkLogText({...})` builds the text.
 5. `sealRunDir(dir, {tier, preset, summary, exitCode, status, appDir, argv, startedAt})` writes `summary.json` when the scan ends, normally or on interrupt (`status` says which).
 6. `writeRunReport({...})` writes `report.md`; `runLogText({...})` builds the text.
@@ -26,7 +26,7 @@ The log root is `MEERKAT_LOG_DIR`, else `~/.meerkat/logs`. When that folder cann
 
 ## Crash safety
 
-Write `timeline.jsonl` as you go and seal `summary.json` only at the end. A crash then leaves a folder with a timeline and no summary; `isSealed`-style checks (look for `summary.json`) tell a later reader the run did not finish. `runState({results, exitCode, findingsTotal})` gives the state text for an unfinished run.
+Not yet. A crash before `writeRunReport` leaves the run folder with the per-check logs only. The fix (write each event as it happens, seal the summary last) is open. Do not claim crash safety for a scanner that uses this module until it is built.
 
 ## Tests to copy
 
