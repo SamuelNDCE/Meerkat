@@ -93,3 +93,26 @@ describe('gate exit codes name their cause', () => {
     expect(r.out[0]).not.toMatch(/\n\s+at /)
   })
 })
+
+describe('TOOL PROBLEM names the checks (docs/issues.md 14a, 16)', () => {
+  const crash = (id: string, detail: string) => ({ kind: 'crash', id, detail })
+  test('line 1 names a crashed check and its reason, not only the count', () => {
+    const oc = gateOutcome({ exitCode: 1, rows: [crash('risky-code', 'tool exited with code 139 (segmentation fault)\nmore'), { kind: 'pass', id: 'ok', detail: '' }] })
+    expect(oc).toMatchObject({ code: 1, status: 503, word: 'TOOL PROBLEM' })
+    expect(oc.reason).toContain('1 check(s) crashed or hung')
+    expect(oc.reason).toContain('risky-code (tool exited with code 139')
+    expect(oc.reason).not.toContain('\n')
+  })
+  test('more than five are cut to five and "and N more"', () => {
+    const rows = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id) => crash(id, `boom ${id}`))
+    const oc = gateOutcome({ exitCode: 1, rows })
+    for (const id of ['a', 'b', 'c', 'd', 'e']) expect(oc.reason).toContain(`${id} (boom ${id})`)
+    expect(oc.reason).not.toContain('f (boom f)')
+    expect(oc.reason).toContain('and 2 more')
+  })
+  test('the missing-tool branch names its checks too', () => {
+    const oc = gateOutcome({ exitCode: 75, rows: [{ kind: 'notrun', id: 'actionlint', detail: 'actionlint is not installed' }] })
+    expect(oc).toMatchObject({ status: 503, word: 'TOOL PROBLEM' })
+    expect(oc.reason).toContain('actionlint (actionlint is not installed)')
+  })
+})
