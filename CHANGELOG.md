@@ -6,6 +6,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ### Fixed
 
+- `meerkat worktrees close` and `node tools/worktrees.mjs close` now refuse to remove a worktree folder that holds another session's live claim (exit 1, naming the owner and the claim's expiry). `--force-claimed --by <owner>` removes it only when the owner matches. An expired claim does not block; it is named in the output.
 - `meerkat gate` no longer prints the folder banner or the "comparing against merge base" line before its answer. The answer (for example `NO-RESULT (status 204): nothing changed ...`) is the first line; the folder line follows it.
 
 ## 0.5.4 (2026-11-11)
