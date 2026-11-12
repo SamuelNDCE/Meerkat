@@ -237,3 +237,7 @@ Six problems, most serious first. None fixed yet.
 - (c) Judge binary files as no-check everywhere. Not recommended: it hides findings in any binary file.
 
 Nothing changes until he decides.
+
+### 14b, new evidence (Neural Vault, fix-3289)
+
+`verdict --base origin/dev` on one changed file in apps/sync-server ran 21+ minutes: 223 of 224 checks done, then stuck on rust-clippy for 850 seconds, which looks like a wait behind the shared cargo lock. Their first line was "note: behind origin/dev by 0 commits", from the meerkat-wt-integ build that predates 309050c. Plan unchanged: a lock wait shows its reason on line 1 and the rest is progress; the rust budget follows the changed crates. Neural Vault is re-running on the current build.
