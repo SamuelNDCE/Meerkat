@@ -222,3 +222,18 @@ Six problems, most serious first. None fixed yet.
 **Gate on 3807** passed in 39 s with exit 0, and its first answer line stated the blocking count. That path is working.
 
 **Not trusted message.** Not seen, so nothing to plan.
+
+## 15. Decision for Samuel: changed binary files (matrix rows 10 and B, B2 red)
+
+**Security review of 4778fec (fixed by reverting the binary part).** The first version classified a file as binary by a NUL byte in its first 8 KB and dropped the findings placed in it. An author could hide a finding, including a secret, by adding one byte. That part is reverted. Extension-based classification was tried next; it has the same risk, since a secret scanner would skip a file merely named `.png`. Also reverted.
+
+**Current state.** The no-check NO-RESULT rule (every changed file matched no check, so NO-RESULT exit 3) stays. Checks run on binary files as they do on any other file. For a new `assets/logo.png` that nothing references, the `dead-assets` check reports a real finding, and the verdict FAILs.
+
+**Matrix rows 10, B and B2 stay red on purpose.** Their expectation (NO-RESULT exit 3 for a binary) was a guess by the test author, and the security reason rules out hiding findings to satisfy it.
+
+**Options for Samuel.**
+- (a) Keep the current behaviour (a changed unreferenced binary is a dead-asset finding). Change rows 10, B and B2 to expect FAIL. This is the safest.
+- (b) Exempt binary files from `dead-assets` only, in that check's own rule (it checks assets, so a changed asset is its job to judge; the exemption would be a rule decision, not a hidden drop). Rows 10 and B expect PASS or NO-RESULT accordingly.
+- (c) Judge binary files as no-check everywhere. Not recommended: it hides findings in any binary file.
+
+Nothing changes until he decides.
