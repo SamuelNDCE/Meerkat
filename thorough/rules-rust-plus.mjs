@@ -613,12 +613,16 @@ export const ERRORS = [
 ]
 
 // ---------------------------------------------------------------- Async (rp-async)
+// A comment line (// or //!) that calls the file a background job and says it runs once per tick, in either order.
+const BG_TICK = /^\s*\/\/[!/]?.*(?:\bbackground\b.*\bonce[ -]per[ -]tick\b|\bonce[ -]per[ -]tick\b.*\bbackground\b)/im
+const markedBackgroundTick = (text) => BG_TICK.test(text)
 export const ASYNC = [
   R('rasync-blocking-thread-sleep', 'thread::sleep is called inside an async fn, which blocks the whole runtime thread', /\bthread::sleep\(/, 'async fn poll() {\n    std::thread::sleep(Duration::from_secs(1));\n}', 'async fn poll() {\n    tokio::time::sleep(Duration::from_secs(1)).await;\n}', {
     test: (line, ctx) => /\bthread::sleep\(/.test(line) && inAsyncFn(ctx),
   }),
   R('rasync-blocking-fs', 'a blocking std::fs call runs inside an async fn', /(?<![\w:])(?:std::)?fs::(?:read|read_to_string|write|create_dir_all|remove_file|copy|rename|metadata|read_dir)\(/, 'async fn load() -> String {\n    std::fs::read_to_string("a.txt").unwrap()\n}', 'async fn load() -> String {\n    tokio::fs::read_to_string("a.txt").await.unwrap_or_default()\n}', {
-    test: (line, ctx) => /(?<![\w:])(?:std::)?fs::(?:read|read_to_string|write|create_dir_all|remove_file|copy|rename|metadata|read_dir)\(/.test(line) && inAsyncFn(ctx),
+    // A file whose own comment says it is a background job that runs once per tick blocks only its own thread, so a blocking call there is deliberate.
+    test: (line, ctx) => /(?<![\w:])(?:std::)?fs::(?:read|read_to_string|write|create_dir_all|remove_file|copy|rename|metadata|read_dir)\(/.test(line) && inAsyncFn(ctx) && !markedBackgroundTick(ctx.text),
   }),
   R('rasync-blocking-net', 'a blocking std::net connect or bind runs inside an async fn', /(?<![\w:])(?:std::)?net::(?:TcpStream|TcpListener|UdpSocket)::(?:connect|bind)\(/, 'async fn ping() {\n    let s = std::net::TcpStream::connect("10.0.0.1:80");\n}', 'async fn ping() {\n    let s = tokio::net::TcpStream::connect("10.0.0.1:80").await;\n}', {
     // Binding an ephemeral loopback port (":0") to find a free one is a one-shot local call, not a wait on the network.

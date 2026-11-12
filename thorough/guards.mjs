@@ -239,7 +239,91 @@ export const ipcMainIsGuardedParameter = (_line, ctx) => {
 export const ipcHandlerCallsSenderHelper = (_line, ctx) => {
   const rest = ctx.lines.slice(ctx.index + 1, ctx.index + 8)
   const next = rest.findIndex((l) => /\bipcMain\./.test(l))
-  return callsSenderHelper([ctx.lines[ctx.index], ...(next < 0 ? rest : rest.slice(0, next))].join('\n'), ctx.text)
+  const handler = [ctx.lines[ctx.index], ...(next < 0 ? rest : rest.slice(0, next))].join('\n')
+  return callsSenderHelper(handler, ctx.text) || callsNamedTrustHelper(handler)
+}
+
+// A wrapper such as handleTrusted or onTrusted registers the handler and stops on a helper whose name says it checks the sender or the frame
+// (`assertTrustedFrame(event)`, `if (!isTrustedSender(event)) return`). The helper may be imported, so its body is not read: the name decides, and it must be
+// called with the event as the first argument, as a bare statement or in an `if`, and the handler must have no `else` (the same fail-closed shape as above).
+const TRUST_HELPER = /trust|sender|frame|origin/i
+const callsNamedTrustHelper = (code) => {
+  const body = stripComments(code)
+  if (/\belse\b/.test(body)) return false
+  const re = new RegExp(String.raw`(?:^|[\n{;])\s*(?:if\s*\(\s*!?\s*|(?:await\s+)?)([A-Za-z_$][\w$]*)\(\s*${EVENT_ARG}\s*[,)]`, 'g')
+  return [...body.matchAll(re)].some((m) => TRUST_HELPER.test(m[1]))
+}
+
+// `ipcMain.removeAllListeners('chan')` followed, in the same function, by a registration of the same channel (`ipcMain.on('chan', ...)`): each register
+// call clears its own channel first, so no other feature's listener is dropped. A removal with no channel, a channel held in a variable, or a different
+// channel does not count. The function ends where a line is indented less than the removal.
+export const removalIsReregistered = (line, ctx) => {
+  const m = /\bipcMain\.removeAllListeners\(\s*(['"`])([^'"`\n]+)\1\s*\)/.exec(line)
+  if (!m) return false
+  const base = indentOf(line)
+  const register = new RegExp(String.raw`\bipcMain\.(?:on|once|handle|handleOnce|addListener)\(\s*${m[1]}${escapeRe(m[2])}${m[1]}`)
+  for (let i = ctx.index + 1; i < Math.min(ctx.lines.length, ctx.index + 41); i++) {
+    const l = ctx.lines[i]
+    if (l.trim() && indentOf(l) < base) return false
+    if (register.test(l)) return true
+  }
+  return false
+}
+
+// The line sits inside the parentheses of a call to `name` (a callback written over several lines), or is on the line that makes the call. A function
+// elsewhere in the same file, even one that also says `resolve(true)`, is not inside it.
+export const insideCallOf = (name, back = 60) => (line, ctx) => {
+  const call = new RegExp(String.raw`\b${name}\s*\(`)
+  if (call.test(line)) return true
+  for (let k = ctx.index - 1; k >= Math.max(0, ctx.index - back); k--) {
+    const at = ctx.lines[k].search(call)
+    if (at < 0) continue
+    let depth = 0
+    for (let j = k; j < ctx.index; j++) {
+      const text = j === k ? ctx.lines[j].slice(at) : ctx.lines[j]
+      for (const ch of text) {
+        if (ch === '(') depth++
+        else if (ch === ')') depth--
+      }
+    }
+    if (depth > 0) return true
+  }
+  return false
+}
+
+// The text of each function-like block that holds the character at `offset`, nearest first, at most three, each at most `maxLines` long. A block counts as a
+// function when its header has the word function, an arrow, or a name followed by a parameter list (a method); if, for, while, switch, catch and try blocks are walked through.
+export const enclosingFunctionTexts = (text, offset, maxLines = 150) => {
+  const out = []
+  let depth = 0
+  const floor = Math.max(0, offset - 30000)
+  for (let k = offset - 1; k >= floor && out.length < 3; k--) {
+    const ch = text[k]
+    if (ch === '}') depth++
+    else if (ch === '{') {
+      if (depth > 0) {
+        depth--
+        continue
+      }
+      const cut = Math.max(text.lastIndexOf(';', k - 1), text.lastIndexOf('}', k - 1), text.lastIndexOf('{', k - 1))
+      const header = text.slice(Math.max(cut + 1, k - 300), k)
+      const flow = /^\s*(?:else\s+)?(?:if|for|while|switch|catch|try|do|else|with)\b/.test(header)
+      const fn = !flow && (/\bfunction\b/.test(header) || /=>\s*$/.test(header) || /(?:^|\s)[A-Za-z_$][\w$]*\s*\([^)]*\)\s*(?::[^{]+)?\s*$/.test(header))
+      if (!fn) continue
+      let d = 0
+      let end = text.length
+      for (let j = k; j < text.length && j - k < 40000; j++) {
+        if (text[j] === '{') d++
+        else if (text[j] === '}' && --d === 0) {
+          end = j
+          break
+        }
+      }
+      const body = text.slice(k, end)
+      if (body.split('\n').length <= maxLines) out.push(body)
+    }
+  }
+  return out
 }
 
 // ---- Electron false-alarm guards (round 5, from an Electron app audit of 2026-11-02) ----

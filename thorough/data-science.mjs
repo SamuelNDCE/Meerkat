@@ -348,6 +348,10 @@ const requirementsPinnedMl = (root) => {
 const DATA_DIR = /^(data|datasets)$/i
 const DATA_FILE = /\.(csv|tsv|json|jsonl|parquet|feather|arrow|sqlite|db|npy|npz|xlsx|xls|h5|hdf5|zip|gz)$/i
 const NOTE_FILE = /^(readme|license|copying|data|dataset|datasets|datasheet|source|sources|provenance)(\.(md|txt|rst))?$/i
+// A JSON data file that says where it came from itself: a top-level source, provenance, origin or licence key (a checked date beside it is the usual extra).
+// Only the first 16 KB is read, where such a header sits; a nested key deeper in a large file does not count.
+const PROVENANCE_KEY = /"(?:source|sources|provenance|origin|licen[cs]e|licen[cs]es|licen[cs]ing)"\s*:/i
+const carriesProvenance = (root, x) => /\.json$/i.test(x) && PROVENANCE_KEY.test(readText(root, x).slice(0, 16384))
 const datasetLicenseNote = (root) => {
   const ID = 'dataset-license-note'
   const all = trackedFiles(root).filter((x) => !isFixture(x))
@@ -357,14 +361,16 @@ const datasetLicenseNote = (root) => {
     const i = segs.findIndex((s) => DATA_DIR.test(s))
     if (i < 0) continue
     const dir = segs.slice(0, i + 1).join('/')
-    dirs.set(dir, (dirs.get(dir) ?? 0) + 1)
+    dirs.set(dir, [...(dirs.get(dir) ?? []), x])
   }
   if (!dirs.size) return na(ID, 'no data folders')
   const allow = allowFor(root, ID)
   const f = []
-  for (const [dir, n] of dirs) {
+  for (const [dir, members] of dirs) {
+    const n = members.length
     if (allow.has(dir)) continue
-    const noted = all.some((x) => posix.dirname(x) === dir && NOTE_FILE.test(posix.basename(x)))
+    // A note file in the folder, or provenance written inside every data file of the folder (a JSON file with a source, provenance, origin or licence key).
+    const noted = all.some((x) => posix.dirname(x) === dir && NOTE_FILE.test(posix.basename(x))) || members.every((x) => carriesProvenance(root, x))
     if (!noted) f.push(`${dir}/ holds ${n} data file(s) and no README, LICENSE or DATA.md saying where they came from`)
   }
   return soft(ID, cfg(root).requireDatasetNotes === true, f, 'every data folder says where its data came from', `${f.length} data folder(s) have no source note (set data.requireDatasetNotes to true to fail on them)`)
