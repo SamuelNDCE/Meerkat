@@ -4,6 +4,7 @@
 //   node thorough/desktop.mjs <check> [--root <dir>]      node thorough/desktop.mjs <check> --fixtures   (must exit 1)
 // A finding you accept goes in .meerkat-desktop-allow as "<check-id> <path>" (the whole file) or "<check-id> <path>:<line>", one per line, # for comments.
 import { finding, finish, isTestFile, main, readText, trackedFiles, withFixture } from './kit.mjs'
+import { enclosingFunctionTexts } from './guards.mjs'
 
 const CODE = /\.(m?[jt]sx?|cjs|cts|mts)$/i
 const PAGE = /\.(m?[jt]sx?|cjs|cts|mts|html?)$/i
@@ -21,6 +22,8 @@ const mentionsElectronImport = (text) => {
   return false
 }
 const ALLOW_WORDS = /allow|whitelist|allowlist|\.includes\(|\.has\(|protocol|isSafe|isAllowed/i
+// A consent step before an open: the user is asked in a dialog.
+const CONSENT_WORDS = /\bdialog\.showMessageBox(?:Sync)?\s*\(|\bshowMessageBox(?:Sync)?\s*\(|\bconsent\b|\bconfirm\s*\(/i
 const DEV_GATE = /isDev|isDevelopment|isPackaged|NODE_ENV|development|VITE_DEV|DEV_URL|\bQA\b|__DEV__|import\.meta\.env\.DEV/i
 // The DevTools toggle is the body of a handler the user triggers: an ipc handler or listener, a before-input-event key handler, a global shortcut or a menu item click.
 const DEVTOOLS_SHORTCUT = /ipc(?:Main)?\.(?:handle|on)\s*\(|before-input-event|globalShortcut\.register|\bclick\s*:/
@@ -180,7 +183,11 @@ main({
         const name = /^\s*([A-Za-z_$][\w$]*)\s*[,)]/.exec(arg)?.[1]
         if (name && constString(t, name)) return
         const near = L.slice(Math.max(0, i - 10), i + 11).join('\n')
-        if (!ALLOW_WORDS.test(near)) out.push({ line: i + 1, why: 'opens a link taken from a value that is not a fixed string, with no allow check within 10 lines' })
+        if (ALLOW_WORDS.test(near)) return
+        // The guard may sit further up in the same function: an allow check (a protocol or host allow-list) or a consent dialog before the open counts.
+        const offset = L.slice(0, i).join('\n').length + 1
+        if (enclosingFunctionTexts(t, offset).some((body) => ALLOW_WORDS.test(body) || CONSENT_WORDS.test(body))) return
+        out.push({ line: i + 1, why: 'opens a link taken from a value that is not a fixed string, with no allow check or consent step in the same function' })
       })
       return out
     }),

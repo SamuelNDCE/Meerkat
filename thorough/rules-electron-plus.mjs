@@ -17,7 +17,7 @@
 // Regexes are linear: bounded quantifiers ({0,200}) and no nested open spans, so a hostile 100 KB line cannot blow up.
 // Rules that need a sibling line (for example a handler body) look only at a fixed window of lines after the match.
 
-import { appDeniesWindowOpen, argIsModuleConstString, channelChecked, templateHolesAllConstant, holesAllWrapped, inDevOnlyBlock, inIpcHandler, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, shellPathIsChecked, withinCallBody } from './guards.mjs'
+import { appDeniesWindowOpen, argIsModuleConstString, channelChecked, templateHolesAllConstant, holesAllWrapped, inDevOnlyBlock, insideCallOf, inIpcHandler, ipcHandlerCallsSenderHelper, ipcMainIsGuardedParameter, removalIsReregistered, shellPathIsChecked, withinCallBody } from './guards.mjs'
 import { rustTestLines } from './kit.mjs'
 const JS = ['js', 'mjs', 'cjs', 'ts', 'mts', 'cts', 'jsx', 'tsx']
 const HTML = ['html', 'htm']
@@ -197,10 +197,11 @@ export const EP_WINDOW = [
     "win.webContents.on('will-navigate', (e) => e.preventDefault())",
     { severity: 'low' }),
   js('ep-permission-grant-all', 'a permission request handler grants every request (callback(true)), where checklist item 5 says to decide each one',
-    lineIf(/\b(?:callback|cb|done|resolve)\(\s*true\s*\)/, (t) => /setPermissionRequestHandler/.test(t)),
+    (line, ctx) => lineIf(/\b(?:callback|cb|done|resolve)\(\s*true\s*\)/, (t) => /setPermissionRequestHandler/.test(t))(line, ctx) && insideCallOf('setPermissionRequestHandler')(line, ctx),
     'ses.setPermissionRequestHandler((wc, permission, callback) => callback(true))',
     "ses.setPermissionRequestHandler((wc, permission, callback) => callback(permission === 'notifications'))",
-    { test: lineIf(/\b(?:callback|cb|done|resolve)\(\s*true\s*\)/, (t) => /setPermissionRequestHandler/.test(t)) }),
+    // The yes must sit inside the setPermissionRequestHandler call itself: a resolve(true) in another function of the same file is not a permission answer.
+    { test: (line, ctx) => lineIf(/\b(?:callback|cb|done|resolve)\(\s*true\s*\)/, (t) => /setPermissionRequestHandler/.test(t))(line, ctx) && insideCallOf('setPermissionRequestHandler')(line, ctx) }),
   js('ep-permission-check-true', 'a permission check handler always answers yes (returns true), so every check passes',
     lineIf(/\breturn\s+true\b|=>\s*true\b/, (t) => /setPermissionCheckHandler/.test(t)),
     'ses.setPermissionCheckHandler(() => true)',
@@ -312,7 +313,8 @@ export const EP_IPC_PRELOAD = [
     /\bipcMain\.removeAllListeners\(/,
     "ipcMain.removeAllListeners('save')",
     "ipcMain.removeListener('save', onSave)",
-    { severity: 'low' }),
+    // A register function that clears its own channel and registers the same channel again right after does not drop another feature's listener.
+    { severity: 'low', unless: removalIsReregistered }),
   js('ep-ipc-listener-leak', 'the preload adds an ipcRenderer listener and never removes it, so listeners pile up on every reload',
     lineIf(/\bipcRenderer\.on\(/, (t) => !/removeListener|removeAllListeners|\.off\(/.test(t)),
     "ipcRenderer.on('tick', onTick)",
@@ -856,8 +858,14 @@ export const CHECKLIST_NOTES = {
   20: 'desktop pack check electron-preload-exposure; ep-preload-raw-callback, ep-ipc-channel-forwarded, ep-preload-node-object',
 }
 
+// Dev-only harness scripts (verify-*.cts, shoot-*.cts, anything under dev/) drive their own test window with fixed scripts and are not shipped, so the rules
+// that look at what a window loads or runs skip them by path. Rules about sandboxing, permissions and switches still read them.
+const DEV_ONLY = /(^|\/)(?:verify|shoot)-[^/]*\.[cm]?[jt]s$|(^|\/)dev\//i
+const DEV_SCOPED = /^ep-(?:load-url|execute-js|insert-css)/
+const devScoped = (rule) => (DEV_SCOPED.test(rule.id) ? { ...rule, notIn: new RegExp(`${rule.notIn.source}|${DEV_ONLY.source}`, 'i') } : rule)
+
 export const CHECK_TABLES = {
-  'ep-window': EP_WINDOW,
+  'ep-window': EP_WINDOW.map(devScoped),
   'ep-ipc-preload': EP_IPC_PRELOAD,
   'ep-fuses-build': EP_FUSES_BUILD,
   'ep-content-renderer': EP_CONTENT_RENDERER,

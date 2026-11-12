@@ -776,6 +776,8 @@ const htmlStructure = (root) => {
   const f = []
   for (const x of trackedFiles(root)) {
     if (!/\.html?$/i.test(x) || /(^|\/)(node_modules|dist|build)\//.test(x)) continue
+    // A saved page under tests/fixtures/ (a third-party capture kept as test input) is not this project's markup.
+    if (/(^|\/)(?:tests?|__tests__|spec)\/fixtures?\//i.test(x)) continue
     const t = readText(root, x).replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, '')
     const heads = [...t.matchAll(/<h([1-6])\b/gi)].map((m) => Number(m[1]))
     if (heads.filter((h) => h === 1).length > 1) f.push(`${x}: more than one <h1>`)

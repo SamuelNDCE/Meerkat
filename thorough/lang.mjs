@@ -313,7 +313,8 @@ function asyncFunctionNames(root, list) {
 // declares the name: nothing in the body can reject, so a call that is not awaited leaves nothing unhandled. A function with an await outside any try stays flagged.
 function shieldedAsyncNames(root, list) {
   const verdict = new Map()
-  const DECL = /\basync\s+function\s*\*?\s*([\w$]+)\s*\([^)]*\)\s*\{|(?:const|let|var)\s+([\w$]+)\s*=\s*async\s*(?:function\b[^(]*)?(?:\([^)]*\)|[\w$]+)\s*(?:=>)?\s*\{/g
+  // (A TypeScript return type such as `: Promise<void>` may sit between the parameter list and the body.)
+  const DECL = /\basync\s+function\s*\*?\s*([\w$]+)\s*\([^)]*\)\s*(?::\s*[^{=;]+?)?\s*\{|(?:const|let|var)\s+([\w$]+)\s*=\s*async\s*(?:function\b[^(]*)?(?:\([^)]*\)|[\w$]+)\s*(?::\s*[^{=;]+?)?\s*(?:=>)?\s*\{/g
   for (const x of list) {
     const code = codeOnly(sourceOf(root, x), JS_OPTS)
     for (const m of code.matchAll(DECL)) {
@@ -367,7 +368,8 @@ const unhandledPromise = (root) => {
       else if (!/\.(?:then|catch|finally)[ \t]*\(/.test(top)) {
         const callee = /^[ \t]*(?:[A-Za-z_$][\w$]*[ \t]*\.[ \t]*)*([A-Za-z_$][\w$]*)[ \t]*\(/.exec(line)?.[1]
         // ipcMain.handle('channel', fn) and ipcRenderer.on(...) register a handler; the call itself returns nothing to await.
-        const registers = /^[ \t]*(?:ipcMain|ipcRenderer)[ \t]*\./.test(line)
+        // child.once('exit', ...) and emitter.on('event', ...) register a listener the same way; the call returns nothing to await, whatever else is named `once` or `on`.
+        const registers = /^[ \t]*(?:ipcMain|ipcRenderer)[ \t]*\./.test(line) || /\.[ \t]*(?:on|once|off|addListener|prependListener|prependOnceListener|removeListener|addEventListener)[ \t]*\([ \t]*(?:['"`]|,)/.test(line) // (the scanned text has string contents, quotes included, turned to spaces, so the event name shows as blanks before the comma)
         if (callee && asyncNames.has(callee) && !registers && !boundLocallyNotAsync(t, callee)) f.push(`${x}:${lineOf(t, start)} calls the async function ${callee} without await or .catch, so a rejection goes unhandled (await it, or add .catch)`)
       }
     }
@@ -393,6 +395,8 @@ function* recursiveMergeHits(t, raw = t) {
   for (const m of t.matchAll(KEY_LOOP)) {
     const key = m[1] || m[2] || m[3]
     if (!key) continue
+    // The keys of the process environment are not attacker JSON, and every value in it is a string, so a copy into a fresh object cannot change a prototype.
+    if (/\bprocess\.env\b/.test(m[0])) continue
     const before = t.slice(Math.max(0, m.index - 300), m.index)
     const win = t.slice(m.index, m.index + 700).split('\n').slice(0, 9).join('\n')
     if (!MERGEISH.test(before.split('\n').slice(-6).join('\n')) && !MERGEISH.test(win)) continue

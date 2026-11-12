@@ -12,6 +12,14 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ### Fixed
 
+- `ep-ipc-handler-no-sender-check` accepts a handler whose first statement calls a trust helper by name with the event (`assertTrustedFrame(event)`, `if (!isTrustedSender(event))`), which is how a `handleTrusted` / `onTrusted` wrapper checks the sender (docs/issues.md 12a). A raw `ipcMain.handle` with no check is still found.
+- `ep-ipc-remove-all-listeners` accepts `ipcMain.removeAllListeners('chan')` when the same function registers the same channel right after (12b). A bare removal, or a removal of another channel, is still found.
+- `ep-permission-grant-all` matches only a `callback(true)` that sits inside a `setPermissionRequestHandler` call, not a `resolve(true)` elsewhere in the file (12c).
+- `electron-open-external` looks for an allow check or a consent dialog in the whole enclosing function, not only 10 lines around the call (12d). A guard in a different function does not count.
+- `js-prototype-pollution` skips a key loop over `process.env` (12g). `js-unhandled-promise` skips event registrations (`child.once('exit', ...)`) and sees an async function that catches inside even when it has a TypeScript return type (12h).
+- `pii-patterns-in-source` skips public service identities: the npm registry domains and Google public calendar ids (13h). A personal address, or a lookalike domain, is still found.
+- `html-structure` skips pages under `tests/fixtures/` (13i). `dataset-license-note` accepts a JSON data file with a source, provenance, origin or licence key (13k). `rasync-blocking-fs` skips a file whose comment calls it a background job that runs once per tick (13l).
+- `ep-window` rules for `loadURL`, `executeJavaScript` and `insertCSS` skip dev-only harness scripts by path: `verify-*`, `shoot-*` and anything under `dev/` (12f).
 - Rust rule false positives (docs/issues.md 13a-13d, 13f, 11e): `unsafe-rust` accepts a SAFETY note anywhere in the comment block directly above the `unsafe`, not only within three lines; `rs-forget-uninitialized` accepts `mem::forget` when the comment above says ownership moved; `rsafe-from-raw-parts-no-len-check` accepts a SAFETY note that names the length source; `rerr-unreachable-in-library` and `rerr-assert-in-library` accept a comment above that states the invariant; `debug-leftovers` skips `todo!()` inside `//!` and `///` doc comments; `skipped-tests` accepts a Python `skipIf`/`skipUnless` that carries a reason argument. Bare cases still fire. `#[ignore = "reason"]` was already accepted and is now covered by a test.
 
 - `meerkat worktrees close` and `node tools/worktrees.mjs close` now refuse to remove a worktree folder that holds another session's live claim (exit 1, naming the owner and the claim's expiry). `--force-claimed --by <owner>` removes it only when the owner matches. An expired claim does not block; it is named in the output.

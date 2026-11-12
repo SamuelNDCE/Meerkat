@@ -159,6 +159,9 @@ const NINO = /\b(?!BG|GB|NK|KN|TN|NT|ZZ)[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]\d{6}
 const SSN = /\b(?!000|666|9\d{2})\d{3}-\d{2}-\d{4}\b/
 // A placeholder written to look like an address: one letter before the @ and one letter for the first domain label (a@b.com, x@y.org).
 const PLACEHOLDER_EMAIL = /^[a-z]$/i
+// Identities of public services, not of a person: the npm registry's own domains, and Google's public calendar ids (a holiday calendar is
+// `en.usa#holiday@group.v.calendar.google.com`). The domain must end with the listed name, so `npmjs.org.evil.io` is still a finding.
+const PUBLIC_SERVICE_DOMAIN = /(^|\.)(?:npmjs\.(?:org|com)|(?:group\.v|group|import)\.calendar\.google\.com)$/i
 const PLACEHOLDER_IPV4 = /^(?:1\.2\.3\.4|192\.0\.0\.\d{1,3})$/ // the counting-up example address, and 192.0.0.0/24 (reserved for protocol use)
 const publicIpv4 = (ip) => {
   if (PLACEHOLDER_IPV4.test(ip)) return false
@@ -186,7 +189,7 @@ const piiPatternsInSource = (root) => {
         const [local, domain] = [m[0].split('@')[0], m[0].split('@')[1]]
         // user:password@host (the @ right after the web address's own host part) is part of a URL, not an email address (credentials in URLs have their own check).
         if (/\w:\/\/[^\s"'`/?#]*$/.test(line.slice(0, m.index))) continue
-        if (GENERIC_LOCAL.test(local) || (PLACEHOLDER_EMAIL.test(local) && PLACEHOLDER_EMAIL.test(domain.split('.')[0])) || FAKE_DOMAIN.test(domain) || /noreply\.github\.com$/i.test(domain)) continue
+        if (GENERIC_LOCAL.test(local) || (PLACEHOLDER_EMAIL.test(local) && PLACEHOLDER_EMAIL.test(domain.split('.')[0])) || FAKE_DOMAIN.test(domain) || PUBLIC_SERVICE_DOMAIN.test(domain) || /noreply\.github\.com$/i.test(domain)) continue
         f.push(`${at} has the email address ${m[0]}`)
         break
       }
