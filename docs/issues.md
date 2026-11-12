@@ -289,3 +289,9 @@ Final result: exit 75, INCOMPLETE; all 225 checks finished; rust-test FAIL at 64
 - **19a. Two counts for one stop.** The log says "stopped early: 3 blocking so far", and the summary says "0 blocking so far (not a pass)". The two lines use different sources for the same count. Bug. Plan: one count, from the same rows, used by both lines; test with a run stopped at a known blocking count.
 - **19b. The result file names no failing checks.** Every entry in `prs` has `failingChecks: []`, and `devBaseline` is empty for this run, so it cannot say which checks failed on the base or the branch. This is item 18a. Plan: write each failing check (id, reason, base-only / branch-only / both) into the result file and the summary.
 - **19c. Earlier batch PASS verdicts.** Per-branch verdicts reported PASS for the same branches with `--allow-stale`. They do not match this batch's result. Plan: the verdict and batch result must state the base commit each one judged; a stale-base PASS is not the same as this batch's result. Needs the base commit from both runs to compare.
+
+### 19, from the run folder (20261112-130641-wt-398654--gate)
+
+- **19d. The count disagrees with the rows.** The report and summary say "225 check(s), 3 failed", but summary.json has 47 rows with status FAIL, 177 PASS and 1 NOT RUN, and no row marked blocking. One of the two counts is wrong. Plan: the count comes from the same rows as the list, and "blocking" is a field on each row, so the summary can say how many are blocking and how many are only failing.
+- **19e. Which checks are blocking is not recorded.** The three blocking checks cannot be named from this folder; the 47 FAIL rows include rust-test (ran only the changed crates) and the ep-* checks. Plan: as 19d.
+- **19f. Base sides not in this folder.** This is a whole-tree gate in a temp checkout, not the batch's base comparison; the batch's per-check base result is not written here. Plan: as 18a and 19b.
