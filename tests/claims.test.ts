@@ -166,12 +166,12 @@ describe('worktrees', () => {
     git(wtA, 'checkout', '-q', 'a.txt')
     rmSync(join(wtA, 'dirty.txt'))
     const dry = mk(main, 'worktrees', 'close', wtA)
-    expect(dry.code).toBe(0)
-    expect(dry.out).toContain('would remove')
+    expect(dry.code).toBe(1) // agent-a still holds a live claim on this folder: the dry run reports the refusal
+    expect(dry.out + dry.err).toMatch(/claim/)
     expect(existsSync(wtA)).toBe(true)
   })
   test('close with --yes removes a clean, merged worktree and its claims', () => {
-    const r = mk(main, 'worktrees', 'close', wtA, '--yes')
+    const r = mk(main, 'worktrees', 'close', wtA, '--yes', '--force-claimed', '--by', 'agent-a') // explicit: the claim owner releases it
     expect(r.code).toBe(0)
     expect(r.out).toMatch(/removed worktree .*wt-a and 1 claim/)
     expect(existsSync(wtA)).toBe(false)
