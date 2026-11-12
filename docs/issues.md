@@ -264,3 +264,11 @@ The gate on PR 3805 reported "could not compile nv-agents (test board_hostile_ma
 
 - 14d: the verdict's line 1 is now the answer with its reason ("INCOMPLETE (status 503): a check crashed or its tool failed, so the run cannot be judged; 2 checks did not work. Next: meerkat gate --only rust-test --base origin/dev"). Confirmed working on the current build; close 14d once the reason is verified on a second case.
 - 14b: the run took 1012 s because the nv-sidecar test target does not compile on `dev` (phone_cmds.rs), and rust-test and rust-clippy each ran to failure. Plan: a compile failure of a crate's test target stops the other rust checks on the same crate at once and reports the compile error as a tool problem, rather than running each to its own failure. Same rule as 14g.
+
+### 14a, result from Neural Vault (PR 3806 head ac4a5e076, build b4a6c4e, separate streams, uninterrupted)
+
+Exit 1. Line 1: "TOOL PROBLEM (status 503): 1 check(s) crashed or hung; that is a tool problem, not a finding in the code. next: read the log folder; meerkat doctor shows missing tools". The crashed check is NOT named on line 1. Stderr is 615 lines, and its last line is "base side: [done 1/1] rp-api-ffi-wasm ... 2.7s FAIL". So the old "reading 'message'" crash did not recur, and the new fact is that a base-side check (rp-api-ffi-wasm) fails on the base side and is reported as a tool problem. Plan: (a) line 1 names the crashed check and its reason, the same rule as 16; (b) a base-side check that fails is judged as pre-existing when it also fails on the base, and only a tool failure is a tool problem; check whether rp-api-ffi-wasm is a missing tool or a real base failure. Close 14a once (a) is in place and this case gives the right answer.
+
+### 16, confirmed case (PR 3806, same run)
+
+The gate's line 1 for this run did not name the crashed check (see 14a). This is the same gap as section 16: the summary must name each crashed or failed-tool check.
