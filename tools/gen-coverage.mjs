@@ -2,11 +2,15 @@
 //   node tools/gen-coverage.mjs
 // It reads every pack under packs/ (not only the packs a project turns on) and counts through the same registry the CLI uses
 // (lib/suites.mjs). Everything outside the markers in docs/coverage.md is written by hand.
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { declaredSubs, groupBySuite, suiteIdOf } from '../lib/suites.mjs'
+import { createSink } from './check-mode.mjs'
+
+// --check compares the generated text with the file on disk, writes nothing and exits 1 on a difference.
+const sink = createSink(process.argv.slice(2), { script: 'tools/gen-coverage.mjs' })
 
 const PACKS_DIR = join(MEERKAT_DIR, 'packs')
 const packs = readdirSync(PACKS_DIR).filter((p) => statSync(join(PACKS_DIR, p)).isDirectory()).sort()
@@ -184,5 +188,6 @@ for (const [name, b] of [['coverage', block], ['coverage-lang', block2]]) {
   if (!re.test(out)) throw new Error(`docs/coverage.md has no ${name} markers`)
   out = out.replace(re, () => b.replace(/\n/g, nl))
 }
-writeFileSync(file, out)
+sink.write(file, out, 'docs/coverage.md')
 console.log(headline.join('\n'))
+process.exitCode = sink.finish()

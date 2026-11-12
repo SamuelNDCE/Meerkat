@@ -6,6 +6,7 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ### Fixed
 
+- The release gate has a `counts` step (after `pack-list`): `tools/gen-checks.mjs`, `tools/gen-coverage.mjs` and `tools/make-badges.mjs` take a new `--check` flag that compares the generated text with the files on disk and exits 1 on a difference without writing anything, and the step also runs the document tests in `tests/count-audit.test.ts`. A drifted document is named with `run node tools/gen-checks.mjs to fix`; a generator that cannot run gives exit 75.
 - `meerkat gate` no longer prints the folder banner or the "comparing against merge base" line before its answer. The answer (for example `NO-RESULT (status 204): nothing changed ...`) is the first line; the folder line follows it.
 
 ## 0.5.4 (2026-11-11)

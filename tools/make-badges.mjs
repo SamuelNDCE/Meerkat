@@ -1,11 +1,15 @@
 // Draws the small labelled badges at the top of the README as plain SVG files (docs/images/badges/), so the repository has its own and
 // they never depend on another site:   node tools/make-badges.mjs
 // The check count is read from the checks themselves.
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { VERSION } from '../lib/version.mjs'
+import { createSink } from './check-mode.mjs'
+
+// --check compares each badge with the file on disk, writes nothing and exits 1 on a difference.
+const sink = createSink(process.argv.slice(2), { script: 'tools/make-badges.mjs' })
 
 // Every folder under packs/ is a pack, so a new pack is counted without anyone remembering to list it here.
 const PACKS = readdirSync(join(MEERKAT_DIR, 'packs'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort()
@@ -38,7 +42,7 @@ const BADGES = [
 const width = (text) => Math.round(text.length * 6.6 + 14)
 const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')
 
-mkdirSync(join(MEERKAT_DIR, 'docs', 'images', 'badges'), { recursive: true })
+if (!sink.check) mkdirSync(join(MEERKAT_DIR, 'docs', 'images', 'badges'), { recursive: true })
 for (const [label, value, colour] of BADGES) {
   const a = width(label)
   const b = width(value)
@@ -55,6 +59,8 @@ for (const [label, value, colour] of BADGES) {
   </g>
 </svg>
 `
-  writeFileSync(join(MEERKAT_DIR, 'docs', 'images', 'badges', `${label.replace(/\s+/g, '-')}.svg`), svg)
+  const name = `${label.replace(/\s+/g, '-')}.svg`
+  sink.write(join(MEERKAT_DIR, 'docs', 'images', 'badges', name), svg, `docs/images/badges/${name}`)
 }
-console.log(`${BADGES.length} badges written (${checks} checks)`)
+console.log(`${BADGES.length} badges ${sink.check ? 'compared' : 'written'} (${checks} checks)`)
+process.exitCode = sink.finish()
