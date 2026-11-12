@@ -67,7 +67,9 @@ function cratesFor(ctx) {
     const abs = resolve(ctx.repoRoot, f)
     // the deepest crate folder that contains the file
     const home = all.filter((c) => abs === c.dir || abs.startsWith(c.dir + sep)).sort((x, y) => y.dir.length - x.dir.length)[0]
-    if (home) changed.add(home.name)
+    // Fail closed: a changed Rust file or manifest that no crate the scanner can see contains means the whole workspace runs.
+    if (!home) return { whole: `a changed Rust file is not in any crate the scanner can see (${f})` }
+    changed.add(home.name)
   }
   if (!changed.size) return { whole: 'the changed files are outside every crate' }
   const dirOf = new Map(all.map((c) => [c.name, c.dir]))

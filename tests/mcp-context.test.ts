@@ -31,6 +31,7 @@ function stubCtx(reply: { code?: number; stdout?: string; stderr?: string } = {}
     now: () => Date.now(),
     isDirectory: (p: string) => p.startsWith(resolve('/work')),
     realpath: (p: string) => p,
+    isFile: () => true,
     roots: () => [],
     runCli: async (argv: string[]) => { cli.push(argv); return { code: reply.code ?? 0, stdout: reply.stdout ?? '', stderr: reply.stderr ?? '', timedOut: false } },
   }
