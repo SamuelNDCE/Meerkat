@@ -73,7 +73,7 @@ Planning only. Nothing here is built yet. Each entry says what is wrong, the pla
 - `plan brief <file> <task-id>`: sections in fixed order (goal, dependencies, owned files, done when, gate, limits, report format). Fixed sections are never cut. Default size limit 4000 characters (inferred; a human sets it).
 - Code: new `lib/plan.mjs` and `lib/planbrief.mjs`. Register the word in `lib/extras-words.mjs` and `lib/cli.mjs`, dispatch beside the `claim` branch in `lib/extras-cli.mjs` (around line 181), add a help entry in `lib/help.mjs`, and keep `docs/commands.md` in step. `lib/brief.mjs` already exists for files, so the plan brief needs its own module.
 
-**Phases and tests.** P1 schema (`tests/plan-schema.test.ts`); P2 cycles (`tests/plan-cycles.test.ts`); P3 ownership overlap, including a directory prefix and `a-b` not overlapping `a` (`tests/plan-ownership.test.ts`); P4 rules, exit codes and `--json` (`tests/plan-check-cli.test.ts`); P5 brief sections and size cap (`tests/plan-brief.test.ts`); P6 help and docs truth (`lib/help.test.ts`).
+**Phases and tests.** P1 schema (`tests/plan-schema.test.ts`); P2 cycles (`tests/plan-cycles.test.ts`); P3 ownership overlap, including a directory prefix and `a-b` not overlapping `a` (`tests/plan-ownership.test.ts`); P4 rule, exit codes and `--json` (`tests/plan-check-cli.test.ts`); P5 brief sections and size cap (`tests/plan-brief.test.ts`); P6 help and docs truth (`lib/help.test.ts`).
 
 **Decisions for Samuel.** (a) JSON only, or markdown too. (b) Missing `done` or limits: FAIL (1) or USAGE (2). (c) Whether tasks linked by `dependsOn` may share files. (d) How a worktree folder is detected, and whether `plan check` also consults live claims. (e) Brief size limit and what is cut first. (f) Whether `done` is a shell string or an argument list (it runs later in R3, so this is a security question). (g) Default time and turn limits, and whether the 25-minute cap is a hard maximum. (h) `plan brief` with no task id: print all, or require one.
 
@@ -204,7 +204,7 @@ Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each 
 
 **Whole-tree versus branch (answer to Neural Vault).** `verify` scans the whole tree with every check on every file; there is no base, so it has no notion of "new". `verdict` and `gate` compare with the base and only judge changed lines. So 1150 findings and 66 failed checks from `verify --json` on a clean tree is the whole-tree view, not a regression. What is missing is a label: the JSON should say `scope: "whole tree"` and the text should say it on line 2. Plan: add that label; the verdict stays the pre-PR gate.
 
-**Slowness, from Neural Vault.** `verify --app` took 132 s (preset quick). `verdict --base origin/dev` sits on "222/224 checks done, running: rust-test" for seven minutes because rust-test builds the whole workspace, with no per-crate progress. Plan: rust-test should show per-crate progress (cargo's own progress), and rust-test's time budget should follow the diff: test only the crates the change touches, plus their dependents.
+**Slowness, from Neural Vault.** `verify --app` took 132 s (preset quick). `verdict --base origin/dev` sits on "222/224 done, running: rust-test" for seven minutes because rust-test builds the whole workspace, with no per-crate progress. Plan: rust-test should show per-crate progress (cargo's own progress), and rust-test's time budget should follow the diff: test only the crates the change touches, plus their dependents.
 
 **Logs not writable.** `~/.meerkat/logs` is not writable on Neural Vault's machine, so gate and last cannot see runs. The NOT RECORDED line says so, but it is not enough. Plan: when the default log folder is not writable, fall back to a temp folder and say which one.
 
@@ -240,11 +240,11 @@ Nothing changes until he decides.
 
 ### 14b, new evidence (Neural Vault, fix-3289)
 
-`verdict --base origin/dev` on one changed file in apps/sync-server ran 21+ minutes: 223 of 224 checks done, then stuck on rust-clippy for 850 seconds, which looks like a wait behind the shared cargo lock. Their first line was "note: behind origin/dev by 0 commits", from the meerkat-wt-integ build that predates 309050c. Plan unchanged: a lock wait shows its reason on line 1 and the rest is progress; the rust budget follows the changed crates. Neural Vault is re-running on the current build.
+`verdict --base origin/dev` on one changed file in apps/sync-server ran 21+ minutes: 223 of 224 done, then stuck on rust-clippy for 850 seconds, which looks like a wait behind the shared cargo lock. Their first line was "note: behind origin/dev by 0 commits", from the meerkat-wt-integ build that predates 309050c. Plan unchanged: a lock wait shows its reason on line 1 and the rest is progress; the rust budget follows the changed crates. Neural Vault is re-running on the current build.
 
 ### 14a, my reproduction on b4a6c4e (PR 3806 head ac4a5e076)
 
-The gate crash did NOT reproduce on the current build. The run went through 225 checks, then `rust-clippy` failed after 595 s (`[done 226/226] rust-clippy ... 595.3s FAIL`). The stdout was empty, and there was no summary line on either stream. The shell's cwd reset during the run, so it may have been killed before it finished. Two follow-ups: (a) re-run with stdout and stderr in separate files and no shell interruption, to confirm whether the crash happens; (b) a gate killed mid-run must still print one INCOMPLETE line on stdout with its reason (this is the exit-75 rule in 14d). Logged as a separate problem until (a) confirms it.
+The gate crash did NOT reproduce on the current build. The run went through 225 done, then `rust-clippy` failed after 595 s (`[done 226/226] rust-clippy ... 595.3s FAIL`). The stdout was empty, and there was no summary line on either stream. The shell's cwd reset during the run, so it may have been killed before it finished. Two follow-ups: (a) re-run with stdout and stderr in separate files and no shell interruption, to confirm whether the crash happens; (b) a gate killed mid-run must still print one INCOMPLETE line on stdout with its reason (this is the exit-75 rule in 14d). Logged as a separate problem until (a) confirms it.
 
 ## 16. Batch: crashed checks not named, no fail-fast (Neural Vault, 15 PRs)
 
@@ -262,7 +262,7 @@ The gate on PR 3805 reported "could not compile nv-agents (test board_hostile_ma
 
 ### 14d and 14b, new evidence (Neural Vault, fix-3635-rust)
 
-- 14d: the verdict's line 1 is now the answer with its reason ("INCOMPLETE (status 503): a check crashed or its tool failed, so the run cannot be judged; 2 checks did not work. Next: meerkat gate --only rust-test --base origin/dev"). Confirmed working on the current build; close 14d once the reason is verified on a second case.
+- 14d: the verdict's line 1 is now the answer with its reason ("INCOMPLETE (status 503): a check crashed or its tool failed, so the run cannot be judged; two checks did not work. Next: meerkat gate --only rust-test --base origin/dev"). Confirmed working on the current build; close 14d once the reason is verified on a second case.
 - 14b: the run took 1012 s because the nv-sidecar test target does not compile on `dev` (phone_cmds.rs), and rust-test and rust-clippy each ran to failure. Plan: a compile failure of a crate's test target stops the other rust checks on the same crate at once and reports the compile error as a tool problem, rather than running each to its own failure. Same rule as 14g.
 
 ### 14a, result from Neural Vault (PR 3806 head ac4a5e076, build b4a6c4e, separate streams, uninterrupted)
