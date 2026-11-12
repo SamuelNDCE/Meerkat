@@ -323,3 +323,12 @@ Final result: exit 75, INCOMPLETE; all 225 checks finished; rust-test FAIL at 64
 - **22f. No summary until all checks finish.** A stopped run shows nothing of what it found. Plan: print a provisional summary line every N checks and at each stop (failures so far, blocking so far, checks left), labelled provisional.
 - **22g. rust-test over 12 min on a frontend-only branch, with no timeout.** A frontend-only change must not run the Rust suite; if a Rust check must run, it has a per-check timeout and reports NOT RUN with the reason when it hits it. Plan: the Rust scope (rustbudget) returns "nothing to run" for a change with no Rust file; a check timeout is set and its NOT RUN line names it.
 - **22h. Gate processes cannot be attributed.** Two gate processes from meerkat-wt-integ (pids 10504 and 16488) are running and nobody can tell which session started them. Plan: each gate's command line (or a run marker in its run folder) records the run id and the start time, so a later session can find and stop its own.
+
+## 23. rust-test FAIL is base-side: attribution and an include-PR check (Neural Vault)
+
+Dev d145a5d57 does not compile its nv-sidecar tests (E0053 at apps/nv-sidecar/src/phone_push_cmds.rs:152; E0277 at phone_cmds.rs:400; E0608 at phone_cmds.rs:407-410; phone_devices_cmds.rs:78). `cargo test -p nv-agents -p nv-runtime -p nv-sidecar` exits 101 on a clean dev worktree after 465 s, with 0 tests run. The fix is PR #3814, not yet merged to dev.
+
+- **23a. Attribute it.** The batch must report this rust-test FAIL as base-side (the check fails on the base commit alone), and must not count it against the branches. This is 18a and 19b; it needs the base-side result per check, which is not built yet.
+- **23b. Does #3814 change the result?** A batch that includes #3814 should show rust-test passing; that is the one check it would change. Neural Vault will check this with their own run; Meerkat does not run it for them.
+
+Not claimed in this entry: that the base failure is the only cause of the batch's FAIL; the base-side result has to be recorded before it is said.
