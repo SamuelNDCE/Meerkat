@@ -2,40 +2,95 @@
 // and add "builtin": false when the project is not the app Meerkat was first written for. Every command runs from the repository root.
 //   rust-fmt            cargo fmt --check
 //   rust-clippy         cargo clippy, warnings are errors
-//   rust-test           cargo test for the whole workspace
+//   rust-test           cargo test, only the changed crates and their direct dependents when the change is inside crates, else the whole workspace
 //   rust-audit          cargo audit (known advisories in the dependencies)
 //   rust-build-release  cargo build --release (catches what only breaks in a release build), thorough
 // Cargo jobs share the machine-wide cargo lock, so only one Rust build runs at a time, however many checks there are.
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { join, resolve, sep } from 'node:path'
 import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
 
-// rust-test runs only the crates the change touches when the change is inside crates. A change to the workspace itself (root Cargo.toml, Cargo.lock, the toolchain, .cargo) runs everything.
+// A rust check runs only the crates the change touches plus their direct dependents (the crates that name one of them as a `path` dependency).
+// A change to the workspace itself (root Cargo.toml, Cargo.lock, the toolchain, .cargo) runs everything, and so does a change outside every crate.
 const WORKSPACE_FILES = /^(?:Cargo\.toml|Cargo\.lock|rust-toolchain(?:\.toml)?|\.cargo\/)/
+const SKIP_DIRS = new Set(['target', 'node_modules', '.git'])
 function crateNameOf(manifest) {
   const text = readFileSync(manifest, 'utf8')
   const pkg = /^\[package\]([\s\S]*?)(?=^\[|(?![\s\S]))/m.exec(text)
   return pkg ? (/^\s*name\s*=\s*"([^"]+)"/m.exec(pkg[1])?.[1] ?? null) : null
 }
-export function scopeRustTest(ctx) {
+// The `path = "..."` values of a manifest's dependency tables: `name = { path = "../x" }` lines and `[dependencies.name]` tables. A small reader, not a TOML parser.
+function pathDepsOf(manifest) {
+  const text = readFileSync(manifest, 'utf8')
+  const paths = []
+  let inDeps = false
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/#.*$/, '').trim()
+    const table = /^\[(.+)\]$/.exec(line)
+    if (table) {
+      inDeps = /(^|\.)(dependencies|dev-dependencies|build-dependencies)$/.test(table[1]) || /(^|\.)(dependencies|dev-dependencies|build-dependencies)\./.test(table[1])
+      // [target.'cfg(x)'.dependencies] and [dependencies.name] both count; a plain `[dependencies.name]` table carries its own path line below.
+      continue
+    }
+    if (!inDeps) continue
+    const m = /\bpath\s*=\s*"([^"]+)"/.exec(line)
+    if (m) paths.push(m[1])
+  }
+  return paths
+}
+// Every crate under the repo (depth 4): name, folder, and the folders of its path dependencies.
+function workspaceCrates(root) {
+  const crates = []
+  const walk = (dir, depth) => {
+    const m = join(dir, 'Cargo.toml')
+    if (existsSync(m)) {
+      const name = crateNameOf(m)
+      if (name) crates.push({ name, dir: resolve(dir), deps: pathDepsOf(m).map((p) => resolve(dir, p)) })
+    }
+    if (depth >= 4) return
+    let entries = []
+    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
+    for (const e of entries) if (e.isDirectory() && !SKIP_DIRS.has(e.name) && !e.name.startsWith('.')) walk(join(dir, e.name), depth + 1)
+  }
+  walk(root, 0)
+  return crates
+}
+// -> { crates: [names, sorted], changed: [names], dependents: [names] } | { whole: reason } | null (nothing to say: no change list).
+function cratesFor(ctx) {
   const files = (ctx.changedFiles ?? []).map((f) => String(f).replace(/\\/g, '/'))
   if (!files.length || !ctx.repoRoot) return null
-  if (files.some((f) => WORKSPACE_FILES.test(f))) return null
-  const names = new Set()
+  if (files.some((f) => WORKSPACE_FILES.test(f))) return { whole: 'the change touches the workspace itself (root Cargo.toml, Cargo.lock, toolchain or .cargo)' }
+  const all = workspaceCrates(ctx.repoRoot)
+  const changed = new Set()
   for (const f of files) {
     if (!/\.rs$|(^|\/)Cargo\.toml$/.test(f)) continue
-    let dir = dirname(join(ctx.repoRoot, f))
-    while (dir.length >= ctx.repoRoot.length) {
-      const m = join(dir, 'Cargo.toml')
-      if (existsSync(m)) { const n = crateNameOf(m); if (!n) return null; names.add(n); break }
-      if (dir === dirname(dir)) break
-      dir = dirname(dir)
-    }
+    const abs = resolve(ctx.repoRoot, f)
+    // the deepest crate folder that contains the file
+    const home = all.filter((c) => abs === c.dir || abs.startsWith(c.dir + sep)).sort((x, y) => y.dir.length - x.dir.length)[0]
+    if (home) changed.add(home.name)
   }
-  if (!names.size) return null
-  const list = [...names].sort()
-  return { args: ['test', ...list.flatMap((n) => ['-p', n])], note: `rust-test ran only the changed crate(s) ${list.join(', ')} (target: ${ctx.env?.CARGO_TARGET_DIR ?? 'the repo default target/'}); cargo test --workspace runs the rest` }
+  if (!changed.size) return { whole: 'the changed files are outside every crate' }
+  const dirOf = new Map(all.map((c) => [c.name, c.dir]))
+  const dependents = new Set()
+  for (const c of all) if (!changed.has(c.name) && c.deps.some((d) => [...changed].some((n) => dirOf.get(n) === d))) dependents.add(c.name)
+  return { crates: [...new Set([...changed, ...dependents])].sort(), changed: [...changed].sort(), dependents: [...dependents].sort() }
 }
+// `build(names)` gives the cargo arguments for those crates; a null result means "run the whole workspace" (the check's own arguments).
+function scopeCargo(ctx, build, label) {
+  const r = cratesFor(ctx)
+  if (!r) return null
+  const target = ctx.env?.CARGO_TARGET_DIR ?? 'the repo default target/'
+  if (r.whole) return { args: undefined, note: `${label} ran the whole workspace (${r.whole})` }
+  const dep = r.dependents.length ? `; dependents ${r.dependents.join(', ')}` : ''
+  return { args: build(r.crates), note: `${label} ran only the crate(s) ${r.crates.join(', ')} (changed ${r.changed.join(', ')}${dep}; target: ${target}); the workspace run covers the rest` }
+}
+const pkgArgs = (names) => names.flatMap((n) => ['-p', n])
+// rust-test's scope as a plain function (the whole-workspace case is null here: the check's arguments stand).
+export function scopeRustTest(ctx) {
+  const s = scopeCargo(ctx, (names) => ['test', ...pkgArgs(names)], 'rust-test')
+  return s?.args ? s : null
+}
+const scopeFor = (label, build) => (ctx) => scopeCargo(ctx, build, label)
 const FIX = `${MK}/fixtures`
 const RUST_PATHS = ['**/*.rs', 'Cargo.toml', '**/Cargo.toml', 'Cargo.lock', '.cargo/**', 'rust-toolchain.toml']
 
@@ -63,6 +118,7 @@ const CHECKS = [
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['clippy', '--workspace', '--all-targets', '--', '-D', 'warnings'], cwd: 'repo' },
+    scopeArgs: scopeFor('rust-clippy', (names) => ['clippy', ...pkgArgs(names), '--all-targets', '--', '-D', 'warnings']),
     selfTest: { cmd: 'cargo', args: ['clippy', '--manifest-path', `${FIX}/clippy-broken/Cargo.toml`, '--', '-D', 'warnings'], cwd: 'repo', expectFail: true },
   },
   {
@@ -78,7 +134,7 @@ const CHECKS = [
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['test', '--workspace'], cwd: 'repo' },
-    scopeArgs: scopeRustTest,
+    scopeArgs: scopeFor('rust-test', (names) => ['test', ...pkgArgs(names)]),
     // A verdict waits for the cargo lock at most 300 s before it reports NOT RUN with the holder, instead of the lock default of 900 s.
     env: { MEERKAT_LOCK_MAX_WAIT: '300' },
     selfTest: { cmd: 'cargo', args: ['test', '--manifest-path', `${FIX}/test-broken/Cargo.toml`], cwd: 'repo', expectFail: true },
@@ -107,6 +163,7 @@ const CHECKS = [
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['build', '--workspace', '--release'], cwd: 'repo' },
+    scopeArgs: scopeFor('rust-build-release', (names) => ['build', ...pkgArgs(names), '--release']),
     selfTest: { cmd: 'cargo', args: ['build', '--manifest-path', `${FIX}/build-broken/Cargo.toml`], cwd: 'repo', expectFail: true },
   },
   {
@@ -119,6 +176,7 @@ const CHECKS = [
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['doc', '--workspace', '--no-deps'], cwd: 'repo', env: { RUSTDOCFLAGS: '-D warnings' } },
+    scopeArgs: scopeFor('rust-doc', (names) => ['doc', ...pkgArgs(names), '--no-deps']),
     selfTest: { cmd: 'cargo', args: ['doc', '--no-deps', '--manifest-path', `${FIX}/tools/rustdoc-broken/Cargo.toml`], cwd: 'repo', env: { RUSTDOCFLAGS: '-D warnings' }, expectFail: true, expectMatch: 'unresolved link' },
   },
   {
