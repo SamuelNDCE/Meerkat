@@ -71,3 +71,33 @@ Meerkat already gates, verdicts and batches changes, and it already isolates wor
 1. Do agents run through the host's own agent API, or through `claude -p` processes that Meerkat starts? (Choice affects R3's limits and R5's watchdog.)
 2. Who owns a plan's file list if two plans overlap across sessions? (Claims in the shared git directory are the current answer, and they do not yet cover worktree folders; see R8.)
 3. Should a plan's cost estimate be a hard limit or a warning?
+
+## Phase: AI context (planned, not built)
+
+Why: an AI working in a repo needs three things before it edits: what the project is, what is known to be fragile, and where the code it will touch sits. Meerkat already has `meerkat map` (per-folder code map), `meerkat brief <file>` (one file) and `meerkat blast` (what a change reaches). This phase extends them into a context set that an AI can read in one call.
+
+Research (one search pass): Aider builds a repo map from tree-sitter symbols, ranks them with a graph of references (PageRank-style), and fits the best symbols into a token budget, with the files a session is editing weighted up. Sources: [how Aider indexes a codebase](https://kitemetric.com/blogs/how-aider-indexes-your-codebase-for-ai-powered-code-assistance), [repository map pattern](https://www.agentpatterns.ai/context-engineering/repository-map-pattern/), [ripmap, a Rust take on it](https://docs.rs/crate/ripmap/0.1.0/source/README.md), [RepoMapper (an MCP server)](https://glama.ai/mcp/servers/@pdavis68/RepoMapper/tree/3ef8914b3a2271695ac9e4b07ce1e8bf5a4c9be6). Not verified: Aider's current defaults; the search did not open Aider's own docs.
+
+### C1. Project brief (`meerkat context`)
+- A short brief an AI reads first: what the project is (from its manifests and README's first lines), the commands that verify it (from the `commands` block or package scripts), which checks apply, the folders and what each holds (from the map), and the rules files that exist (PROJECT.md, CLAUDE.md, AGENTS.md if present).
+- Done when: the brief is under a set size, names only files that exist, and a test checks each named path is on disk.
+
+### C2. Ranked, budgeted code map (`meerkat map --budget <tokens>`)
+- Today the map lists files per folder. Add a ranked list of the symbols that matter most (defined and referenced most), fitted to a token budget, and `--for <file>` that weights symbols near that file.
+- Done when: the output stays under the budget, the same input gives the same output (stable order), and a symbol referenced by many files ranks above one referenced by none.
+
+### C3. Risk list for an AI (`meerkat risks`)
+- The newest run's findings grouped by file, ranked by severity and by how often the file changes, with the next command per entry. Dismissed findings are shown separately with their reasons, so an AI does not re-report them.
+- Done when: each entry names a file and line that exist, and a dismissed finding is listed with its reason and not as open.
+
+### C4. Task context pack (`meerkat brief --task <plan.json> <task-id>`)
+- Builds on the plan file (phase 1 of orchestration): the files the task owns, the symbols they define, the callers outside the task (from `blast`), the open risks in those files (from C3), and the done command. One paste for a sub-agent.
+- Done when: a pack for a task in the test plan lists every owned file and no file outside the task's reach.
+
+### C5. MCP tools for C1 to C4
+- `meerkat_context`, `meerkat_map` (with budget), `meerkat_risks`, `meerkat_task_pack`; each listed in `docs/ai.md` and covered by the docs-truth test.
+
+### Open questions for Samuel
+1. Should `meerkat context` write a file into the repo (for example `MAP.md` already exists per repo), or print to stdout only? Writing a file makes it visible to every tool; printing keeps the repo clean.
+2. What is the default token budget for C2: 2000, 4000, or per model?
+3. Should C3 include findings from other people's branches, or only the current branch's run?
