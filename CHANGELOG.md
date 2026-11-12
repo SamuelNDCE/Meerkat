@@ -4,6 +4,12 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+### Changed
+
+- `meerkat batch` names the checks whose tool crashed, hung or did not start: the result file has a `crashedChecks` list of `{ id, reason }`, and line 1 of the answer names up to 5 of them, then "and N more".
+- `meerkat batch` no longer ends with only "no culprit found" when no branch fails alone. Line 1 says `pre-existing: <check> also fails on <base>, so the batch did not cause it`, or `interaction: <check> fails only when these branches are combined: a + b` (the smallest pair, found with at most 10 extra gate runs; the result file has `interaction`). Exit stays 75.
+- `meerkat batch` names the branches the run limit (`MEERKAT_BATCH_MAX_RUNS`, default 12) left unchecked on line 1 (up to 5, then "and N more") and lists all of them as `uncheckedBranches` in the result file. The result stays INCOMPLETE, never a pass.
+
 ### Fixed
 
 - `meerkat gate` no longer prints the folder banner or the "comparing against merge base" line before its answer. The answer (for example `NO-RESULT (status 204): nothing changed ...`) is the first line; the folder line follows it.
