@@ -4,6 +4,12 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
+### Added
+
+- A progress summary line on stderr for `meerkat gate`, `verdict`, `verify` and `batch`: `[37% 84/226 | 1m40s elapsed | ETA ~3m10s] running: rust-clippy (since 1m12s)`. It prints when a check starts or finishes and on the heartbeat. The ETA is the average time of the finished checks times the checks left, and reads `ETA unknown` until 2 checks have finished. The per-check `[done n/N]` lines and stdout are unchanged. In `batch` one line covers every gate run (`[batch progress]`), and it says `total grew` when a later gate run adds checks.
+- A machine-readable `progress.json` in the run folder while a gate, verdict or verify runs (`state` running then done, `percent`, `finished`, `total`, `running`, `elapsedSeconds`, `etaSeconds`, `updated`), written atomically; batch writes one in its batch folder.
+- `meerkat progress [run-id] [--json]` prints the newest run's progress as one line, or the file itself with `--json`.
+
 ### Changed
 
 - `meerkat batch` names the checks whose tool crashed, hung or did not start: the result file has a `crashedChecks` list of `{ id, reason }`, and line 1 of the answer names up to 5 of them, then "and N more".

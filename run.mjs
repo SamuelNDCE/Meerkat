@@ -603,7 +603,13 @@ export async function main(argv = process.argv.slice(2), { log: givenLog, env = 
     }
     // The estimate counts only what will really run: checks the cache serves take no time (lib/runestimate.mjs).
     if (cached.length) estimatedMs = estimateRunMsWithCache(toRun, cached.length, timings, tier, { slots: defaultParallel(cpus().length, env) })
-    const ranNow = toRun.length ? await stoppable(ctx, log, () => runAll(toRun, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: defaultParallel(cpus().length, env), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder, quiet || hush ? null : verifyProgress(toRun.length)), deadlineMs: runDeadlineMs(ctx, opts) })) : []
+    const vprog = quiet || hush ? null : verifyProgress(toRun.length, undefined, { summary: (l) => process.stderr.write(l + String.fromCharCode(10)), dir: ctx.logDir, heartbeatMs: Number(env.MEERKAT_GATE_HEARTBEAT_MS) || 5000 })
+    let ranNow
+    try {
+      ranNow = toRun.length ? await stoppable(ctx, log, () => runAll(toRun, ctx, { budget, progressFiles: useUi, keepGoing: !opts.failFast, parallel: defaultParallel(cpus().length, env), log: quiet ? () => {} : log, hooks: fanOut(quiet ? bar : null, status, recorder, vprog), deadlineMs: runDeadlineMs(ctx, opts) })) : []
+    } finally {
+      vprog?.stop()
+    }
     results = [...ranNow, ...cached]
     if (cached.length && !quiet) log(`cache: ${cached.length} passing check(s) reused from an earlier run on this exact project (--no-cache runs everything again)`)
     bar.stop()
