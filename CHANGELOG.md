@@ -6,6 +6,8 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ### Added
 
+- New: `meerkat context [folder] [--json]` (roadmap C1) prints a short project brief for an AI: what the project is (and from which file), the commands that verify it, the checks that apply, the folders and what each holds, and the rules files that exist. Defaults taken, not settled: it prints to stdout only and writes nothing into the project, and the text is capped at 4000 characters (long lists end with `[truncated]`, the sections are never cut). New module `lib/ctxbrief.mjs`.
+- New: `meerkat map [folder] --budget <tokens> [--for <file>] [--json]` (roadmap C2) prints the symbols that matter most, ranked by how many other source files mention the name (name-based and approximate, not a call graph), fitted to a token budget (1 token = 4 characters). Defaults taken, not settled: the budget is 4000 tokens and the output is stdout only; `--for` boosts symbols defined in, used by or next to a file. It is a mode of `meerkat map`, only active with `--budget` or `--for`; plain `meerkat map` is unchanged. New module `lib/ctxmap.mjs`.
 - New: `meerkat plan check <file.json> [--json]` validates a plan file for orchestrated work (roadmap R1) and lists every error in one pass; `meerkat plan brief <file.json> <task-id> [--max-chars N]` prints one paste-ready brief per task (R2). Defaults taken for this phase, not settled: JSON only; a missing done-check or limit is FAIL (1); two tasks may own overlapping paths only when one depends on the other; the brief cap is 4000 characters. New modules `lib/plan.mjs` and `lib/planbrief.mjs`.
 
 ### Changed
