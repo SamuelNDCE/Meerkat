@@ -272,3 +272,12 @@ Exit 1. Line 1: "TOOL PROBLEM (status 503): 1 check(s) crashed or hung; that is 
 ### 16, confirmed case (PR 3806, same run)
 
 The gate's line 1 for this run did not name the crashed check (see 14a). This is the same gap as section 16: the summary must name each crashed or failed-tool check.
+
+## 18. Batch output: base versus branch attribution, a status on every done line (Neural Vault, 5 branches, base d145a5d5)
+
+- **18a. Which side failed.** The batch streams many FAIL lines (risky-code, local-links, hadolint, duplicate-test-names and others) without saying whether each failure is on the base, on the branch, or both. Plan: every FAIL line says `base-only`, `branch-only` or `both`, from the base-side result the batch already computes. Base-only failures are pre-existing, not the branch's fault.
+- **18b. No FAIL before the answer.** The progress stream prints FAIL lines before the final result line. Plan: the stream shows progress only; FAIL lines are printed once, after the answer, in the summary.
+- **18c. A done line with no status.** A cyclomatic-complexity done line printed a time (13.4 s) and no PASS or FAIL. This is a bug. Plan: every `[done]` line carries a status; a check with no result prints `NOT RUN` with its reason. Test: a check that returns no status prints one.
+- **18d. rust-test at 223/225 for 365 s or more.** The same rust budget issue as 14b. Plan: as 14b (per-crate budget, stop on a compile failure).
+- **18e. Skip re-gating unchanged checks (unverified benefit).** A branch that touches only Rust or only docs need not re-run checks whose inputs are identical to the base (exec-bits, unicode-control-chars). Plan: measure first, on Neural Vault's 135-line batch, how many checks have identical inputs on base and branch; build only if the saving is real. The gate already caches by file content; check whether this is a gap.
+- **18f. First line names the failing check.** Neural Vault asks that verdict line 1 keep naming the failing check. Plan: keep it (the answer-first order already does; regression test added with 18c).
