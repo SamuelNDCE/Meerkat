@@ -317,3 +317,9 @@ Final result: exit 75, INCOMPLETE; all 225 checks finished; rust-test FAIL at 64
 - **22d. Progress repeats with no change.** Plan: progress lines print only when the state changes (a check starts or finishes, or the running set changes), and the heartbeat is throttled to every 30 s when nothing changes.
 - **22e. Full rust-test takes over 7 min.** Same as 14b and 14g: scope rust-test to the changed crates. Built in the rustbudget branch (merged); the request is that the gate uses it by default.
 - **Process note.** The agent killed the gate with an outer timeout at check 34 of 265, so no blocking count exists. This is 20a: the gate must reap its children when stopped.
+
+### 22, from the #3734 gate run (Neural Vault)
+
+- **22f. No summary until all checks finish.** A stopped run shows nothing of what it found. Plan: print a provisional summary line every N checks and at each stop (failures so far, blocking so far, checks left), labelled provisional.
+- **22g. rust-test over 12 min on a frontend-only branch, with no timeout.** A frontend-only change must not run the Rust suite; if a Rust check must run, it has a per-check timeout and reports NOT RUN with the reason when it hits it. Plan: the Rust scope (rustbudget) returns "nothing to run" for a change with no Rust file; a check timeout is set and its NOT RUN line names it.
+- **22h. Gate processes cannot be attributed.** Two gate processes from meerkat-wt-integ (pids 10504 and 16488) are running and nobody can tell which session started them. Plan: each gate's command line (or a run marker in its run folder) records the run id and the start time, so a later session can find and stop its own.
