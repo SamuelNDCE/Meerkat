@@ -16,7 +16,7 @@ Branches can be separated by commas or spaces. Options:
 | `--app <repo>` | the repository |
 | `--dry-run` | print the plan (what would merge, what is excluded) and run nothing |
 | `--max-lines <n>` | size cap per batch in changed lines (default 3000) |
-| `--max-prs <n>` | cap on branches per batch (default 15) |
+| `--max-prs <n>` | cap on branches per batch (default 50) |
 | `--json` | print the result as JSON |
 
 Environment: `MEERKAT_BATCH_MAX_RUNS` caps the gate runs in one batch (default 12). The result file goes under the Meerkat data folder (`MEERKAT_LOG_DIR`, or `~/.meerkat`).
