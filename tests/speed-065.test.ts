@@ -142,8 +142,10 @@ describe('--first', () => {
 })
 
 describe('heartbeat in the real gate path', () => {
-  test('a sleeping check is named in a heartbeat within 6 seconds, and the base-side comparison is not silent', async () => {
-    const d = join(root, 'sleepy')
+  // The beat grid is anchored to gate start, so a check that starts just after a tick is first named up to one interval later, plus a little for the
+  // process itself. The deadline is therefore the interval plus 2000 ms, derived from the interval the test sets, not a fixed number.
+  async function sleepyRun(beatMs: number, deadlineMs: number) {
+    const d = join(root, beatMs === 1000 ? 'sleepy' : 'sleepy-' + beatMs)
     mkdirSync(d, { recursive: true })
     git(d, 'init', '-q', '-b', 'main')
     put(d, 'meerkat.config.json', JSON.stringify({ packs: [], discover: false, customChecks: [{ id: 'sleepy', title: 'Sleepy', cmd: 'node', args: ['sleep.mjs'], tier: 'fast', group: 'functionality', cwd: '.', timeoutSeconds: 60 }] }))
@@ -158,12 +160,27 @@ describe('heartbeat in the real gate path', () => {
     git(d, 'commit', '-q', '-m', 'change')
     const t0 = Date.now()
     const beats: { at: number; line: string }[] = []
-    await gateMain(['--base', 'main', '--no-cache', '--app', d], { env: env(), cwd: d, banner: true, log: () => {}, err: (l: string) => beats.push({ at: Date.now() - t0, line: l }) })
-    const first = beats.find((b) => b.line.startsWith('…') && b.line.includes('running: sleepy'))
-    expect(first, beats.map((b) => b.line).join('\n')).toBeTruthy()
-    const started = beats.find((b) => b.line.startsWith('[') && b.line.endsWith('sleepy ...'))
-    expect(started).toBeTruthy()
-    expect(first!.at - started!.at).toBeLessThan(6000)
+    await gateMain(['--base', 'main', '--no-cache', '--app', d], { env: { ...env(), MEERKAT_GATE_HEARTBEAT_MS: String(beatMs) }, cwd: d, banner: true, log: () => {}, err: (l: string) => beats.push({ at: Date.now() - t0, line: l }) })
+    const all = beats.map((b) => b.line).join('\n')
+    const idx = (pred: (l: string) => boolean) => beats.findIndex((b) => pred(b.line))
+    const firstIdx = idx((l) => l.startsWith('…') && l.includes('running: sleepy'))
+    const startedIdx = idx((l) => l.startsWith('[') && l.endsWith('sleepy ...'))
+    const doneIdx = idx((l) => l.startsWith('[done') && l.includes('sleepy'))
+    return { all, firstIdx, startedIdx, doneIdx, gap: firstIdx >= 0 && startedIdx >= 0 ? beats[firstIdx].at - beats[startedIdx].at : Infinity }
+  }
+  const check = (r: Awaited<ReturnType<typeof sleepyRun>>, deadlineMs: number) => {
+    expect(r.firstIdx, r.all).toBeGreaterThanOrEqual(0)
+    expect(r.startedIdx, r.all).toBeGreaterThanOrEqual(0)
+    expect(r.doneIdx, r.all).toBeGreaterThanOrEqual(0)
+    // The beat naming the sleeping check comes before the check's own done line.
+    expect(r.firstIdx, r.all).toBeLessThan(r.doneIdx)
+    expect(r.gap, r.all).toBeLessThan(deadlineMs)
+  }
+  test('a sleeping check is named in a heartbeat within the interval plus 2 seconds (1000 ms beat), before it is done', async () => {
+    check(await sleepyRun(1000, 1000 + 2000), 1000 + 2000)
+  }, 120_000)
+  test('a sleeping check is named in a heartbeat within 1500 ms of its start with a 500 ms beat', async () => {
+    check(await sleepyRun(500, 1500), 1500)
   }, 120_000)
 })
 

@@ -6,6 +6,8 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ### Fixed
 
+- `meerkat verify` (and `test`, `quick`) now prints per-check progress on stderr: `[n/N] <check> running` when a check starts and `[done n/N] <check> <seconds>s <status>` when it ends, so a long run no longer looks stuck. The answer is still stdout line 1.
+- Test only: the `speed-065` heartbeat test sets `MEERKAT_GATE_HEARTBEAT_MS` itself, derives its deadline from it (interval plus 2000 ms), checks the beat comes before the check's done line, and has a 500 ms case, so it no longer flakes under load.
 - `meerkat gate` no longer prints the folder banner or the "comparing against merge base" line before its answer. The answer (for example `NO-RESULT (status 204): nothing changed ...`) is the first line; the folder line follows it.
 
 ## 0.5.4 (2026-11-11)
