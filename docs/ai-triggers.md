@@ -33,7 +33,10 @@ Read this table to decide. Each row: the name, the situations it must be used fo
 | meerkat_baseline | the person asks to adopt a legacy project | WRITES, only new findings fail afterwards | meerkat-before-pr |
 | meerkat_brief | before editing a file or file#symbol | callers, tests, churn and risk in one short brief | meerkat-blast-before-edit |
 | meerkat_blast | before changing, moving or deleting something with callers; a file you do not know well | what could break | meerkat-blast-before-edit |
-| meerkat_map | starting in unfamiliar code; planning a refactor | builds the code map | meerkat-map-unfamiliar-code |
+| meerkat_map | starting in unfamiliar code; planning a refactor; with budget or for, a ranked map that fits a token budget | builds the code map, or the ranked symbols that matter most | meerkat-map-unfamiliar-code |
+| meerkat_context | first thing in an unfamiliar project, before reading code | a short project brief, writes nothing | meerkat-map-unfamiliar-code |
+| meerkat_risks | before editing; asking which files are risky | the newest run's open findings grouped by file, ranked | meerkat-blast-before-edit |
+| meerkat_task_pack | briefing a sub-agent on one task of a plan file | owned files, symbols, outside callers, risks and the done command | meerkat |
 | meerkat_list | want to see which checks would run | lists checks, runs none | meerkat-docs-check, meerkat |
 | meerkat_check_list | need the project's own checks and check packs | what is enabled | meerkat-docs-check, meerkat-click-through |
 | meerkat_presets | choosing a preset for meerkat_run | names, tiers, kinds | meerkat, meerkat-smoke-and-red |

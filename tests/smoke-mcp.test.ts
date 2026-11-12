@@ -1,6 +1,8 @@
 // SMOKE: starts the real MCP server (bin/meerkat-mcp.mjs) over stdio on a copy of tests/fixtures/smoke-app and calls every tool it lists once with valid arguments.
 // The tool list comes from the server's own tools/list, and its length is compared with the server's own registry (TOOLS in lib/mcp.mjs), so a new tool
 // is covered automatically and fails "every tool has an example" until an example is added to ARGS below.
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 // @ts-expect-error plain .mjs module
 import { TOOLS } from '../lib/mcp.mjs'
@@ -39,6 +41,15 @@ const ARGS: Record<string, { args?: (ctx: { app: string; id: string }) => Record
   meerkat_tests: {},
   meerkat_summary: {},
   meerkat_first_failure: {},
+  meerkat_context: { args: ({ app }) => ({ folder: app }) },
+  meerkat_risks: { args: ({ app }) => ({ folder: app }) },
+  meerkat_task_pack: {
+    args: ({ app }) => {
+      const plan = join(app, 'smoke-plan.json')
+      writeFileSync(plan, JSON.stringify({ version: 1, tasks: [{ id: 't1', goal: 'smoke', owns: ['src/math.js'], done: 'npm test', timeMinutes: 25, maxTurns: 40 }] }))
+      return { plan, task: 't1' }
+    },
+  },
   meerkat_doctor: {},
   meerkat_discover: {},
   meerkat_recommend: {},
