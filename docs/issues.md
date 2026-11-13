@@ -363,3 +363,15 @@ NV is sending four gate reports today. Those reports will confirm or narrow 25a 
 
 > *Correction 2026-11-13 (NV's read-only check, confirmed here): rounds.rs:2644 was not the cause. Its only changed file is `rounds.rs` and the gate has no finding at 2644. The blocking count is still unexplained.
 > *Read from run 20261113-105615: the run log shows `rp-async` FAIL ("sub-check rasync-blocking-fs failed: 37 found ... and 8 more"), and the findings it lists are in files outside this diff (`apps/desktop-web/src-tauri/src/memos.rs:84`, `onboarding.rs:695`). `changed-files.txt` lists 6 files. So the likely blocking item is `rp-async`, a project-wide sub-check failing on files this branch does not touch. Not verified: which finding the CLI counts as blocking, and whether any of the 37 falls in the diff. The check is a Meerkat question: a failure outside the changed files should not count as blocking in a changed-file gate. 25j stays open.
+
+> *Facts added 2026-11-13 (NV read-only breakdown), to 25g (run 20261113-105821, 3 changed files):*
+> - `summary.json` says "gate: 234 check(s), 0 failed", exitCode 0, yet counts are pass 188, fail 46. It has no blocking field, so the MCP's "0 blocking" has no source in that file.
+> - The 46 FAIL rows group as: risky-code 1, local-links 1, hadolint 1, Electron ep-* 5, js-* 4, in-loop 3, history checks 2 (large-commits, binary-in-history), and 29 others. Several detail strings name files outside this branch (scripts/, supabase/probe/, LibraryPage.tsx).
+> - Overlap with the branch is only in findings.json: RemoveDataSection.tsx as advisory findings (size, complexity), which are PASS-level, not FAIL.
+> - The per-check logs the details name are in run folder 20261113-105623, which is not on disk, so the reason for each FAIL cannot be checked from here.
+
+> *Facts added 2026-11-13 (NV read-only breakdown), to 25h (runs 20261113-110538, 110617, 110702):*
+> - The same three ep-* sub-checks fail in all three runs with the same counts: ep-tauri-command-fs-path 17, ep-execute-js-variable 12, ep-ipc-remove-all-listeners 4.
+> - None of those findings names a file the branch changed. Each run scans the whole repo (5006 files), which is expected.
+> - Run 110538's summary.json says 37 FAIL, matching counts.fail. Runs 110617 and 110702 list about 46 top-level FAILs by status-line count, not checked against a counts field.
+> - Run 110538's FAILs include repo-layout facts: no root tsconfig.json, a transitive rimraf 2.6.3, vsce not in any dependency with node_modules absent.
