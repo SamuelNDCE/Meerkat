@@ -352,3 +352,5 @@ Logged from NV's close-out report. Each item lists the repro and the expected re
 - **25f. Identical findings repeat across runs.** Expected: dedupe by check id and file in the report and in `summary.json`. Related: 22d, 22f.
 
 NV is sending four gate reports today. Those reports will confirm or narrow 25a to 25f.
+
+- **25g. Gate report 1 (run 20261113-105821, fix/3568-token-note, base origin/dev 7f32ce81a).** The MCP result says `0 failed`, `blocking 0`, exit 0. The same run's `summary.json` says `pass 188, fail 46`, findings total 84 (high 26), and `exitCode 0`. The two disagree, which is the 25b mismatch again. Failing checks named in NV's report: risky-code (`apps/desktop-electron/scripts/build-icon.mjs:195`, innerHTML) and local-links (lychee, 725 files). Also: `full=true` on the MCP call returns only `{"schemaVersion":1}` with no result. The per-check log folder named in the report (`20261113-105623-...`) was not found on disk. Expected: one verdict from one run, and a full call returns the full result.
