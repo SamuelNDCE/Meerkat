@@ -97,7 +97,7 @@ Research (one search pass): Aider builds a repo map from tree-sitter symbols, ra
 ### C5. MCP tools for C1 to C4
 - `meerkat_context`, `meerkat_map` (with budget), `meerkat_risks`, `meerkat_task_pack`; each listed in `docs/ai.md` and covered by the docs-truth test.
 
-### Open questions for Samuel
+### Open questions for the maintainer
 1. Should `meerkat context` write a file into the repo (for example `MAP.md` already exists per repo), or print to stdout only? Writing a file makes it visible to every tool; printing keeps the repo clean.
 2. What is the default token budget for C2: 2000, 4000, or per model?
 3. Should C3 include findings from other people's branches, or only the current branch's run?

@@ -9,11 +9,11 @@ Planning only. Nothing here is built yet. Each entry says what is wrong, the pla
 | 1 | Suppressed findings are invisible in the gate summary | BUILD | none |
 | 2 | Count drift can reach a release (no counts step in the release gate) | BUILD, needs generator check mode | none |
 | 3 | speed-065 heartbeat test flakes under parallel load | PLANNED | none |
-| 4 | Worktree folders are not protected by claims (a NeuralVault collision) | PLANNED, needs 2 decisions | Samuel |
-| 5 | Plan file and `plan check` / `plan brief` (orchestration R1 and R2) | PLANNED, needs 6 decisions | Samuel |
-| 6 | Auto-added pack NOT RUN exit code (gate exits 0) | NEEDS DECISION | Samuel |
-| 7 | Electron fuse check: expected value per project | NEEDS DECISION | Samuel |
-| 8 | Batch fix (8502f4a) not in a released version | NEEDS DECISION | Samuel |
+| 4 | Worktree folders are not protected by claims (a NeuralVault collision) | PLANNED, needs 2 decisions | the maintainer |
+| 5 | Plan file and `plan check` / `plan brief` (orchestration R1 and R2) | PLANNED, needs 6 decisions | the maintainer |
+| 6 | Auto-added pack NOT RUN exit code (gate exits 0) | NEEDS DECISION | the maintainer |
+| 7 | Electron fuse check: expected value per project | NEEDS DECISION | the maintainer |
+| 8 | Batch fix (8502f4a) not in a released version | NEEDS DECISION | the maintainer |
 | 9 | Plume `.catch` false positive | NEEDS REPRO | Plume |
 
 ## 1. Suppressed findings are invisible
@@ -63,7 +63,7 @@ Planning only. Nothing here is built yet. Each entry says what is wrong, the pla
 
 **Tests.** `claimed worktree survives close` (exit 1, folder and claim intact); `own claim with --force-claimed removes it`; `expired claim is advisory within the grace period`; `a path inside the folder counts as a claim`; `tools/worktrees.mjs close refuses a claimed worktree`.
 
-**Decisions for Samuel.** (a) Stale policy: a grace period, or record a pid for a liveness check. (b) Whether `--force-claimed` should exist at all. (c) Whether a claim on a path inside a worktree protects the whole folder.
+**Decisions for the maintainer.** (a) Stale policy: a grace period, or record a pid for a liveness check. (b) Whether `--force-claimed` should exist at all. (c) Whether a claim on a path inside a worktree protects the whole folder.
 
 ## 5. Plan file, `plan check` and `plan brief` (roadmap R1 and R2)
 
@@ -75,25 +75,25 @@ Planning only. Nothing here is built yet. Each entry says what is wrong, the pla
 
 **Phases and tests.** P1 schema (`tests/plan-schema.test.ts`); P2 cycles (`tests/plan-cycles.test.ts`); P3 ownership overlap, including a directory prefix and `a-b` not overlapping `a` (`tests/plan-ownership.test.ts`); P4 rule, exit codes and `--json` (`tests/plan-check-cli.test.ts`); P5 brief sections and size cap (`tests/plan-brief.test.ts`); P6 help and docs truth (`lib/help.test.ts`).
 
-**Decisions for Samuel.** (a) JSON only, or markdown too. (b) Missing `done` or limits: FAIL (1) or USAGE (2). (c) Whether tasks linked by `dependsOn` may share files. (d) How a worktree folder is detected, and whether `plan check` also consults live claims. (e) Brief size limit and what is cut first. (f) Whether `done` is a shell string or an argument list (it runs later in R3, so this is a security question). (g) Default time and turn limits, and whether the 25-minute cap is a hard maximum. (h) `plan brief` with no task id: print all, or require one.
+**Decisions for the maintainer.** (a) JSON only, or markdown too. (b) Missing `done` or limits: FAIL (1) or USAGE (2). (c) Whether tasks linked by `dependsOn` may share files. (d) How a worktree folder is detected, and whether `plan check` also consults live claims. (e) Brief size limit and what is cut first. (f) Whether `done` is a shell string or an argument list (it runs later in R3, so this is a security question). (g) Default time and turn limits, and whether the 25-minute cap is a hard maximum. (h) `plan brief` with no task id: print all, or require one.
 
 ## 6. Auto-added pack NOT RUN exit code
 
 **Problem.** A check from a pack the gate added on its own (for example electron-plus on an Electron project) that cannot run (no trust, no build, no tool) is shown as "not configured" and the gate exits 0.
 
-**Decision for Samuel.** Should such a NOT RUN exit 1? The summary now names the count and `--verbose` lists the checks.
+**Decision for the maintainer.** Should such a NOT RUN exit 1? The summary now names the count and `--verbose` lists the checks.
 
 ## 7. Electron fuse check: expected value per project
 
 **Problem.** `ep-fuses-binary` treats GrantFileProtocolExtraPrivileges "off" as secure. Electron packaged apps need it on to load a page. Plume dismissed the finding with a reason, which works, but there is no per-project expected value.
 
-**Decision for Samuel.** Build a per-project expected value (documented, with a reason), or keep dismissal as the path.
+**Decision for the maintainer.** Build a per-project expected value (documented, with a reason), or keep dismissal as the path.
 
 ## 8. Batch fix not in a released version
 
 **Problem.** The batch dry-run fix (8502f4a) is on `release-0.5.4` but not in 0.5.4, which is already published.
 
-**Decision for Samuel.** Ship it in a patch release (0.5.5), or wait for the next version.
+**Decision for the maintainer.** Ship it in a patch release (0.5.5), or wait for the next version.
 
 ## 9. Plume `.catch` false positive
 
@@ -108,14 +108,14 @@ Received after the 0.5.4 release. Status of each item, checked on release-0.5.4 
 - **10a. Verdict first line.** Asked: first line is the answer and the file counts, with no note line first. Status: the 0.5.4 order already puts the answer first and the note after. Needs a sample line from them to confirm.
 - **10b. Gate FAIL line for a cut-off Rust test says "cargo:nv-agents" with no reason.** Status: OPEN, a real gap. Plan: the FAIL line carries the reason the check was cut off (time limit, lock wait, or compile error), taken from the check's own result. Test: a check cut by the time limit shows its reason on the FAIL line.
 - **10c. Batch line limit and exclusion text should match the help.** Status: already matches on 8502f4a (help and code both 3000; the exclusion text names the limit). Needs their build to be checked; they may be on an older build.
-- **10d. Trust for a non-interactive shell.** Status: the flag already exists: `meerkat trust <folder> --yes` approves that folder's commands block and prints it. Decision for Samuel: automating this removes the human check the trust gate exists for. Whether a sub-agent may run it is his call, not a code change.
+- **10d. Trust for a non-interactive shell.** Status: the flag already exists: `meerkat trust <folder> --yes` approves that folder's commands block and prints it. Decision for the maintainer: automating this removes the human check the trust gate exists for. Whether a sub-agent may run it is his call, not a code change.
 - **10e. Verdict text slower than JSON on large staged changes.** Status: OPEN, not reproduced on large input. Plan: measure on their staged change, sizes and seconds, then profile the text path against the JSON path. Waiting for their numbers.
 
 ### Neural Vault answers (received after the 10a to 10e entries above)
 
 - **10a, closed.** Neural Vault sent a sample first line from 37c827f: the answer comes first ("PASS (status 200): nothing new blocks; ... judged 2 changed file(s); 1 matched no check. Next: nothing to fix"). The order is as they want.
 - **10c, closed.** Neural Vault is on the newer batch build, so the mismatch they reported is resolved.
-- **10d, closed for Meerkat.** Neural Vault's agents will not run `meerkat trust`; approval stays with Samuel.
+- **10d, closed for Meerkat.** Neural Vault's agents will not run `meerkat trust`; approval stays with the maintainer.
 - **10e, still open, no repro.** At 37c827f a 16,119-byte markdown file plus the config (about 16 KB) runs 6 s text and 7 s JSON, so no gap at that size. The 137 s gap was on release-rc2. A larger staged change is needed to test the text path; Neural Vault will build one and send lines and seconds.
 
 ## 11. False positives from `meerkat verify` on a large tree (reported by Neural Vault)
@@ -129,7 +129,7 @@ Eight findings on tools/, scripts/, .github/ and docs/ that Neural Vault checked
 | 11c | js-unhandled-promise | tools/claude-code-bridge.mjs:303 | Line 303 is inside listen(), a Promise wrapper. The only async main() (line 321) already has .catch | The rule must follow the call, not the line. Test: a call inside a function that returns a promise and is awaited or chained is not flagged. |
 | 11d | json-parse-in-loop | tools/generate-notices.mjs:175 | One package.json per directory is parsed each iteration, inside try/catch; nothing to hoist | Flag only when the parsed input is the same across iterations. Test: distinct inputs per iteration pass. |
 | 11e | skipped-tests | scripts/test_progress_report.py:246 | A conditional skip with a stated reason (missing tz database) | Do not flag a conditional skip that carries a reason argument. Test: skipUnless with a reason passes; a bare skip still fails. |
-| 11f | shell-hygiene | tools/gate/queue-prs.sh | The script continues past a failing PR on purpose and guards its cd with `|| exit 1`; set -e would break the queue | Judgement, not a clear bug. Plan: the rule accepts a script that guards critical steps explicitly, or Neural Vault adds an ignore with a reason. Samuel decides which. |
+| 11f | shell-hygiene | tools/gate/queue-prs.sh | The script continues past a failing PR on purpose and guards its cd with `|| exit 1`; set -e would break the queue | Judgement, not a clear bug. Plan: the rule accepts a script that guards critical steps explicitly, or Neural Vault adds an ignore with a reason. the maintainer decides which. |
 | 11g | inline-event-handlers | docs/design/mockups/earlier/2026-09-16-settings-redesign-mockup-v3.html:288 | A static design mockup in docs, never served as a product page | Exclude docs/ from web-security rules by default, or let a path rule be set in meerkat.config.json. Decision: the default scope. |
 | 11h | robots-sitemap | docs/codemap/index.html | Generated internal docs, not a public site | Same as 11g: docs/ is not a public site. |
 
@@ -137,7 +137,7 @@ Eight findings on tools/, scripts/, .github/ and docs/ that Neural Vault checked
 
 **Also reported, environment.** Logs were not saved because `C:\Users\Futur\.meerkat\logs` was not writable on their machine. Plan: a NOT RECORDED line already exists (0.5.4); check that it names the folder and the fix.
 
-**Decision for Samuel.** Default scope for docs/ and tools/ under web-security rules (11g, 11h), and whether 11f gets an explicit guard rule or an ignore.
+**Decision for the maintainer.** Default scope for docs/ and tools/ under web-security rules (11g, 11h), and whether 11f gets an explicit guard rule or an ignore.
 
 ### 11 (second batch) and the no-change gate report
 
@@ -145,7 +145,7 @@ Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each 
 
 - **wh-html and iframe-title** (PreviewPage.tsx:42): the rule read a header comment, not the tag. Plan: skip comments; read the whole tag before judging; wh-html only when srcdoc is built from variables.
 - **js-find-undefined** (gate-promote.mjs:675): the value comes from the same `find` that a guard already checked. Plan: accept a truthiness guard on a value derived from the same find.
-- **js-missing-await** (pr-template-check.mjs:326): a top-level `main()` at a script's entry. Plan: a rule for a script's own entry point, or an annotated accept. Decision for Samuel.
+- **js-missing-await** (pr-template-check.mjs:326): a top-level `main()` at a script's entry. Plan: a rule for a script's own entry point, or an annotated accept. Decision for the maintainer.
 - **js-prototype-pollution** (verify-code-mode.cts:389): the keys come from an allow-listed process.env, not attacker JSON. Plan: accept a copy from a fixed allow-list. Judgement.
 - **js-unhandled-promise** (main.cts:878): every awaited step inside handles its own errors. Plan: follow the handling inside the chain, not only the top call.
 - **cp-rust** (shell_isolation.rs:976): `mem::forget` is the intended hand-over after ownership moved to `child`. Plan: accept mem::forget with a comment that says ownership moved, or use an explicit owner type.
@@ -159,9 +159,9 @@ Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each 
 
 **Environment.** The default log folder `C:\Users\Futur\.meerkat\logs` is not writable on Neural Vault's machine. The gate says so on the NOT RECORDED line. Plan: none in Meerkat; they set `MEERKAT_LOG_DIR`.
 
-**Decision for Samuel.** Whether a script's top-level `main()` call needs a rule (11, js-missing-await), and whether verifier and shoot scripts are excluded by path by default.
+**Decision for the maintainer.** Whether a script's top-level `main()` call needs a rule (11, js-missing-await), and whether verifier and shoot scripts are excluded by path by default.
 
-## 12. Third verify batch (Neural Vault, apps/desktop-electron/electron) and verify usability
+## 12. Third verify batch (Neural Vault, the desktop app) and verify usability
 
 **False positives (rule-precision, 10 items).**
 - 12a. ep-ipc-preload and ep-ipc-handler-no-sender-check (ipc.cts:66, :75): the wrappers handleTrusted and onTrusted do the sender check, and a test enforces that every channel uses them. Plan: follow a wrapper call, not the raw ipcMain call.
@@ -181,7 +181,7 @@ Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each 
 - 12m. Progress goes to stderr interleaved with the answer. When stderr is not dropped, the first line is not the verdict. Plan: the answer on stdout as line 1, progress on stderr only (same rule as gate, 309050c).
 - 12n. With no base, verify says "git could not find a base branch ... running every check" and does not say what to set. Plan: name the exact fix (`--base <ref>` or `MEERKAT_BASE`).
 
-**Decision for Samuel.** Whether verify should be the release-gate default (it is slow), or verdict stays the pre-PR step and verify is for whole-tree audits only.
+**Decision for the maintainer.** Whether verify should be the release-gate default (it is slow), or verdict stays the pre-PR step and verify is for whole-tree audits only.
 
 ## 13. Fourth verify batch (Neural Vault, packages/) and the verify scope question
 
@@ -223,7 +223,7 @@ Six problems, most serious first. None fixed yet.
 
 **Not trusted message.** Not seen, so nothing to plan.
 
-## 15. Decision for Samuel: changed binary files (matrix rows 10 and B, B2 red)
+## 15. Decision for the maintainer: changed binary files (matrix rows 10 and B, B2 red)
 
 **Security review of 4778fec (fixed by reverting the binary part).** The first version classified a file as binary by a NUL byte in its first 8 KB and dropped the findings placed in it. An author could hide a finding, including a secret, by adding one byte. That part is reverted. Extension-based classification was tried next; it has the same risk, since a secret scanner would skip a file merely named `.png`. Also reverted.
 
@@ -231,7 +231,7 @@ Six problems, most serious first. None fixed yet.
 
 **Matrix rows 10, B and B2 stay red on purpose.** Their expectation (NO-RESULT exit 3 for a binary) was a guess by the test author, and the security reason rules out hiding findings to satisfy it.
 
-**Options for Samuel.**
+**Options for the maintainer.**
 - (a) Keep the current behaviour (a changed unreferenced binary is a dead-asset finding). Change rows 10, B and B2 to expect FAIL. This is the safest.
 - (b) Exempt binary files from `dead-assets` only, in that check's own rule (it checks assets, so a changed asset is its job to judge; the exemption would be a rule decision, not a hidden drop). Rows 10 and B expect PASS or NO-RESULT accordingly.
 - (c) Judge binary files as no-check everywhere. Not recommended: it hides findings in any binary file.
@@ -263,7 +263,7 @@ The gate on PR 3805 reported "could not compile nv-agents (test board_hostile_ma
 ### 14d and 14b, new evidence (Neural Vault, fix-3635-rust)
 
 - 14d: the verdict's line 1 is now the answer with its reason ("INCOMPLETE (status 503): a check crashed or its tool failed, so the run cannot be judged; two checks did not work. Next: meerkat gate --only rust-test --base origin/dev"). Confirmed working on the current build; close 14d once the reason is verified on a second case.
-- 14b: the run took 1012 s because the nv-sidecar test target does not compile on `dev` (phone_cmds.rs), and rust-test and rust-clippy each ran to failure. Plan: a compile failure of a crate's test target stops the other rust checks on the same crate at once and reports the compile error as a tool problem, rather than running each to its own failure. Same rule as 14g.
+- 14b: the run took 1012 s because the sidecar test target does not compile on `dev` (phone_cmds.rs), and rust-test and rust-clippy each ran to failure. Plan: a compile failure of a crate's test target stops the other rust checks on the same crate at once and reports the compile error as a tool problem, rather than running each to its own failure. Same rule as 14g.
 
 ### 14a, result from Neural Vault (PR 3806 head ac4a5e076, build b4a6c4e, separate streams, uninterrupted)
 
@@ -284,7 +284,7 @@ The gate's line 1 for this run did not name the crashed check (see 14a). This is
 
 ## 19. Batch result: contradictory blocking counts, and no failing checks or base results recorded (Neural Vault, batch-20261112T133233-d13de3)
 
-Final result: exit 75, INCOMPLETE; all 225 checks finished; rust-test FAIL at 645.6 s; 1568 s total, gate 1542 s.
+Final result: exit 75, INCOMPLETE; all of that run's checks finished (the run folder records the count); rust-test FAIL at 645.6 s; 1568 s total, gate 1542 s.
 
 - **19a. Two counts for one stop.** The log says "stopped early: 3 blocking so far", and the summary says "0 blocking so far (not a pass)". The two lines use different sources for the same count. Bug. Plan: one count, from the same rows, used by both lines; test with a run stopped at a known blocking count.
 - **19b. The result file names no failing checks.** Every entry in `prs` has `failingChecks: []`, and `devBaseline` is empty for this run, so it cannot say which checks failed on the base or the branch. This is item 18a. Plan: write each failing check (id, reason, base-only / branch-only / both) into the result file and the summary.
@@ -303,9 +303,9 @@ Final result: exit 75, INCOMPLETE; all 225 checks finished; rust-test FAIL at 64
 - **20c. Five PRs wait on the batch.** Neural Vault will not merge on an INCOMPLETE batch and will rerun on dev head d145a5d57 once 20b lands. Plan: notify them with the commit that writes base status.
 - **20d. Context tools signatures.** Neural Vault's agents call, in order: risks before editing a file, task pack for a handoff, map with a budget for orientation. `meerkat_brief` and gate keep their signatures unchanged. Plan: the MCP tools in the mcpctx worktree take the same order of use in docs/ai.md; no signature change to meerkat_brief or meerkat_gate.
 
-## 21. Lock-wait timeout reported as FAIL; environmental findings unlabelled; a spurious exit (Neural Vault, #3739 gate run)
+## 21. Lock-wait timeout reported as FAIL; environmental findings unlabelled; a spurious exit (Neural Vault, the 3739 gate run)
 
-- **21a. A lock-wait timeout is a FAIL (bug).** rust-test exited 143 after 228 s waiting for the cargo lock (position 2 of 3, held by `cargo test -p nv-agents -p nv-runtime -p nv-sidecar` for 725 s). The check never ran, and the branch changes no Rust file. It must be NOT RUN with a lock-timeout reason, or INCOMPLETE (75), never FAIL. Plan: exit 143 (SIGTERM) and any run stopped by the time limit or the lock wait are classified as not run, with the reason "waited for the cargo lock". Test: an injected child that exits 143 with lock-wait output is NOT RUN, not FAIL.
+- **21a. A lock-wait timeout is a FAIL (bug).** rust-test exited 143 after 228 s waiting for the cargo lock (position 2 of 3, held by `cargo test -p nv-agents -p nv-runtime -p the sidecar` for 725 s). The check never ran, and the branch changes no Rust file. It must be NOT RUN with a lock-timeout reason, or INCOMPLETE (75), never FAIL. Plan: exit 143 (SIGTERM) and any run stopped by the time limit or the lock wait are classified as not run, with the reason "waited for the cargo lock". Test: an injected child that exits 143 with lock-wait output is NOT RUN, not FAIL.
 - **21b. Environmental versus base-side (scripts-binaries).** The finding (apps/nv-vscode/package.json:60, "package" starts with "vsce", which no dependency provides) is on origin/dev too, and node_modules is not installed under nv-vscode, so the check may be partly environmental. Plan: each finding carries a `side` field (base-only, branch-only, both, environmental). environmental means the check could not see its dependencies (no node_modules, no tool on PATH); say which. This is the same field as 18a and 19b. Test: a check that cannot find its tool is environmental.
 - **21c. Spurious non-zero exit at process end.** An npx segfault message appeared once at process exit after `npm run check` passed. A runner that reads npx's exit code can report a spurious failure. Plan: the gate takes the exit code of the check's own command when it is a real child, and records a crash in the child's exit separately from the tool's verdict; re-run once with the same command before reporting a crash. Test: a child that prints its result and then crashes at exit is reported with its result, and the crash is noted.
 
@@ -318,7 +318,7 @@ Final result: exit 75, INCOMPLETE; all 225 checks finished; rust-test FAIL at 64
 - **22e. Full rust-test takes over 7 min.** Same as 14b and 14g: scope rust-test to the changed crates. Built in the rustbudget branch (merged); the request is that the gate uses it by default.
 - **Process note.** The agent killed the gate with an outer timeout at check 34 of 265, so no blocking count exists. This is 20a: the gate must reap its children when stopped.
 
-### 22, from the #3734 gate run (Neural Vault)
+### 22, from the an NV issue gate run (Neural Vault)
 
 - **22f. No summary until all checks finish.** A stopped run shows nothing of what it found. Plan: print a provisional summary line every N checks and at each stop (failures so far, blocking so far, checks left), labelled provisional.
 - **22g. rust-test over 12 min on a frontend-only branch, with no timeout.** A frontend-only change must not run the Rust suite; if a Rust check must run, it has a per-check timeout and reports NOT RUN with the reason when it hits it. Plan: the Rust scope (rustbudget) returns "nothing to run" for a change with no Rust file; a check timeout is set and its NOT RUN line names it.
@@ -326,10 +326,10 @@ Final result: exit 75, INCOMPLETE; all 225 checks finished; rust-test FAIL at 64
 
 ## 23. rust-test FAIL is base-side: attribution and an include-PR check (Neural Vault)
 
-Dev d145a5d57 does not compile its nv-sidecar tests (E0053 at apps/nv-sidecar/src/phone_push_cmds.rs:152; E0277 at phone_cmds.rs:400; E0608 at phone_cmds.rs:407-410; phone_devices_cmds.rs:78). `cargo test -p nv-agents -p nv-runtime -p nv-sidecar` exits 101 on a clean dev worktree after 465 s, with 0 tests run. The fix is PR #3814, not yet merged to dev.
+Dev d145a5d57 does not compile its the sidecar tests (E0053 at apps/the sidecar/src/phone_push_cmds.rs:152; E0277 at phone_cmds.rs:400; E0608 at phone_cmds.rs:407-410; phone_devices_cmds.rs:78). `cargo test -p nv-agents -p nv-runtime -p the sidecar` exits 101 on a clean dev worktree after 465 s, with 0 tests run. The fix is PR an NV issue, not yet merged to dev.
 
 - **23a. Attribute it.** The batch must report this rust-test FAIL as base-side (the check fails on the base commit alone), and must not count it against the branches. This is 18a and 19b; it needs the base-side result per check, which is not built yet.
-- **23b. Does #3814 change the result?** A batch that includes #3814 should show rust-test passing; that is the one check it would change. Neural Vault will check this with their own run; Meerkat does not run it for them.
+- **23b. Does an NV issue change the result?** A batch that includes an NV issue should show rust-test passing; that is the one check it would change. Neural Vault will check this with their own run; Meerkat does not run it for them.
 
 Not claimed in this entry: that the base failure is the only cause of the batch's FAIL; the base-side result has to be recorded before it is said.
 
@@ -344,22 +344,22 @@ Merged in 78938eb (reportfix); the agent's report lists these as its own choices
 
 Logged from NV's close-out report. Each item lists the repro and the expected result. Nothing here is fixed yet.
 
-- **25a. Default base picks stale local main.** A plain `meerkat gate` with no base flag chose local `main` (merge base ed2b4beaae36) over `origin/dev` in `nv-worktrees/fix-3807-copy`. Expected: base is `origin/dev` (or the branch's upstream), and line 1 names the base sha. Waiting on Samuel's decision on the default. Until then NV passes `--base origin/dev` explicitly. Earlier report: see 24 and the default-base note in the 2026-11-12 log.
+- **25a. Default base picks stale local main.** A plain `meerkat gate` with no base flag chose local `main` (merge base ed2b4beaae36) over `origin/dev` in `nv-worktrees/fix-3807-copy`. Expected: base is `origin/dev` (or the branch's upstream), and line 1 names the base sha. Waiting on the maintainer's decision on the default. Until then NV passes `--base origin/dev` explicitly. Earlier report: see 24 and the default-base note in the 2026-11-12 log.
 - **25b. CLI and summary.json disagree.** `guard-g1-rule-id` gated against `origin/dev` (run 20261112-220948): the CLI printed PASS, exit 0, while `summary.json` says `exitCode 1`, "4 failed", `counts.fail 44`, and findings `new 0`, `known 1128`. Expected: one verdict from one run. The exit code follows the blocking count only, and the summary says what is pre-existing.
 - **25c. Base-side failures counted as blocking.** `popup-slice1` gate: 2 blocking, both base-side (branch behind dev, dev has the sidecar fix). Expected: a failure that also fails on the base is reported as base-side, not blocking. Related: 18a, 19b, 23a.
-- **25d. Unfinished base comparison labelled FAIL.** Decision 24b is Samuel's. Whatever he decides, an unfinished base comparison must show as `UNFINISHED`, not `FAIL`. Until then a failing check with an unfinished base is not a pass (agreed with NV).
+- **25d. Unfinished base comparison labelled FAIL.** Decision 24b is the maintainer's. Whatever he decides, an unfinished base comparison must show as `UNFINISHED`, not `FAIL`. Until then a failing check with an unfinished base is not a pass (agreed with NV).
 - **25e. Cargo-lock timeout reported as FAIL, then NOT RUN.** `scripts-binaries` on `chore-3739-vitest` showed FAIL for a lock wait, then NOT RUN. Expected: a lock wait is `WAITING` or `SKIPPED` with the reason, never a failure. Related: 21a, 21b.
 - **25f. Identical findings repeat across runs.** Expected: dedupe by check id and file in the report and in `summary.json`. Related: 22d, 22f.
 
 NV is sending four gate reports today. Those reports will confirm or narrow 25a to 25f.
 
-- **25g. Gate report 1 (run 20261113-105821, fix/3568-token-note, base origin/dev 7f32ce81a).** The MCP result says `0 failed`, `blocking 0`, exit 0. The same run's `summary.json` says `pass 188, fail 46`, findings total 84 (high 26), and `exitCode 0`. The two disagree, which is the 25b mismatch again. Failing checks named in NV's report: risky-code (`apps/desktop-electron/scripts/build-icon.mjs:195`, innerHTML) and local-links (lychee, 725 files). Also: `full=true` on the MCP call returns only `{"schemaVersion":1}` with no result. The per-check log folder named in the report (`20261113-105623-...`) was not found on disk. Expected: one verdict from one run, and a full call returns the full result.
+- **25g. Gate report 1 (run 20261113-105821, fix/3568-token-note, base origin/dev 7f32ce81a).** The MCP result says `0 failed`, `blocking 0`, exit 0. The same run's `summary.json` says `pass 188, fail 46`, findings total 84 (high 26), and `exitCode 0`. The two disagree, which is the 25b mismatch again. Failing checks named in NV's report: risky-code (`the desktop app/scripts/build-icon.mjs:195`, innerHTML) and local-links (lychee, 725 files). Also: `full=true` on the MCP call returns only `{"schemaVersion":1}` with no result. The per-check log folder named in the report (`20261113-105623-...`) was not found on disk. Expected: one verdict from one run, and a full call returns the full result.
 
 - **25h. Gate reports 2 and 3 (base origin/dev, merges local only).** Runs 20261113-110538 (chore-3739-vitest), 20261113-110617 (fix-3734-vitest) and 20261113-110702 (fix-3729-vitest). Each MCP result says pass, blocking 0. Each `summary.json` lists FAIL entries: 55, 72 and 72, plus 121 NA. Vitest is green in all three (669 of 669 files, 13784 to 13787 tests) and `npm run check` exits 0. Same contradiction as 25g. None counts as clean. Expected: the MCP verdict and `summary.json` agree, and an NA is not a FAIL.
 
 - **25i. Gate report 4a (guard-g1-rule-id merged with origin/dev 7f32ce81a, run 20261113-105613).** The CLI says pass, blocking 0, 4 files changed, 226 passed, 52 skipped, 385 pre-existing. The same run's `summary.json` says `4 failed`, `exitCode 1`, counts pass 182 fail 44, subTotals pass 777 fail 88, findings 1128 (high 32), with 1 new and 1127 known. `report.md` says "needs attention (exit code 1)" with 88 failed sub-checks (rp-perf, rp-errors: `rperf-push-str-format` 363, `rperf-println-in-library` 69, `rerr-len-narrowing-cast` 17). Likely cause, not verified: the CLI scopes to the 4 changed files while `summary.json` and `report.md` are project-wide. One finding is marked new and is not yet identified. Same contradiction as 25b and 25g, with a scope cause. The Rust build for this merge is still required and is queued on NV's side. Expected: one verdict, one scope, stated in the summary.
 
-- **25j. Gate report 4b (popup-slice1 merged with origin/dev 7f32ce81a, local HEAD 24097dbd1, run 20261113-105615).** Result: FAIL, exit 1, blocking 1, failed check `rp-perf-style` (`rperf-push-str-format`), preExisting 724. Likely blocking line: `packages/runtime/src/engine/rounds.rs:2644` (`results.push_str(&format!(...))`), added by this branch. The other `push_str` at `rounds.rs:2604` may be pre-existing. The tool does not pin it down. Disagreement: `summary.json` and `findings.json` mark an info-level `ep-fuses-build` in `apps/desktop-electron/package.json` as the one "new" finding, which is not in this diff. The CLI's blocking finding is the `rp-perf-style` one in a changed file. The two outputs disagree on which finding is new. Expected: the blocking line is named, and "new" refers to a finding in the diff. The blocking item needs a fresh check before anyone fixes it.
+- **25j. Gate report 4b (popup-slice1 merged with origin/dev 7f32ce81a, local HEAD 24097dbd1, run 20261113-105615).** Result: FAIL, exit 1, blocking 1, failed check `rp-perf-style` (`rperf-push-str-format`), preExisting 724. Likely blocking line: `packages/runtime/src/engine/rounds.rs:2644` (`results.push_str(&format!(...))`), added by this branch. The other `push_str` at `rounds.rs:2604` may be pre-existing. The tool does not pin it down. Disagreement: `summary.json` and `findings.json` mark an info-level `ep-fuses-build` in `the desktop app/package.json` as the one "new" finding, which is not in this diff. The CLI's blocking finding is the `rp-perf-style` one in a changed file. The two outputs disagree on which finding is new. Expected: the blocking line is named, and "new" refers to a finding in the diff. The blocking item needs a fresh check before anyone fixes it.
 
 > *Correction 2026-11-13 (NV's read-only check, confirmed here): rounds.rs:2644 was not the cause. Its only changed file is `rounds.rs` and the gate has no finding at 2644. The blocking count is still unexplained.
 > *Read from run 20261113-105615: the run log shows `rp-async` FAIL ("sub-check rasync-blocking-fs failed: 37 found ... and 8 more"), and the findings it lists are in files outside this diff (`apps/desktop-web/src-tauri/src/memos.rs:84`, `onboarding.rs:695`). `changed-files.txt` lists 6 files. So the likely blocking item is `rp-async`, a project-wide sub-check failing on files this branch does not touch. Not verified: which finding the CLI counts as blocking, and whether any of the 37 falls in the diff. The check is a Meerkat question: a failure outside the changed files should not count as blocking in a changed-file gate. 25j stays open.
