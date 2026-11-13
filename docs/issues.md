@@ -135,7 +135,7 @@ Eight findings on tools/, scripts/, .github/ and docs/ that Neural Vault checked
 
 **Also reported, a real bug.** `meerkat gate --base origin/dev` on a clean detached worktree prints "nothing changed" when the branch has changes against the base. Neural Vault used `verify` as a workaround. Plan: reproduce on a detached worktree, find where the changed-file list comes from (it likely reads the current branch, not the detached HEAD), and add a test with a detached HEAD. Priority: high, because it makes the gate silently pass.
 
-**Also reported, environment.** Logs were not saved because `C:\Users\Futur\.meerkat\logs` was not writable on their machine. Plan: a NOT RECORDED line already exists (0.5.4); check that it names the folder and the fix.
+**Also reported, environment.** Logs were not saved because the per-user Meerkat logs folder was not writable on their machine. Plan: a NOT RECORDED line already exists (0.5.4); check that it names the folder and the fix.
 
 **Decision for the maintainer.** Default scope for docs/ and tools/ under web-security rules (11g, 11h), and whether 11f gets an explicit guard rule or an ignore.
 
@@ -157,7 +157,7 @@ Twelve more verify findings from Neural Vault's dev tree, grouped by rule. Each 
 
 **The no-change gate report (not a new bug on this branch).** On roadmap-orchestration, `gate --base main` on a branch with no diff prints `NO-RESULT (status 204)` on line 1 and exits 3. The released v0.5.4 has the same mapping (`lib/gate.mjs` line 943), and the gate code has not changed since the tag. The exit-0 result Neural Vault saw came from an older build. Plan: ask which binary and version they ran (`meerkat --version` and the path), then confirm.
 
-**Environment.** The default log folder `C:\Users\Futur\.meerkat\logs` is not writable on Neural Vault's machine. The gate says so on the NOT RECORDED line. Plan: none in Meerkat; they set `MEERKAT_LOG_DIR`.
+**Environment.** The default log folder (the per-user Meerkat logs folder) is not writable on Neural Vault's machine. The gate says so on the NOT RECORDED line. Plan: none in Meerkat; they set `MEERKAT_LOG_DIR`.
 
 **Decision for the maintainer.** Whether a script's top-level `main()` call needs a rule (11, js-missing-await), and whether verifier and shoot scripts are excluded by path by default.
 
