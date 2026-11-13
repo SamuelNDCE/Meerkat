@@ -339,3 +339,16 @@ Merged in 78938eb (reportfix); the agent's report lists these as its own choices
 
 - **24a. `ISSUES` instead of `FAIL` on a failing check's done line.** Chosen so that every done line has a status (18c) and no FAIL appears in the progress stream (18b). Consumers that read `FAIL` will see a new word. Decide: keep `ISSUES`, or use `FAIL` on the done line and move the stream change elsewhere.
 - **24b. A failing check counts as not blocking while the base comparison is unfinished.** This is the consequential one: a PR could pass while its base result is still missing. Decide: block until the base side is known (safer), or allow with a visible "base unknown" label.
+
+## 25. Close-out gate issues from Neural Vault (2026-11-13)
+
+Logged from NV's close-out report. Each item lists the repro and the expected result. Nothing here is fixed yet.
+
+- **25a. Default base picks stale local main.** A plain `meerkat gate` with no base flag chose local `main` (merge base ed2b4beaae36) over `origin/dev` in `nv-worktrees/fix-3807-copy`. Expected: base is `origin/dev` (or the branch's upstream), and line 1 names the base sha. Waiting on Samuel's decision on the default. Until then NV passes `--base origin/dev` explicitly. Earlier report: see 24 and the default-base note in the 2026-11-12 log.
+- **25b. CLI and summary.json disagree.** `guard-g1-rule-id` gated against `origin/dev` (run 20261112-220948): the CLI printed PASS, exit 0, while `summary.json` says `exitCode 1`, "4 failed", `counts.fail 44`, and findings `new 0`, `known 1128`. Expected: one verdict from one run. The exit code follows the blocking count only, and the summary says what is pre-existing.
+- **25c. Base-side failures counted as blocking.** `popup-slice1` gate: 2 blocking, both base-side (branch behind dev, dev has the sidecar fix). Expected: a failure that also fails on the base is reported as base-side, not blocking. Related: 18a, 19b, 23a.
+- **25d. Unfinished base comparison labelled FAIL.** Decision 24b is Samuel's. Whatever he decides, an unfinished base comparison must show as `UNFINISHED`, not `FAIL`. Until then a failing check with an unfinished base is not a pass (agreed with NV).
+- **25e. Cargo-lock timeout reported as FAIL, then NOT RUN.** `scripts-binaries` on `chore-3739-vitest` showed FAIL for a lock wait, then NOT RUN. Expected: a lock wait is `WAITING` or `SKIPPED` with the reason, never a failure. Related: 21a, 21b.
+- **25f. Identical findings repeat across runs.** Expected: dedupe by check id and file in the report and in `summary.json`. Related: 22d, 22f.
+
+NV is sending four gate reports today. Those reports will confirm or narrow 25a to 25f.
