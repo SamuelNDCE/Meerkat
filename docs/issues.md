@@ -427,3 +427,9 @@ NV is sending four gate reports today. Those reports will confirm or narrow 25a 
 - **28d. rust-test is one long step and takes the whole gate down.** rust-test was NOT RUN after 1201 s (limit 1200 s; the message suggests --timeout-scale 2 or a per-check timeout in .meerkat-budgets.json). Expected: rust-test reports progress while it runs, or the Rust crates are split into separate steps, so one slow crate does not end the gate with no result for the others.
 
 - **28c status (2026-11-16).** Fixed: summary.json now carries `blockingFindings`, a list of `{check, file, line, message, onBase}`, whose length equals `blocking`. `onBase` is false when the base comparison finished (what is left is new), and null when it did not. Commit 1aaccde, merged locally. Test: tests/summary-names-blocking.test.ts (2 of 2). Not done: report.md and the printed report do not show the list; onBase true is never written (a blocker also on base is hidden by the comparison, so it is never in the list); the stopped-early and resume paths were checked only through the existing tests.
+
+### 28e to 28g (from the promotion run 20261115-090630, base origin/dev)
+
+- **28e. A rust-test timeout is recorded as NOT RUN, not FAIL.** The summary text says "5 failed" while counts say fail 47, notRun 1, status "incomplete". Expected: a timeout counts as FAIL (blocking if it blocks), and the summary line shows notRun as well as failed. Related to 28d.
+- **28f. rust-test runs `cargo test --workspace`, which exceeds the 1200 s limit.** Expected: run per touched crate, with the full workspace test kept as a separate step. Related to 28d.
+- **28g. Clippy runs only after the test step.** A compile error (nv-llm, 6 errors) took about 20 minutes to appear. Expected: a compile check and clippy run first, so a compile error fails fast.
