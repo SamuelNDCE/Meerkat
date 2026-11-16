@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**405 checks** in 50 suites with 1448 sub-checks (a check that declares no rules counts as one), across 51 packs: 360 quick, 45 thorough, 38 opt-in. [Security 125](#security-checks) · [Functionality 224](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
+**406 checks** in 50 suites with 1449 sub-checks (a check that declares no rules counts as one), across 51 packs: 360 quick, 46 thorough, 39 opt-in. [Security 125](#security-checks) · [Functionality 225](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -45,7 +45,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `dependencies` | Dependencies | 15 | 15 | Lockfile in sync, unused, duplicate, wildcard or misplaced dependencies. |
 | `performance` | Performance | 11 | 11 | Size, start-up, memory, response time, load and build time against budgets. |
 | `node` | Node and TypeScript tools | 9 | 9 | ESLint, tsc, Prettier, circular imports, engines and tsconfig strictness. |
-| `rust` | Rust | 17 | 158 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
+| `rust` | Rust | 18 | 159 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
 | `python` | Python | 8 | 8 | ruff, mypy, pytest, bandit and dead code. |
 | `go` | Go | 4 | 4 | go vet and go test. |
 | `java` | Java | 3 | 3 | Maven validate, compile and test. |
@@ -196,7 +196,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 
 ## Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 224 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 225 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -349,7 +349,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `rust-check` | fast | heavy | 1.5 min | Rust compile check (cargo check, runs first) | rust |
 | `rust-clippy` | fast | heavy | 3.0 min | Rust lints (cargo clippy, warnings are errors) | rust |
 | `rust-fmt` | fast | heavy | 10 s | Rust formatting (cargo fmt --check) | rust |
-| `rust-test` | fast | heavy | 5.0 min | Rust tests (cargo test, the whole workspace) | rust |
+| `rust-test` | fast | heavy | 5.0 min | Rust tests (cargo test, the touched crates and their dependents) | rust |
 | `rust-todo-macros` | fast | tiny | 1 s | Rust has no todo! or unimplemented! outside tests | lang |
 | `rust-unwrap-overuse` | fast | tiny | 1 s | Rust unwrap() and expect() outside tests stay within the budget (lang.maxUnwrap) | lang |
 | `scripts-binaries` | fast | tiny | 1 s | Every program an npm script starts with is installed or on the path | hygiene |
@@ -415,6 +415,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `reproducible-build` | thorough | alone | 2.0 min | Two clean builds of the same source give identical files (no timestamps, paths or random ids) *(opt-in: `--include runtime`)* | robustness |
 | `rust-build-release` | thorough | heavy | 6.7 min | Rust release build (cargo build --release) | rust |
 | `rust-doc` | thorough | heavy | 2.0 min | Rust documentation builds without warnings (cargo doc) | rust |
+| `rust-test-workspace` | thorough | heavy | 25 min | Rust tests (cargo test, the whole workspace) *(opt-in: `--include workspace-test`)* | rust |
 | `semver-checks-api` | thorough | heavy | 2.0 min | Rust library API breaks from cargo-semver-checks, compared with the last published version (libraries only; a binary is not applicable) *(opt-in: `--include detectors`)* *(needs: )* | detectors |
 | `slow-test-regression` | thorough | heavy | 2.0 min | No test got more than 3x slower than its recent median (and the five slowest tests are listed) *(opt-in: `--include runtime`)* | robustness |
 | `staticcheck-go` | thorough | light | 30 s | Go staticcheck bugs (SA rules only), when go.mod exists *(opt-in: `--include detectors`)* *(needs: )* | detectors |
