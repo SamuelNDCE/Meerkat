@@ -3,6 +3,7 @@
 //   rust-fmt            cargo fmt --check
 //   rust-clippy         cargo clippy, warnings are errors
 //   rust-test           cargo test, only the changed crates and their direct dependents when the change is inside crates, else the whole workspace
+//   rust-test-workspace cargo test --workspace, the whole workspace; opt-in (--include workspace-test), not part of the per-change gate
 //   rust-audit          cargo audit (known advisories in the dependencies)
 //   rust-build-release  cargo build --release (catches what only breaks in a release build), thorough
 // Cargo jobs share the machine-wide cargo lock, so only one Rust build runs at a time, however many checks there are.
@@ -129,7 +130,7 @@ const CHECKS = [
     tier: 'fast',
     lane: 'cargo',
     cost: { cpu: 8, memGB: 4 },
-    title: 'Rust tests (cargo test, the whole workspace)',
+    title: 'Rust tests (cargo test, the touched crates and their dependents)',
     estSeconds: 300, weight: 'heavy', scale: 'crates',
     // A cold cargo build of the scoped crate can pass 300 s on a large dependency tree; the scoped run needs the room to finish.
     timeoutSeconds: 1200,
@@ -138,6 +139,23 @@ const CHECKS = [
     run: { cmd: 'cargo', args: ['test', '--workspace'], cwd: 'repo' },
     scopeArgs: scopeFor('rust-test', (names) => ['test', ...pkgArgs(names)]),
     // A verdict waits for the cargo lock at most 300 s before it reports NOT RUN with the holder, instead of the lock default of 900 s.
+    env: { MEERKAT_LOCK_MAX_WAIT: '300' },
+    selfTest: { cmd: 'cargo', args: ['test', '--manifest-path', `${FIX}/test-broken/Cargo.toml`], cwd: 'repo', expectFail: true },
+  },
+  {
+    // The full workspace test, kept apart from the per-change gate: rust-test runs the touched crates, this runs everything. Never narrowed.
+    id: 'rust-test-workspace',
+    optIn: 'workspace-test',
+    group: 'functionality',
+    tier: 'thorough',
+    lane: 'cargo',
+    cost: { cpu: 8, memGB: 4 },
+    title: 'Rust tests (cargo test, the whole workspace)',
+    estSeconds: 1500, weight: 'heavy', scale: 'crates',
+    timeoutSeconds: 3600,
+    needs: ['cargo'],
+    paths: RUST_PATHS,
+    run: { cmd: 'cargo', args: ['test', '--workspace'], cwd: 'repo' },
     env: { MEERKAT_LOCK_MAX_WAIT: '300' },
     selfTest: { cmd: 'cargo', args: ['test', '--manifest-path', `${FIX}/test-broken/Cargo.toml`], cwd: 'repo', expectFail: true },
   },
