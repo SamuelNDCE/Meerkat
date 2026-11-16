@@ -3,7 +3,7 @@
 Generated from the checks themselves by `node tools/gen-checks.mjs`, so it cannot drift from the code. See the [README](../README.md#every-check) for how to read the columns.
 
 <!-- checks:start -->
-**404 checks** in 50 suites with 1447 sub-checks (a check that declares no rules counts as one), across 51 packs: 359 quick, 45 thorough, 38 opt-in. [Security 125](#security-checks) · [Functionality 223](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
+**405 checks** in 50 suites with 1448 sub-checks (a check that declares no rules counts as one), across 51 packs: 360 quick, 45 thorough, 38 opt-in. [Security 125](#security-checks) · [Functionality 224](#functionality-checks) · [UI 26](#ui-checks) · [Performance 17](#performance-checks) · [Refactor 13](#refactor-checks)
 
 ## Suites
 
@@ -45,7 +45,7 @@ You pick a suite; it runs its checks, and each check reports its own sub-checks.
 | `dependencies` | Dependencies | 15 | 15 | Lockfile in sync, unused, duplicate, wildcard or misplaced dependencies. |
 | `performance` | Performance | 11 | 11 | Size, start-up, memory, response time, load and build time against budgets. |
 | `node` | Node and TypeScript tools | 9 | 9 | ESLint, tsc, Prettier, circular imports, engines and tsconfig strictness. |
-| `rust` | Rust | 16 | 157 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
+| `rust` | Rust | 17 | 158 | rustfmt, clippy, tests, audit, deny, docs and the release build. |
 | `python` | Python | 8 | 8 | ruff, mypy, pytest, bandit and dead code. |
 | `go` | Go | 4 | 4 | go vet and go test. |
 | `java` | Java | 3 | 3 | Maven validate, compile and test. |
@@ -196,7 +196,7 @@ Secrets, known-vulnerable dependencies, unsafe code, risky scripts and AI review
 
 ## Functionality checks
 
-Does it build, type-check, lint and pass its tests; is the repository in order. 223 checks.
+Does it build, type-check, lint and pass its tests; is the repository in order. 224 checks.
 
 | Check | Tier | Weight | Time | What it does | Pack |
 |---|---|---|---|---|---|
@@ -346,6 +346,7 @@ Does it build, type-check, lint and pass its tests; is the repository in order. 
 | `rspec` | fast | heavy | 1.0 min | RSpec: the test suite *(needs: rspec)* | ruby |
 | `rubocop` | fast | light | 15 s | RuboCop: Ruby style and common bugs *(needs: rubocop)* | ruby |
 | `ruff` | fast | tiny | 3 s | Ruff: lint and import order *(needs: ruff)* | python |
+| `rust-check` | fast | heavy | 1.5 min | Rust compile check (cargo check, runs first) | rust |
 | `rust-clippy` | fast | heavy | 3.0 min | Rust lints (cargo clippy, warnings are errors) | rust |
 | `rust-fmt` | fast | heavy | 10 s | Rust formatting (cargo fmt --check) | rust |
 | `rust-test` | fast | heavy | 5.0 min | Rust tests (cargo test, the whole workspace) | rust |
