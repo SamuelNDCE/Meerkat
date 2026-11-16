@@ -1,7 +1,8 @@
 // The Rust pack: checks for any Cargo project (a single crate or a workspace). Turn it on with { "packs": ["rust"] } in meerkat.config.json,
 // and add "builtin": false when the project is not the app Meerkat was first written for. Every command runs from the repository root.
 //   rust-fmt            cargo fmt --check
-//   rust-clippy         cargo clippy, warnings are errors
+//   rust-check          cargo check (compile only): runs first, so a compile error fails fast, before clippy and the tests
+//   rust-clippy         cargo clippy, warnings are errors (runs after rust-check, before rust-test)
 //   rust-test           cargo test, only the changed crates and their direct dependents when the change is inside crates, else the whole workspace
 //   rust-audit          cargo audit (known advisories in the dependencies)
 //   rust-build-release  cargo build --release (catches what only breaks in a release build), thorough
@@ -111,7 +112,25 @@ const CHECKS = [
     selfTest: { cmd: 'rustfmt', args: ['--edition', '2021', '--check', `${FIX}/sidecar-fmt/broken.rs`], cwd: 'repo', expectFail: true },
   },
   {
+    id: 'rust-check',
+    group: 'functionality',
+    tier: 'fast',
+    lane: 'cargo',
+    title: 'Rust compile check (cargo check, runs first)',
+    estSeconds: 90, weight: 'heavy', scale: 'crates',
+    timeoutSeconds: 1200,
+    timeoutIsFail: true,
+    needs: ['cargo'],
+    paths: RUST_PATHS,
+    run: { cmd: 'cargo', args: ['check', '--workspace', '--all-targets'], cwd: 'repo' },
+    scopeArgs: scopeFor('rust-check', (names) => ['check', ...pkgArgs(names), '--all-targets']),
+    selfTest: { cmd: 'cargo', args: ['check', '--manifest-path', `${FIX}/build-broken/Cargo.toml`], cwd: 'repo', expectFail: true },
+  },
+  {
     id: 'rust-clippy',
+    // Ranked behind the compile check in the start order (ranking only, nothing waits on its result).
+    orderAfter: ['rust-check'],
+    timeoutIsFail: true,
     group: 'functionality',
     tier: 'fast',
     lane: 'cargo',
@@ -125,6 +144,9 @@ const CHECKS = [
   },
   {
     id: 'rust-test',
+    // Ranked behind the compile check and clippy in the start order (ranking only, a lint finding does not stop the tests). A time-limit stop is a FAIL, not NOT RUN.
+    orderAfter: ['rust-check', 'rust-clippy'],
+    timeoutIsFail: true,
     group: 'functionality',
     tier: 'fast',
     lane: 'cargo',
@@ -162,6 +184,7 @@ const CHECKS = [
     title: 'Rust release build (cargo build --release)',
     estSeconds: 400, weight: 'heavy', scale: 'crates',
     timeoutSeconds: 1800,
+    timeoutIsFail: true,
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['build', '--workspace', '--release'], cwd: 'repo' },
