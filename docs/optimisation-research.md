@@ -86,9 +86,16 @@ Safety rails: a final full gate on the merged tip before announcing done; never 
 
 Rollout: keep the whole-tree key as the fallback. Add `inputs` first to the single-language checks, which the BY_ID table already tags by file kind, and require the mutation self-test before any check leaves scope repo.
 
-## 3. Gate time: measured (open)
+## 3. Gate time: measured (NeuralVault, 5 full-length fast runs, 2026-11-18)
 
-The timing memo for the NeuralVault gate is still running; its numbers will go here once it reports. [open]
+- rust-test is 75% of the summed per-check time and 82% of wall time (5988 of 7268 s). It passed in all five runs, 694 to 1469 s each. [verified from summary.json ms fields]
+- rust-clippy is 16%; one run waited 900 s on the cargo lock and produced nothing. [verified]
+- The roughly 225 non-Rust checks all finish within about 90 s. Scanners together cost about 27 s a gate. [verified]
+- Caching rust-test is the only change that moves the 20 minutes. [reasoning from the numbers]
+- Why rust-test runs the whole workspace: rust.mjs line 64 sends any change to root Cargo.toml, Cargo.lock, the toolchain or .cargo to the whole workspace, and feature branches often touch Cargo.lock. So a lockfile change re-tests everything. [verified in code; how often it applies is [unverified]]
+- Proposed next: when only Cargo.lock changed, compute the crates whose dependency closure changed (cargo metadata before and after) and test only those. [proposal]
+- The logs show the full `cargo test --workspace` command in some runs even when the detail says only the changed crate ran. Not explained yet. [open]
+- Caching: no per-crate key exists, so any edit re-runs rust-test. Per-crate keys are the main lever. [verified in code, gatecache.mjs]
 
 ## 4. Open verification before adopting any of this
 
