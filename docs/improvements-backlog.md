@@ -1,0 +1,50 @@
+# Meerkat improvements backlog
+
+One table of every improvement asked for by the sessions that use Meerkat, with its status. The detail and the reasons are in docs/issues.md (sections 25 to 29). Update this table in the same commit as the change it describes.
+
+Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED asked for, not built; HELD waiting on a decision; OTHER lives in another repo or session.
+
+| Item | What is wanted | Source | Status |
+|---|---|---|---|
+| 25b, 25g | One blocking count for exit code, printed line and summary.json | gate reports | OK |
+| 25i | Failures outside the change labelled as such | gate reports | OK |
+| 25j | Project-wide sub-check counted as blocking (likely rp-async) | promotion run | PARTIAL (not confirmed) |
+| 25k | A printed log folder always exists | gate reports | PARTIAL (second half open) |
+| 25h | Repo-layout facts (tsconfig, rimraf, vsce) reported as failures | sidebar and sync runs | PLANNED |
+| 25l | Queue gate writes a summary; queue stops pushing others' branches | queue run | OTHER (NeuralVault queue) |
+| 26a | Gate on a worktree folder never hangs without a verdict | NV session | PARTIAL (scope named; hang not reproduced) |
+| 26b | npx segfault in the guard step | queue run | OTHER (NeuralVault scripts) |
+| 26d | A check that dies or exits 0 without a result is a crash | gate reports | OK (test runners only, opt-in) |
+| 27a | Full gate on a checkout does not stall silently | NV session | HELD (Samuel's repro go) |
+| 27b | binary-in-history honours ignorePaths and .meerkatignore | NV session | OK |
+| 27b | links check honours ignore keys; root-relative links | NV session | PLANNED |
+| 28a | Run limit covers the base comparison; heartbeat per stage | NV session | PARTIAL (git calls without timeouts) |
+| 28c | Summary names each blocking finding and its base side | NV session | OK |
+| 28d | Long Rust step names itself on a cut-off | NV session | PARTIAL |
+| 28e | A timeout is FAIL, not NOT RUN | promotion run | OK |
+| 28f | Rust tests per touched crate; full workspace opt-in | promotion run | OK |
+| 28g | Compile check and clippy before tests | promotion run | OK |
+| 28h | NOT RUN exit code, and status codes as exit codes | Website, NV | HELD (Samuel to decide) |
+| 29b | Summary failed count, failed list and blocking agree | 4173 run | OK |
+| 29c | A cap-stopped run writes a reason | NV session | OK |
+| 29d | Captures check final URL and title | UI and product sessions | PLANNED |
+| 29e | Spawned tools run from a clean folder | TikTok session | PLANNED |
+| 29g | Fresh worktree gate without a node_modules junction | product session | PLANNED |
+| 29h | Cargo lane wait reported as WAITING with seconds | product session | PLANNED |
+| 29i | Failure on an unchanged file labelled outside the change | 4173 run | OK |
+| 29j | "No check covers" names the files and checks considered | product session | PLANNED |
+| 29k | A stopped gate writes a reason and the last finished check | product session | PARTIAL (orphan seal done; last check open) |
+| 29l | Junction behaviour documented or detected | product session | PLANNED |
+| 29m | Progress line during long runs | product session | PLANNED |
+| 29n | blockingFindings kept in every summary (regression test) | product session | PLANNED (feature OK) |
+| 29o | Gate by git ref without a checkout; name folder and ref | merge-and-verify | PLANNED (top request) |
+| 29p | Not-yet-wired files marker; new versus pre-existing blocking | Website session | PLANNED |
+| 29q | One failed count per run; base-diff scope under a base | merge-and-verify | PLANNED |
+| 22d | Progress printed only on change | gate reports | PARTIAL (on an unmerged branch) |
+| gate lifecycle | Child reaping and run ids (gateproc) | earlier work | PARTIAL (on an unmerged branch) |
+| batch split | Per-branch verdicts from one union gate | NV session | OK |
+| runs prune | Retention for the run store, dry run by default | early request | OK |
+| worktrees report and prune | Verdicts; prune only clean merged and prunable | early request | OK |
+| ps and stop | Live runs; stop one run's process tree | early request | OK |
+| space and worktrees new | One overview; owner and purpose for new worktrees | early request | OK |
+| orphan seal | Runs killed from outside get a sealed summary | product session | OK |
