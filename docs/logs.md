@@ -6,6 +6,8 @@ Every run saves what is needed to understand a failure long after the terminal i
 
 `~/.meerkat/logs/` by default, or the folder in `MEERKAT_LOG_DIR`.
 
+Size cap: after each run, the oldest finished run folders are removed until `runs/` is under `MEERKAT_LOG_MAX_MB` (default 2048 MB; `0` = no cap). The newest run is never removed.
+
 ```
 <log folder>/
   latest.json                      points at the newest run

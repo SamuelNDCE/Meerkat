@@ -391,7 +391,7 @@ node run.mjs --why eslint        print one check's log header and the end of its
 node run.mjs --logs              print where the logs are
 ```
 
-At the end of a run Meerkat prints where the logs are and how long they stay: **run folders are kept until you delete them**. Meerkat removes none, except that `meerkat gate` and `meerkat smoke` keep only their newest run per project. The newest run of each preset is remembered in `latest-by-preset.json` in the log folder (the MCP tools' `preset` argument reads it). If `MEERKAT_LOG_DIR` points inside the operating system's temp folder, the end-of-run note warns that the system may empty it (lib/runpath.mjs).
+At the end of a run Meerkat prints where the logs are and how long they stay: **run folders are kept until you delete them**, with two exceptions: `meerkat gate` and `meerkat smoke` keep only their newest run per project, and after each run the oldest finished run folders are removed until all of `runs/` fits under a total size cap, `MEERKAT_LOG_MAX_MB` (default 2048 MB; `0` turns the cap off). The run just written, a run still being written and the run `latest.json` points at are never removed (lib/logcap.mjs). The newest run of each preset is remembered in `latest-by-preset.json` in the log folder (the MCP tools' `preset` argument reads it). If `MEERKAT_LOG_DIR` points inside the operating system's temp folder, the end-of-run note warns that the system may empty it (lib/runpath.mjs).
 
 Details and the `summary.json` fields: [`docs/logs.md`](logs.md).
 

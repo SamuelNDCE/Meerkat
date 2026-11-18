@@ -4,7 +4,9 @@ Every released version of Meerkat, newest first. Versions follow semantic versio
 
 ## Unreleased
 
-Nothing yet.
+### Fixes
+
+- Run logs now have a total size cap. After each run the oldest finished run folders are removed until `runs/` fits under `MEERKAT_LOG_MAX_MB` (default 2048 MB, `0` turns it off); the newest run, a run still being written and the run `latest.json` points at are always kept.
 
 ## 0.5.4 (2026-11-11)
 
