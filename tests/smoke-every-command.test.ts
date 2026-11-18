@@ -67,6 +67,7 @@ const EXAMPLES: Record<string, Example> = {
   impact: { args: ['impact', '--base', 'HEAD'], codes: [0, 2], why: '2 when the fixture is not a git repository with that ref' },
   'tests-for': { args: ['tests-for', 'src/math.js'], codes: [0, 75], why: '75 when no test names the file' },
   batch: { args: ['batch', '--dry-run', 'main'], codes: [0, 2, 3], why: 'plans a batch and runs nothing; with no base branch in the fixture it says so (2); a plan that excludes every branch judges nothing (3)' },
+  'merge-check': { args: ['merge-check', 'no-such-branch'], codes: [2], why: 'an unknown ref is a usage error (2); nothing is checked out and no gate runs' },
   progress: { args: ['progress'], codes: [0, 1], why: 'prints the newest run progress (0), or says no progress file was found (1)' },
   context: { args: ['context'], codes: [0], why: 'prints the project brief to stdout; always 0' },
   risks: { args: ['risks'], codes: [0, 3], why: 'the newest saved run ranked; no saved run is NO-RESULT (3)' },
