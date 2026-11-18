@@ -35,8 +35,8 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 29k | A stopped gate writes a reason and the last finished check | product session | PARTIAL (orphan seal done; last check open) |
 | 29g, 29l | Junction: a gate on a worktree with a node_modules junction is documented or detected in the summary | product session | PLANNED |
 | 29m | Progress line during long runs even when nothing else printed | product session | OK (merged locally; not in a release) |
-| 29n | blockingFindings kept in every summary (regression test) | product session | PLANNED (feature OK) |
-| 29r | onBase is always present on each blocking finding, never missing | product session | PLANNED |
+| 29n | blockingFindings kept in every summary (regression test) | product session | OK (merged locally; not in a release) |
+| 29r | onBase always present on each blocking finding | product session | OK (merged locally; not in a release) |
 | 29s | 738 killed-from-outside gate: sealed summary with a reason (orphan seal) | product session | OK (orphan seal); last finished check open under 29k |
 | 29o | Gate by git ref without a checkout; name folder and ref | merge-and-verify | PLANNED (top request, per the merge session) |
 | 29p | Not-yet-wired files marker; new versus pre-existing blocking | Website session | PLANNED |
