@@ -510,3 +510,13 @@ Paused on request. State at this point:
 - Not decided: 27a repro go, 28h exit-code meaning, a release (0.5.5), and draft PR SamuelNDCE/Meerkat#107.
 - Outside Meerkat: 25l and 26b (NeuralVault's queue and scripts).
 - Worktrees: every feature worktree has no uncommitted work. They are kept until their branches are cleaned up.
+
+## 29y to 29ab: from the merge-and-verify session (2026-11-18), logged during the break
+
+- **29y. Cargo lane wait shows the holder (29h follow-up).** Wanted: WAITING with the holder's pid, its age, its command, and a queue position. The 29h branch shows the seconds only. Status: planned, not built.
+- **29z. Re-gate after a base move, cached by head SHA, base SHA and Meerkat version.** A queue of 12 PRs costs about 12 full gates today; only checks whose files changed should rerun. Status: planned, not built. Needs the cache key to include the version so an old verdict cannot be reused.
+- **29aa. Stacked PRs.** A gate on the top of a chain should cover its parts, or say it does not. Also wanted: one command to gate once, merge a stack in order, and re-check the base at each step. Status: planned, not built.
+- **29ab. Conflict check as a verdict, before any gate time.** The merge session ran git merge-tree by hand per PR. Expected: a "conflicts with base" verdict without running checks. Status: planned, not built; cheap, a good first item when resumed.
+- **29ac. Health test filter may match zero tests.** A plain "health" filter matched no tests in a Rust suite while the path form worked. Check whether Meerkat's own test filter builds its pattern the same way. Status: to check.
+
+Priorities the merge session gave: 29o (gate by ref), 29h (lane wait detail), 29u (batch partial verdicts; split limit done, time-limit kill not). 29u is PARTIAL on the branch; its time-limit half is open.

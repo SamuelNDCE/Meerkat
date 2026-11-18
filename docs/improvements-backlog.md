@@ -38,7 +38,7 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 29n | blockingFindings kept in every summary (regression test) | product session | PLANNED (feature OK) |
 | 29r | onBase is always present on each blocking finding, never missing | product session | PLANNED |
 | 29s | 738 killed-from-outside gate: sealed summary with a reason (orphan seal) | product session | OK (orphan seal); last finished check open under 29k |
-| 29o | Gate by git ref without a checkout; name folder and ref | merge-and-verify | PLANNED (top request) |
+| 29o | Gate by git ref without a checkout; name folder and ref | merge-and-verify | PLANNED (top request, per the merge session) |
 | 29p | Not-yet-wired files marker; new versus pre-existing blocking | Website session | PLANNED |
 | 29q | One failed count per run; sub-checks labelled apart | merge-and-verify | PARTIAL (count fixed on the branch; the base-diff scope under a base is not reproduced) |
 | 22d | Progress printed only on change | gate reports | PARTIAL (on an unmerged branch) |
@@ -51,3 +51,8 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | ps and stop | Live runs; stop one run's process tree | early request | OK |
 | space and worktrees new | One overview; owner and purpose for new worktrees | early request | OK |
 | orphan seal | Runs killed from outside get a sealed summary | product session | OK |
+| 29y | Lane wait shows the holder pid, age, command and queue position | merge-and-verify | PLANNED |
+| 29z | Re-gate after a base move, cached by head SHA, base SHA and version | merge-and-verify | PLANNED |
+| 29aa | Stacked PRs: gate the chain, or a one-command stack merge | merge-and-verify | PLANNED |
+| 29ab | Conflict check as a verdict before any gate time | merge-and-verify | PLANNED |
+| 29ac | Health test filter may match zero tests | merge-and-verify | TO CHECK |
