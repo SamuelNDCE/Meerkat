@@ -500,3 +500,13 @@ NV is sending four gate reports today. Those reports will confirm or narrow 25a 
 - **29x. Triage of the website gate's remaining cookie-flags findings (Website session, run 20261118-182156, 6 blocking in changed files).** Not a Meerkat rule change for the shipping and auth cookies: the rule is right for consent and session cookies, so the code gets the flags. Open idea for Meerkat: cookie-flags flags ops scripts under scripts/ the same way as shipped code. Expected: a rule can state a scope (for example "not in scripts/ops") so non-shipped tools are reported as a separate, low-severity class instead of blocking. To design with the wave-2 work, not built.
 
 - **29e audit result (2026-11-18).** Read-only pass over every external program Meerkat starts (about 57 call-site groups, tests excluded). Status counts: OK 26 rows, PARTIAL 8, BROKEN 20, N/A 4. The 20 BROKEN rows are the fix targets: node, python and tool calls with no working folder, so they inherit the user's shell folder. The python py_compile call in thorough/mutation.mjs is the direct analogue of the reported stdlib shadowing. The 8 PARTIAL rows run in the Meerkat repo root, so a stray file there is also a risk. Caveat: node is counted as project code here, which also covers Meerkat's own scripts; some rows depend on callers not traced (rows in tools/, thorough/perf.mjs, lib/lock.mjs, lib/exec.mjs callers). Fix shape for the BROKEN rows: pass an explicit working folder (the project folder, or a fresh run folder) to every spawn of project code, and report which calls cannot take one. To build next, as the wave 3 item.
+
+## Break point (2026-11-18)
+
+Paused on request. State at this point:
+- origin/roadmap-orchestration is at f4243d6 and holds everything merged this session.
+- Merged into the branch and tested file by file: 25b, 25g, 25i, 25k (folder kept), 26d (both halves, the second opt-in), 26a (scope half), 27b (binary-in-history), 28a (partial), 28c, 28d (partial), 28e, 28f, 28g, 29b, 29c, 29d, 29h, 29i, 29q (count), 29t, 29u (split and partial), the orphan seal, and the management features (runs prune, worktrees report and prune, ps and stop, space, worktrees new).
+- Not merged: gateproc and gateout2 (wave 2), the gate-by-ref work (29o), the not-yet-wired marker (29p), 29n and 29r (onBase on every blocking finding, next once resumed), 29j and 29k, 25h, 28a git timeouts, and the rest in docs/improvements-plan.md.
+- Not decided: 27a repro go, 28h exit-code meaning, a release (0.5.5), and draft PR SamuelNDCE/Meerkat#107.
+- Outside Meerkat: 25l and 26b (NeuralVault's queue and scripts).
+- Worktrees: every feature worktree has no uncommitted work. They are kept until their branches are cleaned up.
