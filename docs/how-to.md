@@ -154,7 +154,7 @@ To add a check, see [writing-checks.md](writing-checks.md). The shortest way is 
 - Logs are in `~/.meerkat/logs`, or in the folder named by `MEERKAT_LOG_DIR`. `meerkat logs` prints it.
 - Each run has its own folder under `runs/`, named date, time, project and preset. It holds `report.md`, `findings.json` and one log per check.
 - The newest run per project is in `latest-by-project.json`, and per preset in `latest-by-preset.json`.
-- Run folders are kept until you delete them. The only exception is that gate and smoke runs keep just the newest per project.
+- Run folders are kept until you delete them. Exceptions: gate and smoke runs keep just the newest per project, and the oldest runs are removed when all runs together pass `MEERKAT_LOG_MAX_MB` (default 2048 MB, `0` = no cap).
 - To clean up, delete old folders under `runs/` yourself. Nothing else needs cleaning.
 - Dismissals and baselines live in the same data folder, so deleting the whole folder removes them too.
 
