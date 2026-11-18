@@ -29,14 +29,15 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 29c | A cap-stopped run writes a reason | NV session | OK |
 | 29d | Captures check final URL and title | UI and product sessions | PLANNED |
 | 29e | Spawned tools run from a clean folder | TikTok session | PLANNED |
-| 29g | Fresh worktree gate without a node_modules junction | product session | PLANNED |
 | 29h | Cargo lane wait reported as WAITING with seconds | product session | PLANNED |
 | 29i | Failure on an unchanged file labelled outside the change | 4173 run | OK |
 | 29j | "No check covers" names the files and checks considered | product session | PLANNED |
 | 29k | A stopped gate writes a reason and the last finished check | product session | PARTIAL (orphan seal done; last check open) |
-| 29l | Junction behaviour documented or detected | product session | PLANNED |
+| 29g, 29l | Junction: a gate on a worktree with a node_modules junction is documented or detected in the summary | product session | PLANNED |
 | 29m | Progress line during long runs | product session | PLANNED |
 | 29n | blockingFindings kept in every summary (regression test) | product session | PLANNED (feature OK) |
+| 29r | onBase is always present on each blocking finding, never missing | product session | PLANNED |
+| 29s | 738 killed-from-outside gate: sealed summary with a reason (orphan seal) | product session | OK (orphan seal); last finished check open under 29k |
 | 29o | Gate by git ref without a checkout; name folder and ref | merge-and-verify | PLANNED (top request) |
 | 29p | Not-yet-wired files marker; new versus pre-existing blocking | Website session | PLANNED |
 | 29q | One failed count per run; base-diff scope under a base | merge-and-verify | PLANNED |
