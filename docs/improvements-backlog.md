@@ -34,7 +34,7 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 29j | "No check covers" names the files and checks considered | product session | PLANNED |
 | 29k | A stopped gate writes a reason and the last finished check | product session | PARTIAL (orphan seal done; last check open) |
 | 29g, 29l | Junction: a gate on a worktree with a node_modules junction is documented or detected in the summary | product session | PLANNED |
-| 29m | Progress line during long runs | product session | PLANNED |
+| 29m | Progress line during long runs even when nothing else printed | product session | OK (merged locally; not in a release) |
 | 29n | blockingFindings kept in every summary (regression test) | product session | PLANNED (feature OK) |
 | 29r | onBase is always present on each blocking finding, never missing | product session | PLANNED |
 | 29s | 738 killed-from-outside gate: sealed summary with a reason (orphan seal) | product session | OK (orphan seal); last finished check open under 29k |
@@ -54,5 +54,5 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 29y | Lane wait shows the holder pid, age, command and queue position | merge-and-verify | PLANNED |
 | 29z | Re-gate after a base move, cached by head SHA, base SHA and version | merge-and-verify | PLANNED |
 | 29aa | Stacked PRs: gate the chain, or a one-command stack merge | merge-and-verify | PLANNED |
-| 29ab | Conflict check as a verdict before any gate time | merge-and-verify | PLANNED |
-| 29ac | Health test filter may match zero tests | merge-and-verify | TO CHECK |
+| 29ab | Conflict check as a verdict before any gate time (meerkat merge-check) | merge-and-verify | OK (merged locally; not in a release) |
+| 29ac | Test filter that matches no tests is reported, not a silent pass | merge-and-verify | OK (merged locally; not in a release) |
