@@ -11,8 +11,9 @@
 //   cyclomatic-complexity functions with more branches than maxComplexity allows (default 15)
 // Limits live in .meerkat-budgets.json under "refactor". Accepted dead names go in .meerkat-dead-allow, one per line.
 // The function finder (findFunctions) is a heuristic: it blanks out strings and comments first, then matches signatures per language.
+import { spawnSync } from 'node:child_process'
 import { extname, join, posix } from 'node:path'
-import { finish, isTestFile, listTrackedFiles, main, readBudgets, readText, sizeOf, trackedFiles, withFixture } from './kit.mjs'
+import { applyMeerkatIgnore, finish, isTestFile, listTrackedFiles, main, readBudgets, readText, sizeOf, trackedFiles, withFixture } from './kit.mjs'
 
 const cfg = (root) => readBudgets(root)?.refactor ?? {}
 const CODE = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.rs', '.py', '.go', '.svelte', '.vue', '.java', '.cs', '.c', '.cpp', '.h', '.rb', '.php', '.swift', '.kt'])
@@ -431,6 +432,14 @@ const packageEntries = (root) => {
   return out.map((s) => posix.normalize(s.replace(/^\.\//, ''))).filter(Boolean)
 }
 
+// A source file that is not committed yet (untracked, not ignored by git) can still import a committed file: it must count as an importer, or a new file that uses a component makes the component look unused (29am).
+const untrackedSources = (root) => {
+  const r = spawnSync('git', ['-C', root, 'ls-files', '--others', '--exclude-standard'], { encoding: 'utf8', timeout: 30000 })
+  if (r.status !== 0) return []
+  const lines = String(r.stdout).replace(/\r/g, '').split('\n').filter(Boolean)
+  return applyMeerkatIgnore(root, lines).filter((x) => JS_FILE.test(x) && !SKIP.test(x))
+}
+
 const unusedFiles = (root) => {
   const allow = allowList(root, '.meerkat-unused-allow')
   const files = trackedFiles(root).filter((x) => JS_FILE.test(x) && !SKIP.test(x))
@@ -438,7 +447,7 @@ const unusedFiles = (root) => {
   const texts = new Map(files.map((x) => [x, readText(root, x)]))
   const used = new Set()
   // A file kept out of the report by .meerkatignore can still be the one that imports another file.
-  const importers = new Map([...texts, ...ignoredButReal(root, files, JS_FILE).map((x) => [x, readText(root, x)])])
+  const importers = new Map([...texts, ...ignoredButReal(root, files, JS_FILE).map((x) => [x, readText(root, x)]), ...untrackedSources(root).map((x) => [x, readText(root, x)])])
   for (const [x, t] of importers) {
     for (const m of t.matchAll(IMPORT)) {
       const target = posix.normalize(posix.join(posix.dirname(x), m[1]))
