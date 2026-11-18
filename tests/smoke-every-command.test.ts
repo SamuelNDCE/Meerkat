@@ -85,6 +85,8 @@ const EXAMPLES: Record<string, Example> = {
   worktrees: { args: ['worktrees'], codes: [0, 1, 2], why: 'lists worktrees (2 or 1 when the fixture is not a git repository)' },
   'worktrees report': { args: ['worktrees', 'report', '--base', 'no-such-branch'], codes: [1, 2], why: 'refuses an integration branch that does not exist (1), or 2 when the fixture is not a git repository' },
   'worktrees prune': { args: ['worktrees', 'prune', '--base', 'no-such-branch'], codes: [1, 2], why: 'dry run by default; refuses an integration branch that does not exist (1), or 2 when the fixture is not a git repository' },
+  space: { args: ['space', '--base', 'no-such-branch'], codes: [1, 2], why: 'refuses a base branch that does not exist (1), or 2 when the fixture is not a git repository' },
+  'worktrees new': { args: ['worktrees', 'new', '{away}/wt-smoke', '--branch', 'smoke-b', '--for', 'smoke', '--base', 'no-such-branch'], codes: [1, 2], why: 'refuses a base branch that does not exist (1), or 2 when the fixture is not a git repository; nothing is created' },
   'worktrees close': { args: ['worktrees', 'close', 'no-such-worktree'], codes: [1, 2], why: 'refuses a folder that is not a worktree (1), or 2 when the fixture is not a git repository' },
   guide: { args: ['guide'], codes: [0], why: 'advisory: exit 0 always, even outside a git repository' },
   top: { args: ['top'], codes: [0, 1, 2], why: 'a table of changed-file findings; 1 or 2 with a NO-RESULT line when there is nothing to compare' },
