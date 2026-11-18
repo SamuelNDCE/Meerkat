@@ -11,9 +11,11 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve, sep } from 'node:path'
 import { MEERKAT_DIR as MK } from '../../lib/paths.mjs'
+import { affectedByLock, readLocks } from '../../lib/rustlock.mjs'
 
 // A rust check runs only the crates the change touches plus their direct dependents (the crates that name one of them as a `path` dependency).
-// A change to the workspace itself (root Cargo.toml, Cargo.lock, the toolchain, .cargo) runs everything, and so does a change outside every crate.
+// A change to the workspace itself (root Cargo.toml, the toolchain, .cargo) runs everything, and so does a change outside every crate.
+// A change to Cargo.lock alone is narrowed to the crates whose resolved dependency set changed (lib/rustlock.mjs); a lock that cannot be compared runs everything.
 const WORKSPACE_FILES = /^(?:Cargo\.toml|Cargo\.lock|rust-toolchain(?:\.toml)?|\.cargo\/)/
 const SKIP_DIRS = new Set(['target', 'node_modules', '.git'])
 function crateNameOf(manifest) {
@@ -61,9 +63,18 @@ function workspaceCrates(root) {
 function cratesFor(ctx) {
   const files = (ctx.changedFiles ?? []).map((f) => String(f).replace(/\\/g, '/'))
   if (!files.length || !ctx.repoRoot) return null
-  if (files.some((f) => WORKSPACE_FILES.test(f))) return { whole: 'the change touches the workspace itself (root Cargo.toml, Cargo.lock, toolchain or .cargo)' }
+  const wsFiles = files.filter((f) => WORKSPACE_FILES.test(f))
+  if (wsFiles.some((f) => f !== 'Cargo.lock')) return { whole: 'the change touches the workspace itself (root Cargo.toml, toolchain or .cargo)' }
   const all = workspaceCrates(ctx.repoRoot)
   const changed = new Set()
+  let lockOnly = false
+  if (wsFiles.length) {
+    try {
+      const { oldText, newText } = readLocks(ctx.repoRoot, ctx.env ?? process.env)
+      for (const n of affectedByLock(oldText, newText, all.map((c) => c.name)).affected) changed.add(n)
+      lockOnly = true
+    } catch (e) { return { whole: `Cargo.lock changed and could not be compared: ${e.message}` } }
+  }
   for (const f of files) {
     if (!/\.rs$|(^|\/)Cargo\.toml$/.test(f)) continue
     const abs = resolve(ctx.repoRoot, f)
@@ -73,11 +84,12 @@ function cratesFor(ctx) {
     if (!home) return { whole: `a changed Rust file is not in any crate the scanner can see (${f})` }
     changed.add(home.name)
   }
+  if (!changed.size && lockOnly && files.every((f) => f === 'Cargo.lock')) return { crates: [], changed: [], dependents: [], lockOnly }
   if (!changed.size) return { whole: 'the changed files are outside every crate' }
   const dirOf = new Map(all.map((c) => [c.name, c.dir]))
   const dependents = new Set()
   for (const c of all) if (!changed.has(c.name) && c.deps.some((d) => [...changed].some((n) => dirOf.get(n) === d))) dependents.add(c.name)
-  return { crates: [...new Set([...changed, ...dependents])].sort(), changed: [...changed].sort(), dependents: [...dependents].sort() }
+  return { crates: [...new Set([...changed, ...dependents])].sort(), changed: [...changed].sort(), dependents: [...dependents].sort(), lockOnly }
 }
 // `build(names)` gives the cargo arguments for those crates; a null result means "run the whole workspace" (the check's own arguments).
 function scopeCargo(ctx, build, label) {
@@ -85,8 +97,11 @@ function scopeCargo(ctx, build, label) {
   if (!r) return null
   const target = ctx.env?.CARGO_TARGET_DIR ?? 'the repo default target/'
   if (r.whole) return { args: undefined, note: `${label} ran the whole workspace (${r.whole})` }
+  // Only Cargo.lock changed and no resolved dependency of any crate differs (a reorder, a comment): the documented minimum is a lockfile consistency check, no crate tests.
+  if (!r.crates.length) return { args: ['metadata', '--locked', '--format-version', '1'], note: `${label} ran only cargo metadata --locked (Cargo.lock changed but no resolved dependency changed for any crate; the workspace run covers the rest)` }
   const dep = r.dependents.length ? `; dependents ${r.dependents.join(', ')}` : ''
-  return { args: build(r.crates), note: `${label} ran only the crate(s) ${r.crates.join(', ')} (changed ${r.changed.join(', ')}${dep}; target: ${target}); the workspace run covers the rest` }
+  const via = r.lockOnly ? ', through Cargo.lock dependency changes' : ''
+  return { args: build(r.crates), note: `${label} ran only the crate(s) ${r.crates.join(', ')} (changed ${r.changed.join(', ')}${via}${dep}; target: ${target}); the workspace run covers the rest` }
 }
 const pkgArgs = (names) => names.flatMap((n) => ['-p', n])
 // rust-test's scope as a plain function (the whole-workspace case is null here: the check's arguments stand).
