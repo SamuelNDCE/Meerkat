@@ -50,6 +50,7 @@ const EXAMPLES: Record<string, Example> = {
   // Look at results
   run: { args: ['run', 'list'] },
   'run list': { args: ['run', 'list'] },
+  'run prune': { args: ['run', 'prune', '--dry-run'] },
   'run show': { args: ['run', 'show'] },
   'run log': { args: ['run', 'log', 'license'] },
   'run open': { args: ['run', 'open'] },
