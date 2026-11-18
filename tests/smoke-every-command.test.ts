@@ -83,6 +83,8 @@ const EXAMPLES: Record<string, Example> = {
   claims: { args: ['claims'], codes: [0, 2], why: 'lists live claims (2 when the fixture is not a git repository)' },
   release: { args: ['release', 'src', '--by', 'smoke'], codes: [0, 1, 2], why: 'releases the claim above (1 when there is none, 2 when not a git repository)' },
   worktrees: { args: ['worktrees'], codes: [0, 1, 2], why: 'lists worktrees (2 or 1 when the fixture is not a git repository)' },
+  'worktrees report': { args: ['worktrees', 'report', '--base', 'no-such-branch'], codes: [1, 2], why: 'refuses an integration branch that does not exist (1), or 2 when the fixture is not a git repository' },
+  'worktrees prune': { args: ['worktrees', 'prune', '--base', 'no-such-branch'], codes: [1, 2], why: 'dry run by default; refuses an integration branch that does not exist (1), or 2 when the fixture is not a git repository' },
   'worktrees close': { args: ['worktrees', 'close', 'no-such-worktree'], codes: [1, 2], why: 'refuses a folder that is not a worktree (1), or 2 when the fixture is not a git repository' },
   guide: { args: ['guide'], codes: [0], why: 'advisory: exit 0 always, even outside a git repository' },
   top: { args: ['top'], codes: [0, 1, 2], why: 'a table of changed-file findings; 1 or 2 with a NO-RESULT line when there is nothing to compare' },
