@@ -40,7 +40,7 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 29s | 738 killed-from-outside gate: sealed summary with a reason (orphan seal) | product session | OK (orphan seal); last finished check open under 29k |
 | 29o | Gate by git ref without a checkout; name folder and ref | merge-and-verify | PLANNED (top request) |
 | 29p | Not-yet-wired files marker; new versus pre-existing blocking | Website session | PLANNED |
-| 29q | One failed count per run; base-diff scope under a base | merge-and-verify | PLANNED |
+| 29q | One failed count per run; sub-checks labelled apart | merge-and-verify | PARTIAL (count fixed on the branch; the base-diff scope under a base is not reproduced) |
 | 22d | Progress printed only on change | gate reports | PARTIAL (on an unmerged branch) |
 | gate lifecycle | Child reaping and run ids (gateproc) | earlier work | PARTIAL (on an unmerged branch) |
 | batch split | Per-branch verdicts from one union gate | NV session | PARTIAL (on roadmap-orchestration; not in the 0.5.4 release, so NV cannot use --split yet) |
