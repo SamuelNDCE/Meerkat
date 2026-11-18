@@ -103,3 +103,7 @@ Rollout: keep the whole-tree key as the fallback. Add `inputs` first to the sing
 - The real cause of the 13-branch stop, from the batch's summary.json under the Meerkat data folder (batches/<batchId>/summary.json).
 - Per-check input lists for the scoped cache, starting with a few checks.
 - The time shares by check from real NeuralVault runs (section 3).
+
+## 5. Built so far (2026-11-18)
+
+- Cargo.lock-only changes now test the crates whose resolved dependencies changed, plus their dependents; anything unreadable fails closed to the whole workspace (merged locally, commit be7cdb4). Tests: rust-lockfile-scope 6 of 6. Not verified: a real NeuralVault Cargo.lock diff, lock formats other than the plain [[package]] layout, and the real time saving. `cargo metadata --locked` as the minimum for a reorder-only lock change could touch the network on a cold registry cache.
