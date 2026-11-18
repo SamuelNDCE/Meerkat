@@ -27,9 +27,9 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 28h | NOT RUN exit code, and status codes as exit codes | Website, NV | HELD (Samuel to decide) |
 | 29b | Summary failed count, failed list and blocking agree | 4173 run | PARTIAL (fixed on the branch; the 4173 run predates it; re-check on a current build) |
 | 29c | A cap-stopped run writes a reason | NV session | OK |
-| 29d | Captures check final URL and title | UI and product sessions | PLANNED |
+| 29d | Click-through steps assert the final url and title | UI and product sessions | OK (on roadmap-orchestration; exact match only) |
 | 29e | Spawned tools run from a clean folder | TikTok session | PLANNED |
-| 29h | Cargo lane wait reported as WAITING with seconds | product session | PLANNED |
+| 29h | Cargo lane wait reported as WAITING with seconds | product session | OK (on roadmap-orchestration; cargo-lock wording not verified) |
 | 29i | Failure on an unchanged file labelled outside the change | 4173 run | PARTIAL (fixed on the branch; no base label seen in the 4173 run; re-check) |
 | 29j | "No check covers" names the files and checks considered | product session | PLANNED |
 | 29k | A stopped gate writes a reason and the last finished check | product session | PARTIAL (orphan seal done; last check open) |
@@ -44,8 +44,8 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 22d | Progress printed only on change | gate reports | PARTIAL (on an unmerged branch) |
 | gate lifecycle | Child reaping and run ids (gateproc) | earlier work | PARTIAL (on an unmerged branch) |
 | batch split | Per-branch verdicts from one union gate | NV session | PARTIAL (on roadmap-orchestration; not in the 0.5.4 release, so NV cannot use --split yet) |
-| 29t | A batch exit 3 names the branch and the reason (conflict or other) | merge-and-verify | PLANNED |
-| 29u | A batch that hits its limit writes a partial verdict per branch | merge-and-verify | PLANNED |
+| 29t | Batch exit 3 names each branch and reason | merge-and-verify | OK (on roadmap-orchestration) |
+| 29u | Batch at its limit writes a partial verdict per branch | merge-and-verify | PARTIAL (split run limit covered; time-limit kill is not) |
 | runs prune | Retention for the run store, dry run by default | early request | OK |
 | worktrees report and prune | Verdicts; prune only clean merged and prunable | early request | OK |
 | ps and stop | Live runs; stop one run's process tree | early request | OK |
