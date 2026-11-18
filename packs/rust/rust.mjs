@@ -159,6 +159,7 @@ const CHECKS = [
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['test', '--workspace'], cwd: 'repo' },
+    needsResult: true,
     scopeArgs: scopeFor('rust-test', (names) => ['test', ...pkgArgs(names)]),
     // A verdict waits for the cargo lock at most 300 s before it reports NOT RUN with the holder, instead of the lock default of 900 s.
     env: { MEERKAT_LOCK_MAX_WAIT: '300' },
@@ -178,6 +179,7 @@ const CHECKS = [
     needs: ['cargo'],
     paths: RUST_PATHS,
     run: { cmd: 'cargo', args: ['test', '--workspace'], cwd: 'repo' },
+    needsResult: true,
     env: { MEERKAT_LOCK_MAX_WAIT: '300' },
     selfTest: { cmd: 'cargo', args: ['test', '--manifest-path', `${FIX}/test-broken/Cargo.toml`], cwd: 'repo', expectFail: true },
   },
