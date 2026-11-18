@@ -100,6 +100,7 @@ const EXAMPLES: Record<string, Example> = {
   dismissals: { args: ['dismissals'] },
   cost: { args: ['cost', '--last', '3'] },
   ps: { args: ['ps'] },
+  stop: { args: ['stop', 'no-such-run'], codes: [2], why: 'a run id that is not a live Meerkat run is refused, exit 2' },
   team: { args: ['team'] },
   undismiss: { args: ['undismiss', '{id}'] },
   baseline: { args: ['baseline'] },
