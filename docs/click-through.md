@@ -179,7 +179,10 @@ The driver replies with one line, either of:
 | `ok` | `true` only if the step really happened. Required |
 | `actual` | on failure, what the driver saw. The more specific the better (the visible buttons, the current address, the error text). Printed in the failure |
 | `expected` | optional; overrides the runner's wording of what was expected |
+| `url`, `title` | optional; the final page address and title. Required only when the step has `expect.url` or `expect.title` |
 | `state`, `detail` | optional extra evidence kept in `result.json` |
+
+**Checking the page you landed on.** Any step may carry an `expect` block with `url`, `title` or both: `{ "type": "open", "url": "https://app.example/", "expect": { "url": "https://app.example/", "title": "Dashboard" } }`. After the driver answers `ok`, the runner compares its reply fields `url` (the final address, after any redirect) and `title` (the page title) with the expected strings, exactly. A difference fails the step and prints both values, for example `expected: page opened at https://app.example/, with url "https://app.example/". actual: url "https://other.example/login"`. If the driver did not report a field the step asked for, the step fails with `the driver did not report a url` (or `title`). Steps without `expect` ignore these fields. The protocol is unchanged apart from the optional `url` and `title` reply fields.
 
 **Screenshots.** A step of type `screenshot` carries `path`, the exact file to write. The driver writes the PNG there and replies `ok`. The runner then checks the file exists and is not empty.
 
