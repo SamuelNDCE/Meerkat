@@ -548,6 +548,9 @@ const safeLiteralAssign = (t0, m, why, vouched = new Set()) => {
   // dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}: the value goes through a sanitiser first.
   if (why.startsWith('dangerouslySetInnerHTML')) {
     // The WHOLE __html value must be one sanitiser call with balanced parentheses, then }}: a sanitiser followed by + more markup, or a longer expression, is not safe.
+    // A JSON-LD script tag renders serialised data the repo wrote itself (jsonLd(...) or JSON.stringify(...)), not user HTML: not an injection sink (29an).
+    const ldLine = t.slice(t.lastIndexOf('\n', from) + 1, from + 200)
+    if (/type=["']application\/ld\+json["']/.test(ldLine) || /^=\s*\{\{\s*__html\s*:\s*(?:jsonLd|JSON\.stringify)\s*\(/.test(t.slice(from, from + 200))) return true
     const head = /^=\s*\{\{\s*__html\s*:\s*(?:DOMPurify\.sanitize|sanitizeHtml|sanitize)\s*\(/.exec(t.slice(from, from + 400))
     if (!head) return false
     const args = callText(t, from + head[0].length)

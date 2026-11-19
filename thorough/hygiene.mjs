@@ -161,7 +161,9 @@ const uiStatic = (root) => {
     const emailTemplate = /(^|\/)(emails?|email-templates?|mail-templates?)\//i.test(x)
     if (/\.html?$/i.test(x) && /<html\b/i.test(t)) {
       if (!/<html\b[^>]*\blang\s*=/i.test(t)) f.push(`${x}: <html> has no lang attribute`)
-      if (!desktop && !emailTemplate && !/<meta[^>]+viewport/i.test(t)) f.push(`${x}: no viewport meta tag (breaks on phones)`)
+      // A page in a scripts/ or tools/ folder is a build or report helper (for example an image generator), not a site page (29an).
+      const helperPage = /(^|\/)(scripts|tools)\//i.test(x)
+      if (!desktop && !emailTemplate && !helperPage && !/<meta[^>]+viewport/i.test(t)) f.push(`${x}: no viewport meta tag (breaks on phones)`)
       if (!emailTemplate && !/<title>\s*\S/i.test(t)) f.push(`${x}: no page <title>`)
     }
     for (const m of t.matchAll(/<[a-z][\w-]*\b[^>]*\btabindex\s*=\s*["']?\s*([1-9]\d*)/gi)) f.push(`${x}:${t.slice(0, m.index).split('\n').length} a positive tabindex (${m[1]}) breaks the natural tab order`)
