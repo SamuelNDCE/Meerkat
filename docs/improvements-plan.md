@@ -103,7 +103,7 @@ Order: items that unblock others first, then the gate-correctness items, then th
 
 - **27a**, full-gate repro on a fresh checkout: needs your go, because it loads the machine.
 - **28h**, exit code when a check is NOT RUN with nothing blocking: needs your answer on whether you meant the printed status codes or real exit codes. Real exit codes are 0 to 255, so the HTTP-style codes cannot be exit codes as written.
-- **Release**: the merged work on roadmap-orchestration is not in 0.5.4. Cutting a release is a human decision; the draft PR into main (SamuelNDCE/Meerkat#107) is open for review.
+- **Release**: the merged work on roadmap-orchestration is not in the installed release. Cutting a release is a human decision; the draft PR into main (ownerNDCE/Meerkat#107) is open for review.
 - **Other repos**: 25l and 26b are NeuralVault's queue and scripts, owned by its session.
 
 ## Out of scope for Meerkat

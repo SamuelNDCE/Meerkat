@@ -96,7 +96,7 @@ describe('batch fast', () => {
       ['ok-1', 'MERGEABLE', false, 'MERGEABLE-AFTER-RECHECK: the batch without the culprit passed a fresh gate'],
       ['culprit', 'BLOCKED', true, 'culprit: risky-code fails on this branch alone at src/bad.js:1: EVIL'],
       ['shared-1', 'MERGEABLE', false, 'MERGEABLE-AFTER-RECHECK: the batch without the culprit passed a fresh gate'],
-      ['shared-2', 'EXCLUDED', false, expect.stringMatching(/^CONFLICT while merging into the batch/)],
+      ['shared-2', 'EXCLUDED', false, expect.stringMatching(/^CONFLICT with the base: merging it into/)],
       ['big', 'EXCLUDED', false, 'too big (100 changed lines, limit 50)'],
       ['ok-2', 'MERGEABLE', false, 'MERGEABLE-AFTER-RECHECK: the batch without the culprit passed a fresh gate'],
     ])

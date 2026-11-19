@@ -15,7 +15,7 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 26a | Gate on a worktree folder never hangs without a verdict | NV session | PARTIAL (scope named; hang not reproduced) |
 | 26b | npx segfault in the guard step | queue run | OTHER (NeuralVault scripts) |
 | 26d | A check that dies or exits 0 without a result is a crash | gate reports | OK (test runners only, opt-in) |
-| 27a | Full gate on a checkout does not stall silently | NV session | HELD (Samuel's repro go) |
+| 27a | Full gate on a checkout does not stall silently | NV session | HELD (owner's repro go) |
 | 27b | binary-in-history honours ignorePaths and .meerkatignore | NV session | OK |
 | 27b | links check honours ignore keys; root-relative links | NV session | PLANNED |
 | 28a | Run limit covers the base comparison; heartbeat per stage | NV session | PARTIAL (git calls without timeouts) |
@@ -24,7 +24,7 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 28e | A timeout is FAIL, not NOT RUN | promotion run | OK |
 | 28f | Rust tests per touched crate; full workspace opt-in | promotion run | OK |
 | 28g | Compile check and clippy before tests | promotion run | OK |
-| 28h | NOT RUN exit code, and status codes as exit codes | Website, NV | HELD (Samuel to decide) |
+| 28h | NOT RUN exit code, and status codes as exit codes | Website, NV | HELD (owner to decide) |
 | 29b | Summary failed count, failed list and blocking agree | 4173 run | PARTIAL (fixed on the branch; the 4173 run predates it; re-check on a current build) |
 | 29c | A cap-stopped run writes a reason | NV session | OK |
 | 29d | Click-through steps assert the final url and title | UI and product sessions | OK (on roadmap-orchestration; exact match only) |
@@ -43,7 +43,7 @@ Legend: OK done and merged; PARTIAL part of it done, the rest open; PLANNED aske
 | 29q | One failed count per run; sub-checks labelled apart | merge-and-verify | PARTIAL (count fixed on the branch; the base-diff scope under a base is not reproduced) |
 | 22d | Progress printed only on change | gate reports | PARTIAL (on an unmerged branch) |
 | gate lifecycle | Child reaping and run ids (gateproc) | earlier work | PARTIAL (on an unmerged branch) |
-| batch split | Per-branch verdicts from one union gate | NV session | PARTIAL (on roadmap-orchestration; not in the 0.5.4 release, so NV cannot use --split yet) |
+| batch split | Per-branch verdicts from one union gate | NV session | PARTIAL (on roadmap-orchestration; not in the installed release, so NV cannot use --split yet) |
 | 29t | Batch exit 3 names each branch and reason | merge-and-verify | OK (on roadmap-orchestration) |
 | 29u | Batch at its limit writes a partial verdict per branch | merge-and-verify | PARTIAL (split run limit covered; time-limit kill is not) |
 | runs prune | Retention for the run store, dry run by default | early request | OK |

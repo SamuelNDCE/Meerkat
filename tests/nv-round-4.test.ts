@@ -86,7 +86,8 @@ describe('pii-patterns-in-source', () => {
   }
   test('user:password@host in a web address is not an email address', () => {
     expect(pii("const u = 'postgres://admin:Sup3rS3cretPw@db.acme.io/app'\n")).toBe(0)
-    expect(pii("// see https://evil.example/x@registry.npmjs.org\n")).toBe(1) // an @ later in the path is still reported
+    // An @ inside a web address path is not an email address (f13bc82 made the rule say so). Expectation changed 2026-11-19 (29an), was 1.
+    expect(pii("// see https://evil.example/x@registry.npmjs.org\n")).toBe(0)
   })
   test('a real-looking email address is still reported', () => {
     expect(pii("const owner = 'maria.lopez@gmail.com'\n")).toBe(1)

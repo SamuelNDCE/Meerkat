@@ -61,9 +61,9 @@ describe('worktree paths', () => {
     git(app, ['worktree', 'add', '-q', wt, 'wt-branch'])
     put('src/w.js', 'export const w = 1\n', wt)
     const g = cli(['gate', wt, '--no-input'])
-    g.stdout = g.stderr
     // Updated 2026-11-09: the gate's "behind main" line (stderr) can come before the folder line (71b6e96), so find the folder line instead of pinning line 1.
-    const fl = g.stdout.split('\n').find((l) => l.startsWith('folder:')) ?? ''
+    // 2026-11-19 (29an): the folder line can be on either stream; search both (the old line replaced stdout with stderr and lost it).
+    const fl = `${g.stdout}\n${g.stderr}`.split('\n').find((l) => l.startsWith('folder:')) ?? ''
     expect(fl).toContain(`folder: ${wt}`)
     expect(fl).toContain('branch wt-branch')
     expect(fl).toContain('git worktree')
