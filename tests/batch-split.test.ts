@@ -66,8 +66,8 @@ describe('batch --split', () => {
     expect(row('feat-a')).toMatch(/^feat-a [0-9a-f]{12} PASS 0 /)
     expect(row('feat-c')).toMatch(/^feat-c [0-9a-f]{12} PASS 0 /)
     expect(row('feat-b')).toMatch(/^feat-b [0-9a-f]{12} FAIL 1 planted branch-only/)
-    // union once, then bisect: at most ceil(log2 N) + 1 extra runs
-    expect(calls.length - 1).toBeLessThanOrEqual(Math.ceil(Math.log2(3)) + 1)
+    // union once, then bisect: at most ceil(log2 N) + 2 extra runs. The +2 (was +1) is the fail-closed right-half gate (29an): no half is PASS by inference.
+    expect(calls.length - 1).toBeLessThanOrEqual(Math.ceil(Math.log2(3)) + 2)
   })
 
   test('summary.json in the logs folder has the same counts as line 1', async () => {
