@@ -13,3 +13,8 @@ test('a rust-test FAIL with no named file stays blocking when the change touches
   scopeToChanged(rows, new Set(['src/other.js']))
   expect(rows[0].kind).toBe('fail')
 })
+
+test('a failing check whose places are all outside the change does not crash scoping (29an)', () => {
+  const rows = [{ id: 'some-check', kind: 'fail', detail: 'something failed', places: [{ file: 'other/x.js', line: 3, message: 'bad' }], files: ['other/x.js'] }]
+  expect(() => scopeToChanged(rows, new Set(['src/changed.js']))).not.toThrow()
+})
