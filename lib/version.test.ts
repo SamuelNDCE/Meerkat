@@ -120,6 +120,7 @@ describe('every place that shows a version reports VERSION', () => {
 // Files that name a version on purpose: dated records of a run or a measurement, and a fixture that is a sample Cargo.toml.
 // Each entry must still contain the version it names, so a stale entry fails the test instead of hiding a real hard-code.
 const RECORDED_VERSIONS: Record<string, string> = {
+  'docs/issues.md': 'the issue ledger: dated records that name the release each item was found in, and the fix release',
   'docs/accuracy.md': 'the final corpus run before the release (a dated record)',
   'docs/accuracy-results.md': 'the final corpus run before the release (a dated record)',
   'docs/readme-accuracy-section.md': 'the final corpus run before the release (a dated record)',

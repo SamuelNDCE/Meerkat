@@ -84,8 +84,8 @@ describe('a worktree reads its own branch', () => {
     expect(b.stdout.split('\n')[0]).toContain('branch feat')
     expect(b.stdout.split('\n')[0]).toContain('git worktree')
     const g = cli(['gate', '--app', '../wt', '--no-input'], app)
-    // the folder banner goes to stderr (stdout stays the pure gate output)
-    expect(g.stderr).toContain('branch feat')
+    // the folder line follows the answer on stdout (answer first, section 13 / 309050c); the answer is line 1 of stdout
+    expect(g.stdout + g.stderr).toContain('branch feat')
     expect(g.stdout).toContain('only-feat.js')
     expect(g.stderr).not.toMatch(/not found|does not exist/)
   }, SLOW)

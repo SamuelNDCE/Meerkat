@@ -9,11 +9,11 @@ In short: Meerkat reads files as text and applies rules. It is a fast first line
 ## 1. What Meerkat scans
 
 <!-- coverage:start -->
-Counted from all 51 packs under `packs/`: **404 checks** in **50 suites** with **1447 rules** (sub-checks).
+Counted from all 51 packs under `packs/`: **406 checks** in **50 suites** with **1449 rules** (sub-checks).
 
-Run by default: 358 quick checks and 8 full-only checks. Opt-in: 38 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include deny`).
+Run by default: 359 quick checks and 8 full-only checks. Opt-in: 39 (`--include ai`, `--include detectors`, `--include spelling`, `--include rust-nightly`, `--include runtime`, `--include mutation`, `--include workspace-test`, `--include deny`).
 
-Checks that need an outside tool (NOT RUN without it): 39 of 404. The other 365 need only Node.
+Checks that need an outside tool (NOT RUN without it): 41 of 406. The other 365 need only Node.
 
 Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results inside them. **Runs by default**: quick = in `meerkat verify`; full = only in `meerkat full`; both = a mix; opt-in = only when you ask. **Tool**: yes means at least one check in the suite is NOT RUN without that outside tool; the others still work.
 
@@ -53,7 +53,7 @@ Legend. **Checks**: scripts or tool runs. **Rules**: separate pass/fail results 
 | `dependencies` | Manifests and lockfiles; opt-in: clean install | 15 | 15 | quick + opt-in | no |
 | `performance` | Images, assets, and budgets you set (.meerkat-budgets.json) | 11 | 11 | both | no |
 | `node` | JS/TS projects (package.json, tsconfig) | 9 | 9 | both | yes: eslint, madge, prettier, tsc |
-| `rust` | Rust crates (Cargo.toml) | 16 | 157 | both + opt-in | yes: cargo, cargo-audit, cargo-deny |
+| `rust` | Rust crates (Cargo.toml) | 18 | 159 | both + opt-in | yes: cargo, cargo-audit, cargo-deny |
 | `python` | Python projects | 8 | 8 | both | yes: bandit, mypy, pytest, ruff, vulture |
 | `go` | Go modules | 4 | 4 | quick | yes: go |
 | `java` | Maven projects (pom.xml) | 3 | 3 | quick | yes: mvn |

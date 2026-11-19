@@ -333,6 +333,19 @@ const spawnUsesChannel = (ctx) => CHAN_END.test(callSpan(ctx, /\bspawn\(/, 160))
 // A thread that is only handed a channel end as an argument (`run_session(id, rx, paths)`) is not shown to report through it: only a send, a receive or a loop over the receiver counts.
 const CHAN_USE = /\b\w*(?:tx|sender)\w*\s*\.\s*(?:send|try_send|blocking_send)\(|\b\w*(?:rx|receiver)\w*\s*\.\s*(?:recv|try_recv|blocking_recv|recv_timeout|iter|try_iter)\(|\bin\s+&?(?:mut\s+)?\w*(?:rx|receiver)\b/
 const threadUsesChannel = (ctx) => CHAN_USE.test(callSpan(ctx, /\bspawn\(/))
+// The comment block directly above the line (no blank line between; attributes are walked over), as one string.
+const commentAbove = (ctx) => {
+  const out = []
+  for (let i = ctx.index - 1; i >= 0 && i >= ctx.index - 40; i--) {
+    const l = ctx.lines[i].trim()
+    if (/^(?:\/\/|\/\*|\*)/.test(l)) out.push(l)
+    else if (/^#\[/.test(l) && out.length === 0) continue
+    else break
+  }
+  return out.join(' ')
+}
+// A comment directly above that states an invariant or a guard's purpose: at least four words.
+const explainedAbove = (ctx) => commentAbove(ctx).replace(/\/\/+|\/\*+|\*+\/?/g, ' ').trim().split(/\s+/).filter(Boolean).length >= 4
 // The macro call on this line says its case was handled elsewhere (a dispatch invariant): "handled above", "already printed".
 const macroSaysHandled = (ctx) => {
   const l = ctx.lines[ctx.index]
@@ -472,7 +485,7 @@ export const SAFETY = [
   }),
   R('rsafe-raw-ptr-offset-deref', 'a raw pointer is offset and dereferenced in one expression (no bounds check)', /\*\s*\w+\.(?:add|offset|sub|wrapping_add|wrapping_offset)\(/, 'let b = *base.add(i);', 'let b = base.get(i).copied().unwrap_or(0);'),
   R('rsafe-from-raw-parts-no-len-check', 'slice::from_raw_parts takes a length with no assert or range check above it', /\bfrom_raw_parts(?:_mut)?\(/, 'let s = unsafe { slice::from_raw_parts(ptr, len) };', 'assert!(len <= MAX_LEN);\nlet s = unsafe { slice::from_raw_parts(ptr, len) };', {
-    test: (line, ctx) => /\bfrom_raw_parts(?:_mut)?\(/.test(line) && !/\bassert|\bif\b[^\n]{0,80}\blen\b|\.len\(\)\s*[<>=!]/.test(before(ctx, 10)),
+    test: (line, ctx) => /\bfrom_raw_parts(?:_mut)?\(/.test(line) && !/\bassert|\bif\b[^\n]{0,80}\blen\b|\.len\(\)\s*[<>=!]/.test(before(ctx, 10)) && !(/SAFETY/i.test(commentAbove(ctx)) && /\b(?:len|length|size|count|capacity|bytes?)\b/i.test(commentAbove(ctx))),
   }),
   R('rsafe-from-raw-parts-mut-no-note', 'slice::from_raw_parts_mut has no SAFETY note about aliasing above it', /\bfrom_raw_parts_mut\(/, 'let s = unsafe { slice::from_raw_parts_mut(p, n) };', '// SAFETY: no other reference to this region exists.\nlet s = unsafe { slice::from_raw_parts_mut(p, n) };', {
     test: (line, ctx) => /\bfrom_raw_parts_mut\(/.test(line) && !/SAFETY|alias|no other reference/i.test(before(ctx, 3)),
@@ -544,8 +557,8 @@ export const ERRORS = [
   R('rerr-expect-empty-message', 'expect is called with an empty message, so a panic says nothing', /\.expect\(\s*""\s*\)/, 'let cfg = load().expect("");', 'let cfg = load().expect("config file is required");'),
   R('rerr-expect-generic-message', 'expect is called with a generic word ("failed", "error") instead of what failed', /\.expect\(\s*"(?:failed|error|oops|should work|unwrap|panic|todo|msg|unexpected)"\s*\)/i, 'let p = open().expect("failed");', 'let p = open().expect("config file opens");'),
   LIBR('rerr-panic-in-library', 'a library path calls panic!, so the caller cannot recover', /(?<![\w:])panic!\s*[([{]/, 'panic!("bad state");', 'return Err(Error::BadState);', (c) => !macroSaysHandled(c) && notBinary(c) && !/\.unwrap_or_else\(\s*\|[^|\n]*\|\s*panic!/.test(c.lines[c.index])),
-  LIBR('rerr-unreachable-in-library', 'a library path calls unreachable!, which panics if the assumption is ever wrong', /(?<![\w:])unreachable!\s*[([{]/, 'unreachable!("tag {}", tag);', 'return Err(Error::UnknownTag(tag));', (c) => !macroSaysHandled(c) && notBinary(c)),
-  LIBR('rerr-assert-in-library', 'a library path uses assert! (it stays in release builds and panics on bad input)', /(?<![\w:])(?:assert|assert_eq|assert_ne)!\s*\(/, 'assert!(len <= MAX);', 'if len > MAX { return Err(Error::TooLong); }', (c) => notBinary(c) && !/\bconst\s+fn\b/.test(enclosingFn(c)) && !/^\s*(?:pub(?:\([^)]*\))?\s+)?(?:const|static)\s/.test(c.lines[c.index])),
+  LIBR('rerr-unreachable-in-library', 'a library path calls unreachable!, which panics if the assumption is ever wrong', /(?<![\w:])unreachable!\s*[([{]/, 'unreachable!("tag {}", tag);', 'return Err(Error::UnknownTag(tag));', (c) => !macroSaysHandled(c) && notBinary(c) && !explainedAbove(c)),
+  LIBR('rerr-assert-in-library', 'a library path uses assert! (it stays in release builds and panics on bad input)', /(?<![\w:])(?:assert|assert_eq|assert_ne)!\s*\(/, 'assert!(len <= MAX);', 'if len > MAX { return Err(Error::TooLong); }', (c) => notBinary(c) && !explainedAbove(c) && !/\bconst\s+fn\b/.test(enclosingFn(c)) && !/^\s*(?:pub(?:\([^)]*\))?\s+)?(?:const|static)\s/.test(c.lines[c.index])),
   R('rerr-len-narrowing-cast', 'a length is cast to a smaller integer with as, which can silently truncate', /\.(?:len|count)\(\)\s+as\s+(?:u8|u16|u32|i8|i16|i32)\b/, 'let n = items.len() as u16;', 'let n = u16::try_from(items.len())?;', {
     // The length of a string literal is a constant that cannot truncate.
     test: T(/\.(?:len|count)\(\)\s+as\s+(?:u8|u16|u32|i8|i16|i32)\b/, (c) => !/"\s*\.len\(\)\s+as\b/.test(c.lines[c.index])),
@@ -600,12 +613,16 @@ export const ERRORS = [
 ]
 
 // ---------------------------------------------------------------- Async (rp-async)
+// A comment line (// or //!) that calls the file a background job and says it runs once per tick, in either order.
+const BG_TICK = /^\s*\/\/[!/]?.*(?:\bbackground\b.*\bonce[ -]per[ -]tick\b|\bonce[ -]per[ -]tick\b.*\bbackground\b)/im
+const markedBackgroundTick = (text) => BG_TICK.test(text)
 export const ASYNC = [
   R('rasync-blocking-thread-sleep', 'thread::sleep is called inside an async fn, which blocks the whole runtime thread', /\bthread::sleep\(/, 'async fn poll() {\n    std::thread::sleep(Duration::from_secs(1));\n}', 'async fn poll() {\n    tokio::time::sleep(Duration::from_secs(1)).await;\n}', {
     test: (line, ctx) => /\bthread::sleep\(/.test(line) && inAsyncFn(ctx),
   }),
   R('rasync-blocking-fs', 'a blocking std::fs call runs inside an async fn', /(?<![\w:])(?:std::)?fs::(?:read|read_to_string|write|create_dir_all|remove_file|copy|rename|metadata|read_dir)\(/, 'async fn load() -> String {\n    std::fs::read_to_string("a.txt").unwrap()\n}', 'async fn load() -> String {\n    tokio::fs::read_to_string("a.txt").await.unwrap_or_default()\n}', {
-    test: (line, ctx) => /(?<![\w:])(?:std::)?fs::(?:read|read_to_string|write|create_dir_all|remove_file|copy|rename|metadata|read_dir)\(/.test(line) && inAsyncFn(ctx),
+    // A file whose own comment says it is a background job that runs once per tick blocks only its own thread, so a blocking call there is deliberate.
+    test: (line, ctx) => /(?<![\w:])(?:std::)?fs::(?:read|read_to_string|write|create_dir_all|remove_file|copy|rename|metadata|read_dir)\(/.test(line) && inAsyncFn(ctx) && !markedBackgroundTick(ctx.text),
   }),
   R('rasync-blocking-net', 'a blocking std::net connect or bind runs inside an async fn', /(?<![\w:])(?:std::)?net::(?:TcpStream|TcpListener|UdpSocket)::(?:connect|bind)\(/, 'async fn ping() {\n    let s = std::net::TcpStream::connect("10.0.0.1:80");\n}', 'async fn ping() {\n    let s = tokio::net::TcpStream::connect("10.0.0.1:80").await;\n}', {
     // Binding an ephemeral loopback port (":0") to find a free one is a one-shot local call, not a wait on the network.

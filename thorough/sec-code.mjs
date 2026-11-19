@@ -181,6 +181,9 @@ const hardcodedIp = {
   scan: (t, x) => {
     if (/(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|poetry\.lock|go\.sum)$/.test(x)) return []
     return hits(t, /(?<![\w.\/-])(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?![\w.\/-])/)
+      // An address never has a leading zero in an octet (078 is not a valid IPv4 literal), and SVG path data (d="...", points="...") is numbers, not an address (29an).
+      .filter((h) => !h.m[1].split('.').some((o) => o.length > 1 && o.startsWith('0')))
+      .filter((h) => !/\b(?:d|points|viewBox|transform)=["']|<(?:path|polygon|polyline|svg)\b/.test(h.text))
       .filter((h) => publicIp(h.m[1]) && !/version/i.test(h.text))
       .map((h) => ({ line: h.line, why: `contains the address ${h.m[1]}, a public IP written into the code (move it to configuration)` }))
   },

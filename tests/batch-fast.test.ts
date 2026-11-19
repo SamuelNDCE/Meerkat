@@ -74,7 +74,7 @@ const batch = async (args: string[], extraEnv: Record<string, string> = {}) => {
 }
 
 describe('batch fast', () => {
-  test('(a) git spawns per branch: at most 2 (one diff, one merge), the rest is a fixed cost', async () => {
+  test('(a) git spawns per branch: at most 3 (one diff, one merge-tree pre-triage, one merge), the rest is a fixed cost', async () => {
     const count = async (names: string[]) => {
       counter.n = 0
       counter.on = true
@@ -85,8 +85,8 @@ describe('batch fast', () => {
     }
     const two = await count(['clean-1', 'clean-2'])
     const six = await count(['clean-1', 'clean-2', 'clean-3', 'clean-4', 'clean-5', 'clean-6'])
-    expect((six - two) / 4).toBeLessThanOrEqual(2)
-    expect(two).toBeLessThanOrEqual(2 * 2 + 10)
+    expect((six - two) / 4).toBeLessThanOrEqual(3)
+    expect(two).toBeLessThanOrEqual(2 * 3 + 10)
   })
 
   test('(b) a culprit, a conflict and a too-big branch give the same JSON answer as before', async () => {
@@ -96,7 +96,7 @@ describe('batch fast', () => {
       ['ok-1', 'MERGEABLE', false, 'MERGEABLE-AFTER-RECHECK: the batch without the culprit passed a fresh gate'],
       ['culprit', 'BLOCKED', true, 'culprit: risky-code fails on this branch alone at src/bad.js:1: EVIL'],
       ['shared-1', 'MERGEABLE', false, 'MERGEABLE-AFTER-RECHECK: the batch without the culprit passed a fresh gate'],
-      ['shared-2', 'EXCLUDED', false, expect.stringMatching(/^CONFLICT while merging into the batch/)],
+      ['shared-2', 'EXCLUDED', false, expect.stringMatching(/^CONFLICT with the base: merging it into/)],
       ['big', 'EXCLUDED', false, 'too big (100 changed lines, limit 50)'],
       ['ok-2', 'MERGEABLE', false, 'MERGEABLE-AFTER-RECHECK: the batch without the culprit passed a fresh gate'],
     ])

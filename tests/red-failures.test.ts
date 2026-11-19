@@ -182,8 +182,10 @@ describe('red: a damaged run store, baseline or dismissals file', () => {
     const bad = box()
     const env = { MEERKAT_LOG_DIR: join(bad.outside, 'sentinel.txt') }
     const r = runCli(bad, ['verify', '--only', 'secret-scan', '--plain'], { env })
-    clean(r, [0], { says: /logs cannot be saved/ })
-    clean(runCli(bad, ['map'], { env }), [1], { says: /could not make a run folder/, action: false })
+    // Since the fallback (section 13): an unwritable log folder saves the run in a per-user temp folder and the note names it, so the run is not lost.
+    clean(r, [0], { says: /not writable|meerkat-logs/ })
+    // With the fallback, map saves its run in the per-user temp folder and says where (exit 0), instead of failing.
+    clean(runCli(bad, ['map'], { env }), [0], { says: /meerkat-logs/, action: false })
   })
   test.skipIf(WIN || process.getuid?.() === 0)('a read-only project folder: write commands (init) fail with a message, nothing is written', () => {
     const ro = box()

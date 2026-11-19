@@ -27,6 +27,7 @@ for (const p of readdirSync(packsDir)) all.push(...(await loadChecks(join(packsD
 // Compile, test and build checks that keep the fast tier on purpose (functionality-fast, app-fast and ci run them). The quick and fast
 // presets leave them out (skipCompile, lib/presets.mjs). Anything new that compiles must be added here WITH a reason, or go to thorough.
 const COMPILE_IN_FAST: Record<string, string> = {
+  'rust-check': 'the compile check that runs first so a compile error fails fast (estimate 90 s, heavy, cargo lane)',
   'rust-clippy': 'the quick run type-checks the code; clippy is the Rust build check (estimate 180 s, heavy, cargo lane)',
   'rust-test': 'the quick run runs the tests (estimate 300 s, heavy, cargo lane)',
   tsc: 'type check is part of quick (estimate 60 s)',

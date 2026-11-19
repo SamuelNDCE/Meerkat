@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { finish, main, notRun, readBudgets, readText } from './kit.mjs'
+import { applyMeerkatIgnore, finish, main, notRun, readBudgets, readText } from './kit.mjs'
 import { compareVersions } from '../lib/version.mjs'
 
 const TIMEOUT_MS = 60_000
@@ -221,6 +221,8 @@ function binaryInHistory(root) {
     if (type !== 'blob' || Number(size) <= max * 1024) continue
     const path = clean(paths.get(sha) || sha.slice(0, 10))
     if (seen.has(path) || allowed(allow, 'binary-in-history', path)) continue
+    // ignorePaths (MEERKAT_IGNORE_PATHS) and .meerkatignore leave a path out, as in the other checks
+    if (applyMeerkatIgnore(root, [path]).length === 0) continue
     seen.add(path)
     f.push(`${path} is ${Math.round(Number(size) / 1024)} KB (budget ${max} KB) and was added in the last 200 commits`)
   }

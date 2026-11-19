@@ -637,6 +637,7 @@ Meerkat exits non-zero on any failure or NOT RUN, and writes `summary.json` for 
 | `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `MEERKAT_AI_KEY` | a key for the AI checks (see [AI checks](#ai-checks)); `MEERKAT_AI_MODEL` and `MEERKAT_AI_BASE_URL` change the model and the service |
 | `MEERKAT_USER_CONFIG` | use another file than `~/.meerkat.json` for your personal presets and settings |
 | `MEERKAT_GATE_MAX_SECONDS` | the longest `meerkat gate` runs before it stops and keeps the results so far (same as `--max-seconds`) |
+| `MEERKAT_PROGRESS_INTERVAL_MS` | how often a run that has printed nothing says it is still going, while a check runs: one short line naming the longest-running check, its elapsed seconds and the count finished (default 60000; not printed when nothing runs) |
 | `MEERKAT_PRIORITY` | `normal` runs the checks at normal priority; the default is below normal so your PC stays responsive |
 | `MEERKAT_THEME` | the name of a built-in board theme (your theme file still applies on top) |
 | `MEERKAT_NO_UPDATE_NOTE` | set it to leave the "newer version" line off the results screen |

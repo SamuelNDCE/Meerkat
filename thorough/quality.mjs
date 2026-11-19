@@ -108,7 +108,7 @@ const debugWhy = (x, line, prev, testy, cliish, guarded = () => false) => {
     if (!testy && !cliish && log && !/process\.env\b|\b(?:DEBUG|VERBOSE)\b/.test(line.slice(0, log.index)) && !guarded()) return 'has console.log() left in'
   }
   if (/\.py$/.test(x) && /\bprint\(/.test(line) && (/print\(\s*f?["']\s*DEBUG/i.test(line) || /#\s*debug/i.test(prev))) return 'has a debug print() left in'
-  if (/\.rs$/.test(x)) {
+  if (/\.rs$/.test(x) && !/^\s*\/\/[/!]/.test(line)) {
     const m = /\b(dbg|todo)!\s*\(/.exec(line)
     if (m) return `has ${m[1]}!() left in`
   }
@@ -149,6 +149,34 @@ const SKIPPED = [
   /\bpytest\.mark\.skip\w*|\bunittest\.skip\w*/,
   /\bt\.Skip(?:Now)?\s*\(/,
 ]
+// A conditional skip (skipIf, skipUnless, skipif) whose second argument is a reason. Arguments are counted at depth one, so a call with its own commas in the condition does not count.
+const conditionalSkipHasReason = (code) => {
+  const m = /(?:unittest|pytest\.mark)\.skip(?:If|Unless|if)\s*\(/.exec(code)
+  if (!m) return false
+  let depth = 1
+  let quote = ''
+  let commas = 0
+  let reason = false
+  for (let k = m.index + m[0].length; k < code.length; k++) {
+    const c = code[k]
+    if (quote) {
+      if (c === '\\') k++
+      else if (c === quote) quote = ''
+      if (commas >= 1 && depth === 1) reason = true
+      continue
+    }
+    if (c === '"' || c === "'") {
+      quote = c
+      if (commas >= 1 && depth === 1) reason = true
+    } else if (c === '(' || c === '[' || c === '{') depth++
+    else if (c === ')' || c === ']' || c === '}') {
+      depth--
+      if (depth === 0) return commas >= 1 && reason
+    } else if (c === ',' && depth === 1) commas++
+    else if (commas >= 1 && depth === 1 && /\S/.test(c)) reason = true
+  }
+  return false
+}
 const skippedTests = (root) => {
   const allow = allowSet(root)
   const f = []
@@ -159,7 +187,7 @@ const skippedTests = (root) => {
       const t = line.trim()
       if (t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || (hashComments && t.startsWith('#'))) return
       const code = line.replace(/\s\/\/.*$/, '')
-      if (SKIPPED.some((re) => re.test(code)) && !allowed(allow, x, i + 1)) f.push(`${x}:${i + 1} skips a test: ${snip(line)}`)
+      if (SKIPPED.some((re) => re.test(code)) && !conditionalSkipHasReason(code) && !allowed(allow, x, i + 1)) f.push(`${x}:${i + 1} skips a test: ${snip(line)}`)
     })
   }
   return finish('skipped-tests', f, 'no test is skipped')
@@ -223,13 +251,23 @@ const emptyCatch = (root) => {
 }
 
 // ---- test-presence: a project with source and no tests, and folders of source with no matching test file
+// A source file that holds its own tests: Rust #[cfg(test)] / #[test], or JavaScript and TypeScript describe( / it( / test( calls (not a method call such as re.test( ).
+const RUST_INLINE = /#\[(?:cfg\(test\)|test)\]/
+const JS_INLINE = /(?<![\w$.])(?:describe|it|test)\s*\(/
+const hasInlineTests = (root, x) => {
+  const rust = /\.rs$/i.test(x)
+  if (!rust && !/\.(m?[jt]sx?|cjs)$/i.test(x)) return false
+  const t = readText(root, x)
+  return rust ? RUST_INLINE.test(t) : JS_INLINE.test(blankComments(t))
+}
 const testPresence = (root) => {
   const minRatio = cfg(root).minTestRatio ?? 0
   const all = files(root, SOURCE)
   const tests = all.filter((x) => TEST_FILE.test(x))
   const src = all.filter((x) => !TEST_FILE.test(x))
+  const inline = new Set(src.filter((x) => hasInlineTests(root, x)))
   const f = []
-  if (src.length > 5 && tests.length === 0) f.push(`there are ${src.length} source files and no test files`)
+  if (src.length > 5 && tests.length === 0 && inline.size === 0) f.push(`there are ${src.length} source files and no test files`)
   const testNames = new Set(tests.map(testStem))
   const dirs = new Map()
   for (const x of src) {
@@ -238,9 +276,9 @@ const testPresence = (root) => {
     dirs.get(d).push(x)
   }
   for (const [d, list] of dirs) {
-    if (list.length > 10 && !list.some((x) => testNames.has(stemOf(x)))) f.push(`${d}/ has ${list.length} source files and no test file for any of them`)
+    if (list.length > 10 && !list.some((x) => testNames.has(stemOf(x)) || inline.has(x))) f.push(`${d}/ has ${list.length} source files and no test file for any of them`)
   }
-  const matched = src.filter((x) => testNames.has(stemOf(x))).length
+  const matched = src.filter((x) => testNames.has(stemOf(x)) || inline.has(x)).length
   if (minRatio > 0 && src.length && matched / src.length < minRatio) f.push(`only ${matched} of ${src.length} source files have a matching test (budget quality.minTestRatio is ${minRatio})`)
   return finish('test-presence', f, 'the source has tests')
 }

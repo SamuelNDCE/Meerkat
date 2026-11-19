@@ -216,7 +216,7 @@ describe('P3.11 gate output is failures plus one summary line by default', () =>
     expect(t).not.toMatch(/PASS\s+passing-check/)
     expect(t).not.toContain('unconfigured-check')
     // Since 0.5.4 the summary also names a count of checks not configured (added packs whose tool is missing), when there are any.
-    expect(t).toMatch(/MEERKAT gate: 1 blocking, 0 pre-existing \(not in the change\), 1 passed, 0 not run(, \d+ not configured)?, exit 1/)
+    expect(t).toMatch(/MEERKAT gate: 1 blocking, 0 pre-existing \(not in the change\), (\d+ failed, )?1 passed, 0 not run(, \d+ not configured)?, exit 1/)
     expect(gateText('gate', out, 'staged files', { verbose: true })).toMatch(/gate: 1 passed, 1 failed, 0 tool failure\(s\), 0 not run, 1 not configured, exit 1/)
   })
   test('--verbose (verbose: true) lists every check again', () => {

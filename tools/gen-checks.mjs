@@ -1,13 +1,17 @@
 // Writes the list of every check into docs/checks.md and into the README between their markers, from the checks themselves, so the
 // documentation cannot drift from the code:   node tools/gen-checks.mjs
 // One section per kind of check. Example packs (examples/) are not listed: they belong to one app.
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadChecks } from '../lib/load-checks.mjs'
 import { MEERKAT_DIR } from '../lib/paths.mjs'
 import { BUGS_EXCLUDED_CHECKS, BUGS_EXCLUDED_SUBS } from '../lib/bugs-preset.mjs'
 import { isAlone } from '../lib/runner.mjs'
 import { declaredSubs, groupBySuite, suiteIdOf } from '../lib/suites.mjs'
+import { createSink } from './check-mode.mjs'
+
+// --check compares the generated text with the files on disk, writes nothing and exits 1 on a difference.
+const sink = createSink(process.argv.slice(2), { script: 'tools/gen-checks.mjs' })
 
 // Every folder under packs/ is a pack, so a new pack is counted without anyone remembering to list it here.
 const PACKS = readdirSync(join(MEERKAT_DIR, 'packs'), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort()
@@ -50,7 +54,7 @@ const patch = (file) => {
   const nl = text.includes('\r\n') ? '\r\n' : '\n'
   const re = /<!-- checks:start -->[\s\S]*?<!-- checks:end -->/
   if (!re.test(text)) throw new Error(`${file} has no checks markers`)
-  writeFileSync(join(MEERKAT_DIR, file), text.replace(re, () => block.replace(/\n/g, nl)))
+  sink.write(join(MEERKAT_DIR, file), text.replace(re, () => block.replace(/\n/g, nl)), file)
 }
 patch('docs/checks.md')
 
@@ -61,6 +65,7 @@ const countsBlock = `<!-- counts:start -->\n**${rows.length} checks · ${subCoun
   const nl = readme.includes('\r\n') ? '\r\n' : '\n'
   const re = /<!-- counts:start -->[\s\S]*?<!-- counts:end -->/
   if (!re.test(readme)) throw new Error('README.md has no counts markers')
-  writeFileSync(join(MEERKAT_DIR, 'README.md'), readme.replace(re, () => countsBlock.replace(/\n/g, nl)))
+  sink.write(join(MEERKAT_DIR, 'README.md'), readme.replace(re, () => countsBlock.replace(/\n/g, nl)), 'README.md')
 }
 console.log(summary.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1'))
+process.exitCode = sink.finish()

@@ -208,3 +208,17 @@ describe('meerkat batch (real verdict gate)', () => {
     expect(code).toBe(1)
   }, 100_000)
 })
+
+describe('batch plan: zero-change and unreadable branches', () => {
+  test('a branch with no changes against the base is not planned to merge, and an unreadable one says so', () => {
+    const plan = planBatch([
+      { branch: 'already-in-base', sha: 'a'.repeat(40), lines: 0 },
+      { branch: 'unreadable', sha: 'b'.repeat(40), lines: null },
+      { branch: 'real', sha: 'c'.repeat(40), lines: 12 },
+    ])
+    expect(plan.included.map((i) => i.branch)).toEqual(['real'])
+    const why = Object.fromEntries(plan.excluded.map((e) => [e.branch, e.reason]))
+    expect(why['already-in-base']).toMatch(/nothing to merge: no changes against the base/)
+    expect(why['unreadable']).toMatch(/unreadable branch: git diff failed/)
+  })
+})
