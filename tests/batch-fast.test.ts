@@ -74,7 +74,7 @@ const batch = async (args: string[], extraEnv: Record<string, string> = {}) => {
 }
 
 describe('batch fast', () => {
-  test('(a) git spawns per branch: at most 2 (one diff, one merge), the rest is a fixed cost', async () => {
+  test('(a) git spawns per branch: at most 3 (one diff, one merge-tree pre-triage, one merge), the rest is a fixed cost', async () => {
     const count = async (names: string[]) => {
       counter.n = 0
       counter.on = true
@@ -85,8 +85,8 @@ describe('batch fast', () => {
     }
     const two = await count(['clean-1', 'clean-2'])
     const six = await count(['clean-1', 'clean-2', 'clean-3', 'clean-4', 'clean-5', 'clean-6'])
-    expect((six - two) / 4).toBeLessThanOrEqual(2)
-    expect(two).toBeLessThanOrEqual(2 * 2 + 10)
+    expect((six - two) / 4).toBeLessThanOrEqual(3)
+    expect(two).toBeLessThanOrEqual(2 * 3 + 10)
   })
 
   test('(b) a culprit, a conflict and a too-big branch give the same JSON answer as before', async () => {
