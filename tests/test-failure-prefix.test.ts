@@ -18,3 +18,10 @@ test('a failing check whose places are all outside the change does not crash sco
   const rows = [{ id: 'some-check', kind: 'fail', detail: 'something failed', places: [{ file: 'other/x.js', line: 3, message: 'bad' }], files: ['other/x.js'] }]
   expect(() => scopeToChanged(rows, new Set(['src/changed.js']))).not.toThrow()
 })
+
+test('a cargo compile error with a file location is a code failure, not a crash (29an)', async () => {
+  const { classify } = await import('../lib/gate.mjs')
+  const out = 'error: very complex type used. consider a type definition\n   --> packages/mcp/src/catalogue.rs:766:9\n'
+  expect(classify({ exitCode: 101, status: 'FAIL' }, out)).toBe('fail')
+  expect(classify({ exitCode: 101, status: 'FAIL' }, 'thread main panicked at x')).toBe('crash')
+})
