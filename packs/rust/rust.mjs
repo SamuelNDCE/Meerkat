@@ -42,12 +42,27 @@ function pathDepsOf(manifest) {
   }
   return paths
 }
+// The folders the root workspace excludes (`exclude = [...]` under [workspace]). A manifest in one of them is not a member of this
+// workspace, so `cargo -p <name>` from the root cannot address it (29an: apps/desktop-web/src-tauri, package neuralvault-web, failed every run).
+function excludedFolders(root) {
+  try {
+    const text = readFileSync(join(root, 'Cargo.toml'), 'utf8')
+    const ws = /^\[workspace\]([\s\S]*?)(?=^\[(?!workspace\.)|(?![\s\S]))/m.exec(text)
+    const ex = ws ? /^\s*exclude\s*=\s*\[([\s\S]*?)\]/m.exec(ws[1]) : null
+    if (!ex) return []
+    return [...ex[1].matchAll(/"([^"]+)"/g)].map((m) => resolve(root, m[1]))
+  } catch {
+    return []
+  }
+}
 // Every crate under the repo (depth 4): name, folder, and the folders of its path dependencies.
 function workspaceCrates(root) {
   const crates = []
+  const excluded = excludedFolders(root)
+  const isExcluded = (dir) => excluded.some((e) => dir === e || dir.startsWith(`${e}${sep}`))
   const walk = (dir, depth) => {
     const m = join(dir, 'Cargo.toml')
-    if (existsSync(m)) {
+    if (existsSync(m) && !isExcluded(resolve(dir))) {
       const name = crateNameOf(m)
       if (name) crates.push({ name, dir: resolve(dir), deps: pathDepsOf(m).map((p) => resolve(dir, p)) })
     }

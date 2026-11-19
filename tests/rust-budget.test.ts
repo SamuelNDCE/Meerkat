@@ -122,3 +122,22 @@ describe('per-crate progress (18d)', () => {
     expect(seen.map((p) => p.crate)).toEqual(['alpha', 'beta', 'gamma'])
   })
 })
+
+// Regression (29an): a crate in the root workspace's `exclude` list is not a member, so it must not be scoped with -p (it failed every batch run).
+test('a crate excluded by the root workspace is not scoped with -p', () => {
+  const root = mkdtempSync(join(tmpdir(), 'rust-excl-'))
+  try {
+    mkdirSync(join(root, 'core', 'src'), { recursive: true })
+    mkdirSync(join(root, 'apps', 'web', 'src'), { recursive: true })
+    writeFileSync(join(root, 'Cargo.toml'), '[workspace]\nmembers = ["core"]\nexclude = ["apps/web"]\n')
+    writeFileSync(join(root, 'core', 'Cargo.toml'), '[package]\nname = "core"\nversion = "0.1.0"\n')
+    writeFileSync(join(root, 'core', 'src', 'lib.rs'), '')
+    writeFileSync(join(root, 'apps', 'web', 'Cargo.toml'), '[package]\nname = "neuralvault-web"\nversion = "0.1.0"\n')
+    writeFileSync(join(root, 'apps', 'web', 'src', 'lib.rs'), '')
+    // A change inside the excluded app is outside every member crate: the whole workspace runs (null), never -p neuralvault-web.
+    expect(scopeRustTest({ repoRoot: root, changedFiles: ['apps/web/src/lib.rs', 'core/src/lib.rs'] })).toBeNull()
+    expect(JSON.stringify(scopeRustTest({ repoRoot: root, changedFiles: ['core/src/lib.rs'] }))).not.toContain('neuralvault-web')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
